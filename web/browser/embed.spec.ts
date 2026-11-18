@@ -149,7 +149,7 @@ describe("a check report beside the viewer", () => {
       const opened = page.context().waitForEvent("page");
       await page.locator(ioLink).first().click();
       const tab = await opened;
-      await tab.waitForURL(/\/files\/kicad\/hier_numeric_root\.kicad_sch\/(view|load)/, { timeout: 30_000 });
+      await tab.waitForURL(/\/mounts\/kicad\/hier_numeric_root\.kicad_sch\/(view|load)/, { timeout: 30_000 });
       expect(page.url(), "the report itself navigated away").toBe(`${site.base}report.html`);
       await tab.close();
     });

@@ -97,10 +97,10 @@ describe("saving an attached board to the design's design.yaml", () => {
       await dialog.locator(".drop-design", { has: page.locator(".drop-design-name", { hasText: /^gateway\s+\(/ }) }).locator(".drop-design-open").click();
       await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
       const viewer = new URL(page.url());
-      expect(viewer.pathname).toMatch(/\/files\/local\/drop-[a-z0-9]+\/odb\/gateway\.edn\/view/);
+      expect(viewer.pathname).toMatch(/\/mounts\/local\/drop-[a-z0-9]+\/odb\/gateway\.edn\/view/);
       expect(await tiles(page)).not.toContain("Board");
 
-      const folder = viewer.pathname.replace(/^.*\/files\/(local\/drop-[a-z0-9]+\/odb)\/gateway\.edn\/view$/, "$1");
+      const folder = viewer.pathname.replace(/^.*\/mounts\/(local\/drop-[a-z0-9]+\/odb)\/gateway\.edn\/view$/, "$1");
       await page.goto(`${viewer.origin}${viewer.pathname}?engine=wasm&board=${folder}/gateway-layout/matrix/matrix`, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => [...document.querySelectorAll(".sheet-tile-name")].some((n) => n.textContent?.trim() === "Board"), null, { timeout: 60_000 });
       await showPanel(page, "overview");

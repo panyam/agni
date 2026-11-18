@@ -128,7 +128,7 @@ describe("the designs page", () => {
 
       // The newer design opens in the viewer through its store path.
       await page.locator('[data-design="designs/bb-1.1.3"] a.lb-open').click();
-      await page.waitForURL(/\/files\/store\/bb-1\.1\.3\/schematic\/.*\/view/);
+      await page.waitForURL(/\/mounts\/store\/bb-1\.1\.3\/schematic\/.*\/view/);
       await page.locator(".sheet-tile-name").first().waitFor({ state: "attached", timeout: 120_000 });
       await shot(page, "viewer.png");
     });

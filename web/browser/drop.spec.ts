@@ -67,7 +67,7 @@ describe("dropping files on the Load page", () => {
       const dropped = await runChecks(page);
       expect(served.length, "the served run found nothing, so agreeing with it proves nothing").toBeGreaterThan(0);
       expect([...dropped].sort()).toEqual([...served].sort());
-      expect(page.url()).toMatch(/\/files\/local\/drop-[a-z0-9]+\/tutorial\.zip\/designs\/gateway/);
+      expect(page.url()).toMatch(/\/mounts\/local\/drop-[a-z0-9]+\/tutorial\.zip\/designs\/gateway/);
 
       // The design never touched the server: no analysis call, no listing, no file read.
       expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
@@ -93,7 +93,7 @@ describe("dropping files on the Load page", () => {
       await dialog.locator(".drop-design-open").first().click();
 
       expect((await runChecks(page)).length).toBeGreaterThan(0);
-      expect(page.url()).toMatch(/\/files\/local\/drop-[a-z0-9]+\/tutorial-project\/designs\/gateway\//);
+      expect(page.url()).toMatch(/\/mounts\/local\/drop-[a-z0-9]+\/tutorial-project\/designs\/gateway\//);
       await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 30_000 }).toContain("faithful");
       expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
       expect(log.errors).toEqual([]);
@@ -117,7 +117,7 @@ describe("dropping files on the Load page", () => {
       await dialog.locator(".drop-design-open").first().click();
 
       expect((await runChecks(page)).length).toBeGreaterThan(0);
-      expect(page.url()).toMatch(/\/files\/local\/drop-[a-z0-9]+\/gateway\.edn\/view/);
+      expect(page.url()).toMatch(/\/mounts\/local\/drop-[a-z0-9]+\/gateway\.edn\/view/);
       // The schematic is drawn because the written design.yaml names gateway.kicad_sch as a companion.
       // A netlist read without it would draw an auto-layout.
       await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 30_000 }).toContain("faithful");
@@ -142,7 +142,7 @@ describe("dropping files on the Load page", () => {
       await dialog.locator(".drop-design-open").first().click();
 
       expect((await runChecks(page)).length).toBeGreaterThan(0);
-      expect(page.url()).toMatch(/\/files\/local\/drop-[a-z0-9]+\/gateway\.zip\/gateway\.edn\/view/);
+      expect(page.url()).toMatch(/\/mounts\/local\/drop-[a-z0-9]+\/gateway\.zip\/gateway\.edn\/view/);
       await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 30_000 }).toContain("faithful");
       // The zip carries the gateway's symbols/ beside the proposed design.yaml, and a design in no
       // project still reads its own symbol library (agni issue 887), so every part is drawn.
