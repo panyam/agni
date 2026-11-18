@@ -320,7 +320,7 @@ func (s fileSet) artifact(name string) *webapi.Artifact {
 
 // add reads one file and records it under rel.
 func (s *fileSet) add(abs, rel string) error {
-	b, err := os.ReadFile(abs)
+	b, err := os.ReadFile(abs) // #nosec G304 -- a file under the folder the user named to send
 	if err != nil {
 		return err
 	}
@@ -441,7 +441,7 @@ func planPush(dir string) (pushPlan, []string, error) {
 			files = append(files, r)
 		}
 	}
-	read := func(p string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, filepath.FromSlash(p))) }
+	read := func(p string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, filepath.FromSlash(p))) } // #nosec G304 -- a file under the folder the user named to push
 	resp := service.ProposeFromFiles("", files, read)
 	switch n := len(resp.GetDesigns()); {
 	case n == 0:
@@ -597,7 +597,7 @@ type localDescriptor struct {
 // no defaults.
 func readLocalDescriptor(p string) localDescriptor {
 	var d localDescriptor
-	if raw, err := os.ReadFile(p); err == nil {
+	if raw, err := os.ReadFile(p); err == nil { // #nosec G304 -- the design.yaml in the folder the user named
 		_ = yaml.Unmarshal(raw, &d)
 	}
 	return d

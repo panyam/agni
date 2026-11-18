@@ -339,11 +339,16 @@ func (s *DirStore) rebuild(_ context.Context, id string, rec service.DesignRecor
 		return err
 	}
 	defer os.RemoveAll(tmp)
+	store, err := os.OpenRoot(s.root)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
 	for _, a := range have {
 		if _, replaced := put[a]; replaced || a == drop {
 			continue
 		}
-		if err := linkTree(s.abs(path.Join(id, a)), filepath.Join(tmp, a)); err != nil {
+		if err := linkTree(store, path.Join(id, a), path.Join(filepath.Base(tmp), a)); err != nil {
 			return err
 		}
 	}
@@ -389,8 +394,15 @@ func (s *DirStore) rebuild(_ context.Context, id string, rec service.DesignRecor
 }
 
 // readArtifacts reads the artifact subfolders of dir, a design folder, as the design id's artifacts.
+// It reads through an os.Root over dir, so a symlink in the store cannot lead a read outside it.
 func (s *DirStore) readArtifacts(dir, id string) ([]*webapi.Artifact, error) {
-	entries, err := os.ReadDir(dir)
+	r, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	fsys := r.FS()
+	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		return nil, err
 	}
@@ -400,21 +412,22 @@ func (s *DirStore) readArtifacts(dir, id string) ([]*webapi.Artifact, error) {
 			continue
 		}
 		a := &webapi.Artifact{Name: service.ArtifactName(id, e.Name())}
-		root := filepath.Join(dir, e.Name())
+		sub, err := fs.Sub(fsys, e.Name())
+		if err != nil {
+			return nil, err
+		}
 		var newest time.Time
 		var paths []string
-		err := filepath.WalkDir(root, func(p string, de fs.DirEntry, err error) error {
+		err = fs.WalkDir(sub, ".", func(p string, de fs.DirEntry, err error) error {
 			if err != nil || de.IsDir() {
 				return err
 			}
-			b, err := os.ReadFile(p)
+			b, err := fs.ReadFile(sub, p)
 			if err != nil {
 				return err
 			}
-			rel, _ := filepath.Rel(root, p)
-			rel = filepath.ToSlash(rel)
-			paths = append(paths, rel)
-			a.Files = append(a.Files, &webapi.SnapshotFile{Path: rel, Sha256: hashOf(b), Size: int64(len(b))})
+			paths = append(paths, p)
+			a.Files = append(a.Files, &webapi.SnapshotFile{Path: p, Sha256: hashOf(b), Size: int64(len(b))})
 			if fi, err := de.Info(); err == nil && fi.ModTime().After(newest) {
 				newest = fi.ModTime()
 			}
@@ -423,9 +436,7 @@ func (s *DirStore) readArtifacts(dir, id string) ([]*webapi.Artifact, error) {
 		if err != nil {
 			return nil, err
 		}
-		role, err := classifyArtifact(e.Name(), paths, func(p string) ([]byte, error) {
-			return os.ReadFile(filepath.Join(root, filepath.FromSlash(p)))
-		})
+		role, err := classifyArtifact(e.Name(), paths, func(p string) ([]byte, error) { return fs.ReadFile(sub, p) })
 		if err != nil {
 			return nil, err
 		}
@@ -438,8 +449,13 @@ func (s *DirStore) readArtifacts(dir, id string) ([]*webapi.Artifact, error) {
 	return out, nil
 }
 
-// rolesOf classifies each artifact read from dir.
+// rolesOf classifies each artifact read from dir, through an os.Root over it.
 func rolesOf(dir string, arts []*webapi.Artifact) ([]artifactRole, error) {
+	r, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
 	var out []artifactRole
 	for _, a := range arts {
 		_, id, _ := service.ArtifactID(a.GetName())
@@ -447,10 +463,11 @@ func rolesOf(dir string, arts []*webapi.Artifact) ([]artifactRole, error) {
 		for _, f := range a.GetFiles() {
 			paths = append(paths, f.GetPath())
 		}
-		root := filepath.Join(dir, id)
-		role, err := classifyArtifact(id, paths, func(p string) ([]byte, error) {
-			return os.ReadFile(filepath.Join(root, filepath.FromSlash(p)))
-		})
+		sub, err := fs.Sub(r.FS(), id)
+		if err != nil {
+			return nil, err
+		}
+		role, err := classifyArtifact(id, paths, func(p string) ([]byte, error) { return fs.ReadFile(sub, p) })
 		if err != nil {
 			return nil, err
 		}
@@ -459,26 +476,26 @@ func rolesOf(dir string, arts []*webapi.Artifact) ([]artifactRole, error) {
 	return out, nil
 }
 
-// linkTree hard-links every file under src into dst, copying a file where the filesystem refuses a
-// link.
-func linkTree(src, dst string) error {
-	return filepath.WalkDir(src, func(p string, de fs.DirEntry, err error) error {
+// linkTree hard-links every file under src into dst, both relative to r, copying a file where the
+// filesystem refuses a link. Every operation goes through r, so a symlink in the store cannot lead
+// one outside it.
+func linkTree(r *os.Root, src, dst string) error {
+	return fs.WalkDir(r.FS(), src, func(p string, de fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		rel, _ := filepath.Rel(src, p)
-		to := filepath.Join(dst, rel)
+		to := path.Join(dst, strings.TrimPrefix(strings.TrimPrefix(p, src), "/"))
 		if de.IsDir() {
-			return os.MkdirAll(to, 0o750)
+			return r.MkdirAll(to, 0o750)
 		}
-		if err := os.Link(p, to); err == nil {
+		if err := r.Link(p, to); err == nil {
 			return nil
 		}
-		b, err := os.ReadFile(p)
+		b, err := r.ReadFile(p)
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(to, b, 0o600)
+		return r.WriteFile(to, b, 0o600)
 	})
 }
 
