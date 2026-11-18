@@ -39,16 +39,18 @@ func (s *DesignService) WithProjects(projects *ProjectService) *DesignService {
 	return s
 }
 
-// CreateDesign stores a new design from its files.
+// CreateDesign makes a new design with no artifacts.
 func (s *DesignService) CreateDesign(ctx context.Context, req *webapi.CreateDesignRequest) (*webapi.Design, error) {
 	if !newIDPattern.MatchString(req.GetDesignId()) {
 		return nil, fmt.Errorf("%w: design id %q must be lowercase letters, digits, '.', '_' or '-', starting with a letter or digit", ErrInvalidArgument, req.GetDesignId())
 	}
-	d, err := s.catalog.CreateDesign(ctx, req.GetDesignId(), req.GetFiles(), s.blobs)
+	d := req.GetDesign()
+	rec := DesignRecord{Title: d.GetTitle(), Series: d.GetSeries(), FlattenHierarchy: d.GetFlattenHierarchy()}
+	out, err := s.catalog.CreateDesign(ctx, req.GetDesignId(), rec)
 	if err != nil {
 		return nil, err
 	}
-	return s.withLatest(ctx, d)
+	return s.withLatest(ctx, out)
 }
 
 // GetDesign returns one design by resource name.
@@ -86,9 +88,30 @@ func (s *DesignService) ListDesigns(ctx context.Context, req *webapi.ListDesigns
 	return resp, nil
 }
 
-// UpdateDesign replaces a stored design's whole file set.
+// UpdateDesign changes a stored design's title, series or flatten_hierarchy, as update_mask names.
 func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesignRequest) (*webapi.Design, error) {
-	d, err := s.catalog.ReplaceDesign(ctx, req.GetName(), req.GetFiles(), s.blobs)
+	in := req.GetDesign()
+	paths := req.GetUpdateMask().GetPaths()
+	if len(paths) == 0 {
+		paths = []string{"title", "series", "flatten_hierarchy"}
+	}
+	for _, p := range paths {
+		if p != "title" && p != "series" && p != "flatten_hierarchy" {
+			return nil, fmt.Errorf("%w: update_mask path %q; a design's title, series and flatten_hierarchy can be changed", ErrInvalidArgument, p)
+		}
+	}
+	d, err := s.catalog.UpdateDesign(ctx, in.GetName(), func(r *DesignRecord) {
+		for _, p := range paths {
+			switch p {
+			case "title":
+				r.Title = in.GetTitle()
+			case "series":
+				r.Series = in.GetSeries()
+			case "flatten_hierarchy":
+				r.FlattenHierarchy = in.GetFlattenHierarchy()
+			}
+		}
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +121,101 @@ func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesi
 // DeleteDesign removes a stored design.
 func (s *DesignService) DeleteDesign(ctx context.Context, req *webapi.DeleteDesignRequest) error {
 	return s.catalog.DeleteDesign(ctx, req.GetName())
+}
+
+// GetArtifact returns one artifact of a stored design.
+func (s *DesignService) GetArtifact(ctx context.Context, req *webapi.GetArtifactRequest) (*webapi.Artifact, error) {
+	d, _, ok := ArtifactID(req.GetName())
+	if !ok {
+		return nil, fmt.Errorf("%w: %q is not an artifact resource name, designs/{design}/artifacts/{artifact}", ErrInvalidArgument, req.GetName())
+	}
+	all, err := s.catalog.Artifacts(ctx, StandaloneDesignName(d))
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range all {
+		if a.GetName() == req.GetName() {
+			return a, nil
+		}
+	}
+	return nil, fmt.Errorf("%w: no artifact %s", ErrNotFound, req.GetName())
+}
+
+// ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none.
+func (s *DesignService) ListArtifacts(ctx context.Context, req *webapi.ListArtifactsRequest) (*webapi.ListArtifactsResponse, error) {
+	all, err := s.catalog.Artifacts(ctx, req.GetParent())
+	if err != nil {
+		return nil, err
+	}
+	page, next := paginate(len(all), req.GetPageSize(), req.GetPageToken(), func(i int) string { return all[i].GetName() })
+	resp := &webapi.ListArtifactsResponse{NextPageToken: next}
+	for _, i := range page {
+		resp.Artifacts = append(resp.Artifacts, all[i])
+	}
+	return resp, nil
+}
+
+// UpdateArtifact replaces an artifact's files, or creates it with allow_missing.
+func (s *DesignService) UpdateArtifact(ctx context.Context, req *webapi.UpdateArtifactRequest) (*webapi.Artifact, error) {
+	d, w, err := artifactWrite(req)
+	if err != nil {
+		return nil, err
+	}
+	out, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(d), []ArtifactWrite{w}, s.blobs)
+	if err != nil {
+		return nil, err
+	}
+	return out[0], nil
+}
+
+// BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write.
+func (s *DesignService) BatchUpdateArtifacts(ctx context.Context, req *webapi.BatchUpdateArtifactsRequest) (*webapi.BatchUpdateArtifactsResponse, error) {
+	parent, ok := StandaloneDesignID(req.GetParent())
+	if !ok {
+		return nil, fmt.Errorf("%w: %q is not a design resource name, designs/{design}", ErrInvalidArgument, req.GetParent())
+	}
+	if len(req.GetRequests()) == 0 {
+		return nil, fmt.Errorf("%w: the batch holds no requests", ErrInvalidArgument)
+	}
+	seen := map[string]bool{}
+	var writes []ArtifactWrite
+	for _, r := range req.GetRequests() {
+		d, w, err := artifactWrite(r)
+		if err != nil {
+			return nil, err
+		}
+		if d != parent {
+			return nil, fmt.Errorf("%w: %s is not an artifact of %s", ErrInvalidArgument, r.GetArtifact().GetName(), req.GetParent())
+		}
+		if seen[w.ID] {
+			return nil, fmt.Errorf("%w: %s is named twice in the batch", ErrInvalidArgument, r.GetArtifact().GetName())
+		}
+		seen[w.ID] = true
+		writes = append(writes, w)
+	}
+	out, err := s.catalog.WriteArtifacts(ctx, req.GetParent(), writes, s.blobs)
+	if err != nil {
+		return nil, err
+	}
+	return &webapi.BatchUpdateArtifactsResponse{Artifacts: out}, nil
+}
+
+// DeleteArtifact removes one artifact of a stored design.
+func (s *DesignService) DeleteArtifact(ctx context.Context, req *webapi.DeleteArtifactRequest) error {
+	return s.catalog.DeleteArtifact(ctx, req.GetName())
+}
+
+// artifactWrite checks one UpdateArtifact request and returns its design id and the write.
+func artifactWrite(req *webapi.UpdateArtifactRequest) (string, ArtifactWrite, error) {
+	a := req.GetArtifact()
+	d, id, ok := ArtifactID(a.GetName())
+	if !ok || !newIDPattern.MatchString(id) {
+		return "", ArtifactWrite{}, fmt.Errorf("%w: %q is not an artifact resource name, designs/{design}/artifacts/{artifact}, with an id of lowercase letters, digits, '.', '_' or '-'", ErrInvalidArgument, a.GetName())
+	}
+	if len(a.GetFiles()) == 0 {
+		return "", ArtifactWrite{}, fmt.Errorf("%w: %s lists no files; DeleteArtifact removes an artifact", ErrInvalidArgument, a.GetName())
+	}
+	return d, ArtifactWrite{ID: id, Files: a.GetFiles(), AllowMissing: req.GetAllowMissing()}, nil
 }
 
 // withLatest sets d.series_latest against the other designs in its series.

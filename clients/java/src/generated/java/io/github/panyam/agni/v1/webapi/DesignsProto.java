@@ -56,6 +56,46 @@ public final class DesignsProto extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_agni_v1_webapi_DeleteDesignRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_Artifact_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_Artifact_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_GetArtifactRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_GetArtifactRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_ListArtifactsRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_ListArtifactsRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_ListArtifactsResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_ListArtifactsResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_UpdateArtifactRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_UpdateArtifactRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_BatchUpdateArtifactsRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_BatchUpdateArtifactsRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_BatchUpdateArtifactsResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_BatchUpdateArtifactsResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_DeleteArtifactRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_DeleteArtifactRequest_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -68,35 +108,75 @@ public final class DesignsProto extends com.google.protobuf.GeneratedFile {
       "\n\034agni/v1/webapi/designs.proto\022\016agni.v1." +
       "webapi\032\034agni/v1/webapi/project.proto\032\035ag" +
       "ni/v1/webapi/snapshot.proto\032\033google/prot" +
-      "obuf/empty.proto\"f\n\023CreateDesignRequest\022" +
-      "\033\n\tdesign_id\030\001 \001(\tR\010designId\0222\n\005files\030\002 " +
-      "\003(\0132\034.agni.v1.webapi.SnapshotFileR\005files" +
-      "\"&\n\020GetDesignRequest\022\022\n\004name\030\001 \001(\tR\004name" +
-      "\"h\n\022ListDesignsRequest\022\033\n\tpage_size\030\001 \001(" +
-      "\005R\010pageSize\022\035\n\npage_token\030\002 \001(\tR\tpageTok" +
-      "en\022\026\n\006filter\030\003 \001(\tR\006filter\"\221\001\n\023ListDesig" +
-      "nsResponse\0220\n\007designs\030\001 \003(\0132\026.agni.v1.we" +
-      "bapi.DesignR\007designs\022&\n\017next_page_token\030" +
-      "\002 \001(\tR\rnextPageToken\022 \n\013unreachable\030\003 \003(" +
-      "\tR\013unreachable\"]\n\023UpdateDesignRequest\022\022\n" +
-      "\004name\030\001 \001(\tR\004name\0222\n\005files\030\002 \003(\0132\034.agni." +
-      "v1.webapi.SnapshotFileR\005files\")\n\023DeleteD" +
-      "esignRequest\022\022\n\004name\030\001 \001(\tR\004name2\225\003\n\rDes" +
-      "ignService\022K\n\014CreateDesign\022#.agni.v1.web" +
-      "api.CreateDesignRequest\032\026.agni.v1.webapi" +
-      ".Design\022E\n\tGetDesign\022 .agni.v1.webapi.Ge" +
-      "tDesignRequest\032\026.agni.v1.webapi.Design\022V" +
-      "\n\013ListDesigns\022\".agni.v1.webapi.ListDesig" +
-      "nsRequest\032#.agni.v1.webapi.ListDesignsRe" +
-      "sponse\022K\n\014UpdateDesign\022#.agni.v1.webapi." +
-      "UpdateDesignRequest\032\026.agni.v1.webapi.Des" +
-      "ign\022K\n\014DeleteDesign\022#.agni.v1.webapi.Del" +
-      "eteDesignRequest\032\026.google.protobuf.Empty" +
-      "B\267\001\n\037io.github.panyam.agni.v1.webapiB\014De" +
-      "signsProtoP\001Z,github.com/panyam/agni/gen" +
-      "/go/agni/v1/webapi\242\002\003AVW\252\002\016Agni.V1.Webap" +
-      "i\312\002\016Agni\\V1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBM" +
-      "etadata\352\002\020Agni::V1::Webapib\006proto3"
+      "obuf/empty.proto\032 google/protobuf/field_" +
+      "mask.proto\032\037google/protobuf/timestamp.pr" +
+      "oto\"o\n\023CreateDesignRequest\022\033\n\tdesign_id\030" +
+      "\001 \001(\tR\010designId\022.\n\006design\030\003 \001(\0132\026.agni.v" +
+      "1.webapi.DesignR\006designJ\004\010\002\020\003R\005files\"&\n\020" +
+      "GetDesignRequest\022\022\n\004name\030\001 \001(\tR\004name\"h\n\022" +
+      "ListDesignsRequest\022\033\n\tpage_size\030\001 \001(\005R\010p" +
+      "ageSize\022\035\n\npage_token\030\002 \001(\tR\tpageToken\022\026" +
+      "\n\006filter\030\003 \001(\tR\006filter\"\221\001\n\023ListDesignsRe" +
+      "sponse\0220\n\007designs\030\001 \003(\0132\026.agni.v1.webapi" +
+      ".DesignR\007designs\022&\n\017next_page_token\030\002 \001(" +
+      "\tR\rnextPageToken\022 \n\013unreachable\030\003 \003(\tR\013u" +
+      "nreachable\"\233\001\n\023UpdateDesignRequest\022.\n\006de" +
+      "sign\030\003 \001(\0132\026.agni.v1.webapi.DesignR\006desi" +
+      "gn\022;\n\013update_mask\030\004 \001(\0132\032.google.protobu" +
+      "f.FieldMaskR\nupdateMaskJ\004\010\001\020\002J\004\010\002\020\003R\004nam" +
+      "eR\005files\")\n\023DeleteDesignRequest\022\022\n\004name\030" +
+      "\001 \001(\tR\004name\"\327\001\n\010Artifact\022\022\n\004name\030\001 \001(\tR\004" +
+      "name\0222\n\005files\030\002 \003(\0132\034.agni.v1.webapi.Sna" +
+      "pshotFileR\005files\0220\n\004type\030\003 \001(\0162\034.agni.v1" +
+      ".webapi.ArtifactTypeR\004type\022\024\n\005entry\030\004 \001(" +
+      "\tR\005entry\022;\n\013update_time\030\005 \001(\0132\032.google.p" +
+      "rotobuf.TimestampR\nupdateTime\"(\n\022GetArti" +
+      "factRequest\022\022\n\004name\030\001 \001(\tR\004name\"j\n\024ListA" +
+      "rtifactsRequest\022\026\n\006parent\030\001 \001(\tR\006parent\022" +
+      "\033\n\tpage_size\030\002 \001(\005R\010pageSize\022\035\n\npage_tok" +
+      "en\030\003 \001(\tR\tpageToken\"w\n\025ListArtifactsResp" +
+      "onse\0226\n\tartifacts\030\001 \003(\0132\030.agni.v1.webapi" +
+      ".ArtifactR\tartifacts\022&\n\017next_page_token\030" +
+      "\002 \001(\tR\rnextPageToken\"r\n\025UpdateArtifactRe" +
+      "quest\0224\n\010artifact\030\001 \001(\0132\030.agni.v1.webapi" +
+      ".ArtifactR\010artifact\022#\n\rallow_missing\030\002 \001" +
+      "(\010R\014allowMissing\"x\n\033BatchUpdateArtifacts" +
+      "Request\022\026\n\006parent\030\001 \001(\tR\006parent\022A\n\010reque" +
+      "sts\030\002 \003(\0132%.agni.v1.webapi.UpdateArtifac" +
+      "tRequestR\010requests\"V\n\034BatchUpdateArtifac" +
+      "tsResponse\0226\n\tartifacts\030\001 \003(\0132\030.agni.v1." +
+      "webapi.ArtifactR\tartifacts\"+\n\025DeleteArti" +
+      "factRequest\022\022\n\004name\030\001 \001(\tR\004name*\227\001\n\014Arti" +
+      "factType\022\035\n\031ARTIFACT_TYPE_UNSPECIFIED\020\000\022" +
+      "\031\n\025ARTIFACT_TYPE_NETLIST\020\001\022\033\n\027ARTIFACT_T" +
+      "YPE_SCHEMATIC\020\002\022\027\n\023ARTIFACT_TYPE_BOARD\020\003" +
+      "\022\027\n\023ARTIFACT_TYPE_OTHER\020\0042\327\006\n\rDesignServ" +
+      "ice\022K\n\014CreateDesign\022#.agni.v1.webapi.Cre" +
+      "ateDesignRequest\032\026.agni.v1.webapi.Design" +
+      "\022E\n\tGetDesign\022 .agni.v1.webapi.GetDesign" +
+      "Request\032\026.agni.v1.webapi.Design\022V\n\013ListD" +
+      "esigns\022\".agni.v1.webapi.ListDesignsReque" +
+      "st\032#.agni.v1.webapi.ListDesignsResponse\022" +
+      "K\n\014UpdateDesign\022#.agni.v1.webapi.UpdateD" +
+      "esignRequest\032\026.agni.v1.webapi.Design\022K\n\014" +
+      "DeleteDesign\022#.agni.v1.webapi.DeleteDesi" +
+      "gnRequest\032\026.google.protobuf.Empty\022K\n\013Get" +
+      "Artifact\022\".agni.v1.webapi.GetArtifactReq" +
+      "uest\032\030.agni.v1.webapi.Artifact\022\\\n\rListAr" +
+      "tifacts\022$.agni.v1.webapi.ListArtifactsRe" +
+      "quest\032%.agni.v1.webapi.ListArtifactsResp" +
+      "onse\022Q\n\016UpdateArtifact\022%.agni.v1.webapi." +
+      "UpdateArtifactRequest\032\030.agni.v1.webapi.A" +
+      "rtifact\022q\n\024BatchUpdateArtifacts\022+.agni.v" +
+      "1.webapi.BatchUpdateArtifactsRequest\032,.a" +
+      "gni.v1.webapi.BatchUpdateArtifactsRespon" +
+      "se\022O\n\016DeleteArtifact\022%.agni.v1.webapi.De" +
+      "leteArtifactRequest\032\026.google.protobuf.Em" +
+      "ptyB\267\001\n\037io.github.panyam.agni.v1.webapiB" +
+      "\014DesignsProtoP\001Z,github.com/panyam/agni/" +
+      "gen/go/agni/v1/webapi\242\002\003AVW\252\002\016Agni.V1.We" +
+      "bapi\312\002\016Agni\\V1\\Webapi\342\002\032Agni\\V1\\Webapi\\G" +
+      "PBMetadata\352\002\020Agni::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -104,13 +184,15 @@ public final class DesignsProto extends com.google.protobuf.GeneratedFile {
           io.github.panyam.agni.v1.webapi.ProjectProto.getDescriptor(),
           io.github.panyam.agni.v1.webapi.SnapshotProto.getDescriptor(),
           com.google.protobuf.EmptyProto.getDescriptor(),
+          com.google.protobuf.FieldMaskProto.getDescriptor(),
+          com.google.protobuf.TimestampProto.getDescriptor(),
         });
     internal_static_agni_v1_webapi_CreateDesignRequest_descriptor =
       getDescriptor().getMessageType(0);
     internal_static_agni_v1_webapi_CreateDesignRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_CreateDesignRequest_descriptor,
-        new java.lang.String[] { "DesignId", "Files", });
+        new java.lang.String[] { "DesignId", "Design", });
     internal_static_agni_v1_webapi_GetDesignRequest_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_agni_v1_webapi_GetDesignRequest_fieldAccessorTable = new
@@ -134,17 +216,67 @@ public final class DesignsProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_webapi_UpdateDesignRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_UpdateDesignRequest_descriptor,
-        new java.lang.String[] { "Name", "Files", });
+        new java.lang.String[] { "Design", "UpdateMask", });
     internal_static_agni_v1_webapi_DeleteDesignRequest_descriptor =
       getDescriptor().getMessageType(5);
     internal_static_agni_v1_webapi_DeleteDesignRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_DeleteDesignRequest_descriptor,
         new java.lang.String[] { "Name", });
+    internal_static_agni_v1_webapi_Artifact_descriptor =
+      getDescriptor().getMessageType(6);
+    internal_static_agni_v1_webapi_Artifact_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_Artifact_descriptor,
+        new java.lang.String[] { "Name", "Files", "Type", "Entry", "UpdateTime", });
+    internal_static_agni_v1_webapi_GetArtifactRequest_descriptor =
+      getDescriptor().getMessageType(7);
+    internal_static_agni_v1_webapi_GetArtifactRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_GetArtifactRequest_descriptor,
+        new java.lang.String[] { "Name", });
+    internal_static_agni_v1_webapi_ListArtifactsRequest_descriptor =
+      getDescriptor().getMessageType(8);
+    internal_static_agni_v1_webapi_ListArtifactsRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_ListArtifactsRequest_descriptor,
+        new java.lang.String[] { "Parent", "PageSize", "PageToken", });
+    internal_static_agni_v1_webapi_ListArtifactsResponse_descriptor =
+      getDescriptor().getMessageType(9);
+    internal_static_agni_v1_webapi_ListArtifactsResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_ListArtifactsResponse_descriptor,
+        new java.lang.String[] { "Artifacts", "NextPageToken", });
+    internal_static_agni_v1_webapi_UpdateArtifactRequest_descriptor =
+      getDescriptor().getMessageType(10);
+    internal_static_agni_v1_webapi_UpdateArtifactRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_UpdateArtifactRequest_descriptor,
+        new java.lang.String[] { "Artifact", "AllowMissing", });
+    internal_static_agni_v1_webapi_BatchUpdateArtifactsRequest_descriptor =
+      getDescriptor().getMessageType(11);
+    internal_static_agni_v1_webapi_BatchUpdateArtifactsRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_BatchUpdateArtifactsRequest_descriptor,
+        new java.lang.String[] { "Parent", "Requests", });
+    internal_static_agni_v1_webapi_BatchUpdateArtifactsResponse_descriptor =
+      getDescriptor().getMessageType(12);
+    internal_static_agni_v1_webapi_BatchUpdateArtifactsResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_BatchUpdateArtifactsResponse_descriptor,
+        new java.lang.String[] { "Artifacts", });
+    internal_static_agni_v1_webapi_DeleteArtifactRequest_descriptor =
+      getDescriptor().getMessageType(13);
+    internal_static_agni_v1_webapi_DeleteArtifactRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_DeleteArtifactRequest_descriptor,
+        new java.lang.String[] { "Name", });
     descriptor.resolveAllFeaturesImmutable();
     io.github.panyam.agni.v1.webapi.ProjectProto.getDescriptor();
     io.github.panyam.agni.v1.webapi.SnapshotProto.getDescriptor();
     com.google.protobuf.EmptyProto.getDescriptor();
+    com.google.protobuf.FieldMaskProto.getDescriptor();
+    com.google.protobuf.TimestampProto.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

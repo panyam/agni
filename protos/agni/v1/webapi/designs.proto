@@ -7,23 +7,22 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 import "agni/v1/webapi/project.proto";
 import "agni/v1/webapi/snapshot.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
 
-// This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
-// design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
-// project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
-// about a snapshot of a design instead.
+// This file defines DesignService, which keeps the designs a server holds (agni issues 1694, 1696).
+// A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
+// schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
+// name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
 //
-// A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
-// the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
-// too, and those are read-only. A design id is unique across both.
+// A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
+// designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
+// and those are read-only. A design id is unique across both. Nothing on this service names a folder,
+// so each store decides how it keeps a design's files.
 service DesignService {
-  // CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
-  // Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
-  // and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
-  // among the files sets the title and series. A `name` in it naming a different id is
-  // INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
-  // already holds is ALREADY_EXISTS. A server started without --store-dir answers
-  // FAILED_PRECONDITION.
+  // CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
+  // from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+  // --store-dir answers FAILED_PRECONDITION.
   rpc CreateDesign(CreateDesignRequest) returns (Design);
 
   // GetDesign returns one design by resource name. An id two mounted folders both declare is
@@ -33,19 +32,48 @@ service DesignService {
   // ListDesigns returns the designs this server holds, ordered by resource name.
   rpc ListDesigns(ListDesignsRequest) returns (ListDesignsResponse);
 
-  // UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
-  // design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+  // UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+  // update_mask names. A design declared in a mounted folder is read-only, and a write to it is
+  // FAILED_PRECONDITION.
   rpc UpdateDesign(UpdateDesignRequest) returns (Design);
 
-  // DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+  // DeleteDesign removes a stored design and its artifacts. A project listing it keeps the name.
   rpc DeleteDesign(DeleteDesignRequest) returns (google.protobuf.Empty);
+
+  // GetArtifact returns one artifact of a stored design.
+  rpc GetArtifact(GetArtifactRequest) returns (Artifact);
+
+  // ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none, since its
+  // folder names its files.
+  rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactsResponse);
+
+  // UpdateArtifact replaces an artifact's whole file set in one write, so a reader sees the old files
+  // or the new ones. With allow_missing it creates the artifact. Contents the server lacks are
+  // FAILED_PRECONDITION with a BlobsMissing detail naming their hashes, and the caller sends them with
+  // SnapshotService.UploadBlobs and asks again.
+  //
+  // The server reads the files to find the artifact's type and entry. Files that make two designs
+  // are INVALID_ARGUMENT. A write leaving the design with two netlists, two schematics and no netlist,
+  // or two boards is FAILED_PRECONDITION, since the server could not tell which one analysis reads.
+  rpc UpdateArtifact(UpdateArtifactRequest) returns (Artifact);
+
+  // BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write, so the
+  // design moves from its old artifacts to its new ones with no state in between. Any request failing
+  // fails the batch, and nothing is written.
+  rpc BatchUpdateArtifacts(BatchUpdateArtifactsRequest) returns (BatchUpdateArtifactsResponse);
+
+  // DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
+  // design unable to be read until another is put.
+  rpc DeleteArtifact(DeleteArtifactRequest) returns (google.protobuf.Empty);
 }
 
 message CreateDesignRequest {
   // design_id is the new design's id, lowercase letters, digits, '.', '_' or '-'.
   string design_id = 1;
-  // files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-  repeated SnapshotFile files = 2;
+  reserved 2;
+  reserved "files";
+  // design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+  Design design = 3;
 }
 
 message GetDesignRequest {
@@ -73,11 +101,92 @@ message ListDesignsResponse {
 }
 
 message UpdateDesignRequest {
-  string name = 1; // "designs/{design}"
-  // files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-  repeated SnapshotFile files = 2;
+  reserved 1, 2;
+  reserved "name", "files";
+  // design names the design to change, "designs/{design}", and carries the new values.
+  Design design = 3;
+  // update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+  // empty mask changes all three. Any other path is INVALID_ARGUMENT.
+  google.protobuf.FieldMask update_mask = 4;
 }
 
 message DeleteDesignRequest {
   string name = 1; // "designs/{design}"
+}
+
+// Artifact is one source of a design, such as a schematic with its sheets, a board, or a BOM. It is
+// named "designs/{design}/artifacts/{artifact}". It holds one file or several, and replacing it
+// replaces all of them, so a schematic never holds sheets from two releases.
+//
+// A design is read as one IR built from all its artifacts. The server works out which artifact
+// analysis reads: the netlist, else the schematic, else the board. The others are views of the same
+// design. Provenance names a file as "{artifact}/{path}".
+message Artifact {
+  string name = 1; // "designs/{design}/artifacts/{artifact}"
+  // files are the artifact's files. Each path is relative to the artifact, and readers find one file
+  // from another by it, as a KiCad root sheet names its child sheets by filename.
+  repeated SnapshotFile files = 2;
+  // type is what the server found the artifact to hold. It is output only.
+  ArtifactType type = 3;
+  // entry is the path among files that a reader opens first, such as a KiCad root sheet. It is empty
+  // for an artifact no reader opens, such as a BOM. It is output only.
+  string entry = 4;
+  // update_time is when the artifact's files last changed. It is output only.
+  google.protobuf.Timestamp update_time = 5;
+}
+
+// ArtifactType is what an artifact holds, found from its entry's format.
+enum ArtifactType {
+  ARTIFACT_TYPE_UNSPECIFIED = 0;
+  // ARTIFACT_TYPE_NETLIST is a netlist with no drawing, such as an EDIF `.edn`.
+  ARTIFACT_TYPE_NETLIST = 1;
+  // ARTIFACT_TYPE_SCHEMATIC is a drawn schematic, such as a KiCad root sheet and its child sheets.
+  ARTIFACT_TYPE_SCHEMATIC = 2;
+  // ARTIFACT_TYPE_BOARD is a board layout, such as a `.kicad_pcb` or an ODB++ job.
+  ARTIFACT_TYPE_BOARD = 3;
+  // ARTIFACT_TYPE_OTHER is files no reader opens, such as a BOM or a PDF. They are kept with the
+  // design and never read.
+  ARTIFACT_TYPE_OTHER = 4;
+}
+
+message GetArtifactRequest {
+  string name = 1; // "designs/{design}/artifacts/{artifact}"
+}
+
+message ListArtifactsRequest {
+  string parent = 1; // "designs/{design}"
+  // page_size is the maximum number of artifacts to return. 0 uses the server default.
+  int32 page_size = 2;
+  // page_token continues a previous call. An empty token starts at the first artifact.
+  string page_token = 3;
+}
+
+message ListArtifactsResponse {
+  repeated Artifact artifacts = 1;
+  // next_page_token is empty when the last page has been reached.
+  string next_page_token = 2;
+}
+
+message UpdateArtifactRequest {
+  // artifact names the artifact and carries its new files. Its type, entry and update_time are
+  // ignored, since the server works them out.
+  Artifact artifact = 1;
+  // allow_missing creates the artifact when the design has none of that name (AIP-134). Without it,
+  // a missing artifact is NOT_FOUND.
+  bool allow_missing = 2;
+}
+
+message BatchUpdateArtifactsRequest {
+  string parent = 1; // "designs/{design}"
+  // requests each name an artifact of parent. Two naming one artifact is INVALID_ARGUMENT.
+  repeated UpdateArtifactRequest requests = 2;
+}
+
+message BatchUpdateArtifactsResponse {
+  // artifacts are the written artifacts, in the order of the requests.
+  repeated Artifact artifacts = 1;
+}
+
+message DeleteArtifactRequest {
+  string name = 1; // "designs/{design}/artifacts/{artifact}"
 }

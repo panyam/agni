@@ -25,9 +25,11 @@ _sym_db = _symbol_database.Default()
 from agni.v1.webapi import project_pb2 as agni_dot_v1_dot_webapi_dot_project__pb2
 from agni.v1.webapi import snapshot_pb2 as agni_dot_v1_dot_webapi_dot_snapshot__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
+from google.protobuf import field_mask_pb2 as google_dot_protobuf_dot_field__mask__pb2
+from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1c\x61gni/v1/webapi/designs.proto\x12\x0e\x61gni.v1.webapi\x1a\x1c\x61gni/v1/webapi/project.proto\x1a\x1d\x61gni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\"f\n\x13\x43reateDesignRequest\x12\x1b\n\tdesign_id\x18\x01 \x01(\tR\x08\x64\x65signId\x12\x32\n\x05\x66iles\x18\x02 \x03(\x0b\x32\x1c.agni.v1.webapi.SnapshotFileR\x05\x66iles\"&\n\x10GetDesignRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"h\n\x12ListDesignsRequest\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x03 \x01(\tR\x06\x66ilter\"\x91\x01\n\x13ListDesignsResponse\x12\x30\n\x07\x64\x65signs\x18\x01 \x03(\x0b\x32\x16.agni.v1.webapi.DesignR\x07\x64\x65signs\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12 \n\x0bunreachable\x18\x03 \x03(\tR\x0bunreachable\"]\n\x13UpdateDesignRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x32\n\x05\x66iles\x18\x02 \x03(\x0b\x32\x1c.agni.v1.webapi.SnapshotFileR\x05\x66iles\")\n\x13\x44\x65leteDesignRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name2\x95\x03\n\rDesignService\x12K\n\x0c\x43reateDesign\x12#.agni.v1.webapi.CreateDesignRequest\x1a\x16.agni.v1.webapi.Design\x12\x45\n\tGetDesign\x12 .agni.v1.webapi.GetDesignRequest\x1a\x16.agni.v1.webapi.Design\x12V\n\x0bListDesigns\x12\".agni.v1.webapi.ListDesignsRequest\x1a#.agni.v1.webapi.ListDesignsResponse\x12K\n\x0cUpdateDesign\x12#.agni.v1.webapi.UpdateDesignRequest\x1a\x16.agni.v1.webapi.Design\x12K\n\x0c\x44\x65leteDesign\x12#.agni.v1.webapi.DeleteDesignRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1c\x61gni/v1/webapi/designs.proto\x12\x0e\x61gni.v1.webapi\x1a\x1c\x61gni/v1/webapi/project.proto\x1a\x1d\x61gni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"o\n\x13\x43reateDesignRequest\x12\x1b\n\tdesign_id\x18\x01 \x01(\tR\x08\x64\x65signId\x12.\n\x06\x64\x65sign\x18\x03 \x01(\x0b\x32\x16.agni.v1.webapi.DesignR\x06\x64\x65signJ\x04\x08\x02\x10\x03R\x05\x66iles\"&\n\x10GetDesignRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"h\n\x12ListDesignsRequest\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x03 \x01(\tR\x06\x66ilter\"\x91\x01\n\x13ListDesignsResponse\x12\x30\n\x07\x64\x65signs\x18\x01 \x03(\x0b\x32\x16.agni.v1.webapi.DesignR\x07\x64\x65signs\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12 \n\x0bunreachable\x18\x03 \x03(\tR\x0bunreachable\"\x9b\x01\n\x13UpdateDesignRequest\x12.\n\x06\x64\x65sign\x18\x03 \x01(\x0b\x32\x16.agni.v1.webapi.DesignR\x06\x64\x65sign\x12;\n\x0bupdate_mask\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.FieldMaskR\nupdateMaskJ\x04\x08\x01\x10\x02J\x04\x08\x02\x10\x03R\x04nameR\x05\x66iles\")\n\x13\x44\x65leteDesignRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"\xd7\x01\n\x08\x41rtifact\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x32\n\x05\x66iles\x18\x02 \x03(\x0b\x32\x1c.agni.v1.webapi.SnapshotFileR\x05\x66iles\x12\x30\n\x04type\x18\x03 \x01(\x0e\x32\x1c.agni.v1.webapi.ArtifactTypeR\x04type\x12\x14\n\x05\x65ntry\x18\x04 \x01(\tR\x05\x65ntry\x12;\n\x0bupdate_time\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\nupdateTime\"(\n\x12GetArtifactRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"j\n\x14ListArtifactsRequest\x12\x16\n\x06parent\x18\x01 \x01(\tR\x06parent\x12\x1b\n\tpage_size\x18\x02 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x03 \x01(\tR\tpageToken\"w\n\x15ListArtifactsResponse\x12\x36\n\tartifacts\x18\x01 \x03(\x0b\x32\x18.agni.v1.webapi.ArtifactR\tartifacts\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"r\n\x15UpdateArtifactRequest\x12\x34\n\x08\x61rtifact\x18\x01 \x01(\x0b\x32\x18.agni.v1.webapi.ArtifactR\x08\x61rtifact\x12#\n\rallow_missing\x18\x02 \x01(\x08R\x0c\x61llowMissing\"x\n\x1b\x42\x61tchUpdateArtifactsRequest\x12\x16\n\x06parent\x18\x01 \x01(\tR\x06parent\x12\x41\n\x08requests\x18\x02 \x03(\x0b\x32%.agni.v1.webapi.UpdateArtifactRequestR\x08requests\"V\n\x1c\x42\x61tchUpdateArtifactsResponse\x12\x36\n\tartifacts\x18\x01 \x03(\x0b\x32\x18.agni.v1.webapi.ArtifactR\tartifacts\"+\n\x15\x44\x65leteArtifactRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name*\x97\x01\n\x0c\x41rtifactType\x12\x1d\n\x19\x41RTIFACT_TYPE_UNSPECIFIED\x10\x00\x12\x19\n\x15\x41RTIFACT_TYPE_NETLIST\x10\x01\x12\x1b\n\x17\x41RTIFACT_TYPE_SCHEMATIC\x10\x02\x12\x17\n\x13\x41RTIFACT_TYPE_BOARD\x10\x03\x12\x17\n\x13\x41RTIFACT_TYPE_OTHER\x10\x04\x32\xd7\x06\n\rDesignService\x12K\n\x0c\x43reateDesign\x12#.agni.v1.webapi.CreateDesignRequest\x1a\x16.agni.v1.webapi.Design\x12\x45\n\tGetDesign\x12 .agni.v1.webapi.GetDesignRequest\x1a\x16.agni.v1.webapi.Design\x12V\n\x0bListDesigns\x12\".agni.v1.webapi.ListDesignsRequest\x1a#.agni.v1.webapi.ListDesignsResponse\x12K\n\x0cUpdateDesign\x12#.agni.v1.webapi.UpdateDesignRequest\x1a\x16.agni.v1.webapi.Design\x12K\n\x0c\x44\x65leteDesign\x12#.agni.v1.webapi.DeleteDesignRequest\x1a\x16.google.protobuf.Empty\x12K\n\x0bGetArtifact\x12\".agni.v1.webapi.GetArtifactRequest\x1a\x18.agni.v1.webapi.Artifact\x12\\\n\rListArtifacts\x12$.agni.v1.webapi.ListArtifactsRequest\x1a%.agni.v1.webapi.ListArtifactsResponse\x12Q\n\x0eUpdateArtifact\x12%.agni.v1.webapi.UpdateArtifactRequest\x1a\x18.agni.v1.webapi.Artifact\x12q\n\x14\x42\x61tchUpdateArtifacts\x12+.agni.v1.webapi.BatchUpdateArtifactsRequest\x1a,.agni.v1.webapi.BatchUpdateArtifactsResponse\x12O\n\x0e\x44\x65leteArtifact\x12%.agni.v1.webapi.DeleteArtifactRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,18 +37,36 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agni.v1.webapi.designs_pb2'
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
-  _globals['_CREATEDESIGNREQUEST']._serialized_start=138
-  _globals['_CREATEDESIGNREQUEST']._serialized_end=240
-  _globals['_GETDESIGNREQUEST']._serialized_start=242
-  _globals['_GETDESIGNREQUEST']._serialized_end=280
-  _globals['_LISTDESIGNSREQUEST']._serialized_start=282
-  _globals['_LISTDESIGNSREQUEST']._serialized_end=386
-  _globals['_LISTDESIGNSRESPONSE']._serialized_start=389
-  _globals['_LISTDESIGNSRESPONSE']._serialized_end=534
-  _globals['_UPDATEDESIGNREQUEST']._serialized_start=536
-  _globals['_UPDATEDESIGNREQUEST']._serialized_end=629
-  _globals['_DELETEDESIGNREQUEST']._serialized_start=631
-  _globals['_DELETEDESIGNREQUEST']._serialized_end=672
-  _globals['_DESIGNSERVICE']._serialized_start=675
-  _globals['_DESIGNSERVICE']._serialized_end=1080
+  _globals['_ARTIFACTTYPE']._serialized_start=1674
+  _globals['_ARTIFACTTYPE']._serialized_end=1825
+  _globals['_CREATEDESIGNREQUEST']._serialized_start=205
+  _globals['_CREATEDESIGNREQUEST']._serialized_end=316
+  _globals['_GETDESIGNREQUEST']._serialized_start=318
+  _globals['_GETDESIGNREQUEST']._serialized_end=356
+  _globals['_LISTDESIGNSREQUEST']._serialized_start=358
+  _globals['_LISTDESIGNSREQUEST']._serialized_end=462
+  _globals['_LISTDESIGNSRESPONSE']._serialized_start=465
+  _globals['_LISTDESIGNSRESPONSE']._serialized_end=610
+  _globals['_UPDATEDESIGNREQUEST']._serialized_start=613
+  _globals['_UPDATEDESIGNREQUEST']._serialized_end=768
+  _globals['_DELETEDESIGNREQUEST']._serialized_start=770
+  _globals['_DELETEDESIGNREQUEST']._serialized_end=811
+  _globals['_ARTIFACT']._serialized_start=814
+  _globals['_ARTIFACT']._serialized_end=1029
+  _globals['_GETARTIFACTREQUEST']._serialized_start=1031
+  _globals['_GETARTIFACTREQUEST']._serialized_end=1071
+  _globals['_LISTARTIFACTSREQUEST']._serialized_start=1073
+  _globals['_LISTARTIFACTSREQUEST']._serialized_end=1179
+  _globals['_LISTARTIFACTSRESPONSE']._serialized_start=1181
+  _globals['_LISTARTIFACTSRESPONSE']._serialized_end=1300
+  _globals['_UPDATEARTIFACTREQUEST']._serialized_start=1302
+  _globals['_UPDATEARTIFACTREQUEST']._serialized_end=1416
+  _globals['_BATCHUPDATEARTIFACTSREQUEST']._serialized_start=1418
+  _globals['_BATCHUPDATEARTIFACTSREQUEST']._serialized_end=1538
+  _globals['_BATCHUPDATEARTIFACTSRESPONSE']._serialized_start=1540
+  _globals['_BATCHUPDATEARTIFACTSRESPONSE']._serialized_end=1626
+  _globals['_DELETEARTIFACTREQUEST']._serialized_start=1628
+  _globals['_DELETEARTIFACTREQUEST']._serialized_end=1671
+  _globals['_DESIGNSERVICE']._serialized_start=1828
+  _globals['_DESIGNSERVICE']._serialized_end=2683
 # @@protoc_insertion_point(module_scope)

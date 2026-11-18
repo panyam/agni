@@ -28,8 +28,6 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private UpdateDesignRequest() {
-    name_ = "";
-    files_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -50,112 +48,84 @@ private static final long serialVersionUID = 0L;
             io.github.panyam.agni.v1.webapi.UpdateDesignRequest.class, io.github.panyam.agni.v1.webapi.UpdateDesignRequest.Builder.class);
   }
 
-  public static final int NAME_FIELD_NUMBER = 1;
-  @SuppressWarnings("serial")
-  private volatile java.lang.Object name_ = "";
+  private int bitField0_;
+  public static final int DESIGN_FIELD_NUMBER = 3;
+  private io.github.panyam.agni.v1.webapi.Design design_;
   /**
    * <pre>
-   * "designs/{design}"
+   * design names the design to change, "designs/{design}", and carries the new values.
    * </pre>
    *
-   * <code>string name = 1 [json_name = "name"];</code>
-   * @return The name.
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   * @return Whether the design field is set.
    */
   @java.lang.Override
-  public java.lang.String getName() {
-    java.lang.Object ref = name_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      name_ = s;
-      return s;
-    }
+  public boolean hasDesign() {
+    return ((bitField0_ & 0x00000001) != 0);
   }
   /**
    * <pre>
-   * "designs/{design}"
+   * design names the design to change, "designs/{design}", and carries the new values.
    * </pre>
    *
-   * <code>string name = 1 [json_name = "name"];</code>
-   * @return The bytes for name.
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   * @return The design.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString
-      getNameBytes() {
-    java.lang.Object ref = name_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      name_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
+  public io.github.panyam.agni.v1.webapi.Design getDesign() {
+    return design_ == null ? io.github.panyam.agni.v1.webapi.Design.getDefaultInstance() : design_;
+  }
+  /**
+   * <pre>
+   * design names the design to change, "designs/{design}", and carries the new values.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.webapi.DesignOrBuilder getDesignOrBuilder() {
+    return design_ == null ? io.github.panyam.agni.v1.webapi.Design.getDefaultInstance() : design_;
   }
 
-  public static final int FILES_FIELD_NUMBER = 2;
-  @SuppressWarnings("serial")
-  private java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> files_;
+  public static final int UPDATE_MASK_FIELD_NUMBER = 4;
+  private com.google.protobuf.FieldMask updateMask_;
   /**
    * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+   * @return Whether the updateMask field is set.
    */
   @java.lang.Override
-  public java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> getFilesList() {
-    return files_;
+  public boolean hasUpdateMask() {
+    return ((bitField0_ & 0x00000002) != 0);
   }
   /**
    * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+   * @return The updateMask.
    */
   @java.lang.Override
-  public java.util.List<? extends io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> 
-      getFilesOrBuilderList() {
-    return files_;
+  public com.google.protobuf.FieldMask getUpdateMask() {
+    return updateMask_ == null ? com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
   }
   /**
    * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
    */
   @java.lang.Override
-  public int getFilesCount() {
-    return files_.size();
-  }
-  /**
-   * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-   */
-  @java.lang.Override
-  public io.github.panyam.agni.v1.webapi.SnapshotFile getFiles(int index) {
-    return files_.get(index);
-  }
-  /**
-   * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-   */
-  @java.lang.Override
-  public io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder getFilesOrBuilder(
-      int index) {
-    return files_.get(index);
+  public com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder() {
+    return updateMask_ == null ? com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -172,28 +142,24 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(name_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 1, name_);
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(3, getDesign());
     }
-    for (int i = 0; i < files_.size(); i++) {
-      output.writeMessage(2, files_.get(i));
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeMessage(4, getUpdateMask());
     }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
     int size = 0;
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(name_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(1, name_);
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(3, getDesign());
     }
-
-        {
-          final int count = files_.size();
-          for (int i = 0; i < count; i++) {
-            size += com.google.protobuf.CodedOutputStream
-              .computeMessageSizeNoTag(files_.get(i));
-          }
-          size += 1 * count;
-        }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(4, getUpdateMask());
+    }
     return size;
   }
   @java.lang.Override
@@ -218,10 +184,16 @@ private static final long serialVersionUID = 0L;
     }
     io.github.panyam.agni.v1.webapi.UpdateDesignRequest other = (io.github.panyam.agni.v1.webapi.UpdateDesignRequest) obj;
 
-    if (!getName()
-        .equals(other.getName())) return false;
-    if (!getFilesList()
-        .equals(other.getFilesList())) return false;
+    if (hasDesign() != other.hasDesign()) return false;
+    if (hasDesign()) {
+      if (!getDesign()
+          .equals(other.getDesign())) return false;
+    }
+    if (hasUpdateMask() != other.hasUpdateMask()) return false;
+    if (hasUpdateMask()) {
+      if (!getUpdateMask()
+          .equals(other.getUpdateMask())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -233,11 +205,13 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + NAME_FIELD_NUMBER;
-    hash = (53 * hash) + getName().hashCode();
-    if (getFilesCount() > 0) {
-      hash = (37 * hash) + FILES_FIELD_NUMBER;
-      hash = (53 * hash) + getFilesList().hashCode();
+    if (hasDesign()) {
+      hash = (37 * hash) + DESIGN_FIELD_NUMBER;
+      hash = (53 * hash) + getDesign().hashCode();
+    }
+    if (hasUpdateMask()) {
+      hash = (37 * hash) + UPDATE_MASK_FIELD_NUMBER;
+      hash = (53 * hash) + getUpdateMask().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -358,26 +332,35 @@ private static final long serialVersionUID = 0L;
 
     // Construct using io.github.panyam.agni.v1.webapi.UpdateDesignRequest.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetDesignFieldBuilder();
+        internalGetUpdateMaskFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
-      name_ = "";
-      if (filesBuilder_ == null) {
-        files_ = java.util.Collections.emptyList();
-      } else {
-        files_ = null;
-        filesBuilder_.clear();
+      design_ = null;
+      if (designBuilder_ != null) {
+        designBuilder_.dispose();
+        designBuilder_ = null;
       }
-      bitField0_ = (bitField0_ & ~0x00000002);
+      updateMask_ = null;
+      if (updateMaskBuilder_ != null) {
+        updateMaskBuilder_.dispose();
+        updateMaskBuilder_ = null;
+      }
       return this;
     }
 
@@ -404,29 +387,27 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public io.github.panyam.agni.v1.webapi.UpdateDesignRequest buildPartial() {
       io.github.panyam.agni.v1.webapi.UpdateDesignRequest result = new io.github.panyam.agni.v1.webapi.UpdateDesignRequest(this);
-      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartialRepeatedFields(io.github.panyam.agni.v1.webapi.UpdateDesignRequest result) {
-      if (filesBuilder_ == null) {
-        if (((bitField0_ & 0x00000002) != 0)) {
-          files_ = java.util.Collections.unmodifiableList(files_);
-          bitField0_ = (bitField0_ & ~0x00000002);
-        }
-        result.files_ = files_;
-      } else {
-        result.files_ = filesBuilder_.build();
-      }
-    }
-
     private void buildPartial0(io.github.panyam.agni.v1.webapi.UpdateDesignRequest result) {
       int from_bitField0_ = bitField0_;
+      int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000001) != 0)) {
-        result.name_ = name_;
+        result.design_ = designBuilder_ == null
+            ? design_
+            : designBuilder_.build();
+        to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.updateMask_ = updateMaskBuilder_ == null
+            ? updateMask_
+            : updateMaskBuilder_.build();
+        to_bitField0_ |= 0x00000002;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -441,36 +422,11 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(io.github.panyam.agni.v1.webapi.UpdateDesignRequest other) {
       if (other == io.github.panyam.agni.v1.webapi.UpdateDesignRequest.getDefaultInstance()) return this;
-      if (!other.getName().isEmpty()) {
-        name_ = other.name_;
-        bitField0_ |= 0x00000001;
-        onChanged();
+      if (other.hasDesign()) {
+        mergeDesign(other.getDesign());
       }
-      if (filesBuilder_ == null) {
-        if (!other.files_.isEmpty()) {
-          if (files_.isEmpty()) {
-            files_ = other.files_;
-            bitField0_ = (bitField0_ & ~0x00000002);
-          } else {
-            ensureFilesIsMutable();
-            files_.addAll(other.files_);
-          }
-          onChanged();
-        }
-      } else {
-        if (!other.files_.isEmpty()) {
-          if (filesBuilder_.isEmpty()) {
-            filesBuilder_.dispose();
-            filesBuilder_ = null;
-            files_ = other.files_;
-            bitField0_ = (bitField0_ & ~0x00000002);
-            filesBuilder_ = 
-              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                 internalGetFilesFieldBuilder() : null;
-          } else {
-            filesBuilder_.addAllMessages(other.files_);
-          }
-        }
+      if (other.hasUpdateMask()) {
+        mergeUpdateMask(other.getUpdateMask());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -496,24 +452,20 @@ private static final long serialVersionUID = 0L;
             case 0:
               done = true;
               break;
-            case 10: {
-              name_ = input.readStringRequireUtf8();
+            case 26: {
+              input.readMessage(
+                  internalGetDesignFieldBuilder().getBuilder(),
+                  extensionRegistry);
               bitField0_ |= 0x00000001;
               break;
-            } // case 10
-            case 18: {
-              io.github.panyam.agni.v1.webapi.SnapshotFile m =
-                  input.readMessage(
-                      io.github.panyam.agni.v1.webapi.SnapshotFile.parser(),
-                      extensionRegistry);
-              if (filesBuilder_ == null) {
-                ensureFilesIsMutable();
-                files_.add(m);
-              } else {
-                filesBuilder_.addMessage(m);
-              }
+            } // case 26
+            case 34: {
+              input.readMessage(
+                  internalGetUpdateMaskFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000002;
               break;
-            } // case 18
+            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -531,402 +483,323 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.lang.Object name_ = "";
+    private io.github.panyam.agni.v1.webapi.Design design_;
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.webapi.Design, io.github.panyam.agni.v1.webapi.Design.Builder, io.github.panyam.agni.v1.webapi.DesignOrBuilder> designBuilder_;
     /**
      * <pre>
-     * "designs/{design}"
+     * design names the design to change, "designs/{design}", and carries the new values.
      * </pre>
      *
-     * <code>string name = 1 [json_name = "name"];</code>
-     * @return The name.
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     * @return Whether the design field is set.
      */
-    public java.lang.String getName() {
-      java.lang.Object ref = name_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        name_ = s;
-        return s;
+    public boolean hasDesign() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <pre>
+     * design names the design to change, "designs/{design}", and carries the new values.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     * @return The design.
+     */
+    public io.github.panyam.agni.v1.webapi.Design getDesign() {
+      if (designBuilder_ == null) {
+        return design_ == null ? io.github.panyam.agni.v1.webapi.Design.getDefaultInstance() : design_;
       } else {
-        return (java.lang.String) ref;
+        return designBuilder_.getMessage();
       }
     }
     /**
      * <pre>
-     * "designs/{design}"
+     * design names the design to change, "designs/{design}", and carries the new values.
      * </pre>
      *
-     * <code>string name = 1 [json_name = "name"];</code>
-     * @return The bytes for name.
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
      */
-    public com.google.protobuf.ByteString
-        getNameBytes() {
-      java.lang.Object ref = name_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        name_ = b;
-        return b;
+    public Builder setDesign(io.github.panyam.agni.v1.webapi.Design value) {
+      if (designBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        design_ = value;
       } else {
-        return (com.google.protobuf.ByteString) ref;
+        designBuilder_.setMessage(value);
       }
-    }
-    /**
-     * <pre>
-     * "designs/{design}"
-     * </pre>
-     *
-     * <code>string name = 1 [json_name = "name"];</code>
-     * @param value The name to set.
-     * @return This builder for chaining.
-     */
-    public Builder setName(
-        java.lang.String value) {
-      java.util.Objects.requireNonNull(value);
-      name_ = value;
       bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
     /**
      * <pre>
-     * "designs/{design}"
+     * design names the design to change, "designs/{design}", and carries the new values.
      * </pre>
      *
-     * <code>string name = 1 [json_name = "name"];</code>
-     * @return This builder for chaining.
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
      */
-    public Builder clearName() {
-      name_ = getDefaultInstance().getName();
+    public Builder setDesign(
+        io.github.panyam.agni.v1.webapi.Design.Builder builderForValue) {
+      if (designBuilder_ == null) {
+        design_ = builderForValue.build();
+      } else {
+        designBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000001;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * design names the design to change, "designs/{design}", and carries the new values.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     */
+    public Builder mergeDesign(io.github.panyam.agni.v1.webapi.Design value) {
+      if (designBuilder_ == null) {
+        if (((bitField0_ & 0x00000001) != 0) &&
+          design_ != null &&
+          design_ != io.github.panyam.agni.v1.webapi.Design.getDefaultInstance()) {
+          getDesignBuilder().mergeFrom(value);
+        } else {
+          design_ = value;
+        }
+      } else {
+        designBuilder_.mergeFrom(value);
+      }
+      if (design_ != null) {
+        bitField0_ |= 0x00000001;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * design names the design to change, "designs/{design}", and carries the new values.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     */
+    public Builder clearDesign() {
       bitField0_ = (bitField0_ & ~0x00000001);
+      design_ = null;
+      if (designBuilder_ != null) {
+        designBuilder_.dispose();
+        designBuilder_ = null;
+      }
       onChanged();
       return this;
     }
     /**
      * <pre>
-     * "designs/{design}"
+     * design names the design to change, "designs/{design}", and carries the new values.
      * </pre>
      *
-     * <code>string name = 1 [json_name = "name"];</code>
-     * @param value The bytes for name to set.
-     * @return This builder for chaining.
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
      */
-    public Builder setNameBytes(
-        com.google.protobuf.ByteString value) {
-      java.util.Objects.requireNonNull(value);
-      checkByteStringIsUtf8(value);
-      name_ = value;
+    public io.github.panyam.agni.v1.webapi.Design.Builder getDesignBuilder() {
       bitField0_ |= 0x00000001;
       onChanged();
-      return this;
+      return internalGetDesignFieldBuilder().getBuilder();
     }
-
-    private java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> files_ =
-      java.util.Collections.emptyList();
-    private void ensureFilesIsMutable() {
-      if (!((bitField0_ & 0x00000002) != 0)) {
-        files_ = new java.util.ArrayList<io.github.panyam.agni.v1.webapi.SnapshotFile>(files_);
-        bitField0_ |= 0x00000002;
-       }
-    }
-
-    private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.panyam.agni.v1.webapi.SnapshotFile, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder, io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> filesBuilder_;
-
     /**
      * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+     * design names the design to change, "designs/{design}", and carries the new values.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
      */
-    public java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> getFilesList() {
-      if (filesBuilder_ == null) {
-        return java.util.Collections.unmodifiableList(files_);
+    public io.github.panyam.agni.v1.webapi.DesignOrBuilder getDesignOrBuilder() {
+      if (designBuilder_ != null) {
+        return designBuilder_.getMessageOrBuilder();
       } else {
-        return filesBuilder_.getMessageList();
+        return design_ == null ?
+            io.github.panyam.agni.v1.webapi.Design.getDefaultInstance() : design_;
       }
     }
     /**
      * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+     * design names the design to change, "designs/{design}", and carries the new values.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
      */
-    public int getFilesCount() {
-      if (filesBuilder_ == null) {
-        return files_.size();
-      } else {
-        return filesBuilder_.getCount();
-      }
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFile getFiles(int index) {
-      if (filesBuilder_ == null) {
-        return files_.get(index);
-      } else {
-        return filesBuilder_.getMessage(index);
-      }
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder setFiles(
-        int index, io.github.panyam.agni.v1.webapi.SnapshotFile value) {
-      if (filesBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        ensureFilesIsMutable();
-        files_.set(index, value);
-        onChanged();
-      } else {
-        filesBuilder_.setMessage(index, value);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder setFiles(
-        int index, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder builderForValue) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        files_.set(index, builderForValue.build());
-        onChanged();
-      } else {
-        filesBuilder_.setMessage(index, builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder addFiles(io.github.panyam.agni.v1.webapi.SnapshotFile value) {
-      if (filesBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        ensureFilesIsMutable();
-        files_.add(value);
-        onChanged();
-      } else {
-        filesBuilder_.addMessage(value);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder addFiles(
-        int index, io.github.panyam.agni.v1.webapi.SnapshotFile value) {
-      if (filesBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        ensureFilesIsMutable();
-        files_.add(index, value);
-        onChanged();
-      } else {
-        filesBuilder_.addMessage(index, value);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder addFiles(
-        io.github.panyam.agni.v1.webapi.SnapshotFile.Builder builderForValue) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        files_.add(builderForValue.build());
-        onChanged();
-      } else {
-        filesBuilder_.addMessage(builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder addFiles(
-        int index, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder builderForValue) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        files_.add(index, builderForValue.build());
-        onChanged();
-      } else {
-        filesBuilder_.addMessage(index, builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder addAllFiles(
-        java.lang.Iterable<? extends io.github.panyam.agni.v1.webapi.SnapshotFile> values) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, files_);
-        onChanged();
-      } else {
-        filesBuilder_.addAllMessages(values);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder clearFiles() {
-      if (filesBuilder_ == null) {
-        files_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-      } else {
-        filesBuilder_.clear();
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder removeFiles(int index) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        files_.remove(index);
-        onChanged();
-      } else {
-        filesBuilder_.remove(index);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFile.Builder getFilesBuilder(
-        int index) {
-      return internalGetFilesFieldBuilder().getBuilder(index);
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder getFilesOrBuilder(
-        int index) {
-      if (filesBuilder_ == null) {
-        return files_.get(index);  } else {
-        return filesBuilder_.getMessageOrBuilder(index);
-      }
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public java.util.List<? extends io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> 
-         getFilesOrBuilderList() {
-      if (filesBuilder_ != null) {
-        return filesBuilder_.getMessageOrBuilderList();
-      } else {
-        return java.util.Collections.unmodifiableList(files_);
-      }
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFile.Builder addFilesBuilder() {
-      return internalGetFilesFieldBuilder().addBuilder(
-          io.github.panyam.agni.v1.webapi.SnapshotFile.getDefaultInstance());
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFile.Builder addFilesBuilder(
-        int index) {
-      return internalGetFilesFieldBuilder().addBuilder(
-          index, io.github.panyam.agni.v1.webapi.SnapshotFile.getDefaultInstance());
-    }
-    /**
-     * <pre>
-     * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile.Builder> 
-         getFilesBuilderList() {
-      return internalGetFilesFieldBuilder().getBuilderList();
-    }
-    private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.panyam.agni.v1.webapi.SnapshotFile, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder, io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> 
-        internalGetFilesFieldBuilder() {
-      if (filesBuilder_ == null) {
-        filesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            io.github.panyam.agni.v1.webapi.SnapshotFile, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder, io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder>(
-                files_,
-                ((bitField0_ & 0x00000002) != 0),
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.webapi.Design, io.github.panyam.agni.v1.webapi.Design.Builder, io.github.panyam.agni.v1.webapi.DesignOrBuilder> 
+        internalGetDesignFieldBuilder() {
+      if (designBuilder_ == null) {
+        designBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            io.github.panyam.agni.v1.webapi.Design, io.github.panyam.agni.v1.webapi.Design.Builder, io.github.panyam.agni.v1.webapi.DesignOrBuilder>(
+                getDesign(),
                 getParentForChildren(),
                 isClean());
-        files_ = null;
+        design_ = null;
       }
-      return filesBuilder_;
+      return designBuilder_;
+    }
+
+    private com.google.protobuf.FieldMask updateMask_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder> updateMaskBuilder_;
+    /**
+     * <pre>
+     * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+     * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+     * @return Whether the updateMask field is set.
+     */
+    public boolean hasUpdateMask() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+     * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+     * @return The updateMask.
+     */
+    public com.google.protobuf.FieldMask getUpdateMask() {
+      if (updateMaskBuilder_ == null) {
+        return updateMask_ == null ? com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
+      } else {
+        return updateMaskBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+     * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+     */
+    public Builder setUpdateMask(com.google.protobuf.FieldMask value) {
+      if (updateMaskBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        updateMask_ = value;
+      } else {
+        updateMaskBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+     * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+     */
+    public Builder setUpdateMask(
+        com.google.protobuf.FieldMask.Builder builderForValue) {
+      if (updateMaskBuilder_ == null) {
+        updateMask_ = builderForValue.build();
+      } else {
+        updateMaskBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+     * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+     */
+    public Builder mergeUpdateMask(com.google.protobuf.FieldMask value) {
+      if (updateMaskBuilder_ == null) {
+        if (((bitField0_ & 0x00000002) != 0) &&
+          updateMask_ != null &&
+          updateMask_ != com.google.protobuf.FieldMask.getDefaultInstance()) {
+          getUpdateMaskBuilder().mergeFrom(value);
+        } else {
+          updateMask_ = value;
+        }
+      } else {
+        updateMaskBuilder_.mergeFrom(value);
+      }
+      if (updateMask_ != null) {
+        bitField0_ |= 0x00000002;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+     * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+     */
+    public Builder clearUpdateMask() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      updateMask_ = null;
+      if (updateMaskBuilder_ != null) {
+        updateMaskBuilder_.dispose();
+        updateMaskBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+     * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+     */
+    public com.google.protobuf.FieldMask.Builder getUpdateMaskBuilder() {
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return internalGetUpdateMaskFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+     * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+     */
+    public com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder() {
+      if (updateMaskBuilder_ != null) {
+        return updateMaskBuilder_.getMessageOrBuilder();
+      } else {
+        return updateMask_ == null ?
+            com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
+      }
+    }
+    /**
+     * <pre>
+     * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+     * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder> 
+        internalGetUpdateMaskFieldBuilder() {
+      if (updateMaskBuilder_ == null) {
+        updateMaskBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder>(
+                getUpdateMask(),
+                getParentForChildren(),
+                isClean());
+        updateMask_ = null;
+      }
+      return updateMaskBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.UpdateDesignRequest)

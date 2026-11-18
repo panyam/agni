@@ -1,7 +1,12 @@
+import datetime
+
 from agni.v1.webapi import project_pb2 as _project_pb2
 from agni.v1.webapi import snapshot_pb2 as _snapshot_pb2
 from google.protobuf import empty_pb2 as _empty_pb2
+from google.protobuf import field_mask_pb2 as _field_mask_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
@@ -9,13 +14,26 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class ArtifactType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ARTIFACT_TYPE_UNSPECIFIED: _ClassVar[ArtifactType]
+    ARTIFACT_TYPE_NETLIST: _ClassVar[ArtifactType]
+    ARTIFACT_TYPE_SCHEMATIC: _ClassVar[ArtifactType]
+    ARTIFACT_TYPE_BOARD: _ClassVar[ArtifactType]
+    ARTIFACT_TYPE_OTHER: _ClassVar[ArtifactType]
+ARTIFACT_TYPE_UNSPECIFIED: ArtifactType
+ARTIFACT_TYPE_NETLIST: ArtifactType
+ARTIFACT_TYPE_SCHEMATIC: ArtifactType
+ARTIFACT_TYPE_BOARD: ArtifactType
+ARTIFACT_TYPE_OTHER: ArtifactType
+
 class CreateDesignRequest(_message.Message):
-    __slots__ = ("design_id", "files")
+    __slots__ = ("design_id", "design")
     DESIGN_ID_FIELD_NUMBER: _ClassVar[int]
-    FILES_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_FIELD_NUMBER: _ClassVar[int]
     design_id: str
-    files: _containers.RepeatedCompositeFieldContainer[_snapshot_pb2.SnapshotFile]
-    def __init__(self, design_id: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ...) -> None: ...
+    design: _project_pb2.Design
+    def __init__(self, design_id: _Optional[str] = ..., design: _Optional[_Union[_project_pb2.Design, _Mapping]] = ...) -> None: ...
 
 class GetDesignRequest(_message.Message):
     __slots__ = ("name",)
@@ -44,14 +62,80 @@ class ListDesignsResponse(_message.Message):
     def __init__(self, designs: _Optional[_Iterable[_Union[_project_pb2.Design, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., unreachable: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class UpdateDesignRequest(_message.Message):
-    __slots__ = ("name", "files")
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    FILES_FIELD_NUMBER: _ClassVar[int]
-    name: str
-    files: _containers.RepeatedCompositeFieldContainer[_snapshot_pb2.SnapshotFile]
-    def __init__(self, name: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ...) -> None: ...
+    __slots__ = ("design", "update_mask")
+    DESIGN_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
+    design: _project_pb2.Design
+    update_mask: _field_mask_pb2.FieldMask
+    def __init__(self, design: _Optional[_Union[_project_pb2.Design, _Mapping]] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
 
 class DeleteDesignRequest(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class Artifact(_message.Message):
+    __slots__ = ("name", "files", "type", "entry", "update_time")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    FILES_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    ENTRY_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_TIME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    files: _containers.RepeatedCompositeFieldContainer[_snapshot_pb2.SnapshotFile]
+    type: ArtifactType
+    entry: str
+    update_time: _timestamp_pb2.Timestamp
+    def __init__(self, name: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ..., type: _Optional[_Union[ArtifactType, str]] = ..., entry: _Optional[str] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetArtifactRequest(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class ListArtifactsRequest(_message.Message):
+    __slots__ = ("parent", "page_size", "page_token")
+    PARENT_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    parent: str
+    page_size: int
+    page_token: str
+    def __init__(self, parent: _Optional[str] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+
+class ListArtifactsResponse(_message.Message):
+    __slots__ = ("artifacts", "next_page_token")
+    ARTIFACTS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    artifacts: _containers.RepeatedCompositeFieldContainer[Artifact]
+    next_page_token: str
+    def __init__(self, artifacts: _Optional[_Iterable[_Union[Artifact, _Mapping]]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
+
+class UpdateArtifactRequest(_message.Message):
+    __slots__ = ("artifact", "allow_missing")
+    ARTIFACT_FIELD_NUMBER: _ClassVar[int]
+    ALLOW_MISSING_FIELD_NUMBER: _ClassVar[int]
+    artifact: Artifact
+    allow_missing: bool
+    def __init__(self, artifact: _Optional[_Union[Artifact, _Mapping]] = ..., allow_missing: _Optional[bool] = ...) -> None: ...
+
+class BatchUpdateArtifactsRequest(_message.Message):
+    __slots__ = ("parent", "requests")
+    PARENT_FIELD_NUMBER: _ClassVar[int]
+    REQUESTS_FIELD_NUMBER: _ClassVar[int]
+    parent: str
+    requests: _containers.RepeatedCompositeFieldContainer[UpdateArtifactRequest]
+    def __init__(self, parent: _Optional[str] = ..., requests: _Optional[_Iterable[_Union[UpdateArtifactRequest, _Mapping]]] = ...) -> None: ...
+
+class BatchUpdateArtifactsResponse(_message.Message):
+    __slots__ = ("artifacts",)
+    ARTIFACTS_FIELD_NUMBER: _ClassVar[int]
+    artifacts: _containers.RepeatedCompositeFieldContainer[Artifact]
+    def __init__(self, artifacts: _Optional[_Iterable[_Union[Artifact, _Mapping]]] = ...) -> None: ...
+
+class DeleteArtifactRequest(_message.Message):
     __slots__ = ("name",)
     NAME_FIELD_NUMBER: _ClassVar[int]
     name: str

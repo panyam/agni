@@ -8,32 +8,34 @@ actors:
     label: agni server
 ---
 
-## A design is its files
+## A design is its artifacts
 
 Picture an engineer with a board and no folder on the server. They want the server to keep the board under a name, across a restart, and to keep the next revision beside it. A server started with `--store-dir` does that (agni issue 1694).
 
-A design is a set of files with a `design.yaml` among them, named `designs/{design}`. It ties to no project. A project is a title and a list of design names, so one design can sit in several projects. This walkthrough builds the same two services `agni serve --store-dir` builds, over a temporary folder, with the bundled demo project mounted read-only beside it.
+A design is named `designs/{design}` and holds artifacts (agni issue 1696). An artifact is one source of the design, such as a netlist, a schematic with its sheets, or a board, and replacing it replaces all its files. The server reads each artifact to find its type, and writes the design's `design.yaml` itself. A design ties to no project. A project is a title and a list of design names, so one design can sit in several projects. This walkthrough builds the same two services `agni serve --store-dir` builds, over a temporary folder, with the bundled demo project mounted read-only beside it.
 
 ## Keep the first revision {#keep}
 
-> A client sends a manifest first: each file's path, SHA-256 and size. The server answers with the contents it lacks, the client sends those with `UploadBlobs`, and asks again. A file the server already holds is never sent twice.
+> The client makes the design with its title and series, then puts its netlist as an artifact. It sends the artifact's manifest first: each file's path, SHA-256 and size. The server answers with the contents it lacks, the client sends those with `UploadBlobs`, and asks again. A file the server already holds is never sent twice.
 
 ```mermaid
 sequenceDiagram
-You ->> Agni: CreateDesign(mixer-rev-a, manifest)
-Agni -->> You: FAILED_PRECONDITION, BlobsMissing [2 hashes]
+You ->> Agni: CreateDesign(mixer-rev-a, series mixer)
+You ->> Agni: UpdateArtifact(netlist, manifest, allow_missing)
+Agni -->> You: FAILED_PRECONDITION, BlobsMissing [1 hash]
 You ->> Agni: UploadBlobs(contents)
-You ->> Agni: CreateDesign(mixer-rev-a, manifest)
-Agni -->> You: designs/mixer-rev-a
+You ->> Agni: UpdateArtifact(netlist, manifest, allow_missing)
+Agni -->> You: designs/mixer-rev-a/artifacts/netlist
 ```
 
 ## Keep the next revision in the same series {#again}
 
-> Each revision is a design of its own, in its own folder. `series: mixer` in each `design.yaml` groups them, and the server marks the one it updated last.
+> Each revision is a design of its own. The series `mixer` groups them, and the server marks the one it updated last.
 
 ```mermaid
 sequenceDiagram
-You ->> Agni: CreateDesign(mixer-rev-b, manifest)
+You ->> Agni: CreateDesign(mixer-rev-b, series mixer)
+You ->> Agni: UpdateArtifact(netlist, manifest, allow_missing)
 You ->> Agni: ListDesigns(series = "mixer")
 Agni -->> You: mixer-rev-a, mixer-rev-b (latest)
 ```

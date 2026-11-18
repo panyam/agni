@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -61,26 +60,32 @@ func manifest(files map[string][]byte) ([]*webapi.SnapshotFile, map[string][]byt
 	return out, contents
 }
 
-// keep creates a design from a netlist the way a client does: it sends the manifest, sends the
-// contents the server says it lacks, and asks again. It returns how many contents were asked for.
+// keep creates a design and puts its netlist artifact the way a client does: it sends the artifact's
+// manifest, sends the contents the server says it lacks, and asks again. It returns how many contents
+// were asked for.
 func (t *tour) keep(ctx context.Context, id, title, netlist string) (*webapi.Design, int, error) {
 	b, err := os.ReadFile(netlist) // #nosec G304 -- a bundled fixture the example names
 	if err != nil {
 		return nil, 0, err
 	}
-	entry := filepath.Base(netlist)
-	desc := fmt.Sprintf("title: %s\nentry: %s\nseries: mixer\n", title, entry)
-	files, contents := manifest(map[string][]byte{"design.yaml": []byte(desc), entry: b})
-	req := &webapi.CreateDesignRequest{DesignId: id, Files: files}
+	if _, err := t.designs.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: id, Design: &webapi.Design{Title: title, Series: "mixer"}}); err != nil {
+		return nil, 0, err
+	}
+	files, contents := manifest(map[string][]byte{filepath.Base(netlist): b})
+	req := &webapi.UpdateArtifactRequest{Artifact: &webapi.Artifact{Name: service.ArtifactName(id, "netlist"), Files: files}, AllowMissing: true}
 	asked := 0
-	d, err := t.designs.CreateDesign(ctx, req)
+	_, err = t.designs.UpdateArtifact(ctx, req)
 	var bm *service.BlobsMissingError
 	if errors.As(err, &bm) {
 		for _, h := range bm.Hashes {
 			t.uploaded[h] = contents[h]
 		}
 		asked = len(bm.Hashes)
-		d, err = t.designs.CreateDesign(ctx, req)
+		_, err = t.designs.UpdateArtifact(ctx, req)
 	}
+	if err != nil {
+		return nil, asked, err
+	}
+	d, err := t.designs.GetDesign(ctx, &webapi.GetDesignRequest{Name: service.StandaloneDesignName(id)})
 	return d, asked, err
 }

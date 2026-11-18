@@ -93,7 +93,7 @@ public final class ProjectProto extends com.google.protobuf.GeneratedFile {
       "ame\022\024\n\005title\030\002 \001(\tR\005title\022\020\n\003uri\030\003 \001(\tR\003" +
       "uri\0226\n\006config\030\t \001(\0132\036.agni.v1.webapi.Ana" +
       "lysisConfigR\006config\022\030\n\007designs\030\n \003(\tR\007de" +
-      "signsJ\004\010\004\020\005J\004\010\005\020\006J\004\010\006\020\007J\004\010\007\020\010J\004\010\010\020\t\"\376\002\n\006" +
+      "signsJ\004\010\004\020\005J\004\010\005\020\006J\004\010\006\020\007J\004\010\007\020\010J\004\010\010\020\t\"\234\003\n\006" +
       "Design\022\022\n\004name\030\001 \001(\tR\004name\022\024\n\005title\030\002 \001(" +
       "\tR\005title\022\020\n\003uri\030\003 \001(\tR\003uri\022\033\n\tentry_uri\030" +
       "\004 \001(\tR\010entryUri\022%\n\016companion_uris\030\005 \003(\tR" +
@@ -102,44 +102,44 @@ public final class ProjectProto extends com.google.protobuf.GeneratedFile {
       "\030\n \001(\tR\006series\022+\n\021flatten_hierarchy\030\t \001(" +
       "\010R\020flattenHierarchy\022;\n\013update_time\030\013 \001(\013" +
       "2\032.google.protobuf.TimestampR\nupdateTime" +
-      "\022#\n\rseries_latest\030\014 \001(\010R\014seriesLatestJ\004\010" +
-      "\006\020\007J\004\010\010\020\tR\trevisions\"\'\n\021GetProjectReques" +
-      "t\022\022\n\004name\030\001 \001(\tR\004name\"i\n\023ListProjectsReq" +
-      "uest\022\033\n\tpage_size\030\001 \001(\005R\010pageSize\022\035\n\npag" +
-      "e_token\030\002 \001(\tR\tpageToken\022\026\n\006filter\030\003 \001(\t" +
-      "R\006filter\"s\n\024ListProjectsResponse\0223\n\010proj" +
-      "ects\030\001 \003(\0132\027.agni.v1.webapi.ProjectR\010pro" +
-      "jects\022&\n\017next_page_token\030\002 \001(\tR\rnextPage" +
-      "Token\"h\n\024CreateProjectRequest\022\035\n\nproject" +
-      "_id\030\001 \001(\tR\tprojectId\0221\n\007project\030\002 \001(\0132\027." +
-      "agni.v1.webapi.ProjectR\007project\"\206\001\n\024Upda" +
-      "teProjectRequest\0221\n\007project\030\001 \001(\0132\027.agni" +
-      ".v1.webapi.ProjectR\007project\022;\n\013update_ma" +
-      "sk\030\002 \001(\0132\032.google.protobuf.FieldMaskR\nup" +
-      "dateMask\"*\n\024DeleteProjectRequest\022\022\n\004name" +
-      "\030\001 \001(\tR\004name\"(\n\024ResolveDesignRequest\022\020\n\003" +
-      "uri\030\001 \001(\tR\003uri\"z\n\025ResolveDesignResponse\022" +
-      ".\n\006design\030\001 \001(\0132\026.agni.v1.webapi.DesignR" +
-      "\006design\0221\n\007project\030\002 \001(\0132\027.agni.v1.webap" +
-      "i.ProjectR\007project2\202\004\n\016ProjectService\022H\n" +
-      "\nGetProject\022!.agni.v1.webapi.GetProjectR" +
-      "equest\032\027.agni.v1.webapi.Project\022Y\n\014ListP" +
-      "rojects\022#.agni.v1.webapi.ListProjectsReq" +
-      "uest\032$.agni.v1.webapi.ListProjectsRespon" +
-      "se\022N\n\rCreateProject\022$.agni.v1.webapi.Cre" +
-      "ateProjectRequest\032\027.agni.v1.webapi.Proje" +
-      "ct\022N\n\rUpdateProject\022$.agni.v1.webapi.Upd" +
-      "ateProjectRequest\032\027.agni.v1.webapi.Proje" +
-      "ct\022M\n\rDeleteProject\022$.agni.v1.webapi.Del" +
-      "eteProjectRequest\032\026.google.protobuf.Empt" +
-      "y\022\\\n\rResolveDesign\022$.agni.v1.webapi.Reso" +
-      "lveDesignRequest\032%.agni.v1.webapi.Resolv" +
-      "eDesignResponseB\267\001\n\037io.github.panyam.agn" +
-      "i.v1.webapiB\014ProjectProtoP\001Z,github.com/" +
-      "panyam/agni/gen/go/agni/v1/webapi\242\002\003AVW\252" +
-      "\002\016Agni.V1.Webapi\312\002\016Agni\\V1\\Webapi\342\002\032Agni" +
-      "\\V1\\Webapi\\GPBMetadata\352\002\020Agni::V1::Webap" +
-      "ib\006proto3"
+      "\022#\n\rseries_latest\030\014 \001(\010R\014seriesLatest\022\034\n" +
+      "\tartifacts\030\r \003(\tR\tartifactsJ\004\010\006\020\007J\004\010\010\020\tR" +
+      "\trevisions\"\'\n\021GetProjectRequest\022\022\n\004name\030" +
+      "\001 \001(\tR\004name\"i\n\023ListProjectsRequest\022\033\n\tpa" +
+      "ge_size\030\001 \001(\005R\010pageSize\022\035\n\npage_token\030\002 " +
+      "\001(\tR\tpageToken\022\026\n\006filter\030\003 \001(\tR\006filter\"s" +
+      "\n\024ListProjectsResponse\0223\n\010projects\030\001 \003(\013" +
+      "2\027.agni.v1.webapi.ProjectR\010projects\022&\n\017n" +
+      "ext_page_token\030\002 \001(\tR\rnextPageToken\"h\n\024C" +
+      "reateProjectRequest\022\035\n\nproject_id\030\001 \001(\tR" +
+      "\tprojectId\0221\n\007project\030\002 \001(\0132\027.agni.v1.we" +
+      "bapi.ProjectR\007project\"\206\001\n\024UpdateProjectR" +
+      "equest\0221\n\007project\030\001 \001(\0132\027.agni.v1.webapi" +
+      ".ProjectR\007project\022;\n\013update_mask\030\002 \001(\0132\032" +
+      ".google.protobuf.FieldMaskR\nupdateMask\"*" +
+      "\n\024DeleteProjectRequest\022\022\n\004name\030\001 \001(\tR\004na" +
+      "me\"(\n\024ResolveDesignRequest\022\020\n\003uri\030\001 \001(\tR" +
+      "\003uri\"z\n\025ResolveDesignResponse\022.\n\006design\030" +
+      "\001 \001(\0132\026.agni.v1.webapi.DesignR\006design\0221\n" +
+      "\007project\030\002 \001(\0132\027.agni.v1.webapi.ProjectR" +
+      "\007project2\202\004\n\016ProjectService\022H\n\nGetProjec" +
+      "t\022!.agni.v1.webapi.GetProjectRequest\032\027.a" +
+      "gni.v1.webapi.Project\022Y\n\014ListProjects\022#." +
+      "agni.v1.webapi.ListProjectsRequest\032$.agn" +
+      "i.v1.webapi.ListProjectsResponse\022N\n\rCrea" +
+      "teProject\022$.agni.v1.webapi.CreateProject" +
+      "Request\032\027.agni.v1.webapi.Project\022N\n\rUpda" +
+      "teProject\022$.agni.v1.webapi.UpdateProject" +
+      "Request\032\027.agni.v1.webapi.Project\022M\n\rDele" +
+      "teProject\022$.agni.v1.webapi.DeleteProject" +
+      "Request\032\026.google.protobuf.Empty\022\\\n\rResol" +
+      "veDesign\022$.agni.v1.webapi.ResolveDesignR" +
+      "equest\032%.agni.v1.webapi.ResolveDesignRes" +
+      "ponseB\267\001\n\037io.github.panyam.agni.v1.webap" +
+      "iB\014ProjectProtoP\001Z,github.com/panyam/agn" +
+      "i/gen/go/agni/v1/webapi\242\002\003AVW\252\002\016Agni.V1." +
+      "Webapi\312\002\016Agni\\V1\\Webapi\342\002\032Agni\\V1\\Webapi" +
+      "\\GPBMetadata\352\002\020Agni::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -160,7 +160,7 @@ public final class ProjectProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_webapi_Design_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_Design_descriptor,
-        new java.lang.String[] { "Name", "Title", "Uri", "EntryUri", "CompanionUris", "Config", "Series", "FlattenHierarchy", "UpdateTime", "SeriesLatest", });
+        new java.lang.String[] { "Name", "Title", "Uri", "EntryUri", "CompanionUris", "Config", "Series", "FlattenHierarchy", "UpdateTime", "SeriesLatest", "Artifacts", });
     internal_static_agni_v1_webapi_GetProjectRequest_descriptor =
       getDescriptor().getMessageType(2);
     internal_static_agni_v1_webapi_GetProjectRequest_fieldAccessorTable = new

@@ -161,6 +161,10 @@ message Design {
   // series_latest is true on the design a series updated last, and false on the others and on a
   // design with no series. Output only.
   bool series_latest = 12;
+  // artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+  // by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+  // only.
+  repeated string artifacts = 13;
 
   // intent_uri, which moved into config and is now config.intent. revisions, whose versions became
   // designs of their own named by series (agni issue 1692).

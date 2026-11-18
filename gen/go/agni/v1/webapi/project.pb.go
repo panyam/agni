@@ -186,7 +186,11 @@ type Design struct {
 	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	// series_latest is true on the design a series updated last, and false on the others and on a
 	// design with no series. Output only.
-	SeriesLatest  bool `protobuf:"varint,12,opt,name=series_latest,json=seriesLatest,proto3" json:"series_latest,omitempty"`
+	SeriesLatest bool `protobuf:"varint,12,opt,name=series_latest,json=seriesLatest,proto3" json:"series_latest,omitempty"`
+	// artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+	// by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+	// only.
+	Artifacts     []string `protobuf:"bytes,13,rep,name=artifacts,proto3" json:"artifacts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -289,6 +293,13 @@ func (x *Design) GetSeriesLatest() bool {
 		return x.SeriesLatest
 	}
 	return false
+}
+
+func (x *Design) GetArtifacts() []string {
+	if x != nil {
+		return x.Artifacts
+	}
+	return nil
 }
 
 type GetProjectRequest struct {
@@ -733,7 +744,7 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x126\n" +
 	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12\x18\n" +
 	"\adesigns\x18\n" +
-	" \x03(\tR\adesignsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xfe\x02\n" +
+	" \x03(\tR\adesignsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\x9c\x03\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
@@ -746,7 +757,8 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x11flatten_hierarchy\x18\t \x01(\bR\x10flattenHierarchy\x12;\n" +
 	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"updateTime\x12#\n" +
-	"\rseries_latest\x18\f \x01(\bR\fseriesLatestJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
+	"\rseries_latest\x18\f \x01(\bR\fseriesLatest\x12\x1c\n" +
+	"\tartifacts\x18\r \x03(\tR\tartifactsJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
 	"\x11GetProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"i\n" +
 	"\x13ListProjectsRequest\x12\x1b\n" +

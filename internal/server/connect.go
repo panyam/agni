@@ -581,6 +581,45 @@ func (a *Design) DeleteDesign(ctx context.Context, req *connect.Request[webapi.D
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
+func (a *Design) GetArtifact(ctx context.Context, req *connect.Request[webapi.GetArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	resp, err := a.svc.GetArtifact(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) ListArtifacts(ctx context.Context, req *connect.Request[webapi.ListArtifactsRequest]) (*connect.Response[webapi.ListArtifactsResponse], error) {
+	resp, err := a.svc.ListArtifacts(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) UpdateArtifact(ctx context.Context, req *connect.Request[webapi.UpdateArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	resp, err := a.svc.UpdateArtifact(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) BatchUpdateArtifacts(ctx context.Context, req *connect.Request[webapi.BatchUpdateArtifactsRequest]) (*connect.Response[webapi.BatchUpdateArtifactsResponse], error) {
+	resp, err := a.svc.BatchUpdateArtifacts(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) DeleteArtifact(ctx context.Context, req *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {
+	if err := a.svc.DeleteArtifact(ctx, req.Msg); err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
 // Snapshot adapts service.SnapshotService to the generated Connect handler interface.
 type Snapshot struct {
 	webapiconnect.UnimplementedSnapshotServiceHandler

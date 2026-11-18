@@ -43,6 +43,8 @@ private static final long serialVersionUID = 0L;
     companionUris_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
     series_ = "";
+    artifacts_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -523,6 +525,67 @@ private static final long serialVersionUID = 0L;
     return seriesLatest_;
   }
 
+  public static final int ARTIFACTS_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList artifacts_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+   * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+   * only.
+   * </pre>
+   *
+   * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+   * @return A list containing the artifacts.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getArtifactsList() {
+    return artifacts_;
+  }
+  /**
+   * <pre>
+   * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+   * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+   * only.
+   * </pre>
+   *
+   * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+   * @return The count of artifacts.
+   */
+  public int getArtifactsCount() {
+    return artifacts_.size();
+  }
+  /**
+   * <pre>
+   * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+   * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+   * only.
+   * </pre>
+   *
+   * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+   * @param index The index of the element to return.
+   * @return The artifacts at the given index.
+   */
+  public java.lang.String getArtifacts(int index) {
+    return artifacts_.get(index);
+  }
+  /**
+   * <pre>
+   * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+   * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+   * only.
+   * </pre>
+   *
+   * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the artifacts at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getArtifactsBytes(int index) {
+    return artifacts_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -567,6 +630,9 @@ private static final long serialVersionUID = 0L;
     if (seriesLatest_ != false) {
       output.writeBool(12, seriesLatest_);
     }
+    for (int i = 0; i < artifacts_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, artifacts_.getRaw(i));
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -609,6 +675,14 @@ private static final long serialVersionUID = 0L;
     if (seriesLatest_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(12, seriesLatest_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < artifacts_.size(); i++) {
+        dataSize += computeStringSizeNoTag(artifacts_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getArtifactsList().size();
     }
     return size;
   }
@@ -660,6 +734,8 @@ private static final long serialVersionUID = 0L;
     }
     if (getSeriesLatest()
         != other.getSeriesLatest()) return false;
+    if (!getArtifactsList()
+        .equals(other.getArtifactsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -699,6 +775,10 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + SERIES_LATEST_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getSeriesLatest());
+    if (getArtifactsCount() > 0) {
+      hash = (37 * hash) + ARTIFACTS_FIELD_NUMBER;
+      hash = (53 * hash) + getArtifactsList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -864,6 +944,8 @@ private static final long serialVersionUID = 0L;
         updateTimeBuilder_ = null;
       }
       seriesLatest_ = false;
+      artifacts_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -935,6 +1017,10 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000200) != 0)) {
         result.seriesLatest_ = seriesLatest_;
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        artifacts_.makeImmutable();
+        result.artifacts_ = artifacts_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -996,6 +1082,16 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getSeriesLatest() != false) {
         setSeriesLatest(other.getSeriesLatest());
+      }
+      if (!other.artifacts_.isEmpty()) {
+        if (artifacts_.isEmpty()) {
+          artifacts_ = other.artifacts_;
+          bitField0_ |= 0x00000400;
+        } else {
+          ensureArtifactsIsMutable();
+          artifacts_.addAll(other.artifacts_);
+        }
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1075,6 +1171,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 96
+            case 106: {
+              ensureArtifactsIsMutable();
+              artifacts_.add(input.readStringRequireUtf8());
+              break;
+            } // case 106
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2258,6 +2359,171 @@ private static final long serialVersionUID = 0L;
     public Builder clearSeriesLatest() {
       bitField0_ = (bitField0_ & ~0x00000200);
       seriesLatest_ = false;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList artifacts_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureArtifactsIsMutable() {
+      if (!artifacts_.isModifiable()) {
+        artifacts_ = new com.google.protobuf.LazyStringArrayList(artifacts_);
+      }
+      bitField0_ |= 0x00000400;
+    }
+    /**
+     * <pre>
+     * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+     * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+     * only.
+     * </pre>
+     *
+     * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+     * @return A list containing the artifacts.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getArtifactsList() {
+      artifacts_.makeImmutable();
+      return artifacts_;
+    }
+    /**
+     * <pre>
+     * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+     * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+     * only.
+     * </pre>
+     *
+     * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+     * @return The count of artifacts.
+     */
+    public int getArtifactsCount() {
+      return artifacts_.size();
+    }
+    /**
+     * <pre>
+     * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+     * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+     * only.
+     * </pre>
+     *
+     * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+     * @param index The index of the element to return.
+     * @return The artifacts at the given index.
+     */
+    public java.lang.String getArtifacts(int index) {
+      return artifacts_.get(index);
+    }
+    /**
+     * <pre>
+     * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+     * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+     * only.
+     * </pre>
+     *
+     * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the artifacts at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getArtifactsBytes(int index) {
+      return artifacts_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+     * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+     * only.
+     * </pre>
+     *
+     * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+     * @param index The index to set the value at.
+     * @param value The artifacts to set.
+     * @return This builder for chaining.
+     */
+    public Builder setArtifacts(
+        int index, java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureArtifactsIsMutable();
+      artifacts_.set(index, value);
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+     * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+     * only.
+     * </pre>
+     *
+     * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+     * @param value The artifacts to add.
+     * @return This builder for chaining.
+     */
+    public Builder addArtifacts(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureArtifactsIsMutable();
+      artifacts_.add(value);
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+     * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+     * only.
+     * </pre>
+     *
+     * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+     * @param values The artifacts to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllArtifacts(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureArtifactsIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, artifacts_);
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+     * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+     * only.
+     * </pre>
+     *
+     * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearArtifacts() {
+      artifacts_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000400);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+     * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+     * only.
+     * </pre>
+     *
+     * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+     * @param value The bytes of the artifacts to add.
+     * @return This builder for chaining.
+     */
+    public Builder addArtifactsBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      ensureArtifactsIsMutable();
+      artifacts_.add(value);
+      bitField0_ |= 0x00000400;
       onChanged();
       return this;
     }

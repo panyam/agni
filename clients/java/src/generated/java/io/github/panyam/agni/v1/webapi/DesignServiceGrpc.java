@@ -4,13 +4,14 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
 
 /**
  * <pre>
- * This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
- * design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
- * project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
- * about a snapshot of a design instead.
- * A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
- * the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
- * too, and those are read-only. A design id is unique across both.
+ * This file defines DesignService, which keeps the designs a server holds (agni issues 1694, 1696).
+ * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
+ * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
+ * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
+ * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
+ * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
+ * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
+ * so each store decides how it keeps a design's files.
  * </pre>
  */
 @io.grpc.stub.annotations.GrpcGenerated
@@ -176,6 +177,161 @@ public final class DesignServiceGrpc {
     return getDeleteDesignMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetArtifactRequest,
+      io.github.panyam.agni.v1.webapi.Artifact> getGetArtifactMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetArtifact",
+      requestType = io.github.panyam.agni.v1.webapi.GetArtifactRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Artifact.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetArtifactRequest,
+      io.github.panyam.agni.v1.webapi.Artifact> getGetArtifactMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetArtifactRequest, io.github.panyam.agni.v1.webapi.Artifact> getGetArtifactMethod;
+    if ((getGetArtifactMethod = DesignServiceGrpc.getGetArtifactMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getGetArtifactMethod = DesignServiceGrpc.getGetArtifactMethod) == null) {
+          DesignServiceGrpc.getGetArtifactMethod = getGetArtifactMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetArtifactRequest, io.github.panyam.agni.v1.webapi.Artifact>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetArtifact"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.GetArtifactRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Artifact.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("GetArtifact"))
+              .build();
+        }
+      }
+    }
+    return getGetArtifactMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListArtifactsRequest,
+      io.github.panyam.agni.v1.webapi.ListArtifactsResponse> getListArtifactsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListArtifacts",
+      requestType = io.github.panyam.agni.v1.webapi.ListArtifactsRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.ListArtifactsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListArtifactsRequest,
+      io.github.panyam.agni.v1.webapi.ListArtifactsResponse> getListArtifactsMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListArtifactsRequest, io.github.panyam.agni.v1.webapi.ListArtifactsResponse> getListArtifactsMethod;
+    if ((getListArtifactsMethod = DesignServiceGrpc.getListArtifactsMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getListArtifactsMethod = DesignServiceGrpc.getListArtifactsMethod) == null) {
+          DesignServiceGrpc.getListArtifactsMethod = getListArtifactsMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.ListArtifactsRequest, io.github.panyam.agni.v1.webapi.ListArtifactsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListArtifacts"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.ListArtifactsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.ListArtifactsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("ListArtifacts"))
+              .build();
+        }
+      }
+    }
+    return getListArtifactsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UpdateArtifactRequest,
+      io.github.panyam.agni.v1.webapi.Artifact> getUpdateArtifactMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "UpdateArtifact",
+      requestType = io.github.panyam.agni.v1.webapi.UpdateArtifactRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Artifact.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UpdateArtifactRequest,
+      io.github.panyam.agni.v1.webapi.Artifact> getUpdateArtifactMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UpdateArtifactRequest, io.github.panyam.agni.v1.webapi.Artifact> getUpdateArtifactMethod;
+    if ((getUpdateArtifactMethod = DesignServiceGrpc.getUpdateArtifactMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getUpdateArtifactMethod = DesignServiceGrpc.getUpdateArtifactMethod) == null) {
+          DesignServiceGrpc.getUpdateArtifactMethod = getUpdateArtifactMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.UpdateArtifactRequest, io.github.panyam.agni.v1.webapi.Artifact>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "UpdateArtifact"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.UpdateArtifactRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Artifact.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("UpdateArtifact"))
+              .build();
+        }
+      }
+    }
+    return getUpdateArtifactMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest,
+      io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse> getBatchUpdateArtifactsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "BatchUpdateArtifacts",
+      requestType = io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest,
+      io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse> getBatchUpdateArtifactsMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest, io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse> getBatchUpdateArtifactsMethod;
+    if ((getBatchUpdateArtifactsMethod = DesignServiceGrpc.getBatchUpdateArtifactsMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getBatchUpdateArtifactsMethod = DesignServiceGrpc.getBatchUpdateArtifactsMethod) == null) {
+          DesignServiceGrpc.getBatchUpdateArtifactsMethod = getBatchUpdateArtifactsMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest, io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "BatchUpdateArtifacts"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("BatchUpdateArtifacts"))
+              .build();
+        }
+      }
+    }
+    return getBatchUpdateArtifactsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteArtifactRequest,
+      com.google.protobuf.Empty> getDeleteArtifactMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DeleteArtifact",
+      requestType = io.github.panyam.agni.v1.webapi.DeleteArtifactRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteArtifactRequest,
+      com.google.protobuf.Empty> getDeleteArtifactMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteArtifactRequest, com.google.protobuf.Empty> getDeleteArtifactMethod;
+    if ((getDeleteArtifactMethod = DesignServiceGrpc.getDeleteArtifactMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getDeleteArtifactMethod = DesignServiceGrpc.getDeleteArtifactMethod) == null) {
+          DesignServiceGrpc.getDeleteArtifactMethod = getDeleteArtifactMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.DeleteArtifactRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DeleteArtifact"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.DeleteArtifactRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("DeleteArtifact"))
+              .build();
+        }
+      }
+    }
+    return getDeleteArtifactMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -237,26 +393,23 @@ public final class DesignServiceGrpc {
 
   /**
    * <pre>
-   * This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
-   * design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
-   * project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
-   * about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
-   * the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
-   * too, and those are read-only. A design id is unique across both.
+   * This file defines DesignService, which keeps the designs a server holds (agni issues 1694, 1696).
+   * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
+   * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
+   * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
+   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
+   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
+   * so each store decides how it keeps a design's files.
    * </pre>
    */
   public interface AsyncService {
 
     /**
      * <pre>
-     * CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
-     * Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
-     * and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
-     * among the files sets the title and series. A `name` in it naming a different id is
-     * INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
-     * already holds is ALREADY_EXISTS. A server started without --store-dir answers
-     * FAILED_PRECONDITION.
+     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
+     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
     default void createDesign(io.github.panyam.agni.v1.webapi.CreateDesignRequest request,
@@ -287,8 +440,9 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
-     * design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
+     * FAILED_PRECONDITION.
      * </pre>
      */
     default void updateDesign(io.github.panyam.agni.v1.webapi.UpdateDesignRequest request,
@@ -298,25 +452,86 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+     * DeleteDesign removes a stored design and its artifacts. A project listing it keeps the name.
      * </pre>
      */
     default void deleteDesign(io.github.panyam.agni.v1.webapi.DeleteDesignRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteDesignMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * GetArtifact returns one artifact of a stored design.
+     * </pre>
+     */
+    default void getArtifact(io.github.panyam.agni.v1.webapi.GetArtifactRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetArtifactMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none, since its
+     * folder names its files.
+     * </pre>
+     */
+    default void listArtifacts(io.github.panyam.agni.v1.webapi.ListArtifactsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListArtifactsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListArtifactsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * UpdateArtifact replaces an artifact's whole file set in one write, so a reader sees the old files
+     * or the new ones. With allow_missing it creates the artifact. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail naming their hashes, and the caller sends them with
+     * SnapshotService.UploadBlobs and asks again.
+     * The server reads the files to find the artifact's type and entry. Files that make two designs
+     * are INVALID_ARGUMENT. A write leaving the design with two netlists, two schematics and no netlist,
+     * or two boards is FAILED_PRECONDITION, since the server could not tell which one analysis reads.
+     * </pre>
+     */
+    default void updateArtifact(io.github.panyam.agni.v1.webapi.UpdateArtifactRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getUpdateArtifactMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write, so the
+     * design moves from its old artifacts to its new ones with no state in between. Any request failing
+     * fails the batch, and nothing is written.
+     * </pre>
+     */
+    default void batchUpdateArtifacts(io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getBatchUpdateArtifactsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
+     * design unable to be read until another is put.
+     * </pre>
+     */
+    default void deleteArtifact(io.github.panyam.agni.v1.webapi.DeleteArtifactRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteArtifactMethod(), responseObserver);
+    }
   }
 
   /**
    * Base class for the server implementation of the service DesignService.
    * <pre>
-   * This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
-   * design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
-   * project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
-   * about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
-   * the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
-   * too, and those are read-only. A design id is unique across both.
+   * This file defines DesignService, which keeps the designs a server holds (agni issues 1694, 1696).
+   * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
+   * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
+   * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
+   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
+   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
+   * so each store decides how it keeps a design's files.
    * </pre>
    */
   public static abstract class DesignServiceImplBase
@@ -330,13 +545,14 @@ public final class DesignServiceGrpc {
   /**
    * A stub to allow clients to do asynchronous rpc calls to service DesignService.
    * <pre>
-   * This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
-   * design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
-   * project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
-   * about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
-   * the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
-   * too, and those are read-only. A design id is unique across both.
+   * This file defines DesignService, which keeps the designs a server holds (agni issues 1694, 1696).
+   * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
+   * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
+   * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
+   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
+   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
+   * so each store decides how it keeps a design's files.
    * </pre>
    */
   public static final class DesignServiceStub
@@ -354,13 +570,9 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
-     * Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
-     * and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
-     * among the files sets the title and series. A `name` in it naming a different id is
-     * INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
-     * already holds is ALREADY_EXISTS. A server started without --store-dir answers
-     * FAILED_PRECONDITION.
+     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
+     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
     public void createDesign(io.github.panyam.agni.v1.webapi.CreateDesignRequest request,
@@ -394,8 +606,9 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
-     * design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
+     * FAILED_PRECONDITION.
      * </pre>
      */
     public void updateDesign(io.github.panyam.agni.v1.webapi.UpdateDesignRequest request,
@@ -406,7 +619,7 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+     * DeleteDesign removes a stored design and its artifacts. A project listing it keeps the name.
      * </pre>
      */
     public void deleteDesign(io.github.panyam.agni.v1.webapi.DeleteDesignRequest request,
@@ -414,18 +627,84 @@ public final class DesignServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getDeleteDesignMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * GetArtifact returns one artifact of a stored design.
+     * </pre>
+     */
+    public void getArtifact(io.github.panyam.agni.v1.webapi.GetArtifactRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetArtifactMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none, since its
+     * folder names its files.
+     * </pre>
+     */
+    public void listArtifacts(io.github.panyam.agni.v1.webapi.ListArtifactsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListArtifactsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListArtifactsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * UpdateArtifact replaces an artifact's whole file set in one write, so a reader sees the old files
+     * or the new ones. With allow_missing it creates the artifact. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail naming their hashes, and the caller sends them with
+     * SnapshotService.UploadBlobs and asks again.
+     * The server reads the files to find the artifact's type and entry. Files that make two designs
+     * are INVALID_ARGUMENT. A write leaving the design with two netlists, two schematics and no netlist,
+     * or two boards is FAILED_PRECONDITION, since the server could not tell which one analysis reads.
+     * </pre>
+     */
+    public void updateArtifact(io.github.panyam.agni.v1.webapi.UpdateArtifactRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getUpdateArtifactMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write, so the
+     * design moves from its old artifacts to its new ones with no state in between. Any request failing
+     * fails the batch, and nothing is written.
+     * </pre>
+     */
+    public void batchUpdateArtifacts(io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getBatchUpdateArtifactsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
+     * design unable to be read until another is put.
+     * </pre>
+     */
+    public void deleteArtifact(io.github.panyam.agni.v1.webapi.DeleteArtifactRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDeleteArtifactMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
    * A stub to allow clients to do synchronous rpc calls to service DesignService.
    * <pre>
-   * This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
-   * design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
-   * project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
-   * about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
-   * the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
-   * too, and those are read-only. A design id is unique across both.
+   * This file defines DesignService, which keeps the designs a server holds (agni issues 1694, 1696).
+   * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
+   * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
+   * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
+   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
+   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
+   * so each store decides how it keeps a design's files.
    * </pre>
    */
   public static final class DesignServiceBlockingV2Stub
@@ -443,13 +722,9 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
-     * Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
-     * and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
-     * among the files sets the title and series. A `name` in it naming a different id is
-     * INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
-     * already holds is ALREADY_EXISTS. A server started without --store-dir answers
-     * FAILED_PRECONDITION.
+     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
+     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Design createDesign(io.github.panyam.agni.v1.webapi.CreateDesignRequest request) throws io.grpc.StatusException {
@@ -480,8 +755,9 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
-     * design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
+     * FAILED_PRECONDITION.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Design updateDesign(io.github.panyam.agni.v1.webapi.UpdateDesignRequest request) throws io.grpc.StatusException {
@@ -491,25 +767,86 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+     * DeleteDesign removes a stored design and its artifacts. A project listing it keeps the name.
      * </pre>
      */
     public com.google.protobuf.Empty deleteDesign(io.github.panyam.agni.v1.webapi.DeleteDesignRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getDeleteDesignMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * GetArtifact returns one artifact of a stored design.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Artifact getArtifact(io.github.panyam.agni.v1.webapi.GetArtifactRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none, since its
+     * folder names its files.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.ListArtifactsResponse listArtifacts(io.github.panyam.agni.v1.webapi.ListArtifactsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListArtifactsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * UpdateArtifact replaces an artifact's whole file set in one write, so a reader sees the old files
+     * or the new ones. With allow_missing it creates the artifact. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail naming their hashes, and the caller sends them with
+     * SnapshotService.UploadBlobs and asks again.
+     * The server reads the files to find the artifact's type and entry. Files that make two designs
+     * are INVALID_ARGUMENT. A write leaving the design with two netlists, two schematics and no netlist,
+     * or two boards is FAILED_PRECONDITION, since the server could not tell which one analysis reads.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Artifact updateArtifact(io.github.panyam.agni.v1.webapi.UpdateArtifactRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getUpdateArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write, so the
+     * design moves from its old artifacts to its new ones with no state in between. Any request failing
+     * fails the batch, and nothing is written.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse batchUpdateArtifacts(io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getBatchUpdateArtifactsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
+     * design unable to be read until another is put.
+     * </pre>
+     */
+    public com.google.protobuf.Empty deleteArtifact(io.github.panyam.agni.v1.webapi.DeleteArtifactRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getDeleteArtifactMethod(), getCallOptions(), request);
+    }
   }
 
   /**
    * A stub to allow clients to do limited synchronous rpc calls to service DesignService.
    * <pre>
-   * This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
-   * design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
-   * project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
-   * about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
-   * the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
-   * too, and those are read-only. A design id is unique across both.
+   * This file defines DesignService, which keeps the designs a server holds (agni issues 1694, 1696).
+   * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
+   * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
+   * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
+   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
+   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
+   * so each store decides how it keeps a design's files.
    * </pre>
    */
   public static final class DesignServiceBlockingStub
@@ -527,13 +864,9 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
-     * Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
-     * and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
-     * among the files sets the title and series. A `name` in it naming a different id is
-     * INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
-     * already holds is ALREADY_EXISTS. A server started without --store-dir answers
-     * FAILED_PRECONDITION.
+     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
+     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Design createDesign(io.github.panyam.agni.v1.webapi.CreateDesignRequest request) {
@@ -564,8 +897,9 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
-     * design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
+     * FAILED_PRECONDITION.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Design updateDesign(io.github.panyam.agni.v1.webapi.UpdateDesignRequest request) {
@@ -575,25 +909,86 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+     * DeleteDesign removes a stored design and its artifacts. A project listing it keeps the name.
      * </pre>
      */
     public com.google.protobuf.Empty deleteDesign(io.github.panyam.agni.v1.webapi.DeleteDesignRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getDeleteDesignMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * GetArtifact returns one artifact of a stored design.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Artifact getArtifact(io.github.panyam.agni.v1.webapi.GetArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none, since its
+     * folder names its files.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.ListArtifactsResponse listArtifacts(io.github.panyam.agni.v1.webapi.ListArtifactsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListArtifactsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * UpdateArtifact replaces an artifact's whole file set in one write, so a reader sees the old files
+     * or the new ones. With allow_missing it creates the artifact. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail naming their hashes, and the caller sends them with
+     * SnapshotService.UploadBlobs and asks again.
+     * The server reads the files to find the artifact's type and entry. Files that make two designs
+     * are INVALID_ARGUMENT. A write leaving the design with two netlists, two schematics and no netlist,
+     * or two boards is FAILED_PRECONDITION, since the server could not tell which one analysis reads.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Artifact updateArtifact(io.github.panyam.agni.v1.webapi.UpdateArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getUpdateArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write, so the
+     * design moves from its old artifacts to its new ones with no state in between. Any request failing
+     * fails the batch, and nothing is written.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse batchUpdateArtifacts(io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getBatchUpdateArtifactsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
+     * design unable to be read until another is put.
+     * </pre>
+     */
+    public com.google.protobuf.Empty deleteArtifact(io.github.panyam.agni.v1.webapi.DeleteArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDeleteArtifactMethod(), getCallOptions(), request);
+    }
   }
 
   /**
    * A stub to allow clients to do ListenableFuture-style rpc calls to service DesignService.
    * <pre>
-   * This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
-   * design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
-   * project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
-   * about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
-   * the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
-   * too, and those are read-only. A design id is unique across both.
+   * This file defines DesignService, which keeps the designs a server holds (agni issues 1694, 1696).
+   * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
+   * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
+   * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
+   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
+   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
+   * so each store decides how it keeps a design's files.
    * </pre>
    */
   public static final class DesignServiceFutureStub
@@ -611,13 +1006,9 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
-     * Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
-     * and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
-     * among the files sets the title and series. A `name` in it naming a different id is
-     * INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
-     * already holds is ALREADY_EXISTS. A server started without --store-dir answers
-     * FAILED_PRECONDITION.
+     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
+     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Design> createDesign(
@@ -651,8 +1042,9 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
-     * design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
+     * FAILED_PRECONDITION.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Design> updateDesign(
@@ -663,13 +1055,78 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+     * DeleteDesign removes a stored design and its artifacts. A project listing it keeps the name.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> deleteDesign(
         io.github.panyam.agni.v1.webapi.DeleteDesignRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getDeleteDesignMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * GetArtifact returns one artifact of a stored design.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Artifact> getArtifact(
+        io.github.panyam.agni.v1.webapi.GetArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetArtifactMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none, since its
+     * folder names its files.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.ListArtifactsResponse> listArtifacts(
+        io.github.panyam.agni.v1.webapi.ListArtifactsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListArtifactsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * UpdateArtifact replaces an artifact's whole file set in one write, so a reader sees the old files
+     * or the new ones. With allow_missing it creates the artifact. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail naming their hashes, and the caller sends them with
+     * SnapshotService.UploadBlobs and asks again.
+     * The server reads the files to find the artifact's type and entry. Files that make two designs
+     * are INVALID_ARGUMENT. A write leaving the design with two netlists, two schematics and no netlist,
+     * or two boards is FAILED_PRECONDITION, since the server could not tell which one analysis reads.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Artifact> updateArtifact(
+        io.github.panyam.agni.v1.webapi.UpdateArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getUpdateArtifactMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write, so the
+     * design moves from its old artifacts to its new ones with no state in between. Any request failing
+     * fails the batch, and nothing is written.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse> batchUpdateArtifacts(
+        io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getBatchUpdateArtifactsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
+     * design unable to be read until another is put.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> deleteArtifact(
+        io.github.panyam.agni.v1.webapi.DeleteArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDeleteArtifactMethod(), getCallOptions()), request);
     }
   }
 
@@ -678,6 +1135,11 @@ public final class DesignServiceGrpc {
   private static final int METHODID_LIST_DESIGNS = 2;
   private static final int METHODID_UPDATE_DESIGN = 3;
   private static final int METHODID_DELETE_DESIGN = 4;
+  private static final int METHODID_GET_ARTIFACT = 5;
+  private static final int METHODID_LIST_ARTIFACTS = 6;
+  private static final int METHODID_UPDATE_ARTIFACT = 7;
+  private static final int METHODID_BATCH_UPDATE_ARTIFACTS = 8;
+  private static final int METHODID_DELETE_ARTIFACT = 9;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -714,6 +1176,26 @@ public final class DesignServiceGrpc {
           break;
         case METHODID_DELETE_DESIGN:
           serviceImpl.deleteDesign((io.github.panyam.agni.v1.webapi.DeleteDesignRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_GET_ARTIFACT:
+          serviceImpl.getArtifact((io.github.panyam.agni.v1.webapi.GetArtifactRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact>) responseObserver);
+          break;
+        case METHODID_LIST_ARTIFACTS:
+          serviceImpl.listArtifacts((io.github.panyam.agni.v1.webapi.ListArtifactsRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListArtifactsResponse>) responseObserver);
+          break;
+        case METHODID_UPDATE_ARTIFACT:
+          serviceImpl.updateArtifact((io.github.panyam.agni.v1.webapi.UpdateArtifactRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact>) responseObserver);
+          break;
+        case METHODID_BATCH_UPDATE_ARTIFACTS:
+          serviceImpl.batchUpdateArtifacts((io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse>) responseObserver);
+          break;
+        case METHODID_DELETE_ARTIFACT:
+          serviceImpl.deleteArtifact((io.github.panyam.agni.v1.webapi.DeleteArtifactRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
         default:
@@ -769,6 +1251,41 @@ public final class DesignServiceGrpc {
               io.github.panyam.agni.v1.webapi.DeleteDesignRequest,
               com.google.protobuf.Empty>(
                 service, METHODID_DELETE_DESIGN)))
+        .addMethod(
+          getGetArtifactMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.GetArtifactRequest,
+              io.github.panyam.agni.v1.webapi.Artifact>(
+                service, METHODID_GET_ARTIFACT)))
+        .addMethod(
+          getListArtifactsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.ListArtifactsRequest,
+              io.github.panyam.agni.v1.webapi.ListArtifactsResponse>(
+                service, METHODID_LIST_ARTIFACTS)))
+        .addMethod(
+          getUpdateArtifactMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.UpdateArtifactRequest,
+              io.github.panyam.agni.v1.webapi.Artifact>(
+                service, METHODID_UPDATE_ARTIFACT)))
+        .addMethod(
+          getBatchUpdateArtifactsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest,
+              io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse>(
+                service, METHODID_BATCH_UPDATE_ARTIFACTS)))
+        .addMethod(
+          getDeleteArtifactMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.DeleteArtifactRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_DELETE_ARTIFACT)))
         .build();
   }
 
@@ -822,6 +1339,11 @@ public final class DesignServiceGrpc {
               .addMethod(getListDesignsMethod())
               .addMethod(getUpdateDesignMethod())
               .addMethod(getDeleteDesignMethod())
+              .addMethod(getGetArtifactMethod())
+              .addMethod(getListArtifactsMethod())
+              .addMethod(getUpdateArtifactMethod())
+              .addMethod(getBatchUpdateArtifactsMethod())
+              .addMethod(getDeleteArtifactMethod())
               .build();
         }
       }

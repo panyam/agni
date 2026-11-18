@@ -289,4 +289,53 @@ public interface DesignOrBuilder extends
    * @return The seriesLatest.
    */
   boolean getSeriesLatest();
+
+  /**
+   * <pre>
+   * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+   * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+   * only.
+   * </pre>
+   *
+   * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+   * @return A list containing the artifacts.
+   */
+  java.util.List<java.lang.String>
+      getArtifactsList();
+  /**
+   * <pre>
+   * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+   * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+   * only.
+   * </pre>
+   *
+   * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+   * @return The count of artifacts.
+   */
+  int getArtifactsCount();
+  /**
+   * <pre>
+   * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+   * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+   * only.
+   * </pre>
+   *
+   * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+   * @param index The index of the element to return.
+   * @return The artifacts at the given index.
+   */
+  java.lang.String getArtifacts(int index);
+  /**
+   * <pre>
+   * artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+   * by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+   * only.
+   * </pre>
+   *
+   * <code>repeated string artifacts = 13 [json_name = "artifacts"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the artifacts at the given index.
+   */
+  com.google.protobuf.ByteString
+      getArtifactsBytes(int index);
 }

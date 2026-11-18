@@ -14,6 +14,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 // blobs is an upload store in a test: contents by hash.
@@ -54,12 +55,27 @@ func designService(t *testing.T) (*service.DesignService, blobs, string) {
 	return svc, b, root
 }
 
-func board(series string) map[string]string {
-	desc := "entry: a.edn\n"
-	if series != "" {
-		desc += "series: " + series + "\n"
+// newDesign creates a design in series and puts one netlist artifact holding contents, so it reads.
+func newDesign(t *testing.T, svc *service.DesignService, b blobs, id, series, contents string) {
+	t.Helper()
+	ctx := context.Background()
+	if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: id, Design: &webapi.Design{Series: series}}); err != nil {
+		t.Fatal(err)
 	}
-	return map[string]string{"design.yaml": desc, "a.edn": "(edif a)"}
+	putNetlist(t, svc, b, id, map[string]string{"a.edn": contents})
+}
+
+// putNetlist puts the netlist artifact of a design, creating it if missing.
+func putNetlist(t *testing.T, svc *service.DesignService, b blobs, id string, files map[string]string) *webapi.Artifact {
+	t.Helper()
+	a, err := svc.UpdateArtifact(context.Background(), &webapi.UpdateArtifactRequest{
+		Artifact:     &webapi.Artifact{Name: "designs/" + id + "/artifacts/netlist", Files: b.files(files)},
+		AllowMissing: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return a
 }
 
 // setTime stamps a stored design's descriptor, so which design a series updated last is fixed.
@@ -70,28 +86,37 @@ func setTime(t *testing.T, root, id string, at time.Time) {
 	}
 }
 
-func TestADesignIsCreatedReadListedReplacedAndDeleted(t *testing.T) {
+func TestADesignIsCreatedReadListedChangedAndDeleted(t *testing.T) {
 	ctx := context.Background()
 	svc, b, _ := designService(t)
-	d, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "memory_unit", Files: b.files(board(""))})
+	d, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "memory_unit", Design: &webapi.Design{Title: "Memory unit", Series: "mem"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.GetName() != "designs/memory_unit" || d.GetEntryUri() != "mount://store/memory_unit/a.edn" || d.GetUpdateTime() == nil {
-		t.Errorf("created = %s at %s, updated %v; want designs/memory_unit at mount://store/memory_unit/a.edn with an update time", d.GetName(), d.GetEntryUri(), d.GetUpdateTime())
+	if d.GetName() != "designs/memory_unit" || d.GetTitle() != "Memory unit" || d.GetSeries() != "mem" || d.GetEntryUri() != "" || d.GetUpdateTime() == nil {
+		t.Errorf("created = %v; want designs/memory_unit with its title and series, no entry yet, and an update time", d)
+	}
+	a := putNetlist(t, svc, b, "memory_unit", map[string]string{"a.edn": "(edif a)"})
+	if a.GetName() != "designs/memory_unit/artifacts/netlist" || a.GetType() != webapi.ArtifactType_ARTIFACT_TYPE_NETLIST || a.GetEntry() != "a.edn" {
+		t.Errorf("put artifact = %v; want designs/memory_unit/artifacts/netlist, a netlist entered at a.edn", a)
 	}
 	got, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/memory_unit"})
-	if err != nil || got.GetEntryUri() != d.GetEntryUri() {
-		t.Errorf("GetDesign = %v, %v; want the created design", got, err)
+	if err != nil || got.GetEntryUri() != "mount://store/memory_unit/netlist/a.edn" || got.GetTitle() != "Memory unit" {
+		t.Errorf("GetDesign = %v, %v; want the netlist as entry and the title kept", got, err)
 	}
 	list, err := svc.ListDesigns(ctx, &webapi.ListDesignsRequest{})
 	if err != nil || len(list.GetDesigns()) != 2 || list.GetDesigns()[0].GetName() != "designs/g" || list.GetDesigns()[1].GetName() != "designs/memory_unit" {
 		t.Fatalf("ListDesigns = %v, %v; want the mounted g, then memory_unit", list.GetDesigns(), err)
 	}
-	next := map[string]string{"design.yaml": "entry: b.edn\n", "b.edn": "(edif b)"}
-	up, err := svc.UpdateDesign(ctx, &webapi.UpdateDesignRequest{Name: "designs/memory_unit", Files: b.files(next)})
-	if err != nil || up.GetEntryUri() != "mount://store/memory_unit/b.edn" {
-		t.Errorf("UpdateDesign = %v, %v; want the entry b.edn", up, err)
+	up, err := svc.UpdateDesign(ctx, &webapi.UpdateDesignRequest{
+		Design:     &webapi.Design{Name: "designs/memory_unit", Title: "ignored", Series: "memory_unit"},
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"series"}},
+	})
+	if err != nil || up.GetSeries() != "memory_unit" || up.GetTitle() != "Memory unit" || up.GetEntryUri() != got.GetEntryUri() {
+		t.Errorf("UpdateDesign of the series = %v, %v; want the series changed, the title and entry kept", up, err)
+	}
+	if _, err := svc.UpdateDesign(ctx, &webapi.UpdateDesignRequest{Design: &webapi.Design{Name: "designs/memory_unit"}, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"entry_uri"}}}); !errors.Is(err, service.ErrInvalidArgument) {
+		t.Errorf("UpdateDesign of entry_uri = %v, want ErrInvalidArgument", err)
 	}
 	if err := svc.DeleteDesign(ctx, &webapi.DeleteDesignRequest{Name: "designs/memory_unit"}); err != nil {
 		t.Fatal(err)
@@ -101,17 +126,81 @@ func TestADesignIsCreatedReadListedReplacedAndDeleted(t *testing.T) {
 	}
 }
 
+func TestArtifactsAreReadListedReplacedAndDeleted(t *testing.T) {
+	ctx := context.Background()
+	svc, b, _ := designService(t)
+	newDesign(t, svc, b, "mul", "", "(edif a)")
+	if _, err := svc.UpdateArtifact(ctx, &webapi.UpdateArtifactRequest{Artifact: &webapi.Artifact{Name: "designs/mul/artifacts/board", Files: b.files(map[string]string{"a.kicad_pcb": "(kicad_pcb)"})}}); !errors.Is(err, service.ErrNotFound) {
+		t.Errorf("UpdateArtifact of a missing artifact without allow_missing = %v, want ErrNotFound", err)
+	}
+	resp, err := svc.BatchUpdateArtifacts(ctx, &webapi.BatchUpdateArtifactsRequest{Parent: "designs/mul", Requests: []*webapi.UpdateArtifactRequest{
+		{Artifact: &webapi.Artifact{Name: "designs/mul/artifacts/netlist", Files: b.files(map[string]string{"b.edn": "(edif b)"})}},
+		{Artifact: &webapi.Artifact{Name: "designs/mul/artifacts/board", Files: b.files(map[string]string{"b.kicad_pcb": "(kicad_pcb b)"})}, AllowMissing: true},
+	}})
+	if err != nil || len(resp.GetArtifacts()) != 2 || resp.GetArtifacts()[0].GetEntry() != "b.edn" || resp.GetArtifacts()[1].GetType() != webapi.ArtifactType_ARTIFACT_TYPE_BOARD {
+		t.Fatalf("BatchUpdateArtifacts = %v, %v; want the netlist replaced and the board created, in request order", resp.GetArtifacts(), err)
+	}
+	list, err := svc.ListArtifacts(ctx, &webapi.ListArtifactsRequest{Parent: "designs/mul"})
+	if err != nil || len(list.GetArtifacts()) != 2 || list.GetArtifacts()[0].GetName() != "designs/mul/artifacts/board" {
+		t.Errorf("ListArtifacts = %v, %v; want board then netlist", list.GetArtifacts(), err)
+	}
+	if a, err := svc.GetArtifact(ctx, &webapi.GetArtifactRequest{Name: "designs/mul/artifacts/netlist"}); err != nil || len(a.GetFiles()) != 1 || a.GetFiles()[0].GetPath() != "b.edn" {
+		t.Errorf("GetArtifact(netlist) = %v, %v; want only b.edn", a, err)
+	}
+	if err := svc.DeleteArtifact(ctx, &webapi.DeleteArtifactRequest{Name: "designs/mul/artifacts/board"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.GetArtifact(ctx, &webapi.GetArtifactRequest{Name: "designs/mul/artifacts/board"}); !errors.Is(err, service.ErrNotFound) {
+		t.Errorf("GetArtifact after delete = %v, want ErrNotFound", err)
+	}
+	if list, err := svc.ListArtifacts(ctx, &webapi.ListArtifactsRequest{Parent: "designs/g"}); err != nil || len(list.GetArtifacts()) != 0 {
+		t.Errorf("ListArtifacts of the mounted g = %v, %v; want none", list.GetArtifacts(), err)
+	}
+}
+
+func TestABatchIsRefusedWhole(t *testing.T) {
+	ctx := context.Background()
+	svc, b, _ := designService(t)
+	newDesign(t, svc, b, "mul", "", "(edif a)")
+	newDesign(t, svc, b, "other", "", "(edif o)")
+	board := &webapi.Artifact{Name: "designs/mul/artifacts/board", Files: b.files(map[string]string{"a.kicad_pcb": "(kicad_pcb)"})}
+	for name, reqs := range map[string][]*webapi.UpdateArtifactRequest{
+		"no requests":               nil,
+		"one artifact twice":        {{Artifact: board, AllowMissing: true}, {Artifact: board, AllowMissing: true}},
+		"another design's":          {{Artifact: &webapi.Artifact{Name: "designs/other/artifacts/netlist", Files: board.GetFiles()}}},
+		"an artifact with no files": {{Artifact: &webapi.Artifact{Name: "designs/mul/artifacts/empty"}, AllowMissing: true}},
+	} {
+		if _, err := svc.BatchUpdateArtifacts(ctx, &webapi.BatchUpdateArtifactsRequest{Parent: "designs/mul", Requests: reqs}); !errors.Is(err, service.ErrInvalidArgument) {
+			t.Errorf("a batch with %s = %v, want ErrInvalidArgument", name, err)
+		}
+	}
+	// The second request names a missing artifact without allow_missing, so the first is not written.
+	_, err := svc.BatchUpdateArtifacts(ctx, &webapi.BatchUpdateArtifactsRequest{Parent: "designs/mul", Requests: []*webapi.UpdateArtifactRequest{
+		{Artifact: board, AllowMissing: true},
+		{Artifact: &webapi.Artifact{Name: "designs/mul/artifacts/bom", Files: b.files(map[string]string{"bom.csv": "ref\n"})}},
+	}})
+	if !errors.Is(err, service.ErrNotFound) {
+		t.Errorf("a batch naming a missing artifact = %v, want ErrNotFound", err)
+	}
+	if list, err := svc.ListArtifacts(ctx, &webapi.ListArtifactsRequest{Parent: "designs/mul"}); err != nil || len(list.GetArtifacts()) != 1 {
+		t.Errorf("artifacts after the refused batch = %v, %v; want only the netlist", list.GetArtifacts(), err)
+	}
+}
+
 func TestADesignServiceRefusesWhatItCannotWrite(t *testing.T) {
 	ctx := context.Background()
 	svc, b, _ := designService(t)
-	if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "Bad/Id", Files: b.files(board(""))}); !errors.Is(err, service.ErrInvalidArgument) {
+	if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "Bad/Id"}); !errors.Is(err, service.ErrInvalidArgument) {
 		t.Errorf("CreateDesign with a bad id = %v, want ErrInvalidArgument", err)
 	}
-	if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "g", Files: b.files(board(""))}); !errors.Is(err, service.ErrAlreadyExists) {
+	if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "g"}); !errors.Is(err, service.ErrAlreadyExists) {
 		t.Errorf("CreateDesign over a mounted id = %v, want ErrAlreadyExists", err)
 	}
-	if _, err := svc.UpdateDesign(ctx, &webapi.UpdateDesignRequest{Name: "designs/g", Files: b.files(board(""))}); !errors.Is(err, service.ErrFailedPrecondition) {
+	if _, err := svc.UpdateDesign(ctx, &webapi.UpdateDesignRequest{Design: &webapi.Design{Name: "designs/g", Series: "s"}}); !errors.Is(err, service.ErrFailedPrecondition) {
 		t.Errorf("UpdateDesign of a mounted design = %v, want ErrFailedPrecondition", err)
+	}
+	if _, err := svc.UpdateArtifact(ctx, &webapi.UpdateArtifactRequest{Artifact: &webapi.Artifact{Name: "designs/g/artifacts/netlist", Files: b.files(map[string]string{"a.edn": "(edif a)"})}, AllowMissing: true}); !errors.Is(err, service.ErrFailedPrecondition) {
+		t.Errorf("UpdateArtifact of a mounted design = %v, want ErrFailedPrecondition", err)
 	}
 	if err := svc.DeleteDesign(ctx, &webapi.DeleteDesignRequest{Name: "designs/g"}); !errors.Is(err, service.ErrFailedPrecondition) {
 		t.Errorf("DeleteDesign of a mounted design = %v, want ErrFailedPrecondition", err)
@@ -119,14 +208,22 @@ func TestADesignServiceRefusesWhatItCannotWrite(t *testing.T) {
 	if _, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "projects/p/designs/g"}); !errors.Is(err, service.ErrInvalidArgument) {
 		t.Errorf("GetDesign of a nested name = %v, want ErrInvalidArgument", err)
 	}
-	unsent := blobs{}.files(map[string]string{"design.yaml": "entry: u.edn\n", "u.edn": "(edif unsent)"})
-	_, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "mul", Files: unsent})
+	for _, name := range []string{"designs/mul/artifacts/Bad", "designs/mul/netlist", "designs/mul/artifacts/a/b"} {
+		if _, err := svc.UpdateArtifact(ctx, &webapi.UpdateArtifactRequest{Artifact: &webapi.Artifact{Name: name, Files: b.files(map[string]string{"a.edn": "x"})}, AllowMissing: true}); !errors.Is(err, service.ErrInvalidArgument) {
+			t.Errorf("UpdateArtifact(%s) = %v, want ErrInvalidArgument", name, err)
+		}
+	}
+	if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "mul"}); err != nil {
+		t.Fatal(err)
+	}
+	unsent := blobs{}.files(map[string]string{"u.edn": "(edif unsent)", "u.kicad_pcb": "(kicad_pcb unsent)"})
+	_, err := svc.UpdateArtifact(ctx, &webapi.UpdateArtifactRequest{Artifact: &webapi.Artifact{Name: "designs/mul/artifacts/netlist", Files: unsent}, AllowMissing: true})
 	var bm *service.BlobsMissingError
 	if !errors.As(err, &bm) || len(bm.Hashes) != 2 {
-		t.Errorf("CreateDesign with no contents sent = %v, want a BlobsMissingError naming both files", err)
+		t.Errorf("UpdateArtifact with no contents sent = %v, want a BlobsMissingError naming both files", err)
 	}
 	none := service.NewDesignService(service.NewDesignCatalog(nil, projects.NewMountedDesigns(tutorial())), b.source)
-	if _, err := none.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "mul", Files: b.files(board(""))}); !errors.Is(err, service.ErrFailedPrecondition) {
+	if _, err := none.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "mul"}); !errors.Is(err, service.ErrFailedPrecondition) {
 		t.Errorf("CreateDesign with no store = %v, want ErrFailedPrecondition", err)
 	}
 }
@@ -139,9 +236,7 @@ func TestASeriesMarksTheDesignItUpdatedLast(t *testing.T) {
 		if id == "other" {
 			series = ""
 		}
-		if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: id, Files: b.files(board(series))}); err != nil {
-			t.Fatal(err)
-		}
+		newDesign(t, svc, b, id, series, "(edif "+id+")")
 	}
 	base := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
 	setTime(t, root, "mem-1.1.2", base)
@@ -161,11 +256,9 @@ func TestASeriesMarksTheDesignItUpdatedLast(t *testing.T) {
 	if got := latest(); len(got) != 2 || !got["designs/mem-1.1.3"] || got["designs/mem-1.1.2"] {
 		t.Errorf("series = %v, want both members and 1.1.3 latest", got)
 	}
-	if _, err := svc.UpdateDesign(ctx, &webapi.UpdateDesignRequest{Name: "designs/mem-1.1.2", Files: b.files(board("memory_unit"))}); err != nil {
-		t.Fatal(err)
-	}
+	putNetlist(t, svc, b, "mem-1.1.2", map[string]string{"a.edn": "(edif 1.1.2 fixed)"})
 	if got := latest(); !got["designs/mem-1.1.2"] || got["designs/mem-1.1.3"] {
-		t.Errorf("series after replacing 1.1.2 = %v, want 1.1.2 latest", got)
+		t.Errorf("series after replacing 1.1.2's netlist = %v, want 1.1.2 latest", got)
 	}
 	d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/mem-1.1.2"})
 	if err != nil || !d.GetSeriesLatest() {
@@ -180,9 +273,7 @@ func TestListDesignsFiltersByProjectAndRefusesOtherFilters(t *testing.T) {
 	ctx := context.Background()
 	svc, b, _ := designService(t)
 	for _, id := range []string{"a", "b"} {
-		if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: id, Files: b.files(board(""))}); err != nil {
-			t.Fatal(err)
-		}
+		newDesign(t, svc, b, id, "", "(edif "+id+")")
 	}
 	ps := service.NewProjectService(nil).WithRecords(service.NewMemProjectRecords())
 	if _, err := ps.CreateProject(ctx, &webapi.CreateProjectRequest{ProjectId: "b200", Project: &webapi.Project{Designs: []string{"designs/b", "designs/g", "designs/gone"}}}); err != nil {

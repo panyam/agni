@@ -2,21 +2,21 @@
 // @generated from file agni/v1/webapi/designs.proto (package agni.v1.webapi, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Design, DesignSchema } from "./project_pb";
 import { file_agni_v1_webapi_project } from "./project_pb";
 import type { SnapshotFile } from "./snapshot_pb";
 import { file_agni_v1_webapi_snapshot } from "./snapshot_pb";
-import type { EmptySchema } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_empty } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, FieldMask, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/designs.proto.
  */
 export const file_agni_v1_webapi_designs: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9kZXNpZ25zLnByb3RvEg5hZ25pLnYxLndlYmFwaSJVChNDcmVhdGVEZXNpZ25SZXF1ZXN0EhEKCWRlc2lnbl9pZBgBIAEoCRIrCgVmaWxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLlNuYXBzaG90RmlsZSIgChBHZXREZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAkiSwoSTGlzdERlc2lnbnNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJsChNMaXN0RGVzaWduc1Jlc3BvbnNlEicKB2Rlc2lnbnMYASADKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJEhMKC3VucmVhY2hhYmxlGAMgAygJIlAKE1VwZGF0ZURlc2lnblJlcXVlc3QSDAoEbmFtZRgBIAEoCRIrCgVmaWxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLlNuYXBzaG90RmlsZSIjChNEZWxldGVEZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAkylQMKDURlc2lnblNlcnZpY2USSwoMQ3JlYXRlRGVzaWduEiMuYWduaS52MS53ZWJhcGkuQ3JlYXRlRGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJFCglHZXREZXNpZ24SIC5hZ25pLnYxLndlYmFwaS5HZXREZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduElYKC0xpc3REZXNpZ25zEiIuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbnNSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbnNSZXNwb25zZRJLCgxVcGRhdGVEZXNpZ24SIy5hZ25pLnYxLndlYmFwaS5VcGRhdGVEZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduEksKDERlbGV0ZURlc2lnbhIjLmFnbmkudjEud2ViYXBpLkRlbGV0ZURlc2lnblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_project, file_agni_v1_webapi_snapshot, file_google_protobuf_empty]);
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9kZXNpZ25zLnByb3RvEg5hZ25pLnYxLndlYmFwaSJdChNDcmVhdGVEZXNpZ25SZXF1ZXN0EhEKCWRlc2lnbl9pZBgBIAEoCRImCgZkZXNpZ24YAyABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ25KBAgCEANSBWZpbGVzIiAKEEdldERlc2lnblJlcXVlc3QSDAoEbmFtZRgBIAEoCSJLChJMaXN0RGVzaWduc1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJImwKE0xpc3REZXNpZ25zUmVzcG9uc2USJwoHZGVzaWducxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkSEwoLdW5yZWFjaGFibGUYAyADKAkihwEKE1VwZGF0ZURlc2lnblJlcXVlc3QSJgoGZGVzaWduGAMgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEi8KC3VwZGF0ZV9tYXNrGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFza0oECAEQAkoECAIQA1IEbmFtZVIFZmlsZXMiIwoTRGVsZXRlRGVzaWduUmVxdWVzdBIMCgRuYW1lGAEgASgJIrEBCghBcnRpZmFjdBIMCgRuYW1lGAEgASgJEisKBWZpbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuU25hcHNob3RGaWxlEioKBHR5cGUYAyABKA4yHC5hZ25pLnYxLndlYmFwaS5BcnRpZmFjdFR5cGUSDQoFZW50cnkYBCABKAkSLwoLdXBkYXRlX3RpbWUYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIiIKEkdldEFydGlmYWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIk0KFExpc3RBcnRpZmFjdHNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCSJdChVMaXN0QXJ0aWZhY3RzUmVzcG9uc2USKwoJYXJ0aWZhY3RzGAEgAygLMhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIloKFVVwZGF0ZUFydGlmYWN0UmVxdWVzdBIqCghhcnRpZmFjdBgBIAEoCzIYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0EhUKDWFsbG93X21pc3NpbmcYAiABKAgiZgobQmF0Y2hVcGRhdGVBcnRpZmFjdHNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRI3CghyZXF1ZXN0cxgCIAMoCzIlLmFnbmkudjEud2ViYXBpLlVwZGF0ZUFydGlmYWN0UmVxdWVzdCJLChxCYXRjaFVwZGF0ZUFydGlmYWN0c1Jlc3BvbnNlEisKCWFydGlmYWN0cxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0IiUKFURlbGV0ZUFydGlmYWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJKpcBCgxBcnRpZmFjdFR5cGUSHQoZQVJUSUZBQ1RfVFlQRV9VTlNQRUNJRklFRBAAEhkKFUFSVElGQUNUX1RZUEVfTkVUTElTVBABEhsKF0FSVElGQUNUX1RZUEVfU0NIRU1BVElDEAISFwoTQVJUSUZBQ1RfVFlQRV9CT0FSRBADEhcKE0FSVElGQUNUX1RZUEVfT1RIRVIQBDLXBgoNRGVzaWduU2VydmljZRJLCgxDcmVhdGVEZXNpZ24SIy5hZ25pLnYxLndlYmFwaS5DcmVhdGVEZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduEkUKCUdldERlc2lnbhIgLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SVgoLTGlzdERlc2lnbnMSIi5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduc1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduc1Jlc3BvbnNlEksKDFVwZGF0ZURlc2lnbhIjLmFnbmkudjEud2ViYXBpLlVwZGF0ZURlc2lnblJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SSwoMRGVsZXRlRGVzaWduEiMuYWduaS52MS53ZWJhcGkuRGVsZXRlRGVzaWduUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJLCgtHZXRBcnRpZmFjdBIiLmFnbmkudjEud2ViYXBpLkdldEFydGlmYWN0UmVxdWVzdBoYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0ElwKDUxpc3RBcnRpZmFjdHMSJC5hZ25pLnYxLndlYmFwaS5MaXN0QXJ0aWZhY3RzUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RBcnRpZmFjdHNSZXNwb25zZRJRCg5VcGRhdGVBcnRpZmFjdBIlLmFnbmkudjEud2ViYXBpLlVwZGF0ZUFydGlmYWN0UmVxdWVzdBoYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0EnEKFEJhdGNoVXBkYXRlQXJ0aWZhY3RzEisuYWduaS52MS53ZWJhcGkuQmF0Y2hVcGRhdGVBcnRpZmFjdHNSZXF1ZXN0GiwuYWduaS52MS53ZWJhcGkuQmF0Y2hVcGRhdGVBcnRpZmFjdHNSZXNwb25zZRJPCg5EZWxldGVBcnRpZmFjdBIlLmFnbmkudjEud2ViYXBpLkRlbGV0ZUFydGlmYWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_project, file_agni_v1_webapi_snapshot, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message agni.v1.webapi.CreateDesignRequest
@@ -30,11 +30,11 @@ export type CreateDesignRequest = Message<"agni.v1.webapi.CreateDesignRequest"> 
   designId: string;
 
   /**
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
    *
-   * @generated from field: repeated agni.v1.webapi.SnapshotFile files = 2;
+   * @generated from field: agni.v1.webapi.Design design = 3;
    */
-  files: SnapshotFile[];
+  design?: Design | undefined;
 };
 
 /**
@@ -135,18 +135,19 @@ export const ListDesignsResponseSchema: GenMessage<ListDesignsResponse> = /*@__P
  */
 export type UpdateDesignRequest = Message<"agni.v1.webapi.UpdateDesignRequest"> & {
   /**
-   * "designs/{design}"
+   * design names the design to change, "designs/{design}", and carries the new values.
    *
-   * @generated from field: string name = 1;
+   * @generated from field: agni.v1.webapi.Design design = 3;
    */
-  name: string;
+  design?: Design | undefined;
 
   /**
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
    *
-   * @generated from field: repeated agni.v1.webapi.SnapshotFile files = 2;
+   * @generated from field: google.protobuf.FieldMask update_mask = 4;
    */
-  files: SnapshotFile[];
+  updateMask?: FieldMask | undefined;
 };
 
 /**
@@ -176,26 +177,295 @@ export const DeleteDesignRequestSchema: GenMessage<DeleteDesignRequest> = /*@__P
   messageDesc(file_agni_v1_webapi_designs, 5);
 
 /**
- * This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
- * design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
- * project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
- * about a snapshot of a design instead.
+ * Artifact is one source of a design, such as a schematic with its sheets, a board, or a BOM. It is
+ * named "designs/{design}/artifacts/{artifact}". It holds one file or several, and replacing it
+ * replaces all of them, so a schematic never holds sheets from two releases.
  *
- * A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
- * the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
- * too, and those are read-only. A design id is unique across both.
+ * A design is read as one IR built from all its artifacts. The server works out which artifact
+ * analysis reads: the netlist, else the schematic, else the board. The others are views of the same
+ * design. Provenance names a file as "{artifact}/{path}".
+ *
+ * @generated from message agni.v1.webapi.Artifact
+ */
+export type Artifact = Message<"agni.v1.webapi.Artifact"> & {
+  /**
+   * "designs/{design}/artifacts/{artifact}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * files are the artifact's files. Each path is relative to the artifact, and readers find one file
+   * from another by it, as a KiCad root sheet names its child sheets by filename.
+   *
+   * @generated from field: repeated agni.v1.webapi.SnapshotFile files = 2;
+   */
+  files: SnapshotFile[];
+
+  /**
+   * type is what the server found the artifact to hold. It is output only.
+   *
+   * @generated from field: agni.v1.webapi.ArtifactType type = 3;
+   */
+  type: ArtifactType;
+
+  /**
+   * entry is the path among files that a reader opens first, such as a KiCad root sheet. It is empty
+   * for an artifact no reader opens, such as a BOM. It is output only.
+   *
+   * @generated from field: string entry = 4;
+   */
+  entry: string;
+
+  /**
+   * update_time is when the artifact's files last changed. It is output only.
+   *
+   * @generated from field: google.protobuf.Timestamp update_time = 5;
+   */
+  updateTime?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message agni.v1.webapi.Artifact.
+ * Use `create(ArtifactSchema)` to create a new message.
+ */
+export const ArtifactSchema: GenMessage<Artifact> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 6);
+
+/**
+ * @generated from message agni.v1.webapi.GetArtifactRequest
+ */
+export type GetArtifactRequest = Message<"agni.v1.webapi.GetArtifactRequest"> & {
+  /**
+   * "designs/{design}/artifacts/{artifact}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.GetArtifactRequest.
+ * Use `create(GetArtifactRequestSchema)` to create a new message.
+ */
+export const GetArtifactRequestSchema: GenMessage<GetArtifactRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 7);
+
+/**
+ * @generated from message agni.v1.webapi.ListArtifactsRequest
+ */
+export type ListArtifactsRequest = Message<"agni.v1.webapi.ListArtifactsRequest"> & {
+  /**
+   * "designs/{design}"
+   *
+   * @generated from field: string parent = 1;
+   */
+  parent: string;
+
+  /**
+   * page_size is the maximum number of artifacts to return. 0 uses the server default.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize: number;
+
+  /**
+   * page_token continues a previous call. An empty token starts at the first artifact.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListArtifactsRequest.
+ * Use `create(ListArtifactsRequestSchema)` to create a new message.
+ */
+export const ListArtifactsRequestSchema: GenMessage<ListArtifactsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 8);
+
+/**
+ * @generated from message agni.v1.webapi.ListArtifactsResponse
+ */
+export type ListArtifactsResponse = Message<"agni.v1.webapi.ListArtifactsResponse"> & {
+  /**
+   * @generated from field: repeated agni.v1.webapi.Artifact artifacts = 1;
+   */
+  artifacts: Artifact[];
+
+  /**
+   * next_page_token is empty when the last page has been reached.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListArtifactsResponse.
+ * Use `create(ListArtifactsResponseSchema)` to create a new message.
+ */
+export const ListArtifactsResponseSchema: GenMessage<ListArtifactsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 9);
+
+/**
+ * @generated from message agni.v1.webapi.UpdateArtifactRequest
+ */
+export type UpdateArtifactRequest = Message<"agni.v1.webapi.UpdateArtifactRequest"> & {
+  /**
+   * artifact names the artifact and carries its new files. Its type, entry and update_time are
+   * ignored, since the server works them out.
+   *
+   * @generated from field: agni.v1.webapi.Artifact artifact = 1;
+   */
+  artifact?: Artifact | undefined;
+
+  /**
+   * allow_missing creates the artifact when the design has none of that name (AIP-134). Without it,
+   * a missing artifact is NOT_FOUND.
+   *
+   * @generated from field: bool allow_missing = 2;
+   */
+  allowMissing: boolean;
+};
+
+/**
+ * Describes the message agni.v1.webapi.UpdateArtifactRequest.
+ * Use `create(UpdateArtifactRequestSchema)` to create a new message.
+ */
+export const UpdateArtifactRequestSchema: GenMessage<UpdateArtifactRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 10);
+
+/**
+ * @generated from message agni.v1.webapi.BatchUpdateArtifactsRequest
+ */
+export type BatchUpdateArtifactsRequest = Message<"agni.v1.webapi.BatchUpdateArtifactsRequest"> & {
+  /**
+   * "designs/{design}"
+   *
+   * @generated from field: string parent = 1;
+   */
+  parent: string;
+
+  /**
+   * requests each name an artifact of parent. Two naming one artifact is INVALID_ARGUMENT.
+   *
+   * @generated from field: repeated agni.v1.webapi.UpdateArtifactRequest requests = 2;
+   */
+  requests: UpdateArtifactRequest[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.BatchUpdateArtifactsRequest.
+ * Use `create(BatchUpdateArtifactsRequestSchema)` to create a new message.
+ */
+export const BatchUpdateArtifactsRequestSchema: GenMessage<BatchUpdateArtifactsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 11);
+
+/**
+ * @generated from message agni.v1.webapi.BatchUpdateArtifactsResponse
+ */
+export type BatchUpdateArtifactsResponse = Message<"agni.v1.webapi.BatchUpdateArtifactsResponse"> & {
+  /**
+   * artifacts are the written artifacts, in the order of the requests.
+   *
+   * @generated from field: repeated agni.v1.webapi.Artifact artifacts = 1;
+   */
+  artifacts: Artifact[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.BatchUpdateArtifactsResponse.
+ * Use `create(BatchUpdateArtifactsResponseSchema)` to create a new message.
+ */
+export const BatchUpdateArtifactsResponseSchema: GenMessage<BatchUpdateArtifactsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 12);
+
+/**
+ * @generated from message agni.v1.webapi.DeleteArtifactRequest
+ */
+export type DeleteArtifactRequest = Message<"agni.v1.webapi.DeleteArtifactRequest"> & {
+  /**
+   * "designs/{design}/artifacts/{artifact}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.DeleteArtifactRequest.
+ * Use `create(DeleteArtifactRequestSchema)` to create a new message.
+ */
+export const DeleteArtifactRequestSchema: GenMessage<DeleteArtifactRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 13);
+
+/**
+ * ArtifactType is what an artifact holds, found from its entry's format.
+ *
+ * @generated from enum agni.v1.webapi.ArtifactType
+ */
+export enum ArtifactType {
+  /**
+   * @generated from enum value: ARTIFACT_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * ARTIFACT_TYPE_NETLIST is a netlist with no drawing, such as an EDIF `.edn`.
+   *
+   * @generated from enum value: ARTIFACT_TYPE_NETLIST = 1;
+   */
+  NETLIST = 1,
+
+  /**
+   * ARTIFACT_TYPE_SCHEMATIC is a drawn schematic, such as a KiCad root sheet and its child sheets.
+   *
+   * @generated from enum value: ARTIFACT_TYPE_SCHEMATIC = 2;
+   */
+  SCHEMATIC = 2,
+
+  /**
+   * ARTIFACT_TYPE_BOARD is a board layout, such as a `.kicad_pcb` or an ODB++ job.
+   *
+   * @generated from enum value: ARTIFACT_TYPE_BOARD = 3;
+   */
+  BOARD = 3,
+
+  /**
+   * ARTIFACT_TYPE_OTHER is files no reader opens, such as a BOM or a PDF. They are kept with the
+   * design and never read.
+   *
+   * @generated from enum value: ARTIFACT_TYPE_OTHER = 4;
+   */
+  OTHER = 4,
+}
+
+/**
+ * Describes the enum agni.v1.webapi.ArtifactType.
+ */
+export const ArtifactTypeSchema: GenEnum<ArtifactType> = /*@__PURE__*/
+  enumDesc(file_agni_v1_webapi_designs, 0);
+
+/**
+ * This file defines DesignService, which keeps the designs a server holds (agni issues 1694, 1696).
+ * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
+ * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
+ * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
+ *
+ * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
+ * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
+ * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
+ * so each store decides how it keeps a design's files.
  *
  * @generated from service agni.v1.webapi.DesignService
  */
 export const DesignService: GenService<{
   /**
-   * CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
-   * Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
-   * and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
-   * among the files sets the title and series. A `name` in it naming a different id is
-   * INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
-   * already holds is ALREADY_EXISTS. A server started without --store-dir answers
-   * FAILED_PRECONDITION.
+   * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
+   * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+   * --store-dir answers FAILED_PRECONDITION.
    *
    * @generated from rpc agni.v1.webapi.DesignService.CreateDesign
    */
@@ -226,8 +496,9 @@ export const DesignService: GenService<{
     output: typeof ListDesignsResponseSchema;
   },
   /**
-   * UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
-   * design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+   * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+   * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
+   * FAILED_PRECONDITION.
    *
    * @generated from rpc agni.v1.webapi.DesignService.UpdateDesign
    */
@@ -237,13 +508,74 @@ export const DesignService: GenService<{
     output: typeof DesignSchema;
   },
   /**
-   * DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+   * DeleteDesign removes a stored design and its artifacts. A project listing it keeps the name.
    *
    * @generated from rpc agni.v1.webapi.DesignService.DeleteDesign
    */
   deleteDesign: {
     methodKind: "unary";
     input: typeof DeleteDesignRequestSchema;
+    output: typeof EmptySchema;
+  },
+  /**
+   * GetArtifact returns one artifact of a stored design.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.GetArtifact
+   */
+  getArtifact: {
+    methodKind: "unary";
+    input: typeof GetArtifactRequestSchema;
+    output: typeof ArtifactSchema;
+  },
+  /**
+   * ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none, since its
+   * folder names its files.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.ListArtifacts
+   */
+  listArtifacts: {
+    methodKind: "unary";
+    input: typeof ListArtifactsRequestSchema;
+    output: typeof ListArtifactsResponseSchema;
+  },
+  /**
+   * UpdateArtifact replaces an artifact's whole file set in one write, so a reader sees the old files
+   * or the new ones. With allow_missing it creates the artifact. Contents the server lacks are
+   * FAILED_PRECONDITION with a BlobsMissing detail naming their hashes, and the caller sends them with
+   * SnapshotService.UploadBlobs and asks again.
+   *
+   * The server reads the files to find the artifact's type and entry. Files that make two designs
+   * are INVALID_ARGUMENT. A write leaving the design with two netlists, two schematics and no netlist,
+   * or two boards is FAILED_PRECONDITION, since the server could not tell which one analysis reads.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.UpdateArtifact
+   */
+  updateArtifact: {
+    methodKind: "unary";
+    input: typeof UpdateArtifactRequestSchema;
+    output: typeof ArtifactSchema;
+  },
+  /**
+   * BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write, so the
+   * design moves from its old artifacts to its new ones with no state in between. Any request failing
+   * fails the batch, and nothing is written.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.BatchUpdateArtifacts
+   */
+  batchUpdateArtifacts: {
+    methodKind: "unary";
+    input: typeof BatchUpdateArtifactsRequestSchema;
+    output: typeof BatchUpdateArtifactsResponseSchema;
+  },
+  /**
+   * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
+   * design unable to be read until another is put.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.DeleteArtifact
+   */
+  deleteArtifact: {
+    methodKind: "unary";
+    input: typeof DeleteArtifactRequestSchema;
     output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/

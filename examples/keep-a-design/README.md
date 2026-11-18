@@ -2,12 +2,12 @@
 
 Keep designs on a server: store two revisions of a board as designs of one series, group them in a
 project with a design from a mounted folder, and see what a mounted folder will not let you change
-(agni issue 1694). The walkthrough form of `agni serve --store-dir` and the `DesignService` and
+(agni issues 1694, 1696). The walkthrough form of `agni serve --store-dir` and the `DesignService` and
 `ProjectService` calls a client makes against it.
 
 ## What it shows
 
-- A design is a set of files named `designs/{design}`, tied to no project.
+- A design is named `designs/{design}`, holds artifacts such as a netlist or a board, and is tied to no project.
 - A client sends a manifest of hashes first, and only the contents the server asks for.
 - Revisions of one board are designs of one `series`, and the server marks the latest.
 - A project is a list of design names, from any store, and deleting it deletes no design.

@@ -48,28 +48,61 @@ const (
 	// DesignServiceDeleteDesignProcedure is the fully-qualified name of the DesignService's
 	// DeleteDesign RPC.
 	DesignServiceDeleteDesignProcedure = "/agni.v1.webapi.DesignService/DeleteDesign"
+	// DesignServiceGetArtifactProcedure is the fully-qualified name of the DesignService's GetArtifact
+	// RPC.
+	DesignServiceGetArtifactProcedure = "/agni.v1.webapi.DesignService/GetArtifact"
+	// DesignServiceListArtifactsProcedure is the fully-qualified name of the DesignService's
+	// ListArtifacts RPC.
+	DesignServiceListArtifactsProcedure = "/agni.v1.webapi.DesignService/ListArtifacts"
+	// DesignServiceUpdateArtifactProcedure is the fully-qualified name of the DesignService's
+	// UpdateArtifact RPC.
+	DesignServiceUpdateArtifactProcedure = "/agni.v1.webapi.DesignService/UpdateArtifact"
+	// DesignServiceBatchUpdateArtifactsProcedure is the fully-qualified name of the DesignService's
+	// BatchUpdateArtifacts RPC.
+	DesignServiceBatchUpdateArtifactsProcedure = "/agni.v1.webapi.DesignService/BatchUpdateArtifacts"
+	// DesignServiceDeleteArtifactProcedure is the fully-qualified name of the DesignService's
+	// DeleteArtifact RPC.
+	DesignServiceDeleteArtifactProcedure = "/agni.v1.webapi.DesignService/DeleteArtifact"
 )
 
 // DesignServiceClient is a client for the agni.v1.webapi.DesignService service.
 type DesignServiceClient interface {
-	// CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
-	// Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
-	// and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
-	// among the files sets the title and series. A `name` in it naming a different id is
-	// INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
-	// already holds is ALREADY_EXISTS. A server started without --store-dir answers
-	// FAILED_PRECONDITION.
+	// CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
+	// from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+	// --store-dir answers FAILED_PRECONDITION.
 	CreateDesign(context.Context, *connect.Request[webapi.CreateDesignRequest]) (*connect.Response[webapi.Design], error)
 	// GetDesign returns one design by resource name. An id two mounted folders both declare is
 	// FAILED_PRECONDITION naming both, since answering with either could describe the wrong board.
 	GetDesign(context.Context, *connect.Request[webapi.GetDesignRequest]) (*connect.Response[webapi.Design], error)
 	// ListDesigns returns the designs this server holds, ordered by resource name.
 	ListDesigns(context.Context, *connect.Request[webapi.ListDesignsRequest]) (*connect.Response[webapi.ListDesignsResponse], error)
-	// UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
-	// design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+	// UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+	// update_mask names. A design declared in a mounted folder is read-only, and a write to it is
+	// FAILED_PRECONDITION.
 	UpdateDesign(context.Context, *connect.Request[webapi.UpdateDesignRequest]) (*connect.Response[webapi.Design], error)
-	// DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+	// DeleteDesign removes a stored design and its artifacts. A project listing it keeps the name.
 	DeleteDesign(context.Context, *connect.Request[webapi.DeleteDesignRequest]) (*connect.Response[emptypb.Empty], error)
+	// GetArtifact returns one artifact of a stored design.
+	GetArtifact(context.Context, *connect.Request[webapi.GetArtifactRequest]) (*connect.Response[webapi.Artifact], error)
+	// ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none, since its
+	// folder names its files.
+	ListArtifacts(context.Context, *connect.Request[webapi.ListArtifactsRequest]) (*connect.Response[webapi.ListArtifactsResponse], error)
+	// UpdateArtifact replaces an artifact's whole file set in one write, so a reader sees the old files
+	// or the new ones. With allow_missing it creates the artifact. Contents the server lacks are
+	// FAILED_PRECONDITION with a BlobsMissing detail naming their hashes, and the caller sends them with
+	// SnapshotService.UploadBlobs and asks again.
+	//
+	// The server reads the files to find the artifact's type and entry. Files that make two designs
+	// are INVALID_ARGUMENT. A write leaving the design with two netlists, two schematics and no netlist,
+	// or two boards is FAILED_PRECONDITION, since the server could not tell which one analysis reads.
+	UpdateArtifact(context.Context, *connect.Request[webapi.UpdateArtifactRequest]) (*connect.Response[webapi.Artifact], error)
+	// BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write, so the
+	// design moves from its old artifacts to its new ones with no state in between. Any request failing
+	// fails the batch, and nothing is written.
+	BatchUpdateArtifacts(context.Context, *connect.Request[webapi.BatchUpdateArtifactsRequest]) (*connect.Response[webapi.BatchUpdateArtifactsResponse], error)
+	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
+	// design unable to be read until another is put.
+	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewDesignServiceClient constructs a client for the agni.v1.webapi.DesignService service. By
@@ -113,16 +146,51 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("DeleteDesign")),
 			connect.WithClientOptions(opts...),
 		),
+		getArtifact: connect.NewClient[webapi.GetArtifactRequest, webapi.Artifact](
+			httpClient,
+			baseURL+DesignServiceGetArtifactProcedure,
+			connect.WithSchema(designServiceMethods.ByName("GetArtifact")),
+			connect.WithClientOptions(opts...),
+		),
+		listArtifacts: connect.NewClient[webapi.ListArtifactsRequest, webapi.ListArtifactsResponse](
+			httpClient,
+			baseURL+DesignServiceListArtifactsProcedure,
+			connect.WithSchema(designServiceMethods.ByName("ListArtifacts")),
+			connect.WithClientOptions(opts...),
+		),
+		updateArtifact: connect.NewClient[webapi.UpdateArtifactRequest, webapi.Artifact](
+			httpClient,
+			baseURL+DesignServiceUpdateArtifactProcedure,
+			connect.WithSchema(designServiceMethods.ByName("UpdateArtifact")),
+			connect.WithClientOptions(opts...),
+		),
+		batchUpdateArtifacts: connect.NewClient[webapi.BatchUpdateArtifactsRequest, webapi.BatchUpdateArtifactsResponse](
+			httpClient,
+			baseURL+DesignServiceBatchUpdateArtifactsProcedure,
+			connect.WithSchema(designServiceMethods.ByName("BatchUpdateArtifacts")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteArtifact: connect.NewClient[webapi.DeleteArtifactRequest, emptypb.Empty](
+			httpClient,
+			baseURL+DesignServiceDeleteArtifactProcedure,
+			connect.WithSchema(designServiceMethods.ByName("DeleteArtifact")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // designServiceClient implements DesignServiceClient.
 type designServiceClient struct {
-	createDesign *connect.Client[webapi.CreateDesignRequest, webapi.Design]
-	getDesign    *connect.Client[webapi.GetDesignRequest, webapi.Design]
-	listDesigns  *connect.Client[webapi.ListDesignsRequest, webapi.ListDesignsResponse]
-	updateDesign *connect.Client[webapi.UpdateDesignRequest, webapi.Design]
-	deleteDesign *connect.Client[webapi.DeleteDesignRequest, emptypb.Empty]
+	createDesign         *connect.Client[webapi.CreateDesignRequest, webapi.Design]
+	getDesign            *connect.Client[webapi.GetDesignRequest, webapi.Design]
+	listDesigns          *connect.Client[webapi.ListDesignsRequest, webapi.ListDesignsResponse]
+	updateDesign         *connect.Client[webapi.UpdateDesignRequest, webapi.Design]
+	deleteDesign         *connect.Client[webapi.DeleteDesignRequest, emptypb.Empty]
+	getArtifact          *connect.Client[webapi.GetArtifactRequest, webapi.Artifact]
+	listArtifacts        *connect.Client[webapi.ListArtifactsRequest, webapi.ListArtifactsResponse]
+	updateArtifact       *connect.Client[webapi.UpdateArtifactRequest, webapi.Artifact]
+	batchUpdateArtifacts *connect.Client[webapi.BatchUpdateArtifactsRequest, webapi.BatchUpdateArtifactsResponse]
+	deleteArtifact       *connect.Client[webapi.DeleteArtifactRequest, emptypb.Empty]
 }
 
 // CreateDesign calls agni.v1.webapi.DesignService.CreateDesign.
@@ -150,26 +218,69 @@ func (c *designServiceClient) DeleteDesign(ctx context.Context, req *connect.Req
 	return c.deleteDesign.CallUnary(ctx, req)
 }
 
+// GetArtifact calls agni.v1.webapi.DesignService.GetArtifact.
+func (c *designServiceClient) GetArtifact(ctx context.Context, req *connect.Request[webapi.GetArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	return c.getArtifact.CallUnary(ctx, req)
+}
+
+// ListArtifacts calls agni.v1.webapi.DesignService.ListArtifacts.
+func (c *designServiceClient) ListArtifacts(ctx context.Context, req *connect.Request[webapi.ListArtifactsRequest]) (*connect.Response[webapi.ListArtifactsResponse], error) {
+	return c.listArtifacts.CallUnary(ctx, req)
+}
+
+// UpdateArtifact calls agni.v1.webapi.DesignService.UpdateArtifact.
+func (c *designServiceClient) UpdateArtifact(ctx context.Context, req *connect.Request[webapi.UpdateArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	return c.updateArtifact.CallUnary(ctx, req)
+}
+
+// BatchUpdateArtifacts calls agni.v1.webapi.DesignService.BatchUpdateArtifacts.
+func (c *designServiceClient) BatchUpdateArtifacts(ctx context.Context, req *connect.Request[webapi.BatchUpdateArtifactsRequest]) (*connect.Response[webapi.BatchUpdateArtifactsResponse], error) {
+	return c.batchUpdateArtifacts.CallUnary(ctx, req)
+}
+
+// DeleteArtifact calls agni.v1.webapi.DesignService.DeleteArtifact.
+func (c *designServiceClient) DeleteArtifact(ctx context.Context, req *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.deleteArtifact.CallUnary(ctx, req)
+}
+
 // DesignServiceHandler is an implementation of the agni.v1.webapi.DesignService service.
 type DesignServiceHandler interface {
-	// CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
-	// Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
-	// and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
-	// among the files sets the title and series. A `name` in it naming a different id is
-	// INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
-	// already holds is ALREADY_EXISTS. A server started without --store-dir answers
-	// FAILED_PRECONDITION.
+	// CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
+	// from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+	// --store-dir answers FAILED_PRECONDITION.
 	CreateDesign(context.Context, *connect.Request[webapi.CreateDesignRequest]) (*connect.Response[webapi.Design], error)
 	// GetDesign returns one design by resource name. An id two mounted folders both declare is
 	// FAILED_PRECONDITION naming both, since answering with either could describe the wrong board.
 	GetDesign(context.Context, *connect.Request[webapi.GetDesignRequest]) (*connect.Response[webapi.Design], error)
 	// ListDesigns returns the designs this server holds, ordered by resource name.
 	ListDesigns(context.Context, *connect.Request[webapi.ListDesignsRequest]) (*connect.Response[webapi.ListDesignsResponse], error)
-	// UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
-	// design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+	// UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+	// update_mask names. A design declared in a mounted folder is read-only, and a write to it is
+	// FAILED_PRECONDITION.
 	UpdateDesign(context.Context, *connect.Request[webapi.UpdateDesignRequest]) (*connect.Response[webapi.Design], error)
-	// DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+	// DeleteDesign removes a stored design and its artifacts. A project listing it keeps the name.
 	DeleteDesign(context.Context, *connect.Request[webapi.DeleteDesignRequest]) (*connect.Response[emptypb.Empty], error)
+	// GetArtifact returns one artifact of a stored design.
+	GetArtifact(context.Context, *connect.Request[webapi.GetArtifactRequest]) (*connect.Response[webapi.Artifact], error)
+	// ListArtifacts returns a design's artifacts, ordered by name. A mounted design has none, since its
+	// folder names its files.
+	ListArtifacts(context.Context, *connect.Request[webapi.ListArtifactsRequest]) (*connect.Response[webapi.ListArtifactsResponse], error)
+	// UpdateArtifact replaces an artifact's whole file set in one write, so a reader sees the old files
+	// or the new ones. With allow_missing it creates the artifact. Contents the server lacks are
+	// FAILED_PRECONDITION with a BlobsMissing detail naming their hashes, and the caller sends them with
+	// SnapshotService.UploadBlobs and asks again.
+	//
+	// The server reads the files to find the artifact's type and entry. Files that make two designs
+	// are INVALID_ARGUMENT. A write leaving the design with two netlists, two schematics and no netlist,
+	// or two boards is FAILED_PRECONDITION, since the server could not tell which one analysis reads.
+	UpdateArtifact(context.Context, *connect.Request[webapi.UpdateArtifactRequest]) (*connect.Response[webapi.Artifact], error)
+	// BatchUpdateArtifacts applies several UpdateArtifact requests to one design in one write, so the
+	// design moves from its old artifacts to its new ones with no state in between. Any request failing
+	// fails the batch, and nothing is written.
+	BatchUpdateArtifacts(context.Context, *connect.Request[webapi.BatchUpdateArtifactsRequest]) (*connect.Response[webapi.BatchUpdateArtifactsResponse], error)
+	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
+	// design unable to be read until another is put.
+	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewDesignServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -209,6 +320,36 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("DeleteDesign")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceGetArtifactHandler := connect.NewUnaryHandler(
+		DesignServiceGetArtifactProcedure,
+		svc.GetArtifact,
+		connect.WithSchema(designServiceMethods.ByName("GetArtifact")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceListArtifactsHandler := connect.NewUnaryHandler(
+		DesignServiceListArtifactsProcedure,
+		svc.ListArtifacts,
+		connect.WithSchema(designServiceMethods.ByName("ListArtifacts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceUpdateArtifactHandler := connect.NewUnaryHandler(
+		DesignServiceUpdateArtifactProcedure,
+		svc.UpdateArtifact,
+		connect.WithSchema(designServiceMethods.ByName("UpdateArtifact")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceBatchUpdateArtifactsHandler := connect.NewUnaryHandler(
+		DesignServiceBatchUpdateArtifactsProcedure,
+		svc.BatchUpdateArtifacts,
+		connect.WithSchema(designServiceMethods.ByName("BatchUpdateArtifacts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceDeleteArtifactHandler := connect.NewUnaryHandler(
+		DesignServiceDeleteArtifactProcedure,
+		svc.DeleteArtifact,
+		connect.WithSchema(designServiceMethods.ByName("DeleteArtifact")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.DesignService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DesignServiceCreateDesignProcedure:
@@ -221,6 +362,16 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceUpdateDesignHandler.ServeHTTP(w, r)
 		case DesignServiceDeleteDesignProcedure:
 			designServiceDeleteDesignHandler.ServeHTTP(w, r)
+		case DesignServiceGetArtifactProcedure:
+			designServiceGetArtifactHandler.ServeHTTP(w, r)
+		case DesignServiceListArtifactsProcedure:
+			designServiceListArtifactsHandler.ServeHTTP(w, r)
+		case DesignServiceUpdateArtifactProcedure:
+			designServiceUpdateArtifactHandler.ServeHTTP(w, r)
+		case DesignServiceBatchUpdateArtifactsProcedure:
+			designServiceBatchUpdateArtifactsHandler.ServeHTTP(w, r)
+		case DesignServiceDeleteArtifactProcedure:
+			designServiceDeleteArtifactHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -248,4 +399,24 @@ func (UnimplementedDesignServiceHandler) UpdateDesign(context.Context, *connect.
 
 func (UnimplementedDesignServiceHandler) DeleteDesign(context.Context, *connect.Request[webapi.DeleteDesignRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.DeleteDesign is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) GetArtifact(context.Context, *connect.Request[webapi.GetArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.GetArtifact is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) ListArtifacts(context.Context, *connect.Request[webapi.ListArtifactsRequest]) (*connect.Response[webapi.ListArtifactsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.ListArtifacts is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) UpdateArtifact(context.Context, *connect.Request[webapi.UpdateArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.UpdateArtifact is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) BatchUpdateArtifacts(context.Context, *connect.Request[webapi.BatchUpdateArtifactsRequest]) (*connect.Response[webapi.BatchUpdateArtifactsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.BatchUpdateArtifacts is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.DeleteArtifact is not implemented"))
 }

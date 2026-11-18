@@ -1,5 +1,5 @@
-// Command keep-a-design is the walkthrough of the designs a server keeps (agni issue 1694). It
-// stores two revisions of a board as designs of one series, groups them in a project with a design
+// Command keep-a-design is the walkthrough of the designs a server keeps (agni issues 1694, 1696).
+// It stores two revisions of a board as designs of one series, each holding a netlist artifact, groups them in a project with a design
 // from a mounted folder, and shows what a mounted folder will not let it change. The narration is in
 // the sidecar walkthrough.md, so this file only binds the steps that run engine code.
 //
@@ -46,7 +46,7 @@ func main() {
 			return demokit.Errf("keep rev A: %v", err)
 		}
 		fmt.Printf("The server asked for %d file contents, then kept %s.\n", asked, d.GetName())
-		fmt.Printf("entry:  %s\nseries: %s\n", d.GetEntryUri(), d.GetSeries())
+		fmt.Printf("artifacts: %v\nentry:     %s\nseries:    %s\n", d.GetArtifacts(), d.GetEntryUri(), d.GetSeries())
 		return nil
 	})
 

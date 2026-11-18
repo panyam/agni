@@ -27,7 +27,7 @@ class Project(_message.Message):
     def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., designs: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class Design(_message.Message):
-    __slots__ = ("name", "title", "uri", "entry_uri", "companion_uris", "config", "series", "flatten_hierarchy", "update_time", "series_latest")
+    __slots__ = ("name", "title", "uri", "entry_uri", "companion_uris", "config", "series", "flatten_hierarchy", "update_time", "series_latest", "artifacts")
     NAME_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
@@ -38,6 +38,7 @@ class Design(_message.Message):
     FLATTEN_HIERARCHY_FIELD_NUMBER: _ClassVar[int]
     UPDATE_TIME_FIELD_NUMBER: _ClassVar[int]
     SERIES_LATEST_FIELD_NUMBER: _ClassVar[int]
+    ARTIFACTS_FIELD_NUMBER: _ClassVar[int]
     name: str
     title: str
     uri: str
@@ -48,7 +49,8 @@ class Design(_message.Message):
     flatten_hierarchy: bool
     update_time: _timestamp_pb2.Timestamp
     series_latest: bool
-    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., entry_uri: _Optional[str] = ..., companion_uris: _Optional[_Iterable[str]] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., series: _Optional[str] = ..., flatten_hierarchy: _Optional[bool] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., series_latest: _Optional[bool] = ...) -> None: ...
+    artifacts: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., entry_uri: _Optional[str] = ..., companion_uris: _Optional[_Iterable[str]] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., series: _Optional[str] = ..., flatten_hierarchy: _Optional[bool] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., series_latest: _Optional[bool] = ..., artifacts: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetProjectRequest(_message.Message):
     __slots__ = ("name",)
