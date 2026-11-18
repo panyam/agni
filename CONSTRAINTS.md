@@ -697,7 +697,7 @@ mounts, and a URI does not. And it is a PARENT (reviews nest under
 **As amended by agni issue 1692, a declared resource has two homes.** A project or design declared
 in a MOUNTED folder is read-only, with `Get` and `List` and no mutators, since the folder belongs to
 whoever mounted it and the server only reads it. A project or design the server STORES, in a
-writable tree such as `agni serve --store-dir`, is a full resource. A user creates, gets, lists,
+writable store such as `agni serve --store`, is a full resource. A user creates, gets, lists,
 updates and deletes it, and still picks its id (AIP-122). Imagine an engineer with no folder on the
 server who uploads a board's files. Without a stored home, the upload has nothing to be a design of,
 and it is gone at the next restart. A write that names a mounted resource is refused rather than

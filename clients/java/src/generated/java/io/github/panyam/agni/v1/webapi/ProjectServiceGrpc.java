@@ -323,7 +323,7 @@ public final class ProjectServiceGrpc {
      * <pre>
      * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
      * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
-     * without --store-dir answers FAILED_PRECONDITION.
+     * without --store answers FAILED_PRECONDITION.
      * </pre>
      */
     default void createProject(io.github.panyam.agni.v1.webapi.CreateProjectRequest request,
@@ -461,7 +461,7 @@ public final class ProjectServiceGrpc {
      * <pre>
      * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
      * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
-     * without --store-dir answers FAILED_PRECONDITION.
+     * without --store answers FAILED_PRECONDITION.
      * </pre>
      */
     public void createProject(io.github.panyam.agni.v1.webapi.CreateProjectRequest request,
@@ -571,7 +571,7 @@ public final class ProjectServiceGrpc {
      * <pre>
      * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
      * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
-     * without --store-dir answers FAILED_PRECONDITION.
+     * without --store answers FAILED_PRECONDITION.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Project createProject(io.github.panyam.agni.v1.webapi.CreateProjectRequest request) throws io.grpc.StatusException {
@@ -677,7 +677,7 @@ public final class ProjectServiceGrpc {
      * <pre>
      * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
      * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
-     * without --store-dir answers FAILED_PRECONDITION.
+     * without --store answers FAILED_PRECONDITION.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Project createProject(io.github.panyam.agni.v1.webapi.CreateProjectRequest request) {
@@ -785,7 +785,7 @@ public final class ProjectServiceGrpc {
      * <pre>
      * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
      * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
-     * without --store-dir answers FAILED_PRECONDITION.
+     * without --store answers FAILED_PRECONDITION.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Project> createProject(

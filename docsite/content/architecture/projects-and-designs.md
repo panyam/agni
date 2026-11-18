@@ -385,7 +385,7 @@ A design is named `designs/{design}` and ties to no project (agni issue 1694). A
 title and a list of design names, so a design can sit in many projects, and deleting a project
 deletes none of them. A mounted project lists the designs whose `extends` names it. `DesignService`
 creates, reads, changes and deletes designs, and `ProjectService` does the same for stored projects.
-`agni serve --store-dir` keeps both. A design id is unique per server, so an id two mounted folders
+`agni serve --store` keeps both as records, and `--uploads` keeps a stored design's files. A design id is unique per server, so an id two mounted folders
 both declare is left out of a listing and named in its `unreachable`.
 
 ## A stored design holds artifacts
@@ -407,11 +407,13 @@ are refused, and so are two boards, because the server could not tell which one 
 and the checks then read one design built from all the artifacts, and a finding names its file as
 `{artifact}/{path}`.
 
-Nothing on the wire names a folder. The folder adapter, `internal/projects.DirStore`, keeps each
-artifact as a subfolder and writes the design's `design.yaml` itself, naming the entry and the
-companions. A design with no artifact a reader opens keeps its record in `design.draft.yaml`
-instead, since a `design.yaml` must name an entry. A database adapter would keep the same artifacts
-as rows. A mounted design has no artifacts, because its folder's `design.yaml` names its files.
+Nothing on the wire names a folder. The folder adapter, `internal/projects.DirStore`, keeps a
+design's record apart from its files (agni issues 1732, 1739). The record is `<id>.yaml` in the
+store, holding each artifact's type, entry and manifest of paths and hashes. The files sit once each,
+by hash, in the uploads. A design reads through a view in the uploads mount,
+`<id>/<rev>/<artifact>/<path>`, whose files link to those blobs, beside a `design.yaml` the store
+writes from the record. A write builds a new revision's view and never changes an old one. A design
+with no artifact a reader opens has no view. A database adapter would keep the same records as rows. A mounted design has no artifacts, because its folder's `design.yaml` names its files.
 
 A snapshot names a design by `designs/{design}` in `Snapshot.design`, and the server looks the name
 up at every read (agni issue 1695). So a snapshot rebuilt after a restart, or ingested again after an

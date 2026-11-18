@@ -10,7 +10,7 @@ This file covers the release bundle, the images, the native tools, the fetched s
 - **An unchecked declared function travels as a KIND, since the sentence names parts.** `intent.FunctionReasonOf` reads the KIND off the rule's fixed phrases. A new not-considered path in `io-map-function` builds its reason from a new phrase, or it reads as `other`.
 - `hack/compose_smoke.sh` runs the bundle in the `images` and `release` workflows. Pipe `compose run` output only with `-T`, or it arrives empty.
 - **One release tag publishes two images.** `Dockerfile` builds `ghcr.io/panyam/agni` with the engine, viewer and symbol libraries. `Dockerfile.agnids` builds `ghcr.io/panyam/agnids` with the workbench and the docling stack. `make image` and `make dsimage` build them.
-- The `images` workflow builds and smoke-tests both images through `hack/image_smoke.sh` on a PR that touches their source files. `release` runs that script against what it published.
+- The `images` workflow builds and smoke-tests the agni image through `hack/image_smoke.sh` on a PR that touches its source files, and `images-agnids` does the same for agnids on main (agni 1741). `release` runs that script against what it published.
 - **The agnids image prefetches its models by RUNNING pdf2doc over a synthetic page**, and `make setup` (`datasheet-models`) does the same. Docling reads the Hugging Face cache, and `docling-tools models download` fills a different one (agni 786).
 
 ## Native tools

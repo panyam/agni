@@ -33,8 +33,8 @@ and Gradle build is pinned by hash.
 
 ## Open, ranked
 
-1. **#1732** (`--store <url>`) is in another session, with its PR nearly out. #1739 (uploads to a
-   writable mount by hash) follows it. Then #1704 (packs and reports) and #1697 (the viewer for them).
+1. **#1732 and #1739** are in PR #1741: `--store` keeps records, `--uploads` keeps files by hash.
+   Then #1704 (packs and reports) and #1697 (the viewer for them).
 2. **#1734 then #1735**, in the `~/projects/Agni/main` clone. The plan was approved on 2026-11-18.
    A GitHub mount is a snapshot of the repo at its commit, kept in the store, so `osLoader` reads it
    and #864 is not needed. Open question: the user asked whether datasheets should use the same

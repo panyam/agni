@@ -21,8 +21,8 @@ type composeFile struct {
 	Volumes map[string]any `yaml:"volumes"`
 }
 
-// writableFlags are the serve flags that name a folder the server writes into.
-var writableFlags = []string{"--store-dir", "--state-dir", "--review-store"}
+// writableFlags are the serve flags that name a folder the server writes into, as a file:// URL.
+var writableFlags = []string{"--store", "--uploads"}
 
 func readCompose(t *testing.T) composeFile {
 	t.Helper()
@@ -69,12 +69,16 @@ func TestServeKeepsItsWritesOnANamedVolume(t *testing.T) {
 			t.Errorf("the agni service's command has no %s, so the server keeps that state in memory or not at all", flag)
 			continue
 		}
-		dir := cmd[i+1]
-		ok := false
-		for _, target := range targets {
-			ok = ok || under(dir, target)
+		dir, isFile := strings.CutPrefix(cmd[i+1], "file://")
+		if !isFile {
+			t.Errorf("%s %s is no file:// URL", flag, cmd[i+1])
+			continue
 		}
-		if !ok {
+		onVolume := false
+		for _, target := range targets {
+			onVolume = onVolume || under(dir, target)
+		}
+		if !onVolume {
 			t.Errorf("%s %s is on no named volume (the volumes are at %v), so recreating the container loses it", flag, dir, targets)
 		}
 	}

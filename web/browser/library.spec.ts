@@ -1,7 +1,7 @@
 // The designs page uploads designs to a server's store, and they come back after a restart (agni
 // issue 1719). It drives the page as a person does: two Jetson baseboards uploaded as two designs of
 // one series through the new-design form, one schematic replaced on its design's page, the server
-// restarted over the same --store-dir, and the newer design opened in the viewer.
+// restarted over the same --store and --uploads, and the newer design opened in the viewer.
 //
 // It uploads the Jetson revisions 1.1.2 and 1.1.3 when `make samples-revisions` fetched them, and
 // otherwise the oracle corpus's Jetson board twice, so the gate runs it without the revisions.
@@ -12,7 +12,7 @@ import type { Browser, Page } from "playwright-core";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, appendFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { launch, withPage } from "./browser.js";
 import { freePort, start, type Server } from "./childserver.js";
 
@@ -30,13 +30,14 @@ let browser: Browser;
 let server: Server;
 let port: number;
 let store: string;
+let uploads: string;
 
 async function serve(): Promise<Server> {
   const base = `http://127.0.0.1:${port}`;
   return start({
     what: "agni serve (library)",
     command: inject("agniBin"),
-    args: ["serve", "--addr", `127.0.0.1:${port}`, "--store-dir", store, "--web-dir", "web"],
+    args: ["serve", "--addr", `127.0.0.1:${port}`, "--store", pathToFileURL(store).href, "--uploads", pathToFileURL(uploads).href, "--web-dir", "web"],
     cwd: repoRoot,
     base,
     health: base,
@@ -74,7 +75,8 @@ async function artifactFiles(name: string): Promise<Record<string, string>> {
 }
 
 beforeAll(async () => {
-  store = mkdtempSync(join(tmpdir(), "agni-library-"));
+  store = mkdtempSync(join(tmpdir(), "agni-library-store-"));
+  uploads = mkdtempSync(join(tmpdir(), "agni-library-uploads-"));
   port = await freePort();
   server = await serve();
   browser = await launch();
@@ -126,9 +128,9 @@ describe("the designs page", () => {
       expect(await page.locator(".lb-row").count()).toBe(2);
       expect(await page.locator('[data-design="designs/bb-1.1.3"] .lb-latest').count()).toBe(1);
 
-      // The newer design opens in the viewer through its store path.
+      // The newer design opens in the viewer through its view in the uploads mount.
       await page.locator('[data-design="designs/bb-1.1.3"] a.lb-open').click();
-      await page.waitForURL(/\/files\/store\/bb-1\.1\.3\/schematic\/.*\/view/);
+      await page.waitForURL(/\/files\/uploads\/bb-1\.1\.3\/[0-9a-f]{12}\/schematic\/.*\/view/);
       await page.locator(".sheet-tile-name").first().waitFor({ state: "attached", timeout: 120_000 });
       await shot(page, "viewer.png");
     });

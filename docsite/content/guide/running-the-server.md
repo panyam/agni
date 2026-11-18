@@ -192,20 +192,34 @@ so point it at rules that suit the whole mounted set rather than one
 project. See [interface profiles](../interface-profiles/) and
 [naming conventions](../naming-conventions/).
 
+## The store and the uploads
+
+`serve --store <url>` names where the server keeps its records, and `serve --uploads <url>` names
+where it keeps the files of designs its users upload (agni issues 1732, 1739). Today each takes a
+`file://` URL naming a folder, created if absent, such as `--store file:///srv/agni/meta` and
+`--uploads file:///srv/agni/files`. A bare path is refused with the `file://` form it meant, and
+`sqlite://` is reserved for a database store (agni issue 1733).
+
+The store keeps records and no file bytes. It holds each stored design's record, with every
+artifact's paths and hashes, the projects, each snapshot's definition and the review runs. The
+uploads keep each file once, under its SHA-256, and never change a file once written.
+
+A store alone is enough to keep snapshots and review runs. A design's files need the uploads too,
+and a server without `--uploads` refuses them. `--uploads` without `--store` is refused, since
+nothing would record what the uploads hold.
+
 ## Keeping snapshots across a restart
 
 A client asks its questions about a snapshot, a design the server ingested once and holds under a
 name. The server keeps each snapshot's definition, so a question on one it evicted is answered after
-it ingests the snapshot again. `serve --state-dir <dir>` keeps those definitions on disk, so a
-question on a snapshot made before a restart answers too (agni issue 1639). Without it they live in
-memory. Like the review store, it wants a writable volume of its own in a container, such as
-`-v agni-state:/var/lib/agni/state` with `--state-dir /var/lib/agni/state`.
+it ingests the snapshot again. With `--store`, those definitions go on disk, so a question on a
+snapshot made before a restart answers too (agni issue 1639). Without it they live in memory.
+Uploaded file contents go to `--uploads`, so a snapshot sent as files also comes back.
 
 ## Keeping designs
 
-`serve --store-dir <dir>` gives the server a folder of its own for designs and projects (agni issues
-1693, 1694, 1696). It keeps designs in `<dir>/designs`, served as the mount `store` beside the folders
-you mount, and projects in `<dir>/projects`.
+With `--store` and `--uploads`, the server keeps designs and projects of its own (agni issues 1693,
+1694, 1696, 1739).
 
 Say a user keeps a design `memory_unit` from a KiCad folder:
 
@@ -225,14 +239,21 @@ agni check designs/memory_unit --remote http://localhost:8080
 agni diff designs/memory_unit designs/memory_unit-rev-b --remote http://localhost:8080 --format json
 ```
 
-A snapshot can name its design the same way, `Snapshot.design`. The id
-`DesignSnapshotID` derives from the name lets every client that opens the design share one snapshot,
-and a server started with `--state-dir` rebuilds it after a restart by looking the name up again. The store
-then holds `designs/memory_unit/` with a folder per artifact and a `design.yaml` the server wrote.
-A stored design belongs to no project, so `agni check <dir>/designs/memory_unit` reads it like any
-other design folder. A project is a title and a list of design names, kept as
-`projects/<id>.json`, so one design can sit in several projects. `agni projects create` and
-`agni projects add` make one and list designs in it.
+A snapshot can name its design the same way, `Snapshot.design`. The id `DesignSnapshotID` derives
+from the name lets every client that opens the design share one snapshot, and a server started with
+`--store` rebuilds it after a restart by looking the name up again.
+
+The store keeps the design's record as `designs/memory_unit.yaml`. The uploads keep its files under
+`blobs/`, and serve them as the mount `uploads`, at `designs/memory_unit/<rev>/<artifact>/<path>`.
+Each write makes a new revision's folder, named by a hash of what it holds, and never changes an old
+one. So a snapshot read from the older revision keeps answering. That folder also holds a
+`design.yaml` the server writes from the record, so `agni check` on it reads it like any other
+design folder. At startup the server removes revisions and files that no record or snapshot names
+and that are over an hour old.
+
+A project is a title and a list of design names, kept as `projects/<id>.json` in the store, so one
+design can sit in several projects. `agni projects create` and `agni projects add` make one and list
+designs in it.
 
 The viewer's designs page, `/designs/`, does the same from a browser (agni issue 1719). It lists
 every design the server holds, stored and mounted, by series with each series' latest marked, and a
@@ -244,15 +265,16 @@ is at `/files/`, and an older `/designs/<mount>/<path>/view` link redirects ther
 artifact as a manifest of paths and hashes, and sends any contents the server asks for with
 `SnapshotService.UploadBlobs`, as `--remote` already does. A design or project in a mounted folder
 stays read-only, and a write to it is refused. A design id is unique on one server, across the store
-and every mount. In a container give the store a volume, such as
-`-v agni-store:/var/lib/agni/store` with `--store-dir /var/lib/agni/store`. The image makes
-`/var/lib/agni/store`, `state` and `reviews` owned by its user, so a named volume on any of them
-starts out writable. The compose bundle (`deploy/compose.yaml`) mounts one volume, `data`, on
-`/var/lib/agni` and keeps all three in it (agni issue 1698).
+and every mount.
+
+In a container, give the store and the uploads a volume. The image makes `/var/lib/agni/meta` and
+`/var/lib/agni/files` owned by its user, so a named volume on either starts out writable. The
+compose bundle (`deploy/compose.yaml`) mounts one volume, `data`, on `/var/lib/agni` and keeps both
+in it (agni issue 1698).
 
 ## Keeping review runs
 
-`serve --review-store <dir>` makes the server keep review runs. Without it the server
+With `--store`, the server keeps review runs in the store's `reviews/` folder. Without it the server
 still serves everything else, and the review endpoints answer that they store no reviews rather than
 storing a run and dropping it. The viewer's Review panel then scores the checklist without storing it
 (`CreateReview` with `validate_only`) and holds the run in the page until you leave it, as it does on
@@ -263,10 +285,10 @@ The server writes the store into a directory, so in a container give it its own 
 ```
 docker run -p 8080:8080 \
   -v ~/boards:/workspace/boards \
-  -v agni-reviews:/var/lib/agni/reviews \
-  ghcr.io/panyam/agni:v0.1.1 \
+  -v agni-data:/var/lib/agni/meta \
+  ghcr.io/panyam/agni:latest \
   serve --addr :8080 --mount-root /workspace \
-        --review-store /var/lib/agni/reviews
+        --store file:///var/lib/agni/meta
 ```
 
 It is deliberately a different volume from your board folders.
@@ -319,7 +341,7 @@ docker run -p 8090:8090 -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:
 
 The datasheets workbench (`agnids`) writes back into what you mount. It writes an annotation or an
 extracted doc-IR beside its datasheet, and a draft or a published spec into the corpus store. The
-`agni` image writes only to a `--review-store`. Both containers run as a non-root user
+`agni` image writes only to its `--store` and `--uploads`. Both containers run as a non-root user
 (uid 10001), so those files are never written as root.
 
 On **Docker Desktop** (macOS, Windows) that is the whole story. Its file-sharing layer maps

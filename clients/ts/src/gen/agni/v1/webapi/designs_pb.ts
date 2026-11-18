@@ -506,10 +506,10 @@ export const ArtifactTypeSchema: GenEnum<ArtifactType> = /*@__PURE__*/
  * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
  * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
  *
- * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
- * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
- * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
- * so each store decides how it keeps a design's files.
+ * A server holds designs in two kinds of place. The store named by `agni serve --store` keeps the
+ * designs callers create as records, and `--uploads` keeps their files. Those designs can be changed
+ * and deleted. Mounted folders declare designs too, and those are read-only. A design id is unique
+ * across both. Nothing on this service names a folder, so each store decides how it keeps a design.
  *
  * @generated from service agni.v1.webapi.DesignService
  */
@@ -517,7 +517,8 @@ export const DesignService: GenService<{
   /**
    * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
    * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
-   * --store-dir answers FAILED_PRECONDITION.
+   * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
+   * same way.
    *
    * @generated from rpc agni.v1.webapi.DesignService.CreateDesign
    */

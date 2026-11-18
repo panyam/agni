@@ -72,7 +72,8 @@ const (
 type DesignServiceClient interface {
 	// CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
 	// from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
-	// --store-dir answers FAILED_PRECONDITION.
+	// --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
+	// same way.
 	CreateDesign(context.Context, *connect.Request[webapi.CreateDesignRequest]) (*connect.Response[webapi.Design], error)
 	// GetDesign returns one design by resource name. An id two mounted folders both declare is
 	// FAILED_PRECONDITION naming both, since answering with either could describe the wrong board.
@@ -271,7 +272,8 @@ func (c *designServiceClient) DeleteArtifact(ctx context.Context, req *connect.R
 type DesignServiceHandler interface {
 	// CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
 	// from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
-	// --store-dir answers FAILED_PRECONDITION.
+	// --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
+	// same way.
 	CreateDesign(context.Context, *connect.Request[webapi.CreateDesignRequest]) (*connect.Response[webapi.Design], error)
 	// GetDesign returns one design by resource name. An id two mounted folders both declare is
 	// FAILED_PRECONDITION naming both, since answering with either could describe the wrong board.

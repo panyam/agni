@@ -166,7 +166,7 @@ export interface ReviewState {
   // running is true while a create is in flight, so the panel disables its button.
   running: boolean;
   // storeConfigured is false when the engine keeps no review store: a server started without
-  // --review-store, or the browser engine. A checklist still runs there, held by the page until the
+  // --store, or the browser engine. A checklist still runs there, held by the page until the
   // reader leaves it (agni issue 931), and the panel says so. It is distinct from "no runs yet",
   // because one is a deployment that cannot keep runs and the other is a design nobody has reviewed.
   storeConfigured: boolean;

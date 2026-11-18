@@ -67,9 +67,7 @@ func serveCmd() *cobra.Command {
 	var datasheetsURL string
 	var theme string
 	var paramsDir, paramsURL, profilePath, conventions string
-	var reviewStorePath string
-	var stateDir string
-	var storeDir string
+	var storeURL, uploadsURL string
 	var webDir string
 	var queryBudget, queryBudgetWarn int64
 	var slowRequest time.Duration
@@ -100,22 +98,25 @@ func serveCmd() *cobra.Command {
 			if viewerRooms && !mcp {
 				return fmt.Errorf("--viewer-rooms needs --mcp, since agents reach the viewer's tabs through /mcp")
 			}
+			storeDir, uploadsDir, err := storeFolders(storeURL, uploadsURL)
+			if err != nil {
+				return err
+			}
 			return runViewer(cmd, viewerOpts{
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
-				reviewStorePath: reviewStorePath,
-				stateDir:        stateDir,
-				storeDir:        storeDir,
-				budget:          server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
-				slowRequest:     slowRequest,
-				engine:          engine,
-				wasmMaxBytes:    wasmMaxBytes,
-				embedOrigins:    embedOrigins,
-				designCache:     designCache,
-				uploadMaxBytes:  uploadMaxBytes,
-				mcp:             mcpMode,
-				viewerRooms:     viewerRooms,
+				storeDir:       storeDir,
+				uploadsDir:     uploadsDir,
+				budget:         server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
+				slowRequest:    slowRequest,
+				engine:         engine,
+				wasmMaxBytes:   wasmMaxBytes,
+				embedOrigins:   embedOrigins,
+				designCache:    designCache,
+				uploadMaxBytes: uploadMaxBytes,
+				mcp:            mcpMode,
+				viewerRooms:    viewerRooms,
 			})
 		},
 	}
@@ -144,9 +145,8 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&paramsURL, "params-url", "", "a PartSpecService to read published PartSpecs from instead of a directory, e.g. http://host:8090 for an `agnids serve --corpus`; each request fetches its design's parts in one batch, and a spec published there reaches the next request. Not with --params. A project's own params/ still wins over it")
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
-	c.Flags().StringVar(&stateDir, "state-dir", "", "a WRITABLE directory this server keeps its own state in, created if absent. Today that is each snapshot's definition, so a question on a snapshot made before a restart still answers (agni issue 1639). Without it, definitions live in memory and a restart forgets them. Like --review-store, it is separate from the read-only design mounts")
-	c.Flags().StringVar(&storeDir, "store-dir", "", "a WRITABLE directory this server keeps the designs and projects its users create in, created if absent (agni issues 1693, 1694). Designs go in <dir>/designs, served as the mount \""+storeMount+"\", each a folder holding its design.yaml and its files, so the CLI reads it as it reads any design folder. Projects go in <dir>/projects. The mounted folders stay read-only. In a container, mount a volume here")
-	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
+	c.Flags().StringVar(&storeURL, "store", "", "where this server keeps its records, as a URL: file:///srv/agni/meta keeps them as files in that folder, created if absent (agni issue 1732). The records are designs, each artifact's manifest of paths and hashes, projects, snapshot definitions and review runs; they hold no file bytes. Without it, snapshots live in memory, review runs are not kept, and no design can be created. In a container, mount a volume here")
+	c.Flags().StringVar(&uploadsURL, "uploads", "", "where this server keeps the files of designs its users upload, as a URL: file:///srv/agni/files, created if absent (agni issue 1739). It keeps each file once, by hash, and never changes one, and serves each design's files as the mount \""+uploadsMount+"\". Needs --store. Without it, a design's files cannot be written")
 	return c
 }
 
@@ -166,11 +166,11 @@ type viewerOpts struct {
 	profilePath string
 	conventions string
 
-	reviewStorePath string
-	// stateDir is --state-dir, the writable directory the server keeps snapshot definitions in.
-	stateDir string
-	// storeDir is --store-dir, the writable directory the server keeps its users' designs and projects in.
+	// storeDir is --store's folder, where the server keeps its records: designs, projects, snapshot
+	// definitions and review runs.
 	storeDir string
+	// uploadsDir is --uploads' folder, where the server keeps uploaded files by hash.
+	uploadsDir string
 	// budget is the work budget every query the server evaluates runs under, and the threshold above
 	// which a query's cost is logged (agni issue 792).
 	budget server.Budget
@@ -252,7 +252,6 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	addr, webDir, mountRoot := o.addr, o.webDir, o.mountRoot
 	nativeTools, theme := o.nativeTools, o.theme
 	paramsDir, profilePath, conventions := o.paramsDir, o.profilePath, o.conventions
-	reviewStorePath := o.reviewStorePath
 	if theme == "" {
 		theme = "default"
 	}
@@ -299,7 +298,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// A caller-composed mount is layered in last, so `open`'s minted mount sits alongside anything a
 	// flag or an agni.yaml declared.
 	mounts := mounts.Merge(discovered, append(explicit, o.extraMounts...))
-	if mounts, err = withStoreMount(mounts, o.storeDir); err != nil {
+	if mounts, err = withUploadsMount(mounts, o.uploadsDir); err != nil {
 		return err
 	}
 	// The datasheet knowledge base for the params panel (WS9-035), loaded once at startup.
@@ -356,10 +355,10 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if o.uploadMaxBytes > 0 {
 		projectResolver.Uploads, projectResolver.UploadMaxBytes = uploadedHost, o.uploadMaxBytes
 	}
-	// --state-dir keeps snapshot definitions across a restart (agni issue 1639). Without it they live
-	// in memory, which still recovers a snapshot the registry evicted.
-	if o.stateDir != "" {
-		st, err := newOSSnapshotStore(filepath.Join(o.stateDir, "snapshots"))
+	// --store keeps snapshot definitions across a restart (agni issues 1639, 1732). Without it they
+	// live in memory, which still recovers a snapshot the registry evicted.
+	if o.storeDir != "" {
+		st, err := newOSSnapshotStore(filepath.Join(o.storeDir, storeSnapshotsDir))
 		if err != nil {
 			return err
 		}
@@ -380,12 +379,11 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 		conventionCfg = cfg
 	}
-	// --review-store names the writable volume that holds stored runs. It is separate from the
-	// read-only design mounts. Without it, the review resource methods report that they are not
-	// configured rather than discarding runs.
+	// --store holds stored review runs, apart from the read-only design mounts. Without it, the
+	// review resource methods report that they are not configured rather than discarding runs.
 	var reviewStore service.ReviewStore
-	if reviewStorePath != "" {
-		st, err := newOSReviewStore(reviewStorePath)
+	if o.storeDir != "" {
+		st, err := newOSReviewStore(filepath.Join(o.storeDir, storeReviewsDir))
 		if err != nil {
 			return err
 		}
@@ -408,7 +406,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	projectSvc, designSvc, err := storeServices(mounts, o.storeDir, projectStore, projectResolver)
+	projectSvc, designSvc, err := storeServices(mounts, o.storeDir, o.uploadsDir, projectStore, projectResolver, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}
@@ -538,37 +536,34 @@ func newHTTPServer(addr string, h http.Handler) *http.Server {
 	return &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, Protocols: &protocols}
 }
 
-// storeMount is the mount name --store-dir's designs folder serves under.
-const storeMount = "store"
+// uploadsMount is the mount name --uploads' design views serve under.
+const uploadsMount = "uploads"
 
-// The two folders inside --store-dir. Designs are mounted, and project records are not.
+// The folders inside --store. Each holds one kind of record, and none holds a file's bytes.
 const (
-	storeDesignsDir  = "designs"
-	storeProjectsDir = "projects"
+	storeDesignsDir   = "designs"
+	storeProjectsDir  = "projects"
+	storeSnapshotsDir = "snapshots"
+	storeReviewsDir   = "reviews"
 )
 
-// withStoreMount adds --store-dir's designs folder, `<dir>/designs`, as the mount "store", creating
-// it. Stored projects go in `<dir>/projects` beside it, outside every mount (agni issue 1694). A
-// mount already named "store" is refused, since the two would answer one name. An empty dir adds
-// nothing.
-func withStoreMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
+// withUploadsMount adds --uploads' design views as the mount "uploads", creating the folder (agni
+// issue 1739). A mount already named "uploads" is refused, since the two would answer one name. An
+// empty dir adds nothing.
+func withUploadsMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
 	if dir == "" {
 		return ms, nil
 	}
 	for _, m := range ms {
-		if m.Name == storeMount {
-			return nil, fmt.Errorf("--store-dir serves as the mount %q, and a mount of that name is already declared at %s", storeMount, m.Root)
+		if m.Name == uploadsMount {
+			return nil, fmt.Errorf("--uploads serves as the mount %q, and a mount of that name is already declared at %s", uploadsMount, m.Root)
 		}
 	}
-	abs, err := filepath.Abs(dir)
-	if err != nil {
-		return nil, err
+	views := projects.ViewsRoot(dir)
+	if err := os.MkdirAll(views, 0o750); err != nil {
+		return nil, fmt.Errorf("--uploads %q: %w", dir, err)
 	}
-	designs := filepath.Join(abs, storeDesignsDir)
-	if err := os.MkdirAll(designs, 0o750); err != nil {
-		return nil, fmt.Errorf("--store-dir %q: %w", dir, err)
-	}
-	return append(ms, mounts.Mount{Name: storeMount, Root: designs}), nil
+	return append(ms, mounts.Mount{Name: uploadsMount, Root: views}), nil
 }
 
 // projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is

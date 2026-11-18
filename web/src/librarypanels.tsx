@@ -15,13 +15,13 @@ import { designClient, uploadsClient } from "./api.js";
 import { openUrl } from "./landingpanels.jsx";
 import { designId, groupBySeries, importFolder, libraryUrl, replaceArtifact, type DesignsClient, type Picked, type UploadsClient } from "./libraryupload.js";
 
-// noStore words the answer of a server started without --store-dir.
-const noStore = "This server keeps no designs of its own. Start it with --store-dir to create and upload designs here.";
+// noStore words the answer of a server started without --store or --uploads.
+const noStore = "This server keeps no designs of its own. Start it with --store and --uploads to create and upload designs here.";
 
 // explain turns a failed call into a sentence for the status line.
 export function explain(err: unknown): string {
   const ce = ConnectError.from(err);
-  if (ce.code === Code.FailedPrecondition && /--store-dir/.test(ce.rawMessage)) return noStore;
+  if (ce.code === Code.FailedPrecondition && /--(store|uploads)\b/.test(ce.rawMessage)) return noStore;
   return ce.rawMessage || String(err);
 }
 

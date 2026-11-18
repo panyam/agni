@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# The design-store mission's exercise (agni issues 1691, 1696). It starts its own agni serve over a
-# fresh --store-dir, pushes Jetson 1.1.2 and 1.1.3 as two designs of one series, replaces 1.1.3's
+# The design-store mission's exercise (agni issues 1691, 1696, 1739). It starts its own agni serve
+# over a fresh --store and --uploads in separate folders, pushes Jetson 1.1.2 and 1.1.3 as two designs of one series, replaces 1.1.3's
 # schematic, restarts the server over the same store, and lists everything again. Then it checks and
 # diffs the stored designs by name (agni issue 1695) and compares each answer with the same command on
-# the folders. #1704 adds packs. It kills only the server it started.
+# the folders, and checks the store's folder holds records and no board file. #1704 adds packs. It
+# kills only the server it started.
 set -euo pipefail
 
 agni=${AGNI:-bin/agni}
@@ -20,11 +21,12 @@ mkdir -p "$out"
 out=$(cd "$out" && pwd)
 agni=$(cd "$(dirname "$agni")" && pwd)/$(basename "$agni")
 store=$out/store
+uploads=$out/uploads
 pid=
 
 serve() {
   # From $out, so a checkout's unbuilt web/ is not taken for the viewer. The server answers the API.
-  (cd "$out" && exec "$agni" serve --store-dir "$store" --addr "127.0.0.1:$port") >"$out/serve.log" 2>&1 &
+  (cd "$out" && exec "$agni" serve --store "file://$store" --uploads "file://$uploads" --addr "127.0.0.1:$port") >"$out/serve.log" 2>&1 &
   pid=$!
   for _ in $(seq 1 100); do
     curl -fs -o /dev/null "$url/" && return 0
@@ -105,6 +107,17 @@ if [ -s "$out/diff-stored.txt" ] && cmp -s "$out/diff-stored.txt" "$out/diff-fol
   echo "PASS: the diff by name lists the folders' $(wc -l <"$out/diff-folder.txt" | tr -d ' ') changes"
 else
   echo "FAIL: the diff by name and the folders' diff differ; see $out/diff-stored.txt and $out/diff-folder.txt" >&2
+  fail=1
+fi
+# The store keeps records alone. Any file there that is not a YAML or JSON record is a design's
+# bytes in the wrong place.
+strays=$(find "$store" -type f ! -name '*.yaml' ! -name '*.json' | wc -l | tr -d ' ')
+records=$(find "$store/designs" -name '*.yaml' | wc -l | tr -d ' ')
+blobs=$(find "$uploads/blobs" -type f | wc -l | tr -d ' ')
+if [ "$strays" -eq 0 ] && [ "$records" -eq 2 ] && [ "$blobs" -gt 0 ]; then
+  echo "PASS: the store holds $records design records and no other file, and the uploads hold $blobs files by hash"
+else
+  echo "FAIL: the store holds $strays files that are not records and $records design records, and the uploads $blobs files; see $store" >&2
   fail=1
 fi
 exit $fail
