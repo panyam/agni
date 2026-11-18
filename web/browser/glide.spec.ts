@@ -29,21 +29,43 @@ describe("a located subject", () => {
         await page.keyboard.press("Enter");
         const row = page.locator(".query-row .query-locate", { hasText: /^TP76$/ }).first();
         await row.waitFor({ timeout: 30_000 });
+        // A glide lasts GLIDE_MS by the page's clock, so a runner that renders few frames a second
+        // samples few views along it. A CI shard sampled two (PR 1740). Slowing the page's clock
+        // eightfold stretches the glide over eight times as many frames.
+        await page.evaluate((slow) => {
+          const real = performance.now.bind(performance);
+          const t0 = real();
+          performance.now = () => t0 + (real() - t0) / slow;
+        }, 8);
         // Sample the drawing's width over the canvas's each frame from the click until it settles.
         await page.evaluate(() => {
-          const w = window as unknown as { zooms: number[] };
+          const w = window as unknown as { zooms: number[]; sampling: boolean };
           w.zooms = [];
+          w.sampling = true;
           const host = document.querySelector("#svg-view")!;
           const sample = () => {
             const doc = host.querySelector("svg");
             if (doc) w.zooms.push(doc.getBoundingClientRect().width / host.getBoundingClientRect().width);
-            if (w.zooms.length < 120) requestAnimationFrame(sample);
+            if (w.sampling) requestAnimationFrame(sample);
           };
           requestAnimationFrame(sample);
         });
         await row.click();
-        await page.waitForFunction(() => (window as unknown as { zooms: number[] }).zooms.length >= 120, null, { timeout: 30_000 });
-        const zooms = await page.evaluate(() => (window as unknown as { zooms: number[] }).zooms);
+        // Settled means zoomed past 3 and unchanged over the last five frames.
+        await page.waitForFunction(
+          () => {
+            const z = (window as unknown as { zooms: number[] }).zooms;
+            const tail = z.slice(-5);
+            return tail.length === 5 && tail[4] > 3 && tail.every((v) => v === tail[4]);
+          },
+          null,
+          { timeout: 60_000 },
+        );
+        const zooms = await page.evaluate(() => {
+          const w = window as unknown as { zooms: number[]; sampling: boolean };
+          w.sampling = false;
+          return w.zooms;
+        });
         const final = zooms[zooms.length - 1];
         expect(final).toBeGreaterThan(3);
         // Views between the fitted sheet and the part, distinct from both, show a glide.
