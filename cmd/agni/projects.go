@@ -84,6 +84,31 @@ func projectsCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.AddCommand(create, add)
+	packs := &cobra.Command{
+		Use:   "packs <project> [<pack>...]",
+		Short: "Set the packs a report on the project's designs applies first, in order",
+		Long: `packs replaces the project's default packs with the ones named, each as <id> or packs/<id>, in
+the order they layer (agni issue 1704). A report that names the project applies them over the
+design's own intent, before the packs the report names. Naming none clears the list.`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			p, err := unary(cmd.Context(), c.UpdateProject, &webapi.UpdateProjectRequest{
+				Project:    &webapi.Project{Name: projectName(args[0]), DefaultPacks: packNames(args[1:])},
+				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"default_packs"}},
+			})
+			if err != nil {
+				return err
+			}
+			for _, k := range p.GetDefaultPacks() {
+				fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\n", p.GetName(), k)
+			}
+			return nil
+		},
+	}
+	cmd.AddCommand(create, add, packs)
 	return cmd
 }

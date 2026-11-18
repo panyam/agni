@@ -28,7 +28,8 @@ const sweepGrace = time.Hour
 // files too, by hash under uploadsDir, and serves each design's view as the mount "uploads". Uploaded
 // blobs go to the same folder, so they outlive a restart, and a sweep at startup removes what nothing
 // names. With --store it keeps packs too, and a pack's files go to --uploads beside the designs'.
-func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
+// With --store and checks, it keeps each design's reports, each run by checks.
+func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
 	var mountedTrees []projects.Tree
 	for _, t := range projectTrees(ms) {
 		if uploadsDir == "" || t.Mount != uploadsMount {
@@ -38,6 +39,7 @@ func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore 
 	projectSvc := service.NewProjectService(projectStore)
 	var store service.DesignStore
 	var packStore service.PackStore
+	var reportStore service.ReportStore
 	if storeDir != "" {
 		dirStore, err := projects.NewDirStore(filepath.Join(storeDir, storeDesignsDir), uploadsDir, uploadsMount)
 		if err != nil {
@@ -51,7 +53,11 @@ func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore 
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		store, packStore = dirStore, packs
+		reports, err := projects.NewDirReports(filepath.Join(storeDir, storeReportsDir))
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		store, packStore, reportStore = dirStore, packs, reports
 		projectSvc.WithRecords(records)
 		if blobs := dirStore.Blobs(); blobs != nil && resolver != nil {
 			resolver.Blobs = blobs
@@ -83,7 +89,12 @@ func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore 
 		// A snapshot may name the packs it is read under, packs/{k} (agni issue 1704).
 		resolver.Packs = packSvc
 	}
-	return projectSvc, service.NewDesignService(catalog, resolver.Blob).WithProjects(projectSvc), packSvc, nil
+	designSvc := service.NewDesignService(catalog, resolver.Blob).WithProjects(projectSvc)
+	if reportStore != nil && checks != nil {
+		// A report runs a check under packs and keeps it under its design (agni issue 1704).
+		designSvc.WithReports(reportStore, checks, packSvc)
+	}
+	return projectSvc, designSvc, packSvc, nil
 }
 
 // snapshotHashes reads every stored snapshot definition in dir and returns the hashes of the files

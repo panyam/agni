@@ -13,6 +13,7 @@ project with a design from a mounted folder, and see what a mounted folder will 
 - A project is a list of design names, from any store, and deleting it deletes no design.
 - A design in a mounted folder is read-only.
 - A pack, `packs/{pack}`, keeps a project.yaml's rules on the server, and its hash moves when they change.
+- A report checks a stored design against packs, and says later when the design's files changed since.
 
 ## Run it
 
@@ -28,5 +29,5 @@ make doc        # render the walkthrough to markdown
 The narration lives in [`walkthrough.md`](walkthrough.md). [`tour.go`](tour.go) builds the services
 the way `agni serve --store --uploads` does (`cmd/agni/storeservices.go`), over a temporary folder and the
 bundled [`../common/designs/demo-project`](../common/designs/demo-project) mounted read-only.
-[`main.go`](main.go) binds the six steps. [`tour_test.go`](tour_test.go) runs the same calls and
+[`main.go`](main.go) binds the seven steps. [`tour_test.go`](tour_test.go) runs the same calls and
 checks their answers.

@@ -4,6 +4,7 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
+import "agni/v1/webapi/checks.proto";
 import "agni/v1/webapi/project.proto";
 import "agni/v1/webapi/snapshot.proto";
 import "google/protobuf/empty.proto";
@@ -76,6 +77,89 @@ service DesignService {
   // DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
   // design unable to be read until another is put.
   rpc DeleteArtifact(DeleteArtifactRequest) returns (google.protobuf.Empty);
+
+  // CreateReport checks a stored design against packs and keeps the run as
+  // "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
+  // own intent: the default packs of the project the request names, then the packs the report names.
+  // The run is a full check of the catalog the packs compose, as `agni check` with no --rule runs. A
+  // report on a mounted design is FAILED_PRECONDITION, since only a stored design has the content
+  // hash a report records. A server without --store answers FAILED_PRECONDITION.
+  rpc CreateReport(CreateReportRequest) returns (Report);
+
+  // GetReport returns one report, and says whether the design or a pack changed since it ran.
+  rpc GetReport(GetReportRequest) returns (Report);
+
+  // ListReports returns a design's reports, newest first, each saying what changed since it ran.
+  rpc ListReports(ListReportsRequest) returns (ListReportsResponse);
+
+  // DeleteReport removes one report. DeleteDesign removes a design's reports with it.
+  rpc DeleteReport(DeleteReportRequest) returns (google.protobuf.Empty);
+}
+
+// Report is one check of a stored design against packs, kept under the design (agni issue 1704). It
+// records the design's content hash and each pack's hash as they were when it ran, so a later read
+// can say the run is on earlier files or earlier rules.
+message Report {
+  string name = 1; // "designs/{design}/reports/{report}"
+  // packs are the packs the run applied, each "packs/{pack}", in the order they layered: the
+  // project's default packs, then the ones the request named. CreateReport reads the request's from
+  // here.
+  repeated string packs = 2;
+  // project is the project whose default packs applied first, "projects/{project}", empty for none.
+  string project = 3;
+  // design_hash names the design's artifacts and intent as the run read them, "sha256:<hex>". Output
+  // only.
+  string design_hash = 4;
+  // pack_hashes is each pack's hash as the run read it, in the order of packs. Output only.
+  repeated string pack_hashes = 5;
+  // results is the run: its findings, the rules it skipped, and the rest of a CheckDesign answer.
+  // Output only.
+  CheckDesignResponse results = 6;
+  // create_time is when the run was kept. Output only.
+  google.protobuf.Timestamp create_time = 7;
+  // design_changed is true when the design's artifacts or intent differ now from what the run read,
+  // or the design is gone. Computed on every read. Output only.
+  bool design_changed = 8;
+  // packs_changed names each pack whose hash differs now from what the run read, or which is gone.
+  // Computed on every read. Output only.
+  repeated string packs_changed = 9;
+}
+
+message CreateReportRequest {
+  string parent = 1; // "designs/{design}"
+  // report_id is the new report's id, lowercase letters, digits, '.', '_' or '-'. Empty lets the
+  // server assign one that sorts by creation time.
+  string report_id = 2;
+  // report carries the packs to apply, after the project's defaults. Its other fields are ignored.
+  Report report = 3;
+  // project names a project, "projects/{project}", whose default packs apply first. Empty applies
+  // none.
+  string project = 4;
+}
+
+message GetReportRequest {
+  string name = 1; // "designs/{design}/reports/{report}"
+}
+
+message ListReportsRequest {
+  string parent = 1; // "designs/{design}"
+  // page_size is the maximum number of reports to return. 0 uses the server default.
+  int32 page_size = 2;
+  // page_token continues a previous call. An empty token starts at the newest report.
+  string page_token = 3;
+  // filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+  // rather than ignored, since a client that believed it had filtered would read the wrong reports.
+  string filter = 4;
+}
+
+message ListReportsResponse {
+  repeated Report reports = 1;
+  // next_page_token is empty when the last page has been reached.
+  string next_page_token = 2;
+}
+
+message DeleteReportRequest {
+  string name = 1; // "designs/{design}/reports/{report}"
 }
 
 message CreateDesignRequest {

@@ -104,11 +104,12 @@ dropped files already reach it through its `local` mount.
 | Review | DeleteReview | remove a stored run |
 | Review | RenderReviewReport | renders the caller's review as the checklist page, as `agni review --format html` does; nothing is re-run or read from the store |
 | Project | GetProject, ListProjects | the projects declared across the server's mounts and the ones it stores, each listing its designs by name |
-| Project | CreateProject, UpdateProject, DeleteProject | a stored project, a title and a list of designs; a mounted one is read-only (agni issue 1694) |
+| Project | CreateProject, UpdateProject, DeleteProject | a stored project, a title, a list of designs and the default packs a report applies first; a mounted one is read-only (agni issues 1694, 1704) |
 | Design | CreateDesign, UpdateDesign, DeleteDesign | a stored design and its title and series; a mounted one is read-only (agni issue 1694) |
 | Design | GetArtifact, ListArtifacts, UpdateArtifact, BatchUpdateArtifacts, DeleteArtifact | a stored design's artifacts, each one source such as a schematic with its sheets or a board, sent as a manifest with contents through UploadBlobs and replaced whole (agni issue 1696) |
 | Design | ImportDesignFiles | a folder's files sent as one manifest, grouped by the server into artifacts the way ProposeDesigns groups a dropped folder, and written in one write; `agni designs push` and the library page both send it (agni issue 1719) |
 | Pack | CreatePack, GetPack, ListPacks, UpdatePack, DeletePack | a stored pack, `packs/{pack}`: the rules a `project.yaml` holds, with the files its profile and param paths name, and a hash that moves when either changes (agni issue 1704) |
+| Design | CreateReport, GetReport, ListReports, DeleteReport | a stored design's reports, `designs/{design}/reports/{report}`, each a full check under packs that records the design's and each pack's hash, and says on every read whether either changed since (agni issue 1704) |
 | Design | GetDesign, ListDesigns | a design's identity, `designs/{design}`, and which file around it is which; the list filters by series or project and marks each series' latest |
 | Project | ResolveDesign | whether a file belongs to a declared design, and which; resolving to nothing is a normal answer |
 

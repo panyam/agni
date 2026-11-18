@@ -91,7 +91,8 @@ private static final long serialVersionUID = 0L;
   private com.google.protobuf.FieldMask updateMask_;
   /**
    * <pre>
-   * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+   * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+   * changes all three.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -103,7 +104,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+   * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+   * changes all three.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -115,7 +117,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+   * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+   * changes all three.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -640,7 +643,8 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder> updateMaskBuilder_;
     /**
      * <pre>
-     * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+     * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+     * changes all three.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -651,7 +655,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+     * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+     * changes all three.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -666,7 +671,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+     * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+     * changes all three.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -684,7 +690,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+     * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+     * changes all three.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -702,7 +709,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+     * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+     * changes all three.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -727,7 +735,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+     * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+     * changes all three.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -744,7 +753,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+     * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+     * changes all three.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -756,7 +766,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+     * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+     * changes all three.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -771,7 +782,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+     * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+     * changes all three.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>

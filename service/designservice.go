@@ -21,6 +21,10 @@ type DesignService struct {
 	catalog  *DesignCatalog
 	blobs    BlobSource
 	projects *ProjectService
+	// reports, checks and packs serve a design's reports (agni issue 1704). WithReports sets them.
+	reports ReportStore
+	checks  *CheckService
+	packs   PackLookup
 }
 
 // NewDesignService returns a DesignService over catalog, reading uploaded file contents from blobs.
@@ -150,9 +154,16 @@ func checkDesignConfig(cfg *webapi.AnalysisConfig) error {
 	return nil
 }
 
-// DeleteDesign removes a stored design.
+// DeleteDesign removes a stored design and its reports.
 func (s *DesignService) DeleteDesign(ctx context.Context, req *webapi.DeleteDesignRequest) error {
-	return s.catalog.DeleteDesign(ctx, req.GetName())
+	if err := s.catalog.DeleteDesign(ctx, req.GetName()); err != nil {
+		return err
+	}
+	if s.reports == nil {
+		return nil
+	}
+	id, _ := StandaloneDesignID(req.GetName())
+	return s.reports.DeleteReports(ctx, id)
 }
 
 // GetArtifact returns one artifact of a stored design.

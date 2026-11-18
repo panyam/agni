@@ -1,6 +1,6 @@
 // Command keep-a-design is the walkthrough of the designs a server keeps (agni issues 1694, 1696).
 // It stores two revisions of a board as designs of one series, each holding a netlist artifact, keeps a
-// pack of house rules (agni issue 1704), groups the designs in a project with a design
+// pack of house rules and a report under it (agni issue 1704), groups the designs in a project with a design
 // from a mounted folder, and shows what a mounted folder will not let it change. The narration is in
 // the sidecar walkthrough.md, so this file only binds the steps that run engine code.
 //
@@ -78,6 +78,16 @@ func main() {
 		}
 		fmt.Printf("kept %s, %q\n  hash %s\n", before.GetName(), before.GetTitle(), before.GetHash())
 		fmt.Printf("after its rail pattern changed\n  hash %s\n", after.GetHash())
+		return nil
+	})
+
+	demo.Bind("report").Run(func(demokit.StepContext) *demokit.StepResult {
+		kept, after, err := t.report(ctx)
+		if err != nil {
+			return demokit.Errf("report: %v", err)
+		}
+		fmt.Printf("kept %s\n  packs %v, %d findings\n", kept.GetName(), kept.GetPacks(), len(kept.GetResults().GetFindings()))
+		fmt.Printf("after rev B's netlist was replaced\n  design_changed %v\n", after.GetDesignChanged())
 		return nil
 	})
 

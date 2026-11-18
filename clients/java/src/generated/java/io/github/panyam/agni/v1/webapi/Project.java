@@ -49,6 +49,8 @@ private static final long serialVersionUID = 0L;
     uri_ = "";
     designs_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    defaultPacks_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -352,6 +354,71 @@ private static final long serialVersionUID = 0L;
     return designs_.getByteString(index);
   }
 
+  public static final int DEFAULT_PACKS_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList defaultPacks_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * default_packs names the packs a report on one of this project's designs applies first, each
+   * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+   * when it names this project, and the packs it names layer over them. A stored project keeps the
+   * list the caller wrote. A mounted project has none.
+   * </pre>
+   *
+   * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+   * @return A list containing the defaultPacks.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getDefaultPacksList() {
+    return defaultPacks_;
+  }
+  /**
+   * <pre>
+   * default_packs names the packs a report on one of this project's designs applies first, each
+   * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+   * when it names this project, and the packs it names layer over them. A stored project keeps the
+   * list the caller wrote. A mounted project has none.
+   * </pre>
+   *
+   * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+   * @return The count of defaultPacks.
+   */
+  public int getDefaultPacksCount() {
+    return defaultPacks_.size();
+  }
+  /**
+   * <pre>
+   * default_packs names the packs a report on one of this project's designs applies first, each
+   * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+   * when it names this project, and the packs it names layer over them. A stored project keeps the
+   * list the caller wrote. A mounted project has none.
+   * </pre>
+   *
+   * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+   * @param index The index of the element to return.
+   * @return The defaultPacks at the given index.
+   */
+  public java.lang.String getDefaultPacks(int index) {
+    return defaultPacks_.get(index);
+  }
+  /**
+   * <pre>
+   * default_packs names the packs a report on one of this project's designs applies first, each
+   * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+   * when it names this project, and the packs it names layer over them. A stored project keeps the
+   * list the caller wrote. A mounted project has none.
+   * </pre>
+   *
+   * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the defaultPacks at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getDefaultPacksBytes(int index) {
+    return defaultPacks_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -381,6 +448,9 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < designs_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 10, designs_.getRaw(i));
     }
+    for (int i = 0; i < defaultPacks_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 11, defaultPacks_.getRaw(i));
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -405,6 +475,14 @@ private static final long serialVersionUID = 0L;
       }
       size += dataSize;
       size += 1 * getDesignsList().size();
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < defaultPacks_.size(); i++) {
+        dataSize += computeStringSizeNoTag(defaultPacks_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getDefaultPacksList().size();
     }
     return size;
   }
@@ -443,6 +521,8 @@ private static final long serialVersionUID = 0L;
     }
     if (!getDesignsList()
         .equals(other.getDesignsList())) return false;
+    if (!getDefaultPacksList()
+        .equals(other.getDefaultPacksList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -467,6 +547,10 @@ private static final long serialVersionUID = 0L;
     if (getDesignsCount() > 0) {
       hash = (37 * hash) + DESIGNS_FIELD_NUMBER;
       hash = (53 * hash) + getDesignsList().hashCode();
+    }
+    if (getDefaultPacksCount() > 0) {
+      hash = (37 * hash) + DEFAULT_PACKS_FIELD_NUMBER;
+      hash = (53 * hash) + getDefaultPacksList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -631,6 +715,8 @@ private static final long serialVersionUID = 0L;
       }
       designs_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
+      defaultPacks_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -684,6 +770,10 @@ private static final long serialVersionUID = 0L;
         designs_.makeImmutable();
         result.designs_ = designs_;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        defaultPacks_.makeImmutable();
+        result.defaultPacks_ = defaultPacks_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -724,6 +814,16 @@ private static final long serialVersionUID = 0L;
         } else {
           ensureDesignsIsMutable();
           designs_.addAll(other.designs_);
+        }
+        onChanged();
+      }
+      if (!other.defaultPacks_.isEmpty()) {
+        if (defaultPacks_.isEmpty()) {
+          defaultPacks_ = other.defaultPacks_;
+          bitField0_ |= 0x00000020;
+        } else {
+          ensureDefaultPacksIsMutable();
+          defaultPacks_.addAll(other.defaultPacks_);
         }
         onChanged();
       }
@@ -778,6 +878,11 @@ private static final long serialVersionUID = 0L;
               designs_.add(input.readStringRequireUtf8());
               break;
             } // case 82
+            case 90: {
+              ensureDefaultPacksIsMutable();
+              defaultPacks_.add(input.readStringRequireUtf8());
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1506,6 +1611,180 @@ private static final long serialVersionUID = 0L;
       ensureDesignsIsMutable();
       designs_.add(value);
       bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList defaultPacks_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureDefaultPacksIsMutable() {
+      if (!defaultPacks_.isModifiable()) {
+        defaultPacks_ = new com.google.protobuf.LazyStringArrayList(defaultPacks_);
+      }
+      bitField0_ |= 0x00000020;
+    }
+    /**
+     * <pre>
+     * default_packs names the packs a report on one of this project's designs applies first, each
+     * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+     * when it names this project, and the packs it names layer over them. A stored project keeps the
+     * list the caller wrote. A mounted project has none.
+     * </pre>
+     *
+     * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+     * @return A list containing the defaultPacks.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getDefaultPacksList() {
+      defaultPacks_.makeImmutable();
+      return defaultPacks_;
+    }
+    /**
+     * <pre>
+     * default_packs names the packs a report on one of this project's designs applies first, each
+     * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+     * when it names this project, and the packs it names layer over them. A stored project keeps the
+     * list the caller wrote. A mounted project has none.
+     * </pre>
+     *
+     * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+     * @return The count of defaultPacks.
+     */
+    public int getDefaultPacksCount() {
+      return defaultPacks_.size();
+    }
+    /**
+     * <pre>
+     * default_packs names the packs a report on one of this project's designs applies first, each
+     * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+     * when it names this project, and the packs it names layer over them. A stored project keeps the
+     * list the caller wrote. A mounted project has none.
+     * </pre>
+     *
+     * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+     * @param index The index of the element to return.
+     * @return The defaultPacks at the given index.
+     */
+    public java.lang.String getDefaultPacks(int index) {
+      return defaultPacks_.get(index);
+    }
+    /**
+     * <pre>
+     * default_packs names the packs a report on one of this project's designs applies first, each
+     * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+     * when it names this project, and the packs it names layer over them. A stored project keeps the
+     * list the caller wrote. A mounted project has none.
+     * </pre>
+     *
+     * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the defaultPacks at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getDefaultPacksBytes(int index) {
+      return defaultPacks_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * default_packs names the packs a report on one of this project's designs applies first, each
+     * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+     * when it names this project, and the packs it names layer over them. A stored project keeps the
+     * list the caller wrote. A mounted project has none.
+     * </pre>
+     *
+     * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+     * @param index The index to set the value at.
+     * @param value The defaultPacks to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDefaultPacks(
+        int index, java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureDefaultPacksIsMutable();
+      defaultPacks_.set(index, value);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * default_packs names the packs a report on one of this project's designs applies first, each
+     * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+     * when it names this project, and the packs it names layer over them. A stored project keeps the
+     * list the caller wrote. A mounted project has none.
+     * </pre>
+     *
+     * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+     * @param value The defaultPacks to add.
+     * @return This builder for chaining.
+     */
+    public Builder addDefaultPacks(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureDefaultPacksIsMutable();
+      defaultPacks_.add(value);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * default_packs names the packs a report on one of this project's designs applies first, each
+     * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+     * when it names this project, and the packs it names layer over them. A stored project keeps the
+     * list the caller wrote. A mounted project has none.
+     * </pre>
+     *
+     * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+     * @param values The defaultPacks to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllDefaultPacks(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureDefaultPacksIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, defaultPacks_);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * default_packs names the packs a report on one of this project's designs applies first, each
+     * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+     * when it names this project, and the packs it names layer over them. A stored project keeps the
+     * list the caller wrote. A mounted project has none.
+     * </pre>
+     *
+     * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDefaultPacks() {
+      defaultPacks_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000020);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * default_packs names the packs a report on one of this project's designs applies first, each
+     * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+     * when it names this project, and the packs it names layer over them. A stored project keeps the
+     * list the caller wrote. A mounted project has none.
+     * </pre>
+     *
+     * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+     * @param value The bytes of the defaultPacks to add.
+     * @return This builder for chaining.
+     */
+    public Builder addDefaultPacksBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      ensureDefaultPacksIsMutable();
+      defaultPacks_.add(value);
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }

@@ -39,7 +39,8 @@ public interface UpdateProjectRequestOrBuilder extends
 
   /**
    * <pre>
-   * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+   * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+   * changes all three.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -48,7 +49,8 @@ public interface UpdateProjectRequestOrBuilder extends
   boolean hasUpdateMask();
   /**
    * <pre>
-   * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+   * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+   * changes all three.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -57,7 +59,8 @@ public interface UpdateProjectRequestOrBuilder extends
   com.google.protobuf.FieldMask getUpdateMask();
   /**
    * <pre>
-   * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+   * update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+   * changes all three.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
