@@ -9,15 +9,16 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-18, at `9365260c`.
+Last pruned 2026-11-18, at `b5cd9f1b`.
 
 ## At a glance
 
 **#1691 `mission_design_store`** (keep projects and designs on an agni server, and come back to every
-one) is active, at 10 of 15. Its exercise, `make exercise-design-store`, passed on main at `9365260c`
-on 2026-11-18. PR #1741 split `--store` (records) from `--uploads` (files by hash). `/mounts/`
-replaces `/files/` next (#1734), and linked artifacts point into mounts (#1722). PR #1740 merged C37, so every action, base image, pip install
-and Gradle build is pinned by hash.
+one) is active, at 11 of 15. Its exercise, `make exercise-design-store`, last passed on main at
+`9365260c` on 2026-11-18, before PR #1744 merged. PR #1741 split `--store` (records) from `--uploads`
+(files by hash). PR #1744 (#1734) moved `/files/` to `/mounts/`, and agnids now keeps doc-IR and
+annotations in its corpus under `derived/<sha256 of the PDF>/`, so a datasheet mount can be
+read-only. #1735 (mounts made at runtime) is next, then #1722 (linked artifacts point into mounts).
 
 - **#1625 `mission_clients`** is active, at 12 of 13. Its last ticket is #1627 (TLS and tokens). The
   pushdowns are tagged as panyam/oneauth v0.3.3 and panyam/servicekit v0.2.3, and agni still pins
@@ -35,11 +36,10 @@ and Gradle build is pinned by hash.
 
 1. **#1704** (packs and reports), then #1697 (the viewer for them). #1742 (a periodic sweep of
    `--uploads`) is P3.
-2. **#1734 then #1735**, in the `~/projects/Agni/main` clone. The plan was approved on 2026-11-18.
-   A GitHub mount is a snapshot of the repo at its commit, kept in the store, so `osLoader` reads it
-   and #864 is not needed. Open question: the user asked whether datasheets should use the same
-   mounts, with datasheet metadata in the store and the PDFs in mounts, so both share one mounts
-   client. Both PRs must rebase onto #1741, which moved the mount wiring in `cmd/agni/serve.go`. Settle that before PR A decides what happens to `/datasheets/files/`.
+2. **#1735**, in the `~/projects/Agni/main` clone. The plan was approved on 2026-11-18 and is on
+   the issue. A GitHub mount is a snapshot of the repo at its commit, kept in the store, so
+   `osLoader` reads it and #864 is not needed. agnids already serves `WorkspaceService`, so it reads
+   the same runtime mount records from the shared store.
 3. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
    ticket for the gRPC clients to trust a CA, which closes #1625.
 4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
