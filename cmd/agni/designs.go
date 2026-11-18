@@ -21,8 +21,6 @@ import (
 
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/service"
 )
 
@@ -201,8 +199,8 @@ from two releases. Only the contents the server lacks are uploaded.`,
 	push := &cobra.Command{
 		Use:   "push <folder>",
 		Short: "Keep a design folder on the server, one artifact per source",
-		Long: `push finds the design in a folder the way agni propose does, and puts each of its sources as an
-artifact: the file analysis reads, with every file it reads, then each view of it, such as the board.
+		Long: `push sends a folder's files, and the server finds the design in them the way agni propose does
+and puts each of its sources as an artifact: the file analysis reads, with every file it reads, then each view of it, such as the board.
 Each artifact is named for its type, so a KiCad folder becomes a schematic and a board. A folder
 holding two designs is refused, naming both.
 
@@ -419,112 +417,23 @@ func retryUpload[T any](ctx context.Context, c *designsClient, have fileSet, wri
 	return write()
 }
 
-// pushPlan is the artifacts a folder's design becomes, by id.
-type pushPlan struct {
-	ids   []string
-	files map[string]fileSet
-	all   fileSet
-}
-
-// planPush groups a folder's files into artifacts. It proposes the folder's design as agni propose
-// does, ignoring any design.yaml or project.yaml. Each companion, with the files under it when it
-// is a folder such as an ODB++ job, becomes an artifact named for its type, and the entry's
-// artifact holds every other file the design reads.
-func planPush(dir string) (pushPlan, []string, error) {
-	rels, err := walkLocal(dir)
-	if err != nil {
-		return pushPlan{}, nil, err
-	}
-	var files []string
-	for _, r := range rels {
-		if b := path.Base(r); b != service.DesignDescriptorName && b != service.ProjectDescriptorName {
-			files = append(files, r)
-		}
-	}
-	read := func(p string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, filepath.FromSlash(p))) } // #nosec G304 -- a file under the folder the user named to push
-	resp := service.ProposeFromFiles("", files, read)
-	switch n := len(resp.GetDesigns()); {
-	case n == 0:
-		return pushPlan{}, nil, fmt.Errorf("%s holds no design agni reads", dir)
-	case n > 1:
-		var entries []string
-		for _, d := range resp.GetDesigns() {
-			entries = append(entries, d.GetDesign().GetEntryUri())
-		}
-		return pushPlan{}, nil, fmt.Errorf("%s holds %d designs, read from %s; push each from a folder of its own, or put artifacts one by one", dir, n, strings.Join(entries, ", "))
-	}
-	pd := resp.GetDesigns()[0]
-	owner := map[string]string{}
-	prefix := map[string]string{}
-	taken := map[string]bool{}
-	name := func(entry string) string {
-		base := artifactWord(entry)
-		id := base
-		for i := 2; taken[id]; i++ {
-			id = fmt.Sprintf("%s-%d", base, i)
-		}
-		taken[id] = true
-		return id
-	}
-	plan := pushPlan{files: map[string]fileSet{}}
-	entryID := name(pd.GetDesign().GetEntryUri())
-	plan.ids = append(plan.ids, entryID)
-	for _, c := range pd.GetDesign().GetCompanionUris() {
-		id := name(c)
-		plan.ids = append(plan.ids, id)
-		// A companion keeps its path relative to its own folder, and an ODB++ job keeps its job
-		// folder, since the reader finds the job by it.
-		root := c
-		if r := formats.DesignRoot(c); r != "" && r != "." {
-			root = r
-		}
-		if d := path.Dir(root); d != "." {
-			prefix[id] = d + "/"
-		}
-		for _, f := range pd.GetFiles() {
-			if f == root || strings.HasPrefix(f, root+"/") {
-				owner[f] = id
-			}
-		}
-	}
-	for _, f := range pd.GetFiles() {
-		id, ok := owner[f]
-		if !ok {
-			id = entryID
-		}
-		rel := strings.TrimPrefix(f, prefix[id])
-		abs := filepath.Join(dir, filepath.FromSlash(f))
-		set := plan.files[id]
-		if err := set.add(abs, rel); err != nil {
-			return pushPlan{}, nil, err
-		}
-		plan.files[id] = set
-		if err := plan.all.add(abs, rel); err != nil {
-			return pushPlan{}, nil, err
-		}
-	}
-	var unread []string
-	for _, u := range resp.GetUnread() {
-		unread = append(unread, u.GetPath())
-	}
-	return plan, unread, nil
-}
-
-// artifactWord names an artifact by what its entry holds: netlist, schematic, board or files.
-func artifactWord(entry string) string {
-	switch t := projects.ArtifactTypeOf(entry); t {
-	case webapi.ArtifactType_ARTIFACT_TYPE_OTHER, webapi.ArtifactType_ARTIFACT_TYPE_UNSPECIFIED:
-		return "files"
-	default:
-		return strings.ToLower(strings.TrimPrefix(t.String(), "ARTIFACT_TYPE_"))
-	}
-}
-
 // push keeps a folder's design on the server.
 func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, series string) error {
-	plan, unread, err := planPush(dir)
+	rels, err := walkLocal(dir)
 	if err != nil {
 		return err
+	}
+	var all fileSet
+	for _, r := range rels {
+		if b := path.Base(r); b == service.DesignDescriptorName || b == service.ProjectDescriptorName {
+			continue
+		}
+		if err := all.add(filepath.Join(dir, filepath.FromSlash(r)), r); err != nil {
+			return err
+		}
+	}
+	if len(all.files) == 0 {
+		return fmt.Errorf("%s holds no files", dir)
 	}
 	if id == "" || title == "" || series == "" {
 		declared := readLocalDescriptor(filepath.Join(dir, service.DesignDescriptorName))
@@ -542,10 +451,12 @@ func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, s
 		id = strings.ToLower(filepath.Base(filepath.Clean(dir)))
 	}
 	name := designName(id)
+	created := false
 	if _, err := unary(ctx, c.designs.GetDesign, &webapi.GetDesignRequest{Name: name}); connect.CodeOf(err) == connect.CodeNotFound {
 		if _, err := unary(ctx, c.designs.CreateDesign, &webapi.CreateDesignRequest{DesignId: designID(id), Design: &webapi.Design{Title: title, Series: series}}); err != nil {
 			return err
 		}
+		created = true
 	} else if err != nil {
 		return err
 	} else if title != "" || series != "" {
@@ -560,15 +471,18 @@ func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, s
 			return err
 		}
 	}
-	req := &webapi.BatchUpdateArtifactsRequest{Parent: name}
-	for _, a := range plan.ids {
-		req.Requests = append(req.Requests, &webapi.UpdateArtifactRequest{Artifact: plan.files[a].artifact(service.ArtifactName(designID(id), a)), AllowMissing: true})
-	}
-	resp, err := retryUpload(ctx, c, plan.all, func() (*webapi.BatchUpdateArtifactsResponse, error) {
-		return unary(ctx, c.designs.BatchUpdateArtifacts, req)
+	// The server groups the files into artifacts (ImportDesignFiles, agni issue 1719), as the viewer's
+	// upload does, so the two cannot group one folder two ways.
+	req := &webapi.ImportDesignFilesRequest{Parent: name, Files: all.files}
+	resp, err := retryUpload(ctx, c, all, func() (*webapi.ImportDesignFilesResponse, error) {
+		return unary(ctx, c.designs.ImportDesignFiles, req)
 	})
 	if err != nil {
-		return err
+		if created {
+			// A design this push made and could not fill would be left empty, so it goes too.
+			_, _ = unary(context.WithoutCancel(ctx), c.designs.DeleteDesign, &webapi.DeleteDesignRequest{Name: name})
+		}
+		return fmt.Errorf("%s: %w", dir, err)
 	}
 	d, err := unary(ctx, c.designs.GetDesign, &webapi.GetDesignRequest{Name: name})
 	if err != nil {
@@ -578,8 +492,8 @@ func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, s
 	for _, a := range resp.GetArtifacts() {
 		printArtifact(w, a)
 	}
-	if len(unread) > 0 {
-		fmt.Fprintf(w, "not sent, as no reader opens them: %s\n", strings.Join(unread, ", "))
+	if u := resp.GetUnread(); len(u) > 0 {
+		fmt.Fprintf(w, "not kept, as no reader opens them: %s\n", strings.Join(u, ", "))
 	}
 	return nil
 }

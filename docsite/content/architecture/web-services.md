@@ -106,6 +106,7 @@ dropped files already reach it through its `local` mount.
 | Project | CreateProject, UpdateProject, DeleteProject | a stored project, a title and a list of designs; a mounted one is read-only (agni issue 1694) |
 | Design | CreateDesign, UpdateDesign, DeleteDesign | a stored design and its title and series; a mounted one is read-only (agni issue 1694) |
 | Design | GetArtifact, ListArtifacts, UpdateArtifact, BatchUpdateArtifacts, DeleteArtifact | a stored design's artifacts, each one source such as a schematic with its sheets or a board, sent as a manifest with contents through UploadBlobs and replaced whole (agni issue 1696) |
+| Design | ImportDesignFiles | a folder's files sent as one manifest, grouped by the server into artifacts the way ProposeDesigns groups a dropped folder, and written in one write; `agni designs push` and the library page both send it (agni issue 1719) |
 | Design | GetDesign, ListDesigns | a design's identity, `designs/{design}`, and which file around it is which; the list filters by series or project and marks each series' latest |
 | Project | ResolveDesign | whether a file belongs to a declared design, and which; resolving to nothing is a normal answer |
 

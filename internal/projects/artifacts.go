@@ -55,23 +55,8 @@ func classifyArtifact(id string, files []string, read func(string) ([]byte, erro
 	return role, nil
 }
 
-// ArtifactTypeOf names what an artifact entered at entry holds, as the store types it. The CLI's
-// push names artifacts by it.
-func ArtifactTypeOf(entry string) webapi.ArtifactType { return typeOf(entry) }
-
-// typeOf names what an entry holds. A drawn schematic is a schematic even when it also nets, a board
-// is a board even when it carries a netlist, and a netlist is the rest that reads.
-func typeOf(entry string) webapi.ArtifactType {
-	switch {
-	case formats.HasFaithful(entry):
-		return webapi.ArtifactType_ARTIFACT_TYPE_SCHEMATIC
-	case formats.HasBoard(entry):
-		return webapi.ArtifactType_ARTIFACT_TYPE_BOARD
-	case formats.HasNetlist(entry):
-		return webapi.ArtifactType_ARTIFACT_TYPE_NETLIST
-	}
-	return webapi.ArtifactType_ARTIFACT_TYPE_OTHER
-}
+// typeOf names what an entry holds, as service.ArtifactTypeOf does.
+func typeOf(entry string) webapi.ArtifactType { return service.ArtifactTypeOf(entry) }
 
 // composeDesign picks the file analysis reads from a design's artifacts, and names the rest as its
 // views (CONSTRAINTS C21). A netlist wins, then a schematic, then a board. Two artifacts of the

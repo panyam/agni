@@ -60,7 +60,7 @@ func TestPushKeepsAKiCadFolderAsASchematicAndABoard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("push: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "not sent, as no reader opens them: README.md") {
+	if !strings.Contains(out, "not kept, as no reader opens them: README.md") {
 		t.Errorf("push output does not name README.md as not sent:\n%s", out)
 	}
 	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
@@ -102,8 +102,11 @@ func TestPushRefusesAFolderHoldingTwoDesigns(t *testing.T) {
 	dir := t.TempDir()
 	writeFiles(t, dir, map[string]string{"alpha.edn": "(edif alpha)", "beta.edn": "(edif beta)"})
 	out, err := runDesigns(t, srv.URL, "push", dir, "--id", "two")
-	if err == nil || !strings.Contains(err.Error(), "holds 2 designs") {
+	if err == nil || !strings.Contains(err.Error(), "hold 2 designs") {
 		t.Errorf("push of two designs = %v\n%s; want a refusal naming both", err, out)
+	}
+	if out, err := runDesigns(t, srv.URL, "get", "two"); err == nil {
+		t.Errorf("a refused push left designs/two behind:\n%s", out)
 	}
 }
 

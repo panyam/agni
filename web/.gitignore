@@ -13,6 +13,10 @@ static/landing.js.map
 static/load.js
 static/load.js.map
 
+# Library page bundle (agni issue 1719, build artifact, like app.js)
+static/library.js
+static/library.js.map
+
 # Non-distributable packed sheets (e.g. proprietary boards)
 *.local.pb
 shot*.png

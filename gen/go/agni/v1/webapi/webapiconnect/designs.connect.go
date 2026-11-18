@@ -60,6 +60,9 @@ const (
 	// DesignServiceBatchUpdateArtifactsProcedure is the fully-qualified name of the DesignService's
 	// BatchUpdateArtifacts RPC.
 	DesignServiceBatchUpdateArtifactsProcedure = "/agni.v1.webapi.DesignService/BatchUpdateArtifacts"
+	// DesignServiceImportDesignFilesProcedure is the fully-qualified name of the DesignService's
+	// ImportDesignFiles RPC.
+	DesignServiceImportDesignFilesProcedure = "/agni.v1.webapi.DesignService/ImportDesignFiles"
 	// DesignServiceDeleteArtifactProcedure is the fully-qualified name of the DesignService's
 	// DeleteArtifact RPC.
 	DesignServiceDeleteArtifactProcedure = "/agni.v1.webapi.DesignService/DeleteArtifact"
@@ -100,6 +103,15 @@ type DesignServiceClient interface {
 	// design moves from its old artifacts to its new ones with no state in between. Any request failing
 	// fails the batch, and nothing is written.
 	BatchUpdateArtifacts(context.Context, *connect.Request[webapi.BatchUpdateArtifactsRequest]) (*connect.Response[webapi.BatchUpdateArtifactsResponse], error)
+	// ImportDesignFiles puts a folder's files into a design as its artifacts, grouped the way
+	// ProposeDesigns groups a dropped folder (agni issue 1719). The file analysis reads, with every file
+	// it reads, becomes one artifact, and each view of it, such as the board, becomes another. Each is
+	// named for its type: netlist, schematic, board. All of them are written in one write, as
+	// BatchUpdateArtifacts writes, creating or replacing each. A `design.yaml` or `project.yaml` among
+	// the files is left out, since the server writes a design's descriptor itself. Files that make no
+	// design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
+	// are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
+	ImportDesignFiles(context.Context, *connect.Request[webapi.ImportDesignFilesRequest]) (*connect.Response[webapi.ImportDesignFilesResponse], error)
 	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
 	// design unable to be read until another is put.
 	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
@@ -170,6 +182,12 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("BatchUpdateArtifacts")),
 			connect.WithClientOptions(opts...),
 		),
+		importDesignFiles: connect.NewClient[webapi.ImportDesignFilesRequest, webapi.ImportDesignFilesResponse](
+			httpClient,
+			baseURL+DesignServiceImportDesignFilesProcedure,
+			connect.WithSchema(designServiceMethods.ByName("ImportDesignFiles")),
+			connect.WithClientOptions(opts...),
+		),
 		deleteArtifact: connect.NewClient[webapi.DeleteArtifactRequest, emptypb.Empty](
 			httpClient,
 			baseURL+DesignServiceDeleteArtifactProcedure,
@@ -190,6 +208,7 @@ type designServiceClient struct {
 	listArtifacts        *connect.Client[webapi.ListArtifactsRequest, webapi.ListArtifactsResponse]
 	updateArtifact       *connect.Client[webapi.UpdateArtifactRequest, webapi.Artifact]
 	batchUpdateArtifacts *connect.Client[webapi.BatchUpdateArtifactsRequest, webapi.BatchUpdateArtifactsResponse]
+	importDesignFiles    *connect.Client[webapi.ImportDesignFilesRequest, webapi.ImportDesignFilesResponse]
 	deleteArtifact       *connect.Client[webapi.DeleteArtifactRequest, emptypb.Empty]
 }
 
@@ -238,6 +257,11 @@ func (c *designServiceClient) BatchUpdateArtifacts(ctx context.Context, req *con
 	return c.batchUpdateArtifacts.CallUnary(ctx, req)
 }
 
+// ImportDesignFiles calls agni.v1.webapi.DesignService.ImportDesignFiles.
+func (c *designServiceClient) ImportDesignFiles(ctx context.Context, req *connect.Request[webapi.ImportDesignFilesRequest]) (*connect.Response[webapi.ImportDesignFilesResponse], error) {
+	return c.importDesignFiles.CallUnary(ctx, req)
+}
+
 // DeleteArtifact calls agni.v1.webapi.DesignService.DeleteArtifact.
 func (c *designServiceClient) DeleteArtifact(ctx context.Context, req *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteArtifact.CallUnary(ctx, req)
@@ -278,6 +302,15 @@ type DesignServiceHandler interface {
 	// design moves from its old artifacts to its new ones with no state in between. Any request failing
 	// fails the batch, and nothing is written.
 	BatchUpdateArtifacts(context.Context, *connect.Request[webapi.BatchUpdateArtifactsRequest]) (*connect.Response[webapi.BatchUpdateArtifactsResponse], error)
+	// ImportDesignFiles puts a folder's files into a design as its artifacts, grouped the way
+	// ProposeDesigns groups a dropped folder (agni issue 1719). The file analysis reads, with every file
+	// it reads, becomes one artifact, and each view of it, such as the board, becomes another. Each is
+	// named for its type: netlist, schematic, board. All of them are written in one write, as
+	// BatchUpdateArtifacts writes, creating or replacing each. A `design.yaml` or `project.yaml` among
+	// the files is left out, since the server writes a design's descriptor itself. Files that make no
+	// design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
+	// are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
+	ImportDesignFiles(context.Context, *connect.Request[webapi.ImportDesignFilesRequest]) (*connect.Response[webapi.ImportDesignFilesResponse], error)
 	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
 	// design unable to be read until another is put.
 	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
@@ -344,6 +377,12 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("BatchUpdateArtifacts")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceImportDesignFilesHandler := connect.NewUnaryHandler(
+		DesignServiceImportDesignFilesProcedure,
+		svc.ImportDesignFiles,
+		connect.WithSchema(designServiceMethods.ByName("ImportDesignFiles")),
+		connect.WithHandlerOptions(opts...),
+	)
 	designServiceDeleteArtifactHandler := connect.NewUnaryHandler(
 		DesignServiceDeleteArtifactProcedure,
 		svc.DeleteArtifact,
@@ -370,6 +409,8 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceUpdateArtifactHandler.ServeHTTP(w, r)
 		case DesignServiceBatchUpdateArtifactsProcedure:
 			designServiceBatchUpdateArtifactsHandler.ServeHTTP(w, r)
+		case DesignServiceImportDesignFilesProcedure:
+			designServiceImportDesignFilesHandler.ServeHTTP(w, r)
 		case DesignServiceDeleteArtifactProcedure:
 			designServiceDeleteArtifactHandler.ServeHTTP(w, r)
 		default:
@@ -415,6 +456,10 @@ func (UnimplementedDesignServiceHandler) UpdateArtifact(context.Context, *connec
 
 func (UnimplementedDesignServiceHandler) BatchUpdateArtifacts(context.Context, *connect.Request[webapi.BatchUpdateArtifactsRequest]) (*connect.Response[webapi.BatchUpdateArtifactsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.BatchUpdateArtifacts is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) ImportDesignFiles(context.Context, *connect.Request[webapi.ImportDesignFilesRequest]) (*connect.Response[webapi.ImportDesignFilesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.ImportDesignFiles is not implemented"))
 }
 
 func (UnimplementedDesignServiceHandler) DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {

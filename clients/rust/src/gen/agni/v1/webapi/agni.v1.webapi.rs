@@ -2569,6 +2569,24 @@ pub struct DeleteArtifactRequest {
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
 }
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ImportDesignFilesRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub parent: ::prost::alloc::string::String,
+    /// files are the folder's files, each by its path relative to the folder.
+    #[prost(message, repeated, tag="2")]
+    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ImportDesignFilesResponse {
+    /// artifacts are the written artifacts, the one analysis reads first.
+    #[prost(message, repeated, tag="1")]
+    pub artifacts: ::prost::alloc::vec::Vec<Artifact>,
+    /// unread names the files no reader opens, such as a README. They are not stored.
+    #[prost(string, repeated, tag="2")]
+    pub unread: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
 /// ArtifactType is what an artifact holds, found from its entry's format.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

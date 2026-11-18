@@ -1,0 +1,46 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "HeadExtra" }}
+<style>
+  .lb-app { max-width: 920px; margin: 0 auto; padding: 32px 20px 60px; }
+  .lb-app h1 { font-size: 20px; margin: 0 0 4px; color: #222; }
+  .lb-app h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: #888; margin: 22px 0 8px; border-top: 1px solid #e5e5e5; padding-top: 10px; }
+  .lb-tagline { color: #777; margin: 0 0 20px; }
+  .lb-app h2.lb-title { font-size: 18px; text-transform: none; letter-spacing: 0; color: #222; border: 0; padding: 0; margin: 8px 0 4px; }
+  .lb-artifacts td .lb-drop { display: inline-flex; border: 0; padding: 0; gap: 6px; }
+  .lb-delete { margin-left: 6px; }
+  .lb-list { list-style: none; margin: 0; padding: 0; }
+  .lb-row { display: flex; align-items: baseline; gap: 12px; padding: 5px 0; border-bottom: 1px solid #f0f0f0; }
+  .lb-link { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 10px; text-decoration: none; color: inherit; }
+  .lb-link:hover .lb-label { text-decoration: underline; }
+  .lb-label { font-weight: 600; color: #222; }
+  .lb-id, .lb-when, .lb-meta { color: #999; font-size: 12px; }
+  .lb-latest { font-size: 11px; color: #166534; background: #dcfce7; border-radius: 3px; padding: 1px 6px; }
+  .lb-open { font-size: 12px; color: #2563eb; }
+  .lb-note { color: #888; font-size: 12px; margin: 6px 0; }
+  .lb-status { color: #555; min-height: 1.2em; }
+  .lb-new { margin-top: 30px; display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+  .lb-new label { display: flex; gap: 8px; align-items: baseline; }
+  .lb-new label input { flex: 1; padding: 4px 6px; }
+  .lb-drop { border: 1px dashed #bbb; border-radius: 6px; padding: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: #666; }
+  .lb-drop-over { border-color: #2563eb; background: #f8faff; }
+  .lb-submit { align-self: flex-start; padding: 5px 12px; }
+  .lb-artifacts { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  .lb-artifacts th, .lb-artifacts td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; vertical-align: top; font-size: 13px; }
+  .lb-artifacts .lb-drop { padding: 4px 6px; font-size: 12px; }
+</style>
+{{ end }}
+
+{{ define "Body" }}
+<div class="lb-app">
+  <h1><a class="ld-home" href="/">Agni</a> / <a class="ld-home" href="/library/">Library</a></h1>
+  <p class="lb-tagline">The designs this server keeps</p>
+  <div id="library" data-component="library"></div>
+</div>
+{{ end }}
+
+{{ define "AppScript" }}
+<script type="module" src="/static/library.js"></script>
+{{ end }}
+
+{{ define "LibraryPage" }}{{ template "BasePage" . }}{{ end }}

@@ -301,6 +301,37 @@ public final class DesignServiceGrpc {
     return getBatchUpdateArtifactsMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest,
+      io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse> getImportDesignFilesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ImportDesignFiles",
+      requestType = io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest,
+      io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse> getImportDesignFilesMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest, io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse> getImportDesignFilesMethod;
+    if ((getImportDesignFilesMethod = DesignServiceGrpc.getImportDesignFilesMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getImportDesignFilesMethod = DesignServiceGrpc.getImportDesignFilesMethod) == null) {
+          DesignServiceGrpc.getImportDesignFilesMethod = getImportDesignFilesMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest, io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ImportDesignFiles"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("ImportDesignFiles"))
+              .build();
+        }
+      }
+    }
+    return getImportDesignFilesMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteArtifactRequest,
       com.google.protobuf.Empty> getDeleteArtifactMethod;
 
@@ -511,6 +542,23 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * ImportDesignFiles puts a folder's files into a design as its artifacts, grouped the way
+     * ProposeDesigns groups a dropped folder (agni issue 1719). The file analysis reads, with every file
+     * it reads, becomes one artifact, and each view of it, such as the board, becomes another. Each is
+     * named for its type: netlist, schematic, board. All of them are written in one write, as
+     * BatchUpdateArtifacts writes, creating or replacing each. A `design.yaml` or `project.yaml` among
+     * the files is left out, since the server writes a design's descriptor itself. Files that make no
+     * design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
+     * are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
+     * </pre>
+     */
+    default void importDesignFiles(io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getImportDesignFilesMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
      * design unable to be read until another is put.
      * </pre>
@@ -683,6 +731,24 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * ImportDesignFiles puts a folder's files into a design as its artifacts, grouped the way
+     * ProposeDesigns groups a dropped folder (agni issue 1719). The file analysis reads, with every file
+     * it reads, becomes one artifact, and each view of it, such as the board, becomes another. Each is
+     * named for its type: netlist, schematic, board. All of them are written in one write, as
+     * BatchUpdateArtifacts writes, creating or replacing each. A `design.yaml` or `project.yaml` among
+     * the files is left out, since the server writes a design's descriptor itself. Files that make no
+     * design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
+     * are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
+     * </pre>
+     */
+    public void importDesignFiles(io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getImportDesignFilesMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
      * design unable to be read until another is put.
      * </pre>
@@ -826,6 +892,23 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * ImportDesignFiles puts a folder's files into a design as its artifacts, grouped the way
+     * ProposeDesigns groups a dropped folder (agni issue 1719). The file analysis reads, with every file
+     * it reads, becomes one artifact, and each view of it, such as the board, becomes another. Each is
+     * named for its type: netlist, schematic, board. All of them are written in one write, as
+     * BatchUpdateArtifacts writes, creating or replacing each. A `design.yaml` or `project.yaml` among
+     * the files is left out, since the server writes a design's descriptor itself. Files that make no
+     * design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
+     * are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse importDesignFiles(io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getImportDesignFilesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
      * design unable to be read until another is put.
      * </pre>
@@ -964,6 +1047,23 @@ public final class DesignServiceGrpc {
     public io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse batchUpdateArtifacts(io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getBatchUpdateArtifactsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ImportDesignFiles puts a folder's files into a design as its artifacts, grouped the way
+     * ProposeDesigns groups a dropped folder (agni issue 1719). The file analysis reads, with every file
+     * it reads, becomes one artifact, and each view of it, such as the board, becomes another. Each is
+     * named for its type: netlist, schematic, board. All of them are written in one write, as
+     * BatchUpdateArtifacts writes, creating or replacing each. A `design.yaml` or `project.yaml` among
+     * the files is left out, since the server writes a design's descriptor itself. Files that make no
+     * design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
+     * are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse importDesignFiles(io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getImportDesignFilesMethod(), getCallOptions(), request);
     }
 
     /**
@@ -1119,6 +1219,24 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * ImportDesignFiles puts a folder's files into a design as its artifacts, grouped the way
+     * ProposeDesigns groups a dropped folder (agni issue 1719). The file analysis reads, with every file
+     * it reads, becomes one artifact, and each view of it, such as the board, becomes another. Each is
+     * named for its type: netlist, schematic, board. All of them are written in one write, as
+     * BatchUpdateArtifacts writes, creating or replacing each. A `design.yaml` or `project.yaml` among
+     * the files is left out, since the server writes a design's descriptor itself. Files that make no
+     * design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
+     * are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse> importDesignFiles(
+        io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getImportDesignFilesMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
      * design unable to be read until another is put.
      * </pre>
@@ -1139,7 +1257,8 @@ public final class DesignServiceGrpc {
   private static final int METHODID_LIST_ARTIFACTS = 6;
   private static final int METHODID_UPDATE_ARTIFACT = 7;
   private static final int METHODID_BATCH_UPDATE_ARTIFACTS = 8;
-  private static final int METHODID_DELETE_ARTIFACT = 9;
+  private static final int METHODID_IMPORT_DESIGN_FILES = 9;
+  private static final int METHODID_DELETE_ARTIFACT = 10;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1193,6 +1312,10 @@ public final class DesignServiceGrpc {
         case METHODID_BATCH_UPDATE_ARTIFACTS:
           serviceImpl.batchUpdateArtifacts((io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse>) responseObserver);
+          break;
+        case METHODID_IMPORT_DESIGN_FILES:
+          serviceImpl.importDesignFiles((io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse>) responseObserver);
           break;
         case METHODID_DELETE_ARTIFACT:
           serviceImpl.deleteArtifact((io.github.panyam.agni.v1.webapi.DeleteArtifactRequest) request,
@@ -1280,6 +1403,13 @@ public final class DesignServiceGrpc {
               io.github.panyam.agni.v1.webapi.BatchUpdateArtifactsResponse>(
                 service, METHODID_BATCH_UPDATE_ARTIFACTS)))
         .addMethod(
+          getImportDesignFilesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest,
+              io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse>(
+                service, METHODID_IMPORT_DESIGN_FILES)))
+        .addMethod(
           getDeleteArtifactMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -1343,6 +1473,7 @@ public final class DesignServiceGrpc {
               .addMethod(getListArtifactsMethod())
               .addMethod(getUpdateArtifactMethod())
               .addMethod(getBatchUpdateArtifactsMethod())
+              .addMethod(getImportDesignFilesMethod())
               .addMethod(getDeleteArtifactMethod())
               .build();
         }

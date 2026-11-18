@@ -102,7 +102,7 @@ func TestRootServesLandingPage(t *testing.T) {
 		}
 		body := rec.Body.String()
 		// Both destinations are plain server-rendered links, so the page routes with no JavaScript.
-		for _, want := range []string{`href="/designs/"`, `id="landing-recents"`, "/static/landing.js"} {
+		for _, want := range []string{`href="/designs/"`, `href="/library/"`, `id="landing-recents"`, "/static/landing.js"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("GET %s missing %q", path, want)
 			}
@@ -132,6 +132,8 @@ func TestEveryPageOffersAWayHome(t *testing.T) {
 		"/designs/m/boards/b.kicad_sch/view", // a design's work page
 		"/designs/m/boards/b.kicad_sch/load", // its Load page (agni issue 1072)
 		"/designs/local/load/",               // where files are dropped
+		"/library/",                          // the designs the server keeps (agni issue 1719)
+		"/library/bb-1.1.3",                  // one of them
 	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
@@ -289,6 +291,38 @@ func TestViewerPageCarriesItsEngine(t *testing.T) {
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/tut/designs/gateway/view", nil))
 		if want := fmt.Sprintf(`data-wasm-max-bytes="%d"`, c.want); !strings.Contains(rec.Body.String(), want) {
 			t.Errorf("--wasm-max-bytes %d: the shell does not carry %s", c.max, want)
+		}
+	}
+}
+
+// /library/ and every design under it serve the library shell, whose bundle reads which from the URL
+// (agni issue 1719). The folder browser and the viewer stay where they were.
+func TestLibrarySpaceServesTheLibraryPage(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	for _, tc := range []struct {
+		path       string
+		want, deny []string
+	}{
+		{"/library/", []string{`id="library"`, "/static/library.js"}, []string{"/static/browse.js", "/static/landing.js", "/static/app.js"}},
+		{"/library/bb-1.1.3", []string{`id="library"`, "/static/library.js"}, []string{"/static/browse.js", "/static/landing.js", "/static/app.js"}},
+		{"/designs/", []string{"/static/browse.js"}, []string{"/static/library.js"}},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", tc.path, rec.Code)
+		}
+		body := rec.Body.String()
+		for _, w := range tc.want {
+			if !strings.Contains(body, w) {
+				t.Errorf("GET %s missing %q", tc.path, w)
+			}
+		}
+		for _, d := range tc.deny {
+			if strings.Contains(body, d) {
+				t.Errorf("GET %s unexpectedly contains %q", tc.path, d)
+			}
 		}
 	}
 }

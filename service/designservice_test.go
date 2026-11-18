@@ -328,3 +328,49 @@ func TestListDesignsPagesAndReportsUnreachable(t *testing.T) {
 		t.Errorf("paged designs = %v, want designs/h then designs/k", names)
 	}
 }
+
+// A folder's files go in as artifacts the server groups, the root sheet with its sheets and the board
+// apart, and a README is left out (agni issue 1719).
+func TestImportDesignFilesGroupsAFolderIntoArtifacts(t *testing.T) {
+	ctx := context.Background()
+	svc, b, _ := designService(t)
+	if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "bb"}); err != nil {
+		t.Fatal(err)
+	}
+	folder := map[string]string{
+		"design.yaml":         "entry: bb.kicad_sch\n",
+		"bb.kicad_pro":        "{}",
+		"bb.kicad_sch":        `(kicad_sch (sheet (property "Sheetfile" "sub/power.kicad_sch")))`,
+		"sub/power.kicad_sch": "(kicad_sch)",
+		"bb.kicad_pcb":        "(kicad_pcb)",
+		"README.md":           "notes",
+	}
+	unsent := blobs{}.files(folder)
+	if _, err := svc.ImportDesignFiles(ctx, &webapi.ImportDesignFilesRequest{Parent: "designs/bb", Files: unsent}); !errors.As(err, new(*service.BlobsMissingError)) {
+		t.Fatalf("an import before the contents are sent = %v, want a BlobsMissingError", err)
+	}
+	resp, err := svc.ImportDesignFiles(ctx, &webapi.ImportDesignFilesRequest{Parent: "designs/bb", Files: b.files(folder)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string][]string{}
+	for _, a := range resp.GetArtifacts() {
+		for _, f := range a.GetFiles() {
+			got[a.GetName()] = append(got[a.GetName()], f.GetPath())
+		}
+	}
+	if len(resp.GetArtifacts()) != 2 || len(got["designs/bb/artifacts/schematic"]) != 3 || len(got["designs/bb/artifacts/board"]) != 1 {
+		t.Errorf("imported artifacts = %v; want a schematic of three files and a board of one", got)
+	}
+	if len(resp.GetUnread()) != 1 || resp.GetUnread()[0] != "README.md" {
+		t.Errorf("unread = %v, want README.md", resp.GetUnread())
+	}
+	d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/bb"})
+	if err != nil || d.GetEntryUri() != "mount://store/bb/schematic/bb.kicad_sch" {
+		t.Errorf("design = %v, %v; want the root sheet as entry", d, err)
+	}
+	two := b.files(map[string]string{"alpha.edn": "(edif alpha)", "beta.edn": "(edif beta)"})
+	if _, err := svc.ImportDesignFiles(ctx, &webapi.ImportDesignFilesRequest{Parent: "designs/bb", Files: two}); !errors.Is(err, service.ErrInvalidArgument) {
+		t.Errorf("an import of two designs = %v, want ErrInvalidArgument", err)
+	}
+}

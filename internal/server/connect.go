@@ -613,6 +613,14 @@ func (a *Design) BatchUpdateArtifacts(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Design) ImportDesignFiles(ctx context.Context, req *connect.Request[webapi.ImportDesignFilesRequest]) (*connect.Response[webapi.ImportDesignFilesResponse], error) {
+	resp, err := a.svc.ImportDesignFiles(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Design) DeleteArtifact(ctx context.Context, req *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {
 	if err := a.svc.DeleteArtifact(ctx, req.Msg); err != nil {
 		return nil, toConnectErr(err)

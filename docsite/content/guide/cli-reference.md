@@ -294,7 +294,7 @@ schematic, else its board.
 | `artifacts <id>` | list a design's artifacts, each with its type, entry, file count and a short content digest |
 | `put <id> <artifact> <file-or-folder>` | create an artifact, or replace all its files; a folder sends every file under it by its relative path |
 | `rm <id> [<artifact>]` | delete a design, or one artifact |
-| `push <folder> [--id] [--title] [--series]` | find the folder's design as `propose` does and put each source as an artifact named for its type, all in one write; a `design.yaml` there gives the default id, title and series, and its intent is not sent |
+| `push <folder> [--id] [--title] [--series]` | send the folder's files, and the server finds its design as `propose` does and puts each source as an artifact named for its type, all in one write (`ImportDesignFiles`, the call the viewer's library page sends); a `design.yaml` there gives the default id, title and series, and its intent is not sent |
 
 ### `projects`
 

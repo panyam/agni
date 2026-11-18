@@ -1663,6 +1663,32 @@ pub mod design_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn import_design_files(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ImportDesignFilesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ImportDesignFilesResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/ImportDesignFiles",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("agni.v1.webapi.DesignService", "ImportDesignFiles"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn delete_artifact(
             &mut self,
             request: impl tonic::IntoRequest<super::DeleteArtifactRequest>,

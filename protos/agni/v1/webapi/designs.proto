@@ -62,6 +62,16 @@ service DesignService {
   // fails the batch, and nothing is written.
   rpc BatchUpdateArtifacts(BatchUpdateArtifactsRequest) returns (BatchUpdateArtifactsResponse);
 
+  // ImportDesignFiles puts a folder's files into a design as its artifacts, grouped the way
+  // ProposeDesigns groups a dropped folder (agni issue 1719). The file analysis reads, with every file
+  // it reads, becomes one artifact, and each view of it, such as the board, becomes another. Each is
+  // named for its type: netlist, schematic, board. All of them are written in one write, as
+  // BatchUpdateArtifacts writes, creating or replacing each. A `design.yaml` or `project.yaml` among
+  // the files is left out, since the server writes a design's descriptor itself. Files that make no
+  // design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
+  // are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
+  rpc ImportDesignFiles(ImportDesignFilesRequest) returns (ImportDesignFilesResponse);
+
   // DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
   // design unable to be read until another is put.
   rpc DeleteArtifact(DeleteArtifactRequest) returns (google.protobuf.Empty);
@@ -189,4 +199,17 @@ message BatchUpdateArtifactsResponse {
 
 message DeleteArtifactRequest {
   string name = 1; // "designs/{design}/artifacts/{artifact}"
+}
+
+message ImportDesignFilesRequest {
+  string parent = 1; // "designs/{design}"
+  // files are the folder's files, each by its path relative to the folder.
+  repeated SnapshotFile files = 2;
+}
+
+message ImportDesignFilesResponse {
+  // artifacts are the written artifacts, the one analysis reads first.
+  repeated Artifact artifacts = 1;
+  // unread names the files no reader opens, such as a README. They are not stored.
+  repeated string unread = 2;
 }

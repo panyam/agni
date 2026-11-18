@@ -82,7 +82,7 @@ service owns which RPC.
 
 ## The pages
 
-There are five server-rendered shells, each with its own bundle, so a page downloads what it uses and no more.
+There are six server-rendered shells, each with its own bundle, so a page downloads what it uses and no more.
 
 | URL | Page | Bundle | What it is |
 |---|---|---|---|
@@ -90,6 +90,7 @@ There are five server-rendered shells, each with its own bundle, so a page downl
 | `/designs/<mount>/<dir>/` | `BrowsePage` | `browse.js` | The design tree plus a read-only first-sheet preview |
 | `/designs/<mount>/<path>/view` | `ViewerPage` | `app.js` | The work page: the canvas in SVG or WebGL, sheet views, checks, query, diff |
 | `/designs/<mount>/<path>/load`, `/designs/local/load/` | `LoadPage` | `load.js` | Reads a design into the engine's store before the viewer opens it, step by step, then opens the viewer at the same address (agni issue 1072). With no design, the browser mount's page takes dropped files and lists the kept drops |
+| `/library/`, `/library/<id>` | `LibraryPage` | `library.js` | The designs the server keeps of its own (agni issue 1719): the list by series with each series' latest marked and a form that makes a design from a dropped folder, or one design's artifacts, each replaced or deleted there. The server groups a dropped folder into artifacts (`ImportDesignFiles`) |
 
 `agnids` serves the extraction workbench, rather than `agni serve` (agni issue 744). The workbench
 is `DatasheetsPage` at `/datasheets/files/<mount>/<path>`, with its own bundle `datasheets.js`. It

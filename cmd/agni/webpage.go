@@ -155,6 +155,24 @@ func (p *LandingPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App
 	return nil, false
 }
 
+// LibraryPage is the server-rendered shell of /library/, the designs a server keeps of its own
+// (agni issue 1719). /library/ lists them and holds the form to make one, and /library/{id} shows
+// one design's artifacts. The page's bundle (static/library.js) reads which from the URL, so the
+// shell is the same for every path. goapplib maps this type to LibraryPage.html by name.
+type LibraryPage struct {
+	Title string
+}
+
+// Load populates the library page before render. The designs arrive over the Connect API.
+func (p *LibraryPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
+	p.Title = "Agni library"
+	return nil, false
+}
+
+// libraryPrefix is the library's URL space, the mirror of LIBRARY_PREFIX in
+// web/src/libraryupload.ts.
+const libraryPrefix = "/library/"
+
 // redirectLegacyFiles permanently redirects the pre-WS9-049 deep-link space to its replacement.
 // /files/<mount>/<path> becomes /designs/<mount>/<path>/view, and a folder URL (trailing slash)
 // becomes the same folder under /designs/. Both spaces put the sheet and view knobs in the query
@@ -226,6 +244,7 @@ func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	browse := pageHandler[*BrowsePage](app)
 	mux.Handle("/", pageHandler[*LandingPage](app))
 	mux.Handle("/designs/", designsRouter(browse, pageHandler[*ViewerPage](app), pageHandler[*LoadPage](app)))
+	mux.Handle(libraryPrefix, pageHandler[*LibraryPage](app))
 	// The retired /files/ space (WS9-049) redirects rather than 404s, so shared links keep resolving.
 	mux.HandleFunc("/files/", redirectLegacyFiles)
 }
