@@ -52,8 +52,8 @@ describe("the library list", () => {
     expect(series).toEqual(["bb", ""]);
     const latest = [...el.querySelectorAll(".lb-row")].filter((r) => r.querySelector(".lb-latest")).map((r) => (r as HTMLElement).dataset.design);
     expect(latest).toEqual(["designs/bb-1.1.3"]);
-    expect(el.querySelector('[data-design="designs/bb-1.1.3"] a.lb-link')?.getAttribute("href")).toBe("/library/bb-1.1.3");
-    expect(el.querySelector('[data-design="designs/bb-1.1.3"] a.lb-open')?.getAttribute("href")).toBe("/designs/store/bb-1.1.3/schematic/bb.kicad_sch/view");
+    expect(el.querySelector('[data-design="designs/bb-1.1.3"] a.lb-link')?.getAttribute("href")).toBe("/designs/bb-1.1.3");
+    expect(el.querySelector('[data-design="designs/bb-1.1.3"] a.lb-open')?.getAttribute("href")).toBe("/files/store/bb-1.1.3/schematic/bb.kicad_sch/view");
     expect(el.querySelector('[data-design="designs/draft"] a.lb-open')).toBeNull();
   });
 

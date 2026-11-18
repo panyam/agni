@@ -1,4 +1,4 @@
-// Entry point for the Load page (/designs/<mount>/<path>/load, agni issue 1072). The address names a
+// Entry point for the Load page (/files/<mount>/<path>/load, agni issue 1072). The address names a
 // design. The page reads it into the engine's store and then opens the viewer at the same address, so
 // the viewer opens a design already parsed. With no design named, the browser mount's Load page takes
 // dropped or picked files and lists the drops this browser keeps.

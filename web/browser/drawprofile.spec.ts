@@ -45,7 +45,7 @@ describe("?timing's draw profile", () => {
     it(`logs a burst of zooms with its frame times (${mode})`, async () => {
       await withPage(browser, async (page) => {
         const lines = drawLines(page);
-        await page.goto(`${base()}/designs/${DESIGN}/view?mode=${mode}&timing`, { waitUntil: "networkidle" });
+        await page.goto(`${base()}/files/${DESIGN}/view?mode=${mode}&timing`, { waitUntil: "networkidle" });
         await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
         await page.waitForFunction(() => !document.getElementById("render-busy")?.dataset.busy, null, { timeout: 60_000 });
         await expect.poll(() => lines.length, { timeout: 30_000 }).toBeGreaterThan(0);

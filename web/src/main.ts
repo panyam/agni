@@ -1,4 +1,4 @@
-// Entry point for the viewer page (/designs/<mount>/<path>/view). The page is server-rendered by
+// Entry point for the viewer page (/files/<mount>/<path>/view). The page is server-rendered by
 // goapplib/templar. This boots the dockview shell first, then the tsappkit lifecycle. AppRoot builds
 // the canvas, the panel islands and the ViewerPresenter that feeds them, and the LifecycleController
 // initializes each island. The page has no file tree (WS9-049).
@@ -1315,7 +1315,7 @@ async function admitted(): Promise<boolean> {
   const a = await admit({
     pathname: window.location.pathname,
     search: window.location.search,
-    dropMountPrefix: `${appBase()}designs/${BROWSER_MOUNT}/`,
+    dropMountPrefix: `${appBase()}files/${BROWSER_MOUNT}/`,
     stamp: async (mount, path) => (await designListing(mount, path, drops))?.stamp ?? "",
     loaded: (mount, path, stamp) => wasLoaded(storage(), loadedKey(mount, path), stamp),
   });

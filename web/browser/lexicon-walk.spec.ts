@@ -15,7 +15,7 @@ import { showPanel } from "./panels.js";
 
 const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const board = "tools/samples/boards/mnt-reform-motherboard30";
-const view = "/designs/boards/mnt-reform-motherboard30/reform2-motherboard30.kicad_sch/view";
+const view = "/files/boards/mnt-reform-motherboard30/reform2-motherboard30.kicad_sch/view";
 
 // cliTry returns the two tables `agni lexicon --try` answers with. Each row's cells are joined into
 // one string.

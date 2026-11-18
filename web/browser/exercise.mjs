@@ -453,7 +453,7 @@ await step("1. landing page", "", async () => {
   if (log.failed.length) throw new Error(`failed loads: ${log.failed.join(", ")}`);
   return { detail: `${seeds.length} seeds: ${seeds.map((s) => s.title).join(", ")}` };
 });
-const mountOf = (href) => href.match(/designs\/([^/]+)\//)?.[1] ?? href;
+const mountOf = (href) => href.match(/files\/([^/]+)\//)?.[1] ?? href;
 if (!seeds.some((s) => /EDIF/i.test(s.meta) && !SYNTHETIC.has(mountOf(s.href)))) add("1. real EDIF seed", "", "not available", "#928, the only EDIF seed is the synthetic tutorial board");
 add("1. seed a server answers", "", "not available", "#855, the demo has no server");
 
@@ -509,7 +509,7 @@ for (const seed of seeds) {
 async function drop(design, input, files, markers) {
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   const log = record(page);
-  if (!(await visit(page, "designs/local/load/", "2. drop", design))) {
+  if (!(await visit(page, "files/local/load/", "2. drop", design))) {
     await page.close();
     return;
   }

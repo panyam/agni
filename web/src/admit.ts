@@ -14,7 +14,7 @@ export type Admission = { open: true; replaceWith?: string } | { open: false; go
 export interface AdmitDeps {
   pathname: string;
   search: string;
-  // dropMountPrefix is the browser mount's address prefix, `<base>designs/local/`.
+  // dropMountPrefix is the browser mount's address prefix, `<base>files/local/`.
   dropMountPrefix: string;
   // stamp returns the stamp of the design's files now, "" when they cannot be listed.
   stamp(mount: string, path: string): Promise<string>;

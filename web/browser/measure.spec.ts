@@ -61,7 +61,7 @@ describe("the board measuring tool", () => {
   for (const mode of ["svg", "webgl"] as const) {
     it(`measures J1's pitch to the micrometre in ${mode}`, async () => {
       await withPage(browser, async (page) => {
-        await page.goto(`${base()}/designs/render/dimensions.kicad_pcb/view?mode=${mode}`, { waitUntil: "networkidle" });
+        await page.goto(`${base()}/files/render/dimensions.kicad_pcb/view?mode=${mode}`, { waitUntil: "networkidle" });
         const button = page.locator(".canvas-measure");
         await button.waitFor({ state: "visible", timeout: 30_000 });
         await button.click();
@@ -85,7 +85,7 @@ describe("the board measuring tool", () => {
 
   it("measures in a board view beside the canvas", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/designs/render/dimensions.kicad_pcb/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/files/render/dimensions.kicad_pcb/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       await openBeside(page, "Board");
       const stage = `${PANE} .sheetview-stage`;
@@ -108,7 +108,7 @@ describe("the board measuring tool", () => {
 
   it("hides on a schematic", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/designs/kicad/bus.kicad_sch/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/files/kicad/bus.kicad_sch/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       expect(await page.locator(".canvas-measure").isHidden()).toBe(true);
     });

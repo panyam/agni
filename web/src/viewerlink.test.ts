@@ -7,7 +7,7 @@ import { ACCEPTED, ENVELOPE } from "./embed.js";
 // Every saved HTML report carries the script core/report/viewerlink.js. These tests run it in a page
 // holding one report link. The script finds the viewer window by name, and a stand-in plays it.
 const SCRIPT = readFileSync(join(process.cwd(), "..", "core", "report", "viewerlink.js"), "utf8");
-const VIEWER = "http://127.0.0.1:8080/designs/kicad/d.kicad_sch/view";
+const VIEWER = "http://127.0.0.1:8080/files/kicad/d.kicad_sch/view";
 const LINK = VIEWER + "?verdict=x&rule=r";
 
 type Posted = { agni: string; id: string; method: string };

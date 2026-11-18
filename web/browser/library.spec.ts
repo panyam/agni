@@ -1,4 +1,4 @@
-// The library page uploads designs to a server's store, and they come back after a restart (agni
+// The designs page uploads designs to a server's store, and they come back after a restart (agni
 // issue 1719). It drives the page as a person does: two Jetson baseboards uploaded as two designs of
 // one series through the new-design form, one schematic replaced on its design's page, the server
 // restarted over the same --store-dir, and the newer design opened in the viewer.
@@ -51,14 +51,14 @@ async function shot(page: Page, name: string): Promise<void> {
 
 // upload makes a design through the list page's form from a folder.
 async function upload(page: Page, id: string, folder: string): Promise<void> {
-  await page.goto(`${server.base}/library/`);
+  await page.goto(`${server.base}/designs/`);
   const form = page.getByTestId("new-design");
   await form.locator('input[name="id"]').fill(id);
   await form.locator('input[name="series"]').fill("jetson");
   await page.getByTestId("new-files-folder").setInputFiles(folder);
   await form.locator("text=files picked").waitFor();
   await form.locator("button.lb-submit").click();
-  await page.waitForURL(`${server.base}/library/${id}`, { timeout: 120_000 });
+  await page.waitForURL(`${server.base}/designs/${id}`, { timeout: 120_000 });
   await page.locator("tr[data-artifact]").nth(1).waitFor({ timeout: 60_000 });
 }
 
@@ -85,12 +85,12 @@ afterAll(async () => {
   await server?.stop();
 });
 
-describe("the library page", () => {
+describe("the designs page", () => {
   it("uploads two designs of a series, replaces a schematic, and keeps both across a restart", async () => {
     await withPage(browser, async (page) => {
       await page.goto(`${server.base}/`);
       await shot(page, "landing.png");
-      await page.goto(`${server.base}/library/`);
+      await page.goto(`${server.base}/designs/`);
       await expect.poll(() => page.getByTestId("library-status").textContent()).toBe("No designs yet.");
 
       await upload(page, "bb-1.1.2", older);
@@ -99,7 +99,7 @@ describe("the library page", () => {
       expect(types.sort()).toEqual(["board", "schematic"]);
       await shot(page, "design.png");
 
-      await page.goto(`${server.base}/library/`);
+      await page.goto(`${server.base}/designs/`);
       await page.locator('[data-design="designs/bb-1.1.3"]').waitFor();
       expect(await page.locator(".lb-series").getAttribute("data-series")).toBe("jetson");
       expect(await page.locator('[data-design="designs/bb-1.1.3"] .lb-latest').count()).toBe(1);
@@ -112,7 +112,7 @@ describe("the library page", () => {
       const edited = mkdtempSync(join(tmpdir(), "agni-library-sch-"));
       for (const f of Object.keys(before)) cpSync(join(newer, f), join(edited, f));
       appendFileSync(join(edited, "power.kicad_sch"), "\n");
-      await page.goto(`${server.base}/library/bb-1.1.3`);
+      await page.goto(`${server.base}/designs/bb-1.1.3`);
       await page.getByTestId("replace-schematic-folder").setInputFiles(edited);
       await expect.poll(async () => (await artifactFiles("designs/bb-1.1.3/artifacts/schematic"))["power.kicad_sch"], { timeout: 60_000 }).not.toBe(before["power.kicad_sch"]);
       const after = await artifactFiles("designs/bb-1.1.3/artifacts/schematic");
@@ -121,14 +121,14 @@ describe("the library page", () => {
       // The server restarts over the same store, and the page reads everything back.
       await server.stop();
       server = await serve();
-      await page.goto(`${server.base}/library/`);
+      await page.goto(`${server.base}/designs/`);
       await page.locator('[data-design="designs/bb-1.1.3"]').waitFor({ timeout: 30_000 });
       expect(await page.locator(".lb-row").count()).toBe(2);
       expect(await page.locator('[data-design="designs/bb-1.1.3"] .lb-latest').count()).toBe(1);
 
       // The newer design opens in the viewer through its store path.
       await page.locator('[data-design="designs/bb-1.1.3"] a.lb-open').click();
-      await page.waitForURL(/\/designs\/store\/bb-1\.1\.3\/schematic\/.*\/view/);
+      await page.waitForURL(/\/files\/store\/bb-1\.1\.3\/schematic\/.*\/view/);
       await page.locator(".sheet-tile-name").first().waitFor({ state: "attached", timeout: 120_000 });
       await shot(page, "viewer.png");
     });

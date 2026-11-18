@@ -13,7 +13,7 @@ page with the viewer's design URL:
 ```bash
 go run ./cmd/agni serve --addr 127.0.0.1:8080 --web-dir web --mount kicad=readers/kicad/testdata --embed-origin http://127.0.0.1:9000
 python3 -m http.server 9000 --bind 127.0.0.1 --directory examples/embed-viewer
-open "http://127.0.0.1:9000/parent.html?viewer=http://127.0.0.1:8080/designs/kicad/hier_numeric_root.kicad_sch/view"
+open "http://127.0.0.1:9000/parent.html?viewer=http://127.0.0.1:8080/files/kicad/hier_numeric_root.kicad_sch/view"
 ```
 
 Press Get location, paste a sheet id into the sheet box, and press Show sheet. The viewer moves
@@ -26,7 +26,7 @@ viewer's server and open the page with both:
 
 ```bash
 go run ./cmd/agni check readers/kicad/testdata/hier_numeric_root.kicad_sch --mount kicad=readers/kicad/testdata --server http://127.0.0.1:8080 --verdicts --format html -o examples/embed-viewer/report.html
-open "http://127.0.0.1:9000/two-pane.html?viewer=http://127.0.0.1:8080/designs/kicad/hier_numeric_root.kicad_sch/view&report=report.html"
+open "http://127.0.0.1:9000/two-pane.html?viewer=http://127.0.0.1:8080/files/kicad/hier_numeric_root.kicad_sch/view&report=report.html"
 ```
 
 Clicking a subject in the report moves the viewer beside it without reloading it. The viewer's frame
@@ -46,7 +46,7 @@ claude mcp add --transport http agni http://127.0.0.1:8080/mcp
 
 Then walk it in this order:
 
-1. Open `http://127.0.0.1:8080/designs/tut/designs/gateway/view` in two tabs. Each shows "Let agents
+1. Open `http://127.0.0.1:8080/files/tut/designs/gateway/view` in two tabs. Each shows "Let agents
    drive this tab" beside the sheet tabs, off.
 2. Tick the switch in the second tab only.
 3. Ask the agent to show the gateway's board sheet. It calls `viewer_show_sheet` with

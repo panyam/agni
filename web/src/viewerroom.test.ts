@@ -61,7 +61,7 @@ function harness(opts: { stored?: string; joinFails?: boolean; dispatch?: PageDi
   const store = new Map<string, string>(opts.stored ? [[AGENTS_KEY, opts.stored]] : []);
   const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
   const winListeners: Record<string, () => void> = {};
-  const win = { location: { href: "http://127.0.0.1:8080/designs/m/a/view" } as Location, addEventListener: (t: string, f: () => void) => void (winListeners[t] = f) };
+  const win = { location: { href: "http://127.0.0.1:8080/files/m/a/view" } as Location, addEventListener: (t: string, f: () => void) => void (winListeners[t] = f) };
   const host = document.createElement("div");
   host.hidden = true;
   const dispatch = opts.dispatch ?? vi.fn(async (method: string, body: unknown) => ({ method, body }) as never);

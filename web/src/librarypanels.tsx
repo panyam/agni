@@ -1,4 +1,4 @@
-// The library page's two views (agni issue 1719). The list shows the designs a server holds, grouped
+// The designs page's two views (agni issue 1719). The list shows the designs a server holds, grouped
 // by series with each series' latest marked, and a form that makes a design from dropped files. A
 // design's own page lists its artifacts, and replaces or deletes one. Files go up as the CLI's
 // `agni designs push` sends them (libraryupload.ts), and the server groups a folder into artifacts.

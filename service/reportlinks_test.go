@@ -17,10 +17,10 @@ import (
 var linkNames = []struct {
 	name, uri, want string
 }{
-	{"the design's folder", "mount://m/d", "/designs/m/d/board.edn/view?"},
-	{"the entry", "mount://m/d/board.edn", "/designs/m/d/board.edn/view?"},
-	{"a declared companion", "mount://m/d/board.eds", "/designs/m/d/board.edn/view?"},
-	{"an undeclared sibling", "mount://m/d/other.edn", "/designs/m/d/other.edn/view?"},
+	{"the design's folder", "mount://m/d", "/files/m/d/board.edn/view?"},
+	{"the entry", "mount://m/d/board.edn", "/files/m/d/board.edn/view?"},
+	{"a declared companion", "mount://m/d/board.eds", "/files/m/d/board.edn/view?"},
+	{"an undeclared sibling", "mount://m/d/other.edn", "/files/m/d/other.edn/view?"},
 }
 
 func TestTheChecklistPageLinksTheEntryWhateverTheCallerNamed(t *testing.T) {

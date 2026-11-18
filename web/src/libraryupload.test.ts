@@ -91,9 +91,9 @@ describe("groupBySeries", () => {
 
 describe("libraryRoute", () => {
   it("reads the list and a design from the URL, and libraryUrl writes one back", () => {
-    expect(libraryRoute("/library/")).toEqual({ kind: "list" });
-    expect(libraryRoute("/library")).toEqual({ kind: "list" });
-    expect(libraryRoute("/library/bb-1.1.3")).toEqual({ kind: "design", id: "bb-1.1.3" });
+    expect(libraryRoute("/designs/")).toEqual({ kind: "list" });
+    expect(libraryRoute("/designs")).toEqual({ kind: "list" });
+    expect(libraryRoute("/designs/bb-1.1.3")).toEqual({ kind: "design", id: "bb-1.1.3" });
     expect(libraryRoute(libraryUrl("bb-1.1.3") + "/")).toEqual({ kind: "design", id: "bb-1.1.3" });
   });
 });

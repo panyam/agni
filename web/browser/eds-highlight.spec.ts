@@ -31,7 +31,7 @@ describe("a finding's net on an EDIF companion schematic in WebGL", () => {
     it(`lights SCL when every finding is shown (${engine} engine)`, async () => {
       await withPage(browser, async (page) => {
         const q = `mode=webgl${engine === "wasm" ? "&engine=wasm" : ""}`;
-        await page.goto(`${base()}/designs/${DESIGN}/view?${q}`, { waitUntil: "networkidle" });
+        await page.goto(`${base()}/files/${DESIGN}/view?${q}`, { waitUntil: "networkidle" });
         await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
         await page.waitForFunction(() => !document.getElementById("render-busy")?.dataset.busy, null, { timeout: 60_000 });
 

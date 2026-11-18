@@ -158,7 +158,7 @@ it(
       const server = await serve();
       const contexts: BrowserContext[] = [];
       try {
-        const url = `${server.base}/designs/${design.mount}/${design.path}/view?mode=webgl&sheet=board&timing=1`;
+        const url = `${server.base}/files/${design.mount}/${design.path}/view?mode=webgl&sheet=board&timing=1`;
         const a = await freshPage();
         contexts.push(a.context);
         seen.get("server, cold")!.push(await timed(a.page, () => a.page.goto(url, { waitUntil: "commit" })));

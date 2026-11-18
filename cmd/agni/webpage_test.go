@@ -17,7 +17,7 @@ func TestViewerPageRendersShell(t *testing.T) {
 
 	// A work-page URL, not "/", which serves the landing page, so the viewer shell is reached by
 	// addressing a design (WS9-049).
-	const workURL = "/designs/corpus/boards/b.kicad_sch/view"
+	const workURL = "/files/corpus/boards/b.kicad_sch/view"
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, workURL, nil))
 
@@ -56,9 +56,9 @@ func TestViewerPageRendersShell(t *testing.T) {
 }
 
 // TestWorkPageServesDesignsSpace asserts that the WS9-049 work-page URL space renders the shell. It
-// also asserts that the shell renders because /designs/ is registered, not because the root pattern
+// also asserts that the shell renders because /files/ is registered, not because the root pattern
 // catches everything. Only the pattern check can fail, since "/" is a catch-all. A 200 alone would
-// pass even with no /designs/ registration at all. Phase 2 hangs the browse page off this same
+// pass even with no /files/ registration at all. Phase 2 hangs the browse page off this same
 // pattern, and the /view suffix splits the two, since a ServeMux pattern cannot put a wildcard
 // segment before a literal one.
 func TestWorkPageServesDesignsSpace(t *testing.T) {
@@ -66,13 +66,13 @@ func TestWorkPageServesDesignsSpace(t *testing.T) {
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
 
 	for _, path := range []string{
-		"/designs/",        // the space root
-		"/designs/corpus/", // a mount root (folder form)
-		"/designs/corpus/boards/b.kicad_sch/view", // a design (work page)
+		"/files/",                               // the space root
+		"/files/corpus/",                        // a mount root (folder form)
+		"/files/corpus/boards/b.kicad_sch/view", // a design (work page)
 	} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
-		if _, pattern := mux.Handler(req); pattern != "/designs/" {
-			t.Errorf("GET %s matched pattern %q, want %q", path, pattern, "/designs/")
+		if _, pattern := mux.Handler(req); pattern != "/files/" {
+			t.Errorf("GET %s matched pattern %q, want %q", path, pattern, "/files/")
 		}
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, req)
@@ -89,7 +89,7 @@ func TestWorkPageServesDesignsSpace(t *testing.T) {
 // page.
 // "/" is the landing page rather than the design browser, and it is also the catch-all. A URL that
 // matches no other pattern then reaches a page offering the destinations instead of an empty tree.
-// The browser did not move, so the same test asserts /designs/ still serves it.
+// The browser did not move, so the same test asserts /files/ serves it.
 func TestRootServesLandingPage(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
@@ -102,7 +102,7 @@ func TestRootServesLandingPage(t *testing.T) {
 		}
 		body := rec.Body.String()
 		// Both destinations are plain server-rendered links, so the page routes with no JavaScript.
-		for _, want := range []string{`href="/designs/"`, `href="/library/"`, `id="landing-recents"`, "/static/landing.js"} {
+		for _, want := range []string{`href="/designs/"`, `href="/files/"`, `id="landing-recents"`, "/static/landing.js"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("GET %s missing %q", path, want)
 			}
@@ -128,12 +128,12 @@ func TestEveryPageOffersAWayHome(t *testing.T) {
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
 
 	for _, path := range []string{
-		"/designs/",                          // the folder browser
-		"/designs/m/boards/b.kicad_sch/view", // a design's work page
-		"/designs/m/boards/b.kicad_sch/load", // its Load page (agni issue 1072)
-		"/designs/local/load/",               // where files are dropped
-		"/library/",                          // the designs the server keeps (agni issue 1719)
-		"/library/bb-1.1.3",                  // one of them
+		"/files/",                          // the folder browser
+		"/files/m/boards/b.kicad_sch/view", // a design's work page
+		"/files/m/boards/b.kicad_sch/load", // its Load page (agni issue 1072)
+		"/files/local/load/",               // where files are dropped
+		"/designs/",                        // the designs the server holds (agni issue 1719)
+		"/designs/bb-1.1.3",                // one of them
 	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
@@ -161,16 +161,16 @@ func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 		path       string
 		want, deny []string
 	}{
-		{"/designs/", browseMarkers, workMarkers},               // the space root
-		{"/designs/corpus/", browseMarkers, workMarkers},        // a mount root
-		{"/designs/corpus/boards/", browseMarkers, workMarkers}, // a subfolder
-		{"/designs/corpus/b.kicad_sch/view", workMarkers, browseMarkers},
-		{"/designs/corpus/boards/b.kicad_sch/view?sheet=root", workMarkers, browseMarkers},
-		{"/designs/corpus/b.kicad_sch/load", loadMarkers, append(workMarkers, browseMarkers...)},
-		{"/designs/corpus/boards/b.kicad_sch/load?verdict=x&rule=r", loadMarkers, append(workMarkers, browseMarkers...)},
-		{"/designs/local/load/", loadMarkers, append(workMarkers, browseMarkers...)},
+		{"/files/", browseMarkers, workMarkers},               // the space root
+		{"/files/corpus/", browseMarkers, workMarkers},        // a mount root
+		{"/files/corpus/boards/", browseMarkers, workMarkers}, // a subfolder
+		{"/files/corpus/b.kicad_sch/view", workMarkers, browseMarkers},
+		{"/files/corpus/boards/b.kicad_sch/view?sheet=root", workMarkers, browseMarkers},
+		{"/files/corpus/b.kicad_sch/load", loadMarkers, append(workMarkers, browseMarkers...)},
+		{"/files/corpus/boards/b.kicad_sch/load?verdict=x&rule=r", loadMarkers, append(workMarkers, browseMarkers...)},
+		{"/files/local/load/", loadMarkers, append(workMarkers, browseMarkers...)},
 		// The suffix is matched as a whole segment, so a folder named loads is still a folder.
-		{"/designs/corpus/loads/", browseMarkers, append(workMarkers, loadMarkers...)},
+		{"/files/corpus/loads/", browseMarkers, append(workMarkers, loadMarkers...)},
 	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
@@ -201,7 +201,7 @@ func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/", nil))
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/files/", nil))
 
 	body := rec.Body.String()
 	for _, deny := range []string{
@@ -219,20 +219,19 @@ func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
 	}
 }
 
-// TestLegacyFilesRedirect pins the WS9-049 migration promise that a /files/ deep link shared before
-// the split still resolves, landing on the same design and sheet in the new space.
-func TestLegacyFilesRedirect(t *testing.T) {
+// TestOldDesignsLinksRedirectToFiles pins that a folder-browser or viewer link from when /designs/
+// held them still resolves (agni issue 1719). It lands on the same file and sheet under /files/, and
+// the knobs in the query carry over verbatim. A one-segment /designs/<id> is a design's page.
+func TestOldDesignsLinksRedirectToFiles(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
 
 	for _, tc := range []struct{ from, want string }{
-		{"/files/corpus/boards/b.kicad_sch", "/designs/corpus/boards/b.kicad_sch/view"},
-		// The knobs travel in the query string in both spaces, so they carry over verbatim.
-		{"/files/corpus/b.eds?sheet=root&mode=svg", "/designs/corpus/b.eds/view?sheet=root&mode=svg"},
-		// A folder keeps its trailing slash and does NOT gain /view.
-		{"/files/corpus/boards/", "/designs/corpus/boards/"},
-		{"/files/corpus/", "/designs/corpus/"},
-		{"/files/", "/designs/"},
+		{"/designs/corpus/boards/b.kicad_sch/view", "/files/corpus/boards/b.kicad_sch/view"},
+		{"/designs/corpus/b.eds/view?sheet=root&mode=svg", "/files/corpus/b.eds/view?sheet=root&mode=svg"},
+		{"/designs/corpus/b.kicad_sch/load?verdict=x", "/files/corpus/b.kicad_sch/load?verdict=x"},
+		{"/designs/corpus/boards/", "/files/corpus/boards/"},
+		{"/designs/corpus/", "/files/corpus/"},
 	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.from, nil))
@@ -278,7 +277,7 @@ func TestViewerPageCarriesItsEngine(t *testing.T) {
 		mux := http.NewServeMux()
 		registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{engine: c.engine}), mux)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/tut/designs/gateway/view", nil))
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/files/tut/designs/gateway/view", nil))
 		if want := `data-engine="` + c.want + `"`; !strings.Contains(rec.Body.String(), want) {
 			t.Errorf("engine %q: the shell does not carry %s", c.engine, want)
 		}
@@ -288,15 +287,15 @@ func TestViewerPageCarriesItsEngine(t *testing.T) {
 		mux := http.NewServeMux()
 		registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{wasmMaxBytes: c.max}), mux)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/tut/designs/gateway/view", nil))
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/files/tut/designs/gateway/view", nil))
 		if want := fmt.Sprintf(`data-wasm-max-bytes="%d"`, c.want); !strings.Contains(rec.Body.String(), want) {
 			t.Errorf("--wasm-max-bytes %d: the shell does not carry %s", c.max, want)
 		}
 	}
 }
 
-// /library/ and every design under it serve the library shell, whose bundle reads which from the URL
-// (agni issue 1719). The folder browser and the viewer stay where they were.
+// /designs/ and every design under it serve the designs shell, whose bundle reads which from the URL
+// (agni issue 1719). The folder browser serves /files/.
 func TestLibrarySpaceServesTheLibraryPage(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
@@ -304,9 +303,9 @@ func TestLibrarySpaceServesTheLibraryPage(t *testing.T) {
 		path       string
 		want, deny []string
 	}{
-		{"/library/", []string{`id="library"`, "/static/library.js"}, []string{"/static/browse.js", "/static/landing.js", "/static/app.js"}},
-		{"/library/bb-1.1.3", []string{`id="library"`, "/static/library.js"}, []string{"/static/browse.js", "/static/landing.js", "/static/app.js"}},
-		{"/designs/", []string{"/static/browse.js"}, []string{"/static/library.js"}},
+		{"/designs/", []string{`id="library"`, "/static/library.js"}, []string{"/static/browse.js", "/static/landing.js", "/static/app.js"}},
+		{"/designs/bb-1.1.3", []string{`id="library"`, "/static/library.js"}, []string{"/static/browse.js", "/static/landing.js", "/static/app.js"}},
+		{"/files/", []string{"/static/browse.js"}, []string{"/static/library.js"}},
 	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))

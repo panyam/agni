@@ -1,4 +1,4 @@
-// Sending files to a server's design store from the library page (agni issue 1719). A design's
+// Sending files to a server's design store from the designs page (agni issue 1719). A design's
 // files go up the way the CLI's `agni designs push` sends them: a manifest of paths and hashes
 // first, then only the contents the server says it lacks, then the same request again. The server
 // groups a folder into artifacts (ImportDesignFiles), so this page never decides which file is the
@@ -136,21 +136,21 @@ export function groupBySeries(designs: Design[]): SeriesGroup[] {
   return out;
 }
 
-// LibraryRoute is what a /library/ URL addresses: the list, or one design by id.
+// LibraryRoute is what a /designs/ URL addresses: the list, or one design by id.
 export type LibraryRoute = { kind: "list" } | { kind: "design"; id: string };
 
-// LIBRARY_PREFIX is the library's URL space, the mirror of libraryPrefix in cmd/agni/webpage.go.
-export const LIBRARY_PREFIX = "/library/";
+// DESIGNS_PREFIX is the designs' URL space, the mirror of designsPrefix in cmd/agni/webpage.go.
+export const DESIGNS_PREFIX = "/designs/";
 
-// libraryRoute reads a pathname under /library/.
+// libraryRoute reads a pathname under /designs/.
 export function libraryRoute(pathname: string): LibraryRoute {
-  const rest = pathname.startsWith(LIBRARY_PREFIX) ? pathname.slice(LIBRARY_PREFIX.length).replace(/\/+$/, "") : "";
+  const rest = pathname.startsWith(DESIGNS_PREFIX) ? pathname.slice(DESIGNS_PREFIX.length).replace(/\/+$/, "") : "";
   return rest === "" ? { kind: "list" } : { kind: "design", id: decodeURIComponent(rest) };
 }
 
-// libraryUrl is a design's page in the library.
+// libraryUrl is a design's page, /designs/<id>.
 export function libraryUrl(id: string): string {
-  return LIBRARY_PREFIX + encodeURIComponent(id);
+  return DESIGNS_PREFIX + encodeURIComponent(id);
 }
 
 // designId is the id in "designs/{design}".

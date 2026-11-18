@@ -31,7 +31,7 @@ export interface ViewerLocation {
   // verdict is the id of the focused verdict ("i2c-pull-up:net:SDA"), "" when none.
   //
   // It is SELECTION STATE, like `sheet`, and not the resource form. A server-resolved `GET
-  // /checks/<id>` would need a fixed-arity design identity, and `/designs/<mount>/<path...>/` has a
+  // /checks/<id>` would need a fixed-arity design identity, and `/files/<mount>/<path...>/` has a
   // variable-length path, so a two-segment verb suffix cannot be told from a folder without the
   // trailing slash.
   verdict: string;
@@ -123,7 +123,7 @@ export function appBase(): string {
 }
 
 function designsPrefix(): string {
-  return `${base}designs/`;
+  return `${base}files/`;
 }
 
 // VIEW_SEGMENT terminates a design's work-page URL, telling a FILE location from a FOLDER one
@@ -172,9 +172,9 @@ function isRenderMode(s: string | null): s is RenderMode {
 }
 
 // locationToUrl renders a location as a root-relative URL (pathname + search). A design's work
-// page lives at /designs/<mount>/<path...>/view, with the sheet and view knobs in the query string
+// page lives at /files/<mount>/<path...>/view, with the sheet and view knobs in the query string
 // because sheet ids and layout names are not guaranteed path-safe. A folder is the same path with a
-// trailing slash (/designs/<mount>/ for a mount root) and no query. With neither it is "/".
+// trailing slash (/files/<mount>/ for a mount root) and no query. With neither it is "/".
 export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGMENT): string {
   if (hasDir(loc)) {
     const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
@@ -292,7 +292,7 @@ export function pageOf(pathname: string): DesignPage | "" {
 
 // parseUrl reads a location back out of a pathname+search pair (as read from window.location). The
 // first path segment is the mount and the rest, rejoined, is the path within it. A trailing slash
-// marks a folder (mount root is /designs/<mount>/, path ""), and a trailing /view marks a design,
+// marks a folder (mount root is /files/<mount>/, path ""), and a trailing /view marks a design,
 // which needs at least one path segment and carries the knobs from the query. Anything else yields
 // the empty location.
 export function parseUrl(pathname: string, search: string): ViewerLocation {

@@ -1,6 +1,6 @@
 // One design, one URL, either engine (agni issues 178 and 853).
 //
-// The tutorial gateway is opened at its own `/designs/tut/...` URL twice: once on the server engine,
+// The tutorial gateway is opened at its own `/files/tut/...` URL twice: once on the server engine,
 // once with `?engine=wasm`, where the page loads agni.wasm into a Web Worker, brings the design's
 // files over from the server, and routes every analysis client to the worker. Both runs must find
 // the same thing. On wasm, the request log checks directly that the analysis happened in the page.
@@ -25,7 +25,7 @@ afterAll(async () => {
   await browser?.close();
 });
 
-const gateway = "/designs/tut/designs/gateway/view";
+const gateway = "/files/tut/designs/gateway/view";
 const apiPrefix = "/agni.v1.webapi.";
 const workspacePrefix = "/agni.v1.webapi.WorkspaceService/";
 

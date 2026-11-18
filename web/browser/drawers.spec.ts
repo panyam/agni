@@ -17,7 +17,7 @@ afterAll(async () => {
 });
 
 async function open(page: Page): Promise<void> {
-  await page.goto(`${base()}/designs/kicad/hier_bus_root.kicad_sch/view?mode=svg`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/files/kicad/hier_bus_root.kicad_sch/view?mode=svg`, { waitUntil: "networkidle" });
   await page.waitForSelector(".query-mode", { timeout: 30_000 });
   await page.locator(".dock-drawer-btn").first().waitFor({ timeout: 30_000 });
 }

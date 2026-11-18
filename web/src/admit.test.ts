@@ -3,9 +3,9 @@ import { admit, type AdmitDeps } from "./admit.js";
 
 function deps(over: Partial<AdmitDeps> = {}): AdmitDeps {
   return {
-    pathname: "/designs/m/b.edn/view",
+    pathname: "/files/m/b.edn/view",
     search: "",
-    dropMountPrefix: "/designs/local/",
+    dropMountPrefix: "/files/local/",
     stamp: async () => "s1",
     loaded: () => false,
     ...over,
@@ -17,7 +17,7 @@ function deps(over: Partial<AdmitDeps> = {}): AdmitDeps {
 describe("whether the viewer opens its design", () => {
   it("sends a design with no record to its Load page, the query kept", async () => {
     const a = await admit(deps({ search: "?verdict=v&rule=r" }));
-    expect(a).toEqual({ open: false, goTo: "/designs/m/b.edn/load?verdict=v&rule=r" });
+    expect(a).toEqual({ open: false, goTo: "/files/m/b.edn/load?verdict=v&rule=r" });
   });
 
   it("opens a design whose record matches its files now", async () => {
@@ -37,12 +37,12 @@ describe("whether the viewer opens its design", () => {
   it("opens a design the Load page has just sent, and drops the marker from the address", async () => {
     const stamp = vi.fn(async () => "s1");
     const a = await admit(deps({ search: "?sheet=s&loaded=1", stamp }));
-    expect(a).toEqual({ open: true, replaceWith: "/designs/m/b.edn/view?sheet=s" });
+    expect(a).toEqual({ open: true, replaceWith: "/files/m/b.edn/view?sheet=s" });
     expect(stamp).not.toHaveBeenCalled();
   });
 
   it("sends the browser mount's bare address to the drop page and leaves any other bare address alone", async () => {
-    expect(await admit(deps({ pathname: "/designs/local/view/" }))).toEqual({ open: false, goTo: "/designs/local/load/" });
-    expect(await admit(deps({ pathname: "/designs/m/view" }))).toEqual({ open: true });
+    expect(await admit(deps({ pathname: "/files/local/view/" }))).toEqual({ open: false, goTo: "/files/local/load/" });
+    expect(await admit(deps({ pathname: "/files/m/view" }))).toEqual({ open: true });
   });
 });

@@ -65,7 +65,7 @@ func openCmd() *cobra.Command {
 				addr = net.JoinHostPort("127.0.0.1", port)
 			}
 
-			view := "/designs/" + u.Mount + "/" + u.Path + "/view"
+			view := "/files/" + u.Mount + "/" + u.Path + "/view"
 			return runViewer(cmd, viewerOpts{
 				addr:        addr,
 				webDir:      webDir,

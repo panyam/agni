@@ -22,7 +22,7 @@ func TestReportLinksOpenTheNamedViewer(t *testing.T) {
 	}
 	c := Checklist{Design: "d", Name: "n", URLBase: "http://h:1", MountPath: "m/d", Areas: []ChecklistArea{{
 		Name:  "a",
-		Items: []ChecklistItem{{ID: "1", Title: "t", Outcome: "fail", Evidence: []ChecklistEvidence{{Rule: "r", Subject: "N", URL: "http://h:1/designs/m/d/view?verdict=x"}}}},
+		Items: []ChecklistItem{{ID: "1", Title: "t", Outcome: "fail", Evidence: []ChecklistEvidence{{Rule: "r", Subject: "N", URL: "http://h:1/files/m/d/view?verdict=x"}}}},
 	}}}
 	if err := ChecklistHTML(&checklistPage, c); err != nil {
 		t.Fatal(err)

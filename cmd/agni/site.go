@@ -152,7 +152,7 @@ func writeSite(out, webDir, base, socialImage string, seeds []string, notes inte
 	}
 	// The browser mount has one viewer page and one Load page, and a dropped design names its path
 	// in their query, since a static host serves only the pages written here.
-	pages = append(pages, "designs/"+wasmengine.BrowserMount+"/view")
+	pages = append(pages, "files/"+wasmengine.BrowserMount+"/view")
 
 	app := newPageApp(webDir, sa)
 	viewer, err := renderPage(pageHandler[*ViewerPage](app))
@@ -365,7 +365,7 @@ func seedDesigns(dir, mount string) ([]seededDesign, error) {
 		}
 		out = append(out, seededDesign{
 			uri:    "mount://" + mount + "/" + rel,
-			addr:   path.Join("designs", mount, rel, "view"),
+			addr:   path.Join("files", mount, rel, "view"),
 			title:  fmt.Sprintf("%s (%s)", title, mount),
 			format: format,
 		})

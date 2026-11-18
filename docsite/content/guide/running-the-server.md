@@ -234,10 +234,11 @@ other design folder. A project is a title and a list of design names, kept as
 `projects/<id>.json`, so one design can sit in several projects. `agni projects create` and
 `agni projects add` make one and list designs in it.
 
-The viewer's library page, `/library/`, does the same from a browser (agni issue 1719). It lists
-the server's designs by series with each series' latest marked, and a form there makes a design from
-a dropped folder. A design's page, `/library/<id>`, lists its artifacts and replaces or deletes one.
-The Library card on the landing page links to it.
+The viewer's designs page, `/designs/`, does the same from a browser (agni issue 1719). It lists
+every design the server holds, stored and mounted, by series with each series' latest marked, and a
+form there makes a design from a dropped folder. A design's page, `/designs/<id>`, lists its
+artifacts and replaces or deletes one, and a mounted design shows as read-only. The folder browser
+is at `/files/`, and an older `/designs/<mount>/<path>/view` link redirects there.
 
 `DesignService` and `ProjectService` create, change and delete them over the wire. A client sends an
 artifact as a manifest of paths and hashes, and sends any contents the server asks for with
