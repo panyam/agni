@@ -13,7 +13,7 @@
 name = "agnids-pdf2doc"
 version = "0"
 requires-python = "==3.12.*"
-dependencies = ["torch==2.14.1", "torchvision==0.29.1", "docling==2.132.0"]
+dependencies = ["torch==2.14.1", "torchvision==0.29.1", "docling==2.150.1", "pillow>=13.0.0"]
 
 [tool.uv.sources]
 torch = { index = "pytorch-cpu", marker = "sys_platform == 'linux'" }
