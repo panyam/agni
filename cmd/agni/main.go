@@ -1393,7 +1393,7 @@ func diffCmd() *cobra.Command {
 	var format string
 	var orderBy []string
 	var renameApprox, includeEqual bool
-	var serverVal, conventions string
+	var serverVal, conventions, remoteURL string
 	var srvSpec serverSpec
 	c := &cobra.Command{
 		Use:   "diff <old> <new> | diff <design>",
@@ -1431,7 +1431,10 @@ match. A design with no board, or one that is its board alone, reads "Not compar
 				return err
 			}
 			defer reset()
-			if err := runDiff(cmd, args[0], args[1], format, orderBy, renameApprox, includeEqual); err != nil {
+			if remoteURL != "" && format == "text" {
+				return fmt.Errorf("--remote answers with the DiffDesigns message; pass --format json or --format csv")
+			}
+			if err := runDiff(cmd, args[0], args[1], remoteURL, format, orderBy, renameApprox, includeEqual); err != nil {
 				return err
 			}
 			// The link goes to stderr for every format, as trace's does. So stdout holds only the diff
@@ -1461,11 +1464,13 @@ match. A design with no board, or one that is its board alone, reads "Not compar
 	conventionsFlag(c, &conventions)
 	serverFlag(c, &serverVal)
 	withSelfServer(c, &srvSpec)
+	remoteFlag(c, &remoteURL)
 	return c
 }
 
-// runDiff writes the diff of older and newer to stdout in format.
-func runDiff(cmd *cobra.Command, older, newer, format string, orderBy []string, renameApprox, includeEqual bool) error {
+// runDiff writes the diff of older and newer to stdout in format. With remote, the server named
+// answers, and only json and csv, which are its DiffDesigns message, are written.
+func runDiff(cmd *cobra.Command, older, newer, remote, format string, orderBy []string, renameApprox, includeEqual bool) error {
 	// json is the message DiffDesigns returns, so it goes through the service (C31, agni
 	// issues 737 and 817). The CLI is a client of the rpc rather than a second composition
 	// of it. The service fills the sheet and placement maps, and they are in its output too.
@@ -1473,11 +1478,11 @@ func runDiff(cmd *cobra.Command, older, newer, format string, orderBy []string, 
 		return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
 	}
 	if format == "json" {
-		return diffViaService(cmd, older, newer, renameApprox, includeEqual)
+		return diffViaService(cmd, older, newer, remote, renameApprox, includeEqual)
 	}
 	// csv is the diff table the TableService projects from the same response (agni 862).
 	if format == "csv" {
-		resp, err := diffResponse(cmd, older, newer, renameApprox, includeEqual)
+		resp, err := diffResponse(cmd, older, newer, remote, renameApprox, includeEqual)
 		if err != nil {
 			return err
 		}

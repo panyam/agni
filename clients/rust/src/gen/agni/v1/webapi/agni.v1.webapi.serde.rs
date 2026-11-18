@@ -22093,6 +22093,9 @@ impl serde::Serialize for Snapshot {
         if self.refresh {
             len += 1;
         }
+        if !self.design.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Snapshot", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -22133,6 +22136,9 @@ impl serde::Serialize for Snapshot {
         if self.refresh {
             struct_ser.serialize_field("refresh", &self.refresh)?;
         }
+        if !self.design.is_empty() {
+            struct_ser.serialize_field("design", &self.design)?;
+        }
         struct_ser.end()
     }
 }
@@ -22161,6 +22167,7 @@ impl<'de> serde::Deserialize<'de> for Snapshot {
             "flatten_hierarchy",
             "flattenHierarchy",
             "refresh",
+            "design",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -22178,6 +22185,7 @@ impl<'de> serde::Deserialize<'de> for Snapshot {
             Files,
             FlattenHierarchy,
             Refresh,
+            Design,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -22212,6 +22220,7 @@ impl<'de> serde::Deserialize<'de> for Snapshot {
                             "files" => Ok(GeneratedField::Files),
                             "flattenHierarchy" | "flatten_hierarchy" => Ok(GeneratedField::FlattenHierarchy),
                             "refresh" => Ok(GeneratedField::Refresh),
+                            "design" => Ok(GeneratedField::Design),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -22244,6 +22253,7 @@ impl<'de> serde::Deserialize<'de> for Snapshot {
                 let mut files__ = None;
                 let mut flatten_hierarchy__ = None;
                 let mut refresh__ = None;
+                let mut design__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -22324,6 +22334,12 @@ impl<'de> serde::Deserialize<'de> for Snapshot {
                             }
                             refresh__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::Design => {
+                            if design__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("design"));
+                            }
+                            design__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Snapshot {
@@ -22340,6 +22356,7 @@ impl<'de> serde::Deserialize<'de> for Snapshot {
                     files: files__.unwrap_or_default(),
                     flatten_hierarchy: flatten_hierarchy__.unwrap_or_default(),
                     refresh: refresh__.unwrap_or_default(),
+                    design: design__.unwrap_or_default(),
                 })
             }
         }
