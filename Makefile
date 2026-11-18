@@ -295,18 +295,30 @@ test:
 
 # The Python client (agni issue 728) against a real binary and a real server. Its venv is its own and
 # small (protobuf, openpyxl, pytest), separate from the docling one `make setup` builds, and is rebuilt
-# when pyproject.toml changes. Its server runs with no web dir, the API-only path an installed binary
+# when pyproject.toml or its lock changes. The test dependencies come from requirements-test.txt with
+# hashes (C37), and the client itself installs with --no-deps and --no-build-isolation, so nothing is
+# fetched without a hash check. `make python-client-lock` regenerates the lock. Its server runs with no web dir, the API-only path an installed binary
 # takes (agni issue 735), so it needs no viewer bundle. PYTHONDONTWRITEBYTECODE keeps __pycache__ out
 # of the generated tree that proto-check diffs.
 PY_CLIENT := clients/python
 PY_VENV := $(PY_CLIENT)/.venv
 
-$(PY_VENV)/.installed: $(PY_CLIENT)/pyproject.toml
+$(PY_VENV)/.installed: $(PY_CLIENT)/pyproject.toml $(PY_CLIENT)/requirements-test.txt
 	python3 -m venv $(PY_VENV)
-	$(PY_VENV)/bin/pip install -q -e '$(PY_CLIENT)[test]'
+	$(PY_VENV)/bin/pip install -q --require-hashes -r $(PY_CLIENT)/requirements-test.txt
+	$(PY_VENV)/bin/pip install -q --no-deps --no-build-isolation -e '$(PY_CLIENT)'
 	touch $@
 
 python-venv: $(PY_VENV)/.installed
+
+# Recompile the Python client's hashed locks (C37) after changing a dependency in pyproject.toml or a
+# .in file. The test lock covers every Python the client supports, so it is universal.
+.PHONY: python-client-lock
+python-client-lock:
+	cd $(PY_CLIENT) && uv pip compile pyproject.toml requirements-test.in --extra test --universal \
+		--python-version 3.10 --generate-hashes --quiet -o requirements-test.txt
+	cd $(PY_CLIENT) && uv pip compile requirements-build.in --universal --python-version 3.10 \
+		--generate-hashes --quiet -o requirements-build.txt
 
 python-test: agni python-venv
 	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q
@@ -331,9 +343,9 @@ python-dist:
 	grep -q "^version = \"$$ver\"$$" "$$tmp/src/pyproject.toml" || { echo "pyproject.toml was not stamped with $$ver"; exit 1; }; \
 	rm "$$tmp/src/pyproject.toml.orig"; \
 	python3 -m venv "$$tmp/build-venv"; \
-	PIP_DISABLE_PIP_VERSION_CHECK=1 "$$tmp/build-venv/bin/pip" install -q build; \
+	PIP_DISABLE_PIP_VERSION_CHECK=1 "$$tmp/build-venv/bin/pip" install -q --require-hashes -r $(PY_CLIENT)/requirements-build.txt; \
 	rm -rf "$(PY_DIST)"; mkdir -p "$(PY_DIST)"; out=$$(cd "$(PY_DIST)" && pwd); \
-	"$$tmp/build-venv/bin/python" -m build -q --outdir "$$out" "$$tmp/src"; \
+	"$$tmp/build-venv/bin/python" -m build -q --no-isolation --outdir "$$out" "$$tmp/src"; \
 	hack/python_dist_smoke.sh $(PY_DIST) "$$ver"
 
 # The gate's run of python-dist, so a packaging break shows on the PR rather than on the release.
@@ -1213,7 +1225,9 @@ docsite-images-check: samples-oracle
 
 # One-time (idempotent): build the venv, install docling, and PREFETCH its models so the first
 # `make pdf2doc` (or the workbench's Extract button) does not stall on a model download. Re-run to
-# refresh docling or repair the env. torch has no wheels for python 3.14, so the venv is built with
+# repair the env. docling comes from the same lock as the agnids image, with hashes (C37), so a local
+# Extract runs the docling the image runs. To move it, change datasheet/tools/pdf2doc/deps/pyproject.toml,
+# run `make pdf2doc-lock`, and re-run this. torch has no wheels for python 3.14, so the venv is built with
 # 3.12; override VENV_PY for another base.
 #
 # The prefetch RUNS pdf2doc once over a synthetic page (datasheet-models), because that is the only
@@ -1231,13 +1245,28 @@ docsite-images-check: samples-oracle
 VENV_PY ?= /opt/homebrew/bin/python3.12
 VENV_SEARCH ?= .venv ../.venv
 VENV_DIR ?= $(patsubst %/bin/python,%,$(firstword $(wildcard $(addsuffix /bin/python,$(VENV_SEARCH))) .venv/bin/python))
+# PDF2DOC_LOCK names this machine's lock: darwin-arm64 on a Mac, amd64 or arm64 on Linux. The extra
+# index serves the Linux `+cpu` torch wheels, and each wheel must still match a hash in the lock.
+PDF2DOC_DEPS := datasheet/tools/pdf2doc/deps
+PDF2DOC_LOCK ?= $(if $(filter Darwin,$(shell uname -s)),darwin-$(shell uname -m),$(if $(filter x86_64,$(shell uname -m)),amd64,arm64))
+PYTORCH_CPU_INDEX := https://download.pytorch.org/whl/cpu
 $(VENV_DIR)/bin/python:
 	$(VENV_PY) -m venv $(VENV_DIR)
-	$(VENV_DIR)/bin/python -m pip install --upgrade pip
 setup: $(VENV_DIR)/bin/python
-	$(VENV_DIR)/bin/python -m pip install --upgrade docling
+	$(VENV_DIR)/bin/python -m pip install --require-hashes --extra-index-url $(PYTORCH_CPU_INDEX) -r $(PDF2DOC_DEPS)/requirements-$(PDF2DOC_LOCK).txt
 	$(MAKE) datasheet-models
 	@echo "setup: $(VENV_DIR) ready (docling + prefetched models)"
+
+# Recompile the docling locks (C37) from $(PDF2DOC_DEPS)/pyproject.toml: one per Linux architecture
+# for the agnids image, and one for `make setup` on a Mac. torch's macOS wheels need macOS 14.
+.PHONY: pdf2doc-lock
+pdf2doc-lock:
+	cd $(PDF2DOC_DEPS) && uv pip compile pyproject.toml --python-version 3.12 \
+		--python-platform x86_64-manylinux_2_28 --generate-hashes --quiet -o requirements-amd64.txt
+	cd $(PDF2DOC_DEPS) && uv pip compile pyproject.toml --python-version 3.12 \
+		--python-platform aarch64-manylinux_2_28 --generate-hashes --quiet -o requirements-arm64.txt
+	cd $(PDF2DOC_DEPS) && MACOSX_DEPLOYMENT_TARGET=14.0 uv pip compile pyproject.toml --python-version 3.12 \
+		--python-platform aarch64-apple-darwin --generate-hashes --quiet -o requirements-darwin-arm64.txt
 
 # Fetch the models Extract uses by running pdf2doc once over the synthetic warm-up page, into the
 # Hugging Face cache docling reads. The output is thrown away.

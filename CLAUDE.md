@@ -95,7 +95,7 @@ or a connection. Never add a free-text field to it.
 
 ## Architectural constraints
 
-`CONSTRAINTS.md` holds C1 to C36. Read it before proposing a change, and push back when a request
+`CONSTRAINTS.md` holds C1 to C37. Read it before proposing a change, and push back when a request
 would break one. Quote it by name, explain the conflict, and ask whether to proceed and whether the
 rule should change. A new rule owes a test, never a command typed into the document.
 `build/the-gate.md` says which of four homes a test goes in.

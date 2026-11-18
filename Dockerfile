@@ -32,7 +32,7 @@
 # $BUILDPLATFORM, not the target: the bundle is JavaScript and identical on every architecture, so
 # building it natively lets a multi-arch build produce it once instead of once per platform under
 # emulation.
-FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS web
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS web
 WORKDIR /src
 # The web code is a pnpm workspace with one lockfile at the root (agni issue 744): the viewer
 # (web/), what it shares with the datasheets workbench (web-shared/), the workbench itself
@@ -61,7 +61,7 @@ RUN pnpm -C web build
 # ---------------------------------------------------------------------------------------------
 # $BUILDPLATFORM with an explicit GOARCH below: the binary is CGO-free, so Go cross-compiles it far
 # faster than emulating the whole toolchain on the target architecture.
-FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1.26-bookworm@sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 AS build
 # VERSION stamps the build's identity. It must be passed explicitly here, unlike every other way
 # agni is built, because .dockerignore excludes .git to keep the context small: the toolchain has
 # no repository to read, so it records neither a vcs.revision nor a module version and
@@ -99,7 +99,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpat
 # architecture: kicad-symbols is even `Architecture: all` in Debian, and only /usr/share data is
 # taken from the xschem and Lepton packages. Emulating this stage per target would cost minutes of
 # apt under QEMU to produce byte-identical output.
-FROM --platform=$BUILDPLATFORM debian:bookworm-slim AS symbols
+FROM --platform=$BUILDPLATFORM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS symbols
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       kicad-symbols \
@@ -125,7 +125,7 @@ RUN mkdir -p /symbols/licenses \
 # ---------------------------------------------------------------------------------------------
 # Stage 4: the runtime.
 # ---------------------------------------------------------------------------------------------
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
 # ca-certificates only; nothing here reaches the network, but a future overlay fetched over HTTPS
 # would fail confusingly without them.
 RUN apt-get update \

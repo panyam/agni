@@ -1,4 +1,4 @@
-# Dependabot for the Go modules and the workflows' actions.
+# Dependabot for the Go modules, the workflows' actions and the Dockerfiles' base images.
 #
 # This repo is MANY Go modules: the root, datasheet/, docsite/, and one per example (C10 keeps each
 # example's dependencies out of the engine's go.mod). Every nested module reaches the root through a
@@ -36,12 +36,29 @@ updates:
 
   # The workflows' actions get VERSION updates, unlike the modules above, because an action goes stale
   # by its runtime being retired rather than by an advisory. Node 20 was retired in 2026 with every
-  # workflow still on actions that targeted it. One grouped PR a month.
+  # workflow still on actions that targeted it. Each action is pinned to a commit SHA with its tag in
+  # a trailing comment (C37), and Dependabot moves both. One grouped PR a month.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: monthly
     groups:
       actions:
+        patterns:
+          - "*"
+
+  # The Dockerfiles pin each base image as tag@sha256:<digest> (C37). A digest never moves, so without
+  # this entry the images would stop getting the base's security fixes. Dependabot refreshes the digest
+  # behind the same tag. Major and minor bumps are ignored, because the Go image follows go.mod and the
+  # Node and Python versions are a choice, not drift. One grouped PR a month.
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: monthly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+    groups:
+      base-images:
         patterns:
           - "*"

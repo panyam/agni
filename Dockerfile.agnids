@@ -19,20 +19,20 @@
 #
 # ENTRYPOINT is the bare binary, so `docker run <image> derive ...` works as the CLI.
 
-# ---------------------------------------------------------------------------------------------
-# The docling stack, declared before the first FROM so every stage can read it. Pinned, so an image names the producer every doc-IR it derives will carry
-# (pdf2doc stamps `docling/<version>`), and torch comes from its CPU-only index, which keeps the
-# CUDA libraries (several gigabytes nothing here can use) out of the image.
-# ---------------------------------------------------------------------------------------------
-ARG DOCLING_VERSION=2.132.0
-ARG TORCH_VERSION=2.14.1
-ARG TORCHVISION_VERSION=0.29.1
+# The docling stack comes from a lock per architecture, datasheet/tools/pdf2doc/deps, installed with
+# --require-hashes (C37). The lock pins the producer every doc-IR it derives will carry (pdf2doc stamps
+# `docling/<version>`). torch comes from PyTorch's CPU-only index, which keeps the CUDA libraries
+# (several gigabytes nothing here can use) out of the image. Change a version in deps/pyproject.toml
+# and run `make pdf2doc-lock`.
+# The extra index is where pip finds the lock's `+cpu` torch wheels. Each wheel must still match a
+# hash in the lock, so the index adds no trust.
+ARG PYTORCH_CPU_INDEX=https://download.pytorch.org/whl/cpu
 
 # ---------------------------------------------------------------------------------------------
 # Stage 1: the workbench bundle, from datasheet/web in the pnpm workspace. Built once on the build
 # platform, since the JavaScript is identical on every architecture.
 # ---------------------------------------------------------------------------------------------
-FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS web
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS web
 WORKDIR /src
 # Every member's manifest, because --frozen-lockfile checks all of them against the lockfile; the
 # --filter then installs only the workbench and what it depends on.
@@ -50,7 +50,7 @@ RUN pnpm -C datasheet/web build
 # Stage 2: the agnids binary, cross-compiled CGO-free on the build platform. The datasheet module
 # requires the engine through `replace ../`, so the build sees the whole repository.
 # ---------------------------------------------------------------------------------------------
-FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1.26-bookworm@sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 AS build
 # VERSION is what `agnids version` reports. The context has no .git (see .dockerignore), so it is
 # passed in, exactly as for the agni image; the release workflow sets it from the tag.
 ARG VERSION=dev
@@ -72,17 +72,16 @@ RUN cd datasheet && CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} g
 # directory that this path never reads. The cache is architecture-independent files, so it is
 # fetched once natively and copied into every platform's runtime.
 # ---------------------------------------------------------------------------------------------
-FROM --platform=$BUILDPLATFORM python:3.12-slim-bookworm AS models
-ARG DOCLING_VERSION
-ARG TORCH_VERSION
-ARG TORCHVISION_VERSION
+FROM --platform=$BUILDPLATFORM python:3.12-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS models
+ARG PYTORCH_CPU_INDEX
+ARG BUILDARCH
 # docling imports OpenCV, which links libGL and glib even when nothing is drawn.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
-      torch==${TORCH_VERSION} torchvision==${TORCHVISION_VERSION} \
- && pip install --no-cache-dir docling==${DOCLING_VERSION}
+COPY datasheet/tools/pdf2doc/deps/requirements-${BUILDARCH}.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --require-hashes --extra-index-url ${PYTORCH_CPU_INDEX} \
+      -r /tmp/requirements.txt
 ENV HF_HOME=/models
 COPY datasheet/tools/pdf2doc/ /pdf2doc/
 RUN python /pdf2doc/pdf2doc.py /pdf2doc/testdata/warmup.pdf -o /tmp/warmup.doc.textproto
@@ -92,17 +91,17 @@ RUN python /pdf2doc/pdf2doc.py /pdf2doc/testdata/warmup.pdf -o /tmp/warmup.doc.t
 # torch's wheels are architecture-specific; on a multi-arch build this is the one stage that runs
 # under emulation, and it only unpacks wheels.
 # ---------------------------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm
-ARG DOCLING_VERSION
-ARG TORCH_VERSION
-ARG TORCHVISION_VERSION
+FROM python:3.12-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+ARG PYTORCH_CPU_INDEX
+ARG TARGETARCH
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
+COPY datasheet/tools/pdf2doc/deps/requirements-${TARGETARCH}.txt /tmp/requirements.txt
 RUN python -m venv /opt/docling \
- && /opt/docling/bin/pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
-      torch==${TORCH_VERSION} torchvision==${TORCHVISION_VERSION} \
- && /opt/docling/bin/pip install --no-cache-dir docling==${DOCLING_VERSION}
+ && /opt/docling/bin/pip install --no-cache-dir --require-hashes --extra-index-url ${PYTORCH_CPU_INDEX} \
+      -r /tmp/requirements.txt \
+ && rm /tmp/requirements.txt
 
 COPY --from=models /models                  /opt/docling/models
 COPY --from=build  /out/agnids              /usr/local/bin/agnids
