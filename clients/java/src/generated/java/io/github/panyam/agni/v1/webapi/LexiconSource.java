@@ -59,6 +59,15 @@ public enum LexiconSource
    * <code>LEXICON_SOURCE_REQUEST = 5;</code>
    */
   LEXICON_SOURCE_REQUEST(5),
+  /**
+   * <pre>
+   * A pack the snapshot was read under, packs/{pack} (agni issue 1704). A later pack's convention
+   * replaces an earlier one's, and the request's replaces a pack's.
+   * </pre>
+   *
+   * <code>LEXICON_SOURCE_PACK = 6;</code>
+   */
+  LEXICON_SOURCE_PACK(6),
   UNRECOGNIZED(-1),
   ;
 
@@ -115,6 +124,15 @@ public enum LexiconSource
    * <code>LEXICON_SOURCE_REQUEST = 5;</code>
    */
   public static final int LEXICON_SOURCE_REQUEST_VALUE = 5;
+  /**
+   * <pre>
+   * A pack the snapshot was read under, packs/{pack} (agni issue 1704). A later pack's convention
+   * replaces an earlier one's, and the request's replaces a pack's.
+   * </pre>
+   *
+   * <code>LEXICON_SOURCE_PACK = 6;</code>
+   */
+  public static final int LEXICON_SOURCE_PACK_VALUE = 6;
 
 
   public final int getNumber() {
@@ -147,6 +165,7 @@ public enum LexiconSource
       case 3: return LEXICON_SOURCE_PROJECT;
       case 4: return LEXICON_SOURCE_DESIGN;
       case 5: return LEXICON_SOURCE_REQUEST;
+      case 6: return LEXICON_SOURCE_PACK;
       default: return null;
     }
   }

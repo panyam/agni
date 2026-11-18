@@ -48,6 +48,10 @@ type ProjectResolver struct {
 	// its design instead of a URI (agni issue 1695). A DesignCatalog satisfies it. Nil means this host
 	// resolves no design names, and such an ingest is refused.
 	Designs DesignLookup
+	// Packs looks a pack up by its resource name, "packs/{pack}", for a snapshot that names packs (agni
+	// issue 1704). A PackService satisfies it. Nil means this host keeps no packs, and an ingest naming
+	// one is refused.
+	Packs PackLookup
 
 	snapMu sync.Mutex
 	snaps  *snapshotRegistry
@@ -70,13 +74,24 @@ type ProjectResolver struct {
 // raised, and missed 95 it would have (#307). A malformed descriptor for an UNRELATED design still
 // does not surface here. See docsite/content/architecture/projects-and-designs.md#resolution-is-an-interface-not-a-path-convention.
 func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
+	return r.OverlayUnder(ctx, uri, nil, req, baseConvention)
+}
+
+// OverlayUnder is Overlay with packs layered between the design's config and the request's, each in
+// the order given (agni issue 1704). OverlayFor says how a pack layers.
+func (r *ProjectResolver) OverlayUnder(ctx context.Context, uri artifact.URI, packs []*webapi.Pack, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	defer timing.Begin(ctx, "resolve.overlay")()
 	var p *webapi.Project
 	var d *webapi.Design
 	// A caller asking for the built-in catalog is treated as though the design belonged to no
 	// project, so resolution is skipped rather than its result filtered out afterwards.
 	if req.GetIgnoreProject() {
-		return OverlayFor(ctx, nil, nil, nil, nil, req, baseConvention)
+		// The project's config is skipped, and a pack's still layers, so only a pack resolves refs.
+		var resolver ConfigResolver
+		if r != nil && len(packs) > 0 {
+			resolver = r.Config
+		}
+		return overlayFor(ctx, resolver, nil, nil, nil, packs, req, baseConvention)
 	}
 	if r != nil && r.Store != nil {
 		design, project, err := r.Store.ResolveDesign(ctx, uri)
@@ -97,7 +112,7 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 	if r != nil {
 		store = r.Store
 	}
-	ov, err := OverlayFor(ctx, resolver, store, p, d, req, baseConvention)
+	ov, err := overlayFor(ctx, resolver, store, p, d, packs, req, baseConvention)
 	if err != nil {
 		return Overlay{}, err
 	}

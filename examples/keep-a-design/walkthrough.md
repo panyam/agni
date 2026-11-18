@@ -40,6 +40,18 @@ You ->> Agni: ListDesigns(series = "mixer")
 Agni -->> You: mixer-rev-a, mixer-rev-b (latest)
 ```
 
+## Keep a pack of rules {#pack}
+
+> A pack holds the rules a design is judged by, in the shape a `project.yaml` holds them: a naming convention, checklists, profiles, params and intent (agni issue 1704). It is named `packs/{pack}` and ties to no design. A snapshot names the packs it is read under, and `agni check designs/<d> --pack house` checks a stored design against one. The server hashes each pack, so a report can later say the pack changed since it ran.
+
+```mermaid
+sequenceDiagram
+You ->> Agni: CreatePack(house, convention)
+Agni -->> You: packs/house, hash A
+You ->> Agni: UpdatePack(house, new rail pattern)
+Agni -->> You: packs/house, hash B
+```
+
 ## Group them in a project {#group}
 
 > The project lists the two stored revisions and the mounted `designs/mixer` together. A design's name says nothing about where its files live, so one project can hold designs from any store.

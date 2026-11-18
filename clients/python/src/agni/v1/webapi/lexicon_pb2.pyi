@@ -18,12 +18,14 @@ class LexiconSource(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     LEXICON_SOURCE_PROJECT: _ClassVar[LexiconSource]
     LEXICON_SOURCE_DESIGN: _ClassVar[LexiconSource]
     LEXICON_SOURCE_REQUEST: _ClassVar[LexiconSource]
+    LEXICON_SOURCE_PACK: _ClassVar[LexiconSource]
 LEXICON_SOURCE_UNSPECIFIED: LexiconSource
 LEXICON_SOURCE_BUILTIN: LexiconSource
 LEXICON_SOURCE_SERVER: LexiconSource
 LEXICON_SOURCE_PROJECT: LexiconSource
 LEXICON_SOURCE_DESIGN: LexiconSource
 LEXICON_SOURCE_REQUEST: LexiconSource
+LEXICON_SOURCE_PACK: LexiconSource
 
 class LexiconEntry(_message.Message):
     __slots__ = ("vocabulary", "kind", "value", "source", "convention", "replaced")

@@ -260,6 +260,12 @@ func ProfileSourceName(namespace string) string {
 	if id, ok := service.ProjectID(namespace); ok {
 		return id + "-profiles"
 	}
+	// A pack stands where a project's config stood, so its profiles take the same name a project of
+	// that id would give them. A pack pushed from a project.yaml under the project's name then names
+	// its rules as a run on the project's folder does (agni issue 1704).
+	if id, ok := service.PackID(namespace); ok {
+		return id + "-profiles"
+	}
 	// A namespace that is not a project resource name is a request's. It keeps the `-profiles` suffix
 	// and cannot collide with a project's, because a project id can never be the literal "request".
 	return namespace + "-profiles"

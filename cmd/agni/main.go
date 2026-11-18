@@ -113,7 +113,7 @@ func rootCmd() *cobra.Command {
 		"NAME=dir: a path variable a footprint's 3D model names, such as Antmicro's ANT3DMDL, and the "+
 			"folder it stands for. A KiCad board takes a part's height from the model it finds there "+
 			"(repeatable). Defaults to "+envModelVars+" when unset.")
-	root.AddCommand(statsCmd(), withTiming(checkCmd(), false), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), mcpCmd(), openCmd(), nativeCmd(), withTiming(queryCmd(), true), withTiming(traceCmd(), false), withTiming(walkCmd(), false), pinmapCmd(), lexiconCmd(), withTiming(reviewCmd(), false), designsCmd(), projectsCmd(), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), opscmd.Healthcheck("agni", "localhost:8080"), opscmd.Version("agni"), paramsCmd(), tabulateCmd(), checklistsCmd(), proposeCmd(), siteCmd(), trialCmd(), stackupCmd(), boardCmd())
+	root.AddCommand(statsCmd(), withTiming(checkCmd(), false), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), mcpCmd(), openCmd(), nativeCmd(), withTiming(queryCmd(), true), withTiming(traceCmd(), false), withTiming(walkCmd(), false), pinmapCmd(), lexiconCmd(), withTiming(reviewCmd(), false), designsCmd(), packsCmd(), projectsCmd(), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), opscmd.Healthcheck("agni", "localhost:8080"), opscmd.Version("agni"), paramsCmd(), tabulateCmd(), checklistsCmd(), proposeCmd(), siteCmd(), trialCmd(), stackupCmd(), boardCmd())
 	return root
 }
 
@@ -566,6 +566,7 @@ func statsJSON(cmd *cobra.Command, design string, maskPaths, nets, refs []string
 func checkCmd() *cobra.Command {
 	var ruleNames, tagPairs []string
 	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut, boardPath string
+	var packs []string
 	var verdicts bool
 	var serverVal, outPath string
 	var orderBy []string
@@ -694,26 +695,46 @@ func checkCmd() *cobra.Command {
 			// the request's convention and the project's own rules. CheckDesign and GetCheckReport select
 			// by name, so without the project's rules `--rule gateway/signal-net-naming` would report "no
 			// rules selected" for a rule that runs.
-			resolveAgainst, _, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
-			// Noted against the run's catalog rather than the flag-built one, so a project's own
-			// supersessions are reported too (C25, agni issue 450).
-			if err == nil {
-				noteSupersededRules(cmd.ErrOrStderr(), resolveAgainst)
-			}
-			if err != nil {
-				return err
-			}
-			if err := resolveAgainst.CheckNames(ruleNames); err != nil {
-				return fmt.Errorf("--rule: %w", err)
-			}
-			selected := resolveAgainst.Filter(facets)
-			if len(selected) == 0 && format == "text" {
-				fmt.Fprintln(cmd.OutOrStdout(), "no rules selected")
-				return nil
-			}
-			names := make([]string, len(selected))
-			for i, r := range selected {
-				names[i] = r.Name
+			var names []string
+			// runRules are the rules the run's catalog holds, for the coverage line and the verdict
+			// report, and rulesRun how many the run selected. Under --pack the catalog is the server's,
+			// so runRules stays nil and rulesRun is counted from the server's listing below.
+			var runRules []*check.Rule
+			rulesRun := 0
+			if len(packs) > 0 {
+				// The packs compose the run's catalog on the server, and this process never sees it. So
+				// --rule names go as written and the server refuses one it lacks, and no --rule runs the
+				// whole catalog the packs compose (agni issue 1704).
+				if len(tagPairs) > 0 {
+					return fmt.Errorf("--tag selects rules from a catalog this process builds, and --pack builds the run's catalog on the server; name the rules with --rule")
+				}
+				if verdicts && format != "json" {
+					return fmt.Errorf("--verdicts reports against the rules of a catalog this process builds, and --pack builds the run's catalog on the server; use --verdicts --format json")
+				}
+				names = ruleNames
+			} else {
+				resolveAgainst, _, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
+				// Noted against the run's catalog rather than the flag-built one, so a project's own
+				// supersessions are reported too (C25, agni issue 450).
+				if err == nil {
+					noteSupersededRules(cmd.ErrOrStderr(), resolveAgainst)
+				}
+				if err != nil {
+					return err
+				}
+				if err := resolveAgainst.CheckNames(ruleNames); err != nil {
+					return fmt.Errorf("--rule: %w", err)
+				}
+				selected := resolveAgainst.Filter(facets)
+				if len(selected) == 0 && format == "text" {
+					fmt.Fprintln(cmd.OutOrStdout(), "no rules selected")
+					return nil
+				}
+				names = make([]string, len(selected))
+				for i, r := range selected {
+					names[i] = r.Name
+				}
+				runRules, rulesRun = resolveAgainst.Rules(), len(selected)
 			}
 			// Thin client of the in-process CheckService, the same service the web check panel runs
 			// (WS9-048). The catalog and datasheet corpus are injected. --conventions travels on the
@@ -727,6 +748,9 @@ func checkCmd() *cobra.Command {
 			var snaps snapshotAPI
 			var queries queryAPI
 			addr := cliArgURI
+			if len(packs) > 0 && (remoteURL == "" || !storedDesignArg(args[0])) {
+				return fmt.Errorf("--pack names a pack an agni server keeps, so it applies to a design that server keeps: agni check designs/<id> --pack <k> --remote <url>")
+			}
 			if remoteURL != "" {
 				if err := refuseLocalOnly(cmd, "params", "profile-path"); err != nil {
 					return err
@@ -760,11 +784,21 @@ func checkCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			snap, drop, err := ingest(ctx, snaps, &webapi.Snapshot{Uri: designURI, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
+			snap, drop, err := ingest(ctx, snaps, &webapi.Snapshot{Uri: designURI, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed, Packs: packNames(packs)})
 			if err != nil {
 				return rpcFailed(err)
 			}
 			defer drop()
+			if len(packs) > 0 {
+				rulesRun = len(names)
+				if rulesRun == 0 {
+					listed, err := svc.ListRules(ctx, &webapi.ListRulesRequest{Snapshot: snap})
+					if err != nil {
+						return rpcFailed(err)
+					}
+					rulesRun = len(listed.GetRules())
+				}
+			}
 			var failFindings []*checkspb.Finding
 			// --results-out takes one path through the service for every format (WS3-103). The document
 			// holds findings in run order and the terminal output is rendered FROM it, so the file and
@@ -798,7 +832,7 @@ func checkCmd() *cobra.Command {
 				// The document has no field for a considered set (OUT_OF_SCOPE.md), so the coverage
 				// line comes from the live response. A later replay of the document cannot reproduce it.
 				if format == "text" {
-					writeCoverage(cmd.OutOrStdout(), coverageOf(resp, resolveAgainst.Rules()))
+					writeCoverage(cmd.OutOrStdout(), coverageOf(resp, runRules))
 				}
 				if failOn != "" && failsAtProto(resp.GetFindings(), failOn) {
 					cmd.SilenceUsage = true
@@ -884,7 +918,7 @@ func checkCmd() *cobra.Command {
 							return err
 						}
 					default:
-						writeVerdictText(cmd.OutOrStdout(), service.VerdictReport(resp, resolveAgainst.Rules(), meta))
+						writeVerdictText(cmd.OutOrStdout(), service.VerdictReport(resp, runRules, meta))
 					}
 					failFindings = resp.GetFindings()
 					break
@@ -899,7 +933,7 @@ func checkCmd() *cobra.Command {
 						return err
 					}
 				default:
-					writeCheckText(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), len(selected), coverageOf(resp, resolveAgainst.Rules()))
+					writeCheckText(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), rulesRun, coverageOf(resp, runRules))
 				}
 				failFindings = resp.GetFindings()
 			}
@@ -927,6 +961,7 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations; their rules join the catalog alongside the built-in profiles")
 	cmd.Flags().StringVar(&conventions, "conventions", "", "compose an operator naming-convention config (YAML) into the catalog; its rules appear namespaced as <config name>/<rule name>")
 	cmd.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration (expected modules, voltage domains); its rules join the catalog")
+	cmd.Flags().StringArrayVar(&packs, "pack", nil, "check a design an agni server keeps, designs/<id>, against this pack the server keeps, as <k> or packs/<k> (agni issue 1704). Repeatable: each pack layers over the one before, and over the design's own intent. Needs --remote")
 	cmd.Flags().StringVar(&boardPath, "board-path", "", "a board-geometry file (.kicad_pcb / IPC-2581 .xml|.cvg) attached to the netlist design so board-tier rules resolve instead of reading not-applicable. Only needed for a board that is NOT a declared companion of the design: a fab's returned file, or a layout not yet landed")
 	cmd.Flags().StringVar(&resultsOut, "results-out", "", "also write the run as a self-contained check-result document (JSON) at this path; render it later with `agni results`")
 	return cmd
@@ -985,7 +1020,12 @@ func writeCoverage(w io.Writer, t *rpt.Totals) {
 
 // coverageOf is a run's coverage as the verdict report counts it (service.VerdictReport), so the
 // default output's coverage line and the --verdicts footer state one set of numbers (agni issue 1045).
+//
+// No rules gives no coverage, as for a --pack run whose catalog this process never saw.
 func coverageOf(resp *webapi.CheckDesignResponse, rules []*check.Rule) *rpt.Totals {
+	if rules == nil {
+		return nil
+	}
 	t := service.VerdictReport(resp, rules, rpt.Report{}).Totals
 	return &t
 }

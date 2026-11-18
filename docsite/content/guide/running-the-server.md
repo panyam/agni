@@ -239,6 +239,21 @@ agni check designs/memory_unit --remote http://localhost:8080
 agni diff designs/memory_unit designs/memory_unit-rev-b --remote http://localhost:8080 --format json
 ```
 
+A stored design keeps the `intent:` of the folder's `design.yaml`, and nothing else from it. The
+project's convention, checklists, profiles and params go up as a pack, `packs/<id>`, which `agni
+packs push` reads from a `project.yaml` (agni issue 1704). A check names the pack, and the server
+reads the design under it:
+
+```bash
+agni packs push ./b200 --remote http://localhost:8080
+agni check designs/memory_unit --pack b200 --remote http://localhost:8080
+```
+
+`push` takes the pack's id from the project's `name:`, so its profile rules are named
+`b200-profiles/...` as they are on the folder. `--pack` repeats, and each pack layers over the one
+before it. Under `--pack` the server's catalog decides the rules, so `--rule` names go as written and
+`--tag` is refused.
+
 A snapshot can name its design the same way, `Snapshot.design`. The id `DesignSnapshotID` derives
 from the name lets every client that opens the design share one snapshot, and a server started with
 `--store` rebuilds it after a restart by looking the name up again.

@@ -41,7 +41,7 @@ func designServer(t *testing.T, store, uploads string) *httptest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, err := storeServices(ms, store, uploads, projectStore, resolver, io.Discard)
+	projectSvc, designSvc, packSvc, err := storeServices(ms, store, uploads, projectStore, resolver, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,6 +50,7 @@ func designServer(t *testing.T, store, uploads string) *httptest.Server {
 		Workspace: service.NewWorkspaceService(osWorkspace(ms)),
 		Project:   projectSvc,
 		Design:    designSvc,
+		Pack:      packSvc,
 		Snapshot:  checkSvc.Snapshots(),
 		Check:     checkSvc,
 		Diff:      service.NewDiffService(loader, resolver),

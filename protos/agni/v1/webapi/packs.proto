@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/webapi/config.proto";
+import "agni/v1/webapi/snapshot.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+// This file defines PackService, which keeps the packs a server holds (agni issue 1704). A pack is
+// the rules a design is judged by: a naming convention, checklists, interface profiles, datasheet
+// parameters and shared intent. It holds what a `project.yaml` holds, as an AnalysisConfig, and it
+// ties to no design. A snapshot names the packs it is read under, and they layer over the design's own
+// config in the order it names them.
+//
+// A pack is a resource (CONSTRAINTS C23). It outlives the call that made it, and a report records
+// which packs it applied and each one's hash, so a later read can say a pack changed since.
+service PackService {
+  // CreatePack keeps a new pack. An id a pack already holds is ALREADY_EXISTS. A server started
+  // without --store answers FAILED_PRECONDITION. A pack with files needs --uploads too, and contents
+  // the server lacks are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports
+  // them.
+  rpc CreatePack(CreatePackRequest) returns (Pack);
+
+  // GetPack returns one pack by resource name.
+  rpc GetPack(GetPackRequest) returns (Pack);
+
+  // ListPacks returns the packs this server holds, ordered by name.
+  rpc ListPacks(ListPacksRequest) returns (ListPacksResponse);
+
+  // UpdatePack changes a pack's title, config or files, the fields update_mask names. A pack's hash
+  // moves whenever its config or its files change.
+  rpc UpdatePack(UpdatePackRequest) returns (Pack);
+
+  // DeletePack removes a pack. A snapshot that names it then fails to read, naming the pack.
+  rpc DeletePack(DeletePackRequest) returns (google.protobuf.Empty);
+}
+
+// Pack is a set of rules kept on a server, named "packs/{pack}".
+message Pack {
+  string name = 1; // "packs/{pack}"
+  // title is the human-readable label, falling back to the id.
+  string title = 2;
+  // config is what the pack checks a design against, in the shape `project.yaml` binds to. Its
+  // conventions, checklists and intent are values. Its file tiers, such as profile_uris and
+  // param_uris, are each a `mount://` URI or a path relative to the pack's own files. A relative path
+  // must name a file or folder among files. Its extends must be empty, since a pack layers by the order
+  // a snapshot names packs and inherits from none.
+  AnalysisConfig config = 3;
+  // files are the pack's own files, such as a profiles folder and a params folder, each with its path
+  // relative to the pack. The contents go up with SnapshotService.UploadBlobs.
+  repeated SnapshotFile files = 4;
+  // uri is the folder the server reads the pack's files from, against which config's relative paths
+  // resolve. It is empty for a pack with no files. Output only.
+  string uri = 5;
+  // hash names the pack's config and files as they are now, "sha256:<hex>". Two packs with the same
+  // config and the same files have the same hash. Output only.
+  string hash = 6;
+  // update_time is when the pack last changed. Output only.
+  google.protobuf.Timestamp update_time = 7;
+}
+
+message CreatePackRequest {
+  // pack_id is the new pack's id, lowercase letters, digits, '.', '_' or '-'.
+  string pack_id = 1;
+  // pack carries the new pack's title, config and files. Its name is ignored.
+  Pack pack = 2;
+}
+
+message GetPackRequest {
+  string name = 1; // "packs/{pack}"
+}
+
+message ListPacksRequest {
+  // page_size is the maximum number of packs to return. 0 uses the server default.
+  int32 page_size = 1;
+  // page_token continues a previous call. An empty token starts at the first pack.
+  string page_token = 2;
+}
+
+message ListPacksResponse {
+  repeated Pack packs = 1;
+  // next_page_token is empty when the last page has been reached.
+  string next_page_token = 2;
+}
+
+message UpdatePackRequest {
+  // pack names the pack to change, "packs/{pack}", and carries the new values.
+  Pack pack = 1;
+  // update_mask names the fields to change, among `title`, `config` and `files`. An empty mask changes
+  // all three. Any other path is INVALID_ARGUMENT.
+  google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeletePackRequest {
+  string name = 1; // "packs/{pack}"
+}

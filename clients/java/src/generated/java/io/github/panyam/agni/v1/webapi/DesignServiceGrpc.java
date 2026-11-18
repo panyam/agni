@@ -438,8 +438,8 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
-     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
+     * intent come from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
      * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
      * same way.
      * </pre>
@@ -472,7 +472,7 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, the fields
      * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
      * FAILED_PRECONDITION.
      * </pre>
@@ -619,8 +619,8 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
-     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
+     * intent come from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
      * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
      * same way.
      * </pre>
@@ -656,7 +656,7 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, the fields
      * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
      * FAILED_PRECONDITION.
      * </pre>
@@ -790,8 +790,8 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
-     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
+     * intent come from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
      * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
      * same way.
      * </pre>
@@ -824,7 +824,7 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, the fields
      * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
      * FAILED_PRECONDITION.
      * </pre>
@@ -950,8 +950,8 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
-     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
+     * intent come from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
      * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
      * same way.
      * </pre>
@@ -984,7 +984,7 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, the fields
      * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
      * FAILED_PRECONDITION.
      * </pre>
@@ -1110,8 +1110,8 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
-     * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+     * CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
+     * intent come from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
      * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
      * same way.
      * </pre>
@@ -1147,7 +1147,7 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+     * UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, the fields
      * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
      * FAILED_PRECONDITION.
      * </pre>

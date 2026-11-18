@@ -140,6 +140,9 @@ type snapshotEntry struct {
 	// names tiers rather than the files in touched, since on a server those are host paths (C28).
 	changedTiers func(ctx context.Context) []string
 	used         uint64
+	// packHashes are the hashes of the packs the definition named, as read, in its order (agni issue
+	// 1704). A repeat ingest reads the snapshot again when one has moved.
+	packHashes []string
 }
 
 // snapshotRegistry holds a host's snapshots. Past max it evicts the least recently asked.
@@ -395,7 +398,7 @@ func (s *SnapshotService) Ingest(ctx context.Context, req *webapi.IngestRequest)
 			if !same {
 				return nil, fmt.Errorf("%w: %s holds a different definition; update it instead", ErrAlreadyExists, name)
 			}
-			if !req.GetReadBoard() && !s.designMoved(ctx, e, def) {
+			if !req.GetReadBoard() && !s.designMoved(ctx, e, def) && !s.packsMoved(ctx, e, def) {
 				return e.out(), nil
 			}
 		}
@@ -496,8 +499,10 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 				def.Refresh = next.GetRefresh()
 			case "design":
 				def.Design = next.GetDesign()
+			case "packs":
+				def.Packs = next.GetPacks()
 			default:
-				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, design, board_uri, geometry_uri, as_named, overlay, files, flatten_hierarchy and refresh", ErrInvalidArgument, p)
+				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, design, packs, board_uri, geometry_uri, as_named, overlay, files, flatten_hierarchy and refresh", ErrInvalidArgument, p)
 			}
 		}
 	}
@@ -557,7 +562,11 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 		}
 		res, ld = up.resolver, up.loader
 	}
-	ov, err := res.Overlay(ctx, u, def.GetOverlay(), s.baseConvention)
+	packs, packHashes, err := s.definitionPacks(ctx, def)
+	if err != nil {
+		return nil, err
+	}
+	ov, err := res.OverlayUnder(ctx, u, packs, def.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
@@ -570,9 +579,10 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 		gu = geometry
 	}
 	e := &snapshotEntry{
-		snap:    Snap{Name: name, Design: u, Netlist: nu, Board: bu, Geometry: gu, AsNamed: def.GetAsNamed(), Overlay: ov, Config: def.GetOverlay()},
-		upload:  up,
-		touched: formats.NewTouched(),
+		snap:       Snap{Name: name, Design: u, Netlist: nu, Board: bu, Geometry: gu, AsNamed: def.GetAsNamed(), Overlay: ov, Config: def.GetOverlay()},
+		upload:     up,
+		touched:    formats.NewTouched(),
+		packHashes: packHashes,
 	}
 	rctx := withTouched(ctx, e.touched)
 	out := proto.Clone(def).(*webapi.Snapshot)
@@ -655,6 +665,36 @@ func (s *SnapshotService) designURI(ctx context.Context, def *webapi.Snapshot) (
 	return d.GetEntryUri(), nil
 }
 
+// definitionPacks looks up the packs a definition names and returns them with each one's hash, in
+// order (agni issue 1704). A definition naming none returns nil.
+func (s *SnapshotService) definitionPacks(ctx context.Context, def *webapi.Snapshot) ([]*webapi.Pack, []string, error) {
+	if len(def.GetPacks()) == 0 {
+		return nil, nil, nil
+	}
+	var lookup PackLookup
+	if s.projects != nil {
+		lookup = s.projects.Packs
+	}
+	packs, err := ResolvePacks(ctx, lookup, def.GetPacks())
+	if err != nil {
+		return nil, nil, err
+	}
+	hashes := make([]string, 0, len(packs))
+	for _, p := range packs {
+		hashes = append(hashes, p.GetHash())
+	}
+	return packs, hashes, nil
+}
+
+// packsMoved reports whether a pack the entry read under has changed or gone since.
+func (s *SnapshotService) packsMoved(ctx context.Context, e *snapshotEntry, def *webapi.Snapshot) bool {
+	if len(def.GetPacks()) == 0 {
+		return false
+	}
+	_, now, err := s.definitionPacks(ctx, def)
+	return err != nil || !slices.Equal(now, e.packHashes)
+}
+
 // designMoved reports whether a snapshot that names its design must be read again on a repeat
 // ingest: its files changed since they were read, or the design's entry is another file now. A
 // repeat ingest by design name then reads the design as it is, rather than returning a snapshot
@@ -676,13 +716,20 @@ type DesignLookup interface {
 	Design(ctx context.Context, name string) (*webapi.Design, error)
 }
 
-// DesignSnapshotID is the snapshot id every client uses for a snapshot that names a design and no
-// other definition, "d-" and the first 16 hex digits of the name's SHA-256 (agni issue 1695). Two
-// clients opening one design then ingest once, since Ingest returns the snapshot an id already holds
-// for the same definition. The viewer derives the same id in TypeScript.
-func DesignSnapshotID(design string) string {
-	sum := sha256.Sum256([]byte(design))
-	return "d-" + hex.EncodeToString(sum[:])[:16]
+// DesignSnapshotID is the snapshot id every client uses for a snapshot that names a design, and
+// optionally packs, and no other definition (agni issues 1695, 1704). It is "d-" and the first 16 hex
+// digits of a SHA-256. With no packs the hash is of the design's name alone. With packs it is of the
+// name and each pack's name in order, each after a NUL, so one design read under two pack sets is two
+// snapshots. Two clients opening one design under the same packs then ingest once, since Ingest
+// returns the snapshot an id already holds for the same definition.
+func DesignSnapshotID(design string, packs ...string) string {
+	h := sha256.New()
+	h.Write([]byte(design))
+	for _, p := range packs {
+		h.Write([]byte{0})
+		h.Write([]byte(p))
+	}
+	return "d-" + hex.EncodeToString(h.Sum(nil))[:16]
 }
 
 // out is a copy of the entry's definition and outputs.
@@ -703,6 +750,7 @@ func definitionOf(s *webapi.Snapshot) *webapi.Snapshot {
 		Files:       s.GetFiles(),
 		Refresh:     s.GetRefresh(),
 		Design:      s.GetDesign(),
+		Packs:       s.GetPacks(),
 
 		FlattenHierarchy: s.GetFlattenHierarchy(),
 	}

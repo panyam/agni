@@ -111,26 +111,27 @@ public final class LexiconProto extends com.google.protobuf.GeneratedFile {
       "amingConventionR\013conventions\"s\n\030RenderCo" +
       "nventionResponse\022\030\n\007content\030\001 \001(\014R\007conte" +
       "nt\022!\n\014content_type\030\002 \001(\tR\013contentType\022\032\n" +
-      "\010filename\030\003 \001(\tR\010filename*\271\001\n\rLexiconSou" +
+      "\010filename\030\003 \001(\tR\010filename*\322\001\n\rLexiconSou" +
       "rce\022\036\n\032LEXICON_SOURCE_UNSPECIFIED\020\000\022\032\n\026L" +
       "EXICON_SOURCE_BUILTIN\020\001\022\031\n\025LEXICON_SOURC" +
       "E_SERVER\020\002\022\032\n\026LEXICON_SOURCE_PROJECT\020\003\022\031" +
       "\n\025LEXICON_SOURCE_DESIGN\020\004\022\032\n\026LEXICON_SOU" +
-      "RCE_REQUEST\020\0052\205\003\n\016LexiconService\022S\n\nGetL" +
-      "exicon\022!.agni.v1.webapi.GetLexiconReques" +
-      "t\032\".agni.v1.webapi.GetLexiconResponse\022S\n" +
-      "\nExplainNet\022!.agni.v1.webapi.ExplainNetR" +
-      "equest\032\".agni.v1.webapi.ExplainNetRespon" +
-      "se\022b\n\017CompareLexicons\022&.agni.v1.webapi.C" +
-      "ompareLexiconsRequest\032\'.agni.v1.webapi.C" +
-      "ompareLexiconsResponse\022e\n\020RenderConventi" +
-      "on\022\'.agni.v1.webapi.RenderConventionRequ" +
-      "est\032(.agni.v1.webapi.RenderConventionRes" +
-      "ponseB\267\001\n\037io.github.panyam.agni.v1.webap" +
-      "iB\014LexiconProtoP\001Z,github.com/panyam/agn" +
-      "i/gen/go/agni/v1/webapi\242\002\003AVW\252\002\016Agni.V1." +
-      "Webapi\312\002\016Agni\\V1\\Webapi\342\002\032Agni\\V1\\Webapi" +
-      "\\GPBMetadata\352\002\020Agni::V1::Webapib\006proto3"
+      "RCE_REQUEST\020\005\022\027\n\023LEXICON_SOURCE_PACK\020\0062\205" +
+      "\003\n\016LexiconService\022S\n\nGetLexicon\022!.agni.v" +
+      "1.webapi.GetLexiconRequest\032\".agni.v1.web" +
+      "api.GetLexiconResponse\022S\n\nExplainNet\022!.a" +
+      "gni.v1.webapi.ExplainNetRequest\032\".agni.v" +
+      "1.webapi.ExplainNetResponse\022b\n\017CompareLe" +
+      "xicons\022&.agni.v1.webapi.CompareLexiconsR" +
+      "equest\032\'.agni.v1.webapi.CompareLexiconsR" +
+      "esponse\022e\n\020RenderConvention\022\'.agni.v1.we" +
+      "bapi.RenderConventionRequest\032(.agni.v1.w" +
+      "ebapi.RenderConventionResponseB\267\001\n\037io.gi" +
+      "thub.panyam.agni.v1.webapiB\014LexiconProto" +
+      "P\001Z,github.com/panyam/agni/gen/go/agni/v" +
+      "1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\V" +
+      "1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetadata\352\002\020" +
+      "Agni::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

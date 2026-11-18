@@ -406,7 +406,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	projectSvc, designSvc, err := storeServices(mounts, o.storeDir, o.uploadsDir, projectStore, projectResolver, cmd.ErrOrStderr())
+	projectSvc, designSvc, packSvc, err := storeServices(mounts, o.storeDir, o.uploadsDir, projectStore, projectResolver, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}
@@ -414,6 +414,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Workspace:  workspace,
 		Project:    projectSvc,
 		Design:     designSvc,
+		Pack:       packSvc,
 		Snapshot:   checkSvc.Snapshots(),
 		DesignView: service.NewDesignViewService(loader, nativeR, style, projectResolver),
 		Check:      checkSvc,
@@ -544,6 +545,7 @@ const (
 	storeDesignsDir   = "designs"
 	storeProjectsDir  = "projects"
 	storeSnapshotsDir = "snapshots"
+	storePacksDir     = "packs"
 	storeReviewsDir   = "reviews"
 )
 

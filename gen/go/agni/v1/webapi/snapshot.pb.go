@@ -135,7 +135,14 @@ type Snapshot struct {
 	// both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
 	// opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
 	// every client that opens one design share one snapshot. Part of the definition.
-	Design        string `protobuf:"bytes,14,opt,name=design,proto3" json:"design,omitempty"`
+	Design string `protobuf:"bytes,14,opt,name=design,proto3" json:"design,omitempty"`
+	// packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+	// layer over the design's own config in the order named, and the overlay's config layers over them.
+	// A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+	// a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+	// that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+	// changed since is read as it is now. Part of the definition.
+	Packs         []string `protobuf:"bytes,15,rep,name=packs,proto3" json:"packs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -266,6 +273,13 @@ func (x *Snapshot) GetDesign() string {
 		return x.Design
 	}
 	return ""
+}
+
+func (x *Snapshot) GetPacks() []string {
+	if x != nil {
+		return x.Packs
+	}
+	return nil
 }
 
 // SnapshotFile is one file of a design that a client sends, named within its mount.
@@ -718,9 +732,9 @@ type UpdateSnapshotRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// snapshot holds the new definition and names the snapshot to update.
 	Snapshot *Snapshot `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
-	// update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-	// overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-	// files again, and that refreshes a stale snapshot.
+	// update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+	// as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+	// Sending the same definition again reads the files again, and that refreshes a stale snapshot.
 	UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	// read_board is as on IngestRequest.
 	ReadBoard     bool `protobuf:"varint,3,opt,name=read_board,json=readBoard,proto3" json:"read_board,omitempty"`
@@ -1032,7 +1046,7 @@ var File_agni_v1_webapi_snapshot_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\x8e\x04\n" +
+	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xa4\x04\n" +
 	"\bSnapshot\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vrevision_id\x18\x02 \x01(\tR\n" +
@@ -1049,7 +1063,8 @@ const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\x05files\x18\v \x03(\v2\x1c.agni.v1.webapi.SnapshotFileR\x05files\x12+\n" +
 	"\x11flatten_hierarchy\x18\f \x01(\bR\x10flattenHierarchy\x12\x18\n" +
 	"\arefresh\x18\r \x01(\bR\arefresh\x12\x16\n" +
-	"\x06design\x18\x0e \x01(\tR\x06design\"N\n" +
+	"\x06design\x18\x0e \x01(\tR\x06design\x12\x14\n" +
+	"\x05packs\x18\x0f \x03(\tR\x05packs\"N\n" +
 	"\fSnapshotFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06sha256\x18\x02 \x01(\tR\x06sha256\x12\x12\n" +

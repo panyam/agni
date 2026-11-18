@@ -628,6 +628,13 @@ The authority is always `mount`, never `s3://` or `db://`. The deployment decide
 resolves to. A per-store scheme would put the storage kind in the client's hands, and the Loader and
 ProjectStore ports exist to keep that choice out of them.
 
+**As amended by agni issue 1704, a config the server KEEPS may be named by its resource name.** A
+pack is config with a lifetime of its own, `packs/{pack}` (C23), and an ingest names the packs it is
+read under on `Snapshot.packs`. The ingest looks each one up through the `PackLookup` port, as it
+looks up `Snapshot.design`, and layers its value. A resource name is identity, not a locator, so no
+caller ever names a file a callee opens. A report must also say later whether a pack changed since,
+and only a name can say that. A config the caller holds still travels as a value.
+
 RESOURCE NAMES are a different system and are NOT URIs. `projects/{project}` and `reviews/{review}`
 are AIP paths naming IDENTITY rather than location, and a project keeps its name when its folder is
 renamed or moved between mounts because its id is declared rather than derived. Addressing
@@ -665,7 +672,8 @@ review, or a set's text, rather than a loaded design. `TestC22WebAPICarriesNoLoc
 artifact is named by a single `uri` (or `*_uri` where a message names more than one), and a config
 travels as a value. It reads field declarations rather than the whole line, so `ref_des` and
 `cell_refs` (domain names, not locators) and the several comments mentioning a `board_ref` do not
-match. Plus no `os`/`path/filepath`/`io/fs` import in `service/`
+match. `TestASnapshotRereadsWhenItsPackChanges` (`cmd/agni`) holds a named pack to a lookup on every
+ingest, so a deleted pack is NOT_FOUND rather than a value kept from before. Plus no `os`/`path/filepath`/`io/fs` import in `service/`
 impl files (`transport_guard_test.go`, `TestNoFilesystemImports`); the vocabulary installers
 (`naming.ApplyLexicon`, `classify.SetActive*`) are called only from entrypoint startup wiring
 (`cmd/agni`), never from a service method or any per-run path.

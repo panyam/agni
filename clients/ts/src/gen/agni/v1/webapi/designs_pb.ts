@@ -30,7 +30,8 @@ export type CreateDesignRequest = Message<"agni.v1.webapi.CreateDesignRequest"> 
   designId: string;
 
   /**
-   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+   * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+   * (agni issue 1704). Its name is ignored.
    *
    * @generated from field: agni.v1.webapi.Design design = 3;
    */
@@ -142,8 +143,10 @@ export type UpdateDesignRequest = Message<"agni.v1.webapi.UpdateDesignRequest"> 
   design?: Design | undefined;
 
   /**
-   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
-   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
+   * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
+   * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
+   * under.
    *
    * @generated from field: google.protobuf.FieldMask update_mask = 4;
    */
@@ -515,8 +518,8 @@ export const ArtifactTypeSchema: GenEnum<ArtifactType> = /*@__PURE__*/
  */
 export const DesignService: GenService<{
   /**
-   * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
-   * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+   * CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
+   * intent come from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
    * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
    * same way.
    *
@@ -549,7 +552,7 @@ export const DesignService: GenService<{
     output: typeof ListDesignsResponseSchema;
   },
   /**
-   * UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+   * UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, the fields
    * update_mask names. A design declared in a mounted folder is read-only, and a write to it is
    * FAILED_PRECONDITION.
    *

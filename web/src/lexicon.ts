@@ -68,6 +68,7 @@ const SOURCE_LABELS: Partial<Record<LexiconSource, string>> = {
   [LexiconSource.PROJECT]: "project",
   [LexiconSource.DESIGN]: "design",
   [LexiconSource.REQUEST]: "request",
+  [LexiconSource.PACK]: "pack",
 };
 
 function sourceLabel(e: LexiconEntry): string {

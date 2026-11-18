@@ -38,6 +38,9 @@ const (
 	LexiconSource_LEXICON_SOURCE_DESIGN LexiconSource = 4
 	// The request. The CLI sends its --conventions file this way.
 	LexiconSource_LEXICON_SOURCE_REQUEST LexiconSource = 5
+	// A pack the snapshot was read under, packs/{pack} (agni issue 1704). A later pack's convention
+	// replaces an earlier one's, and the request's replaces a pack's.
+	LexiconSource_LEXICON_SOURCE_PACK LexiconSource = 6
 )
 
 // Enum value maps for LexiconSource.
@@ -49,6 +52,7 @@ var (
 		3: "LEXICON_SOURCE_PROJECT",
 		4: "LEXICON_SOURCE_DESIGN",
 		5: "LEXICON_SOURCE_REQUEST",
+		6: "LEXICON_SOURCE_PACK",
 	}
 	LexiconSource_value = map[string]int32{
 		"LEXICON_SOURCE_UNSPECIFIED": 0,
@@ -57,6 +61,7 @@ var (
 		"LEXICON_SOURCE_PROJECT":     3,
 		"LEXICON_SOURCE_DESIGN":      4,
 		"LEXICON_SOURCE_REQUEST":     5,
+		"LEXICON_SOURCE_PACK":        6,
 	}
 )
 
@@ -673,14 +678,15 @@ const file_agni_v1_webapi_lexicon_proto_rawDesc = "" +
 	"\x18RenderConventionResponse\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\fR\acontent\x12!\n" +
 	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x1a\n" +
-	"\bfilename\x18\x03 \x01(\tR\bfilename*\xb9\x01\n" +
+	"\bfilename\x18\x03 \x01(\tR\bfilename*\xd2\x01\n" +
 	"\rLexiconSource\x12\x1e\n" +
 	"\x1aLEXICON_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16LEXICON_SOURCE_BUILTIN\x10\x01\x12\x19\n" +
 	"\x15LEXICON_SOURCE_SERVER\x10\x02\x12\x1a\n" +
 	"\x16LEXICON_SOURCE_PROJECT\x10\x03\x12\x19\n" +
 	"\x15LEXICON_SOURCE_DESIGN\x10\x04\x12\x1a\n" +
-	"\x16LEXICON_SOURCE_REQUEST\x10\x052\x85\x03\n" +
+	"\x16LEXICON_SOURCE_REQUEST\x10\x05\x12\x17\n" +
+	"\x13LEXICON_SOURCE_PACK\x10\x062\x85\x03\n" +
 	"\x0eLexiconService\x12S\n" +
 	"\n" +
 	"GetLexicon\x12!.agni.v1.webapi.GetLexiconRequest\x1a\".agni.v1.webapi.GetLexiconResponse\x12S\n" +

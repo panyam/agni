@@ -89,7 +89,8 @@ type CreateDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// design_id is the new design's id, lowercase letters, digits, '.', '_' or '-'.
 	DesignId string `protobuf:"bytes,1,opt,name=design_id,json=designId,proto3" json:"design_id,omitempty"`
-	// design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+	// design carries the new design's title, series and flatten_hierarchy, and its config's intent
+	// (agni issue 1704). Its name is ignored.
 	Design        *Design `protobuf:"bytes,3,opt,name=design,proto3" json:"design,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -315,8 +316,10 @@ type UpdateDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// design names the design to change, "designs/{design}", and carries the new values.
 	Design *Design `protobuf:"bytes,3,opt,name=design,proto3" json:"design,omitempty"`
-	// update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
-	// empty mask changes all three. Any other path is INVALID_ARGUMENT.
+	// update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
+	// `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
+	// INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
+	// under.
 	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,4,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

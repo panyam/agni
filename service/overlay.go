@@ -327,6 +327,14 @@ type NamedQuerySet struct {
 //
 // baseConvention is as on ComposeOverlay. A REQUEST's own overlay wins over the project's.
 func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
+	return overlayFor(ctx, resolver, store, p, d, nil, req, baseConvention)
+}
+
+// overlayFor is OverlayFor with packs layered between the design's config and the request's (agni
+// issue 1704). Each pack is a tier of its own, applied in order the way a request's config is: its
+// convention and intent replace what came before, its params replace the corpus, and its profiles,
+// symbols and library accumulate. Its profiles register under the pack's name, as a project's do.
+func overlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore, p *webapi.Project, d *webapi.Design, packs []*webapi.Pack, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	// Seeded with every input this call can see. What a resolver reads is folded in below, where it is
 	// read, because only the resolver knows what it opened.
 	id := &overlayID{}
@@ -334,8 +342,15 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 	id.addProto("request", req)
 	id.addProto("project", p)
 	id.addProto("design", d)
+	for _, pk := range packs {
+		id.addProto("pack", pk)
+	}
 	if p == nil && d == nil {
-		return overlayWithRequest(ctx, resolver, req, Overlay{}, baseConvention, id)
+		base, err := layerPacks(ctx, resolver, packs, Overlay{}, baseConvention, id)
+		if err != nil {
+			return Overlay{}, err
+		}
+		return overlayWithRequest(ctx, resolver, req, base, baseConvention, id, requestNamespace, false)
 	}
 	// A design in no project still has config of its own, its symbol library and its intent. They
 	// compose here exactly as they do under a project, with nothing inherited (agni issue 887). A
@@ -394,7 +409,25 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		}
 	}
 	o.baseConvention = baseConvention
-	return overlayWithRequest(ctx, resolver, req, o, baseConvention, id)
+	o, err = layerPacks(ctx, resolver, packs, o, baseConvention, id)
+	if err != nil {
+		return Overlay{}, err
+	}
+	return overlayWithRequest(ctx, resolver, req, o, baseConvention, id, requestNamespace, false)
+}
+
+// layerPacks layers each pack over base in order, each under its own name.
+func layerPacks(ctx context.Context, resolver ConfigResolver, packs []*webapi.Pack, base Overlay, baseConvention string, id *overlayID) (Overlay, error) {
+	for _, pk := range packs {
+		cfg, err := packConfigURIs(pk)
+		if err != nil {
+			return Overlay{}, err
+		}
+		if base, err = overlayWithRequest(ctx, resolver, &webapi.OverlayConfig{Config: cfg}, base, baseConvention, id, pk.GetName(), true); err != nil {
+			return Overlay{}, fmt.Errorf("%s: %w", pk.GetName(), err)
+		}
+	}
+	return base, nil
 }
 
 // projectNamespace is the catalog source name a project's profiles are registered under.
@@ -486,8 +519,11 @@ func intentSource(cfg *webapi.AnalysisConfig, name string) (check.RuleSource, er
 	return intent.Source("intent", decl), nil
 }
 
-// overlayWithRequest lets a request's own config override whatever it was layered on.
-func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webapi.OverlayConfig, base Overlay, baseConvention string, id *overlayID) (Overlay, error) {
+// overlayWithRequest lets a request's own config override whatever it was layered on. namespace
+// names the tier's profile source, requestNamespace for a request and the pack's name for a pack.
+// A pack's tier is chained: one sending no convention keeps whether the tiers under it dropped the
+// server's convention, where a request sending none brings the server's back.
+func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webapi.OverlayConfig, base Overlay, baseConvention string, id *overlayID, namespace string, chained bool) (Overlay, error) {
 	reqOv, err := ComposeOverlay(req, baseConvention)
 	if err != nil {
 		return Overlay{}, err
@@ -501,11 +537,11 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 		if resolver == nil {
 			return Overlay{}, fmt.Errorf("%w: this deployment cannot resolve config refs (profiles, parameters, intent); send a resolved convention or run against a host that can", ErrInvalidArgument)
 		}
-		reqResolved, err = resolver.ResolveConfig(ctx, reqCfg, requestNamespace)
+		reqResolved, err = resolver.ResolveConfig(ctx, reqCfg, namespace)
 		if err != nil {
 			return Overlay{}, err
 		}
-		id.addDigest("request-config", reqResolved.Digest)
+		id.addDigest(namespace+"-config", reqResolved.Digest)
 	}
 	reqIntent, err := intentSource(reqCfg, "")
 	if err != nil {
@@ -529,6 +565,9 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	if reqOv.Lexicon != nil {
 		out.Lexicon = reqOv.Lexicon
 		out.Convention, out.ConventionSource = reqCfg.GetConventions(), webapi.LexiconSource_LEXICON_SOURCE_REQUEST
+		if chained {
+			out.ConventionSource = webapi.LexiconSource_LEXICON_SOURCE_PACK
+		}
 	}
 	// Replacement is by source NAME. Keeping both would run two vocabularies at once, and when they
 	// are the same file (--conventions naming the one the project already declares) it would be a
@@ -565,6 +604,10 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out.InterfaceProfiles = append(append([]profiles.Profile{}, out.InterfaceProfiles...), reqResolved.InterfaceProfiles...)
 	out.Intent = out.Intent || reqResolved.Intent || reqIntent != nil
 	out.conventionName = req.GetConfig().GetConventions().GetName()
+	if chained && req.GetConfig().GetConventions() == nil {
+		// A later tier's convention must still find this one's source to replace it.
+		out.conventionName = base.conventionName
+	}
 	// Set the base convention's NAME explicitly, since Overlay.Catalog drops the sources tagged with it.
 	// Inheriting whatever the base overlay held would leave the server's convention running alongside the
 	// request's (WS3-124). Only a request that SENDS a convention replaces the server's. One carrying
@@ -573,6 +616,8 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out.baseConvention = ""
 	if req.GetConfig().GetConventions() != nil {
 		out.baseConvention = baseConvention
+	} else if chained {
+		out.baseConvention = base.baseConvention
 	}
 	out.id = id
 	return out, nil

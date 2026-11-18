@@ -32,7 +32,7 @@ func storeServer(t *testing.T, dir string) *httptest.Server {
 	}
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
 	resolver := &service.ProjectResolver{Store: projectStore, Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
-	projectSvc, designSvc, err := storeServices(ms, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), projectStore, resolver, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(ms, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), projectStore, resolver, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

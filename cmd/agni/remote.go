@@ -117,6 +117,7 @@ func refuseLocalOnly(cmd *cobra.Command, flags ...string) error {
 // the local one (C31, C32).
 type (
 	checkAPI interface {
+		ListRules(context.Context, *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error)
 		CheckDesign(context.Context, *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error)
 		GetCheckReport(context.Context, *webapi.GetCheckReportRequest) (*webapi.GetCheckReportResponse, error)
 		RenderCheckReport(context.Context, *webapi.RenderCheckReportRequest) (*webapi.RenderCheckReportResponse, error)
@@ -331,6 +332,10 @@ type remoteCheck struct {
 
 func (r *remoteServer) check() checkAPI {
 	return remoteCheck{webapiconnect.NewCheckServiceClient(r.http, r.url)}
+}
+
+func (r remoteCheck) ListRules(ctx context.Context, req *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error) {
+	return unary(ctx, r.c.ListRules, req)
 }
 
 func (r remoteCheck) CheckDesign(ctx context.Context, req *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error) {

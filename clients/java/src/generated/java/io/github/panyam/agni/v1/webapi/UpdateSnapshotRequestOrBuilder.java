@@ -39,9 +39,9 @@ public interface UpdateSnapshotRequestOrBuilder extends
 
   /**
    * <pre>
-   * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-   * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-   * files again, and that refreshes a stale snapshot.
+   * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+   * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+   * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -50,9 +50,9 @@ public interface UpdateSnapshotRequestOrBuilder extends
   boolean hasUpdateMask();
   /**
    * <pre>
-   * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-   * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-   * files again, and that refreshes a stale snapshot.
+   * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+   * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+   * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -61,9 +61,9 @@ public interface UpdateSnapshotRequestOrBuilder extends
   com.google.protobuf.FieldMask getUpdateMask();
   /**
    * <pre>
-   * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-   * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-   * files again, and that refreshes a stale snapshot.
+   * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+   * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+   * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>

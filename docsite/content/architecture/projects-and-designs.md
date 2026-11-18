@@ -420,9 +420,33 @@ up at every read (agni issue 1695). So a snapshot rebuilt after a restart, or in
 artifact changed, reads the design's files as they are then. `DesignSnapshotID` derives one snapshot
 id from the name, so every client opening the design shares one snapshot.
 
-Scaffolding design intent is still not a server operation. Writing `intent:` from a design is a
-judgment step with a confidentiality boundary, so the server never generates one. A stored design
-carries no intent of its own yet. A pack will carry it to a design at report time (agni issue 1704).
+## A pack carries the rules a design is judged by
+
+Picture an engineer who pushes a board's schematic and layout but not the `project.yaml` beside them.
+On the laptop, `agni check` reads the project's convention, profiles and params. On the server the
+stored design had none of them, so Jetson rev 1.1.3 gave 476 findings stored and 87 on its folder. A
+pack closes that gap (agni issue 1704).
+
+A pack is named `packs/{pack}` and holds an `AnalysisConfig`, the shape a `project.yaml` binds to. Its
+conventions, checklists and intent are values. Its profile, param, symbol, library and query tiers
+are each a `mount://` URI or a path among the pack's own files. `agni packs push` reads a
+`project.yaml` and sends the files its paths name. The folder adapter, `DirPacks`, keeps the record as
+`<id>.json` and links the files into a view, `@packs/<id>/<rev>/` in the uploads mount, which never
+changes once built. A pack's hash covers its config and its files' hashes, so a changed profile moves
+it.
+
+A snapshot names its packs on `Snapshot.packs`, and each read looks them up again. They layer between
+the design's own config and the request's, in the order named, each the way a request layers. A pack's
+convention, intent and params replace what came before, and its profiles, symbols and library
+accumulate. A pack's profiles register as `<pack>-profiles`, the name a project of that id gives them.
+So a pack pushed under its project's name reports the same rule names as a run on the folder.
+`DesignSnapshotID` adds the pack names in order, so one design under two pack sets is two snapshots.
+
+A stored design keeps its own intent, as `config.intent` on `CreateDesign` and `UpdateDesign`. `agni
+designs push` sends the `intent:` of the folder's `design.yaml`, and the store writes it into each
+view's `design.yaml`. Every other tier of a stored design's config comes from its packs. Scaffolding
+intent is still not a server operation. Writing `intent:` from a design is a judgment step with a
+confidentiality boundary, so the server never generates one.
 
 That makes `Project` and `Design` the declared-identity case in
 [C23](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md), with two homes. A mounted one has

@@ -11,7 +11,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Snapshot(_message.Message):
-    __slots__ = ("name", "revision_id", "uri", "board_uri", "geometry_uri", "as_named", "overlay", "tiers", "consistency", "project", "files", "flatten_hierarchy", "refresh", "design")
+    __slots__ = ("name", "revision_id", "uri", "board_uri", "geometry_uri", "as_named", "overlay", "tiers", "consistency", "project", "files", "flatten_hierarchy", "refresh", "design", "packs")
     NAME_FIELD_NUMBER: _ClassVar[int]
     REVISION_ID_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
@@ -26,6 +26,7 @@ class Snapshot(_message.Message):
     FLATTEN_HIERARCHY_FIELD_NUMBER: _ClassVar[int]
     REFRESH_FIELD_NUMBER: _ClassVar[int]
     DESIGN_FIELD_NUMBER: _ClassVar[int]
+    PACKS_FIELD_NUMBER: _ClassVar[int]
     name: str
     revision_id: str
     uri: str
@@ -40,7 +41,8 @@ class Snapshot(_message.Message):
     flatten_hierarchy: bool
     refresh: bool
     design: str
-    def __init__(self, name: _Optional[str] = ..., revision_id: _Optional[str] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., geometry_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., overlay: _Optional[_Union[_config_pb2.OverlayConfig, _Mapping]] = ..., tiers: _Optional[_Union[SnapshotTiers, _Mapping]] = ..., consistency: _Optional[_Union[SnapshotConsistency, _Mapping]] = ..., project: _Optional[str] = ..., files: _Optional[_Iterable[_Union[SnapshotFile, _Mapping]]] = ..., flatten_hierarchy: _Optional[bool] = ..., refresh: _Optional[bool] = ..., design: _Optional[str] = ...) -> None: ...
+    packs: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, name: _Optional[str] = ..., revision_id: _Optional[str] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., geometry_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., overlay: _Optional[_Union[_config_pb2.OverlayConfig, _Mapping]] = ..., tiers: _Optional[_Union[SnapshotTiers, _Mapping]] = ..., consistency: _Optional[_Union[SnapshotConsistency, _Mapping]] = ..., project: _Optional[str] = ..., files: _Optional[_Iterable[_Union[SnapshotFile, _Mapping]]] = ..., flatten_hierarchy: _Optional[bool] = ..., refresh: _Optional[bool] = ..., design: _Optional[str] = ..., packs: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SnapshotFile(_message.Message):
     __slots__ = ("path", "sha256", "size")

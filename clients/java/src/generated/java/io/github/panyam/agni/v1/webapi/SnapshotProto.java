@@ -108,7 +108,7 @@ public final class SnapshotProto extends com.google.protobuf.GeneratedFile {
       "\n\035agni/v1/webapi/snapshot.proto\022\016agni.v1" +
       ".webapi\032\033agni/v1/webapi/config.proto\032\033go" +
       "ogle/protobuf/empty.proto\032 google/protob" +
-      "uf/field_mask.proto\"\216\004\n\010Snapshot\022\022\n\004name" +
+      "uf/field_mask.proto\"\244\004\n\010Snapshot\022\022\n\004name" +
       "\030\001 \001(\tR\004name\022\037\n\013revision_id\030\002 \001(\tR\nrevis" +
       "ionId\022\020\n\003uri\030\003 \001(\tR\003uri\022\033\n\tboard_uri\030\004 \001" +
       "(\tR\010boardUri\022!\n\014geometry_uri\030\005 \001(\tR\013geom" +
@@ -121,60 +121,61 @@ public final class SnapshotProto extends com.google.protobuf.GeneratedFile {
       "t\0222\n\005files\030\013 \003(\0132\034.agni.v1.webapi.Snapsh" +
       "otFileR\005files\022+\n\021flatten_hierarchy\030\014 \001(\010" +
       "R\020flattenHierarchy\022\030\n\007refresh\030\r \001(\010R\007ref" +
-      "resh\022\026\n\006design\030\016 \001(\tR\006design\"N\n\014Snapshot" +
-      "File\022\022\n\004path\030\001 \001(\tR\004path\022\026\n\006sha256\030\002 \001(\t" +
-      "R\006sha256\022\022\n\004size\030\003 \001(\003R\004size\"\270\001\n\rSnapsho" +
-      "tTiers\022\037\n\013netlist_uri\030\001 \001(\tR\nnetlistUri\022" +
-      "\033\n\tboard_uri\030\002 \001(\tR\010boardUri\022!\n\014geometry" +
-      "_uri\030\003 \001(\tR\013geometryUri\022\035\n\nboard_read\030\004 " +
-      "\001(\010R\tboardRead\022\'\n\017board_persisted\030\005 \001(\010R" +
-      "\016boardPersisted\"\257\001\n\023SnapshotConsistency\022" +
-      "\035\n\nboard_only\030\001 \003(\tR\tboardOnly\022(\n\020board_" +
-      "only_count\030\002 \001(\005R\016boardOnlyCount\022!\n\014netl" +
-      "ist_only\030\003 \003(\tR\013netlistOnly\022,\n\022netlist_o" +
-      "nly_count\030\004 \001(\005R\020netlistOnlyCount\"\205\001\n\rIn" +
-      "gestRequest\0224\n\010snapshot\030\001 \001(\0132\030.agni.v1." +
-      "webapi.SnapshotR\010snapshot\022\037\n\013snapshot_id" +
-      "\030\002 \001(\tR\nsnapshotId\022\035\n\nread_board\030\003 \001(\010R\t" +
-      "readBoard\"(\n\022GetSnapshotRequest\022\022\n\004name\030" +
-      "\001 \001(\tR\004name\"j\n\024ListSnapshotsRequest\022\033\n\tp" +
-      "age_size\030\001 \001(\005R\010pageSize\022\035\n\npage_token\030\002" +
-      " \001(\tR\tpageToken\022\026\n\006filter\030\003 \001(\tR\006filter\"" +
-      "w\n\025ListSnapshotsResponse\0226\n\tsnapshots\030\001 " +
-      "\003(\0132\030.agni.v1.webapi.SnapshotR\tsnapshots" +
-      "\022&\n\017next_page_token\030\002 \001(\tR\rnextPageToken" +
-      "\"\251\001\n\025UpdateSnapshotRequest\0224\n\010snapshot\030\001" +
-      " \001(\0132\030.agni.v1.webapi.SnapshotR\010snapshot" +
-      "\022;\n\013update_mask\030\002 \001(\0132\032.google.protobuf." +
-      "FieldMaskR\nupdateMask\022\035\n\nread_board\030\003 \001(" +
-      "\010R\treadBoard\"+\n\025DeleteSnapshotRequest\022\022\n" +
-      "\004name\030\001 \001(\tR\004name\"&\n\014BlobsMissing\022\026\n\006sha" +
-      "256\030\001 \003(\tR\006sha256\"0\n\022UploadBlobsRequest\022" +
-      "\032\n\010contents\030\001 \003(\014R\010contents\"-\n\023UploadBlo" +
-      "bsResponse\022\026\n\006sha256\030\001 \003(\tR\006sha256\"\317\001\n\023S" +
-      "napshotUnavailable\022\022\n\004name\030\001 \001(\tR\004name\022B" +
-      "\n\006reason\030\002 \001(\0162*.agni.v1.webapi.Snapshot" +
-      "Unavailable.ReasonR\006reason\022\030\n\007changed\030\003 " +
-      "\003(\tR\007changed\"F\n\006Reason\022\026\n\022REASON_UNSPECI" +
-      "FIED\020\000\022\022\n\016REASON_MISSING\020\001\022\020\n\014REASON_STA" +
-      "LE\020\0022\373\003\n\017SnapshotService\022A\n\006Ingest\022\035.agn" +
-      "i.v1.webapi.IngestRequest\032\030.agni.v1.weba" +
-      "pi.Snapshot\022K\n\013GetSnapshot\022\".agni.v1.web" +
-      "api.GetSnapshotRequest\032\030.agni.v1.webapi." +
-      "Snapshot\022\\\n\rListSnapshots\022$.agni.v1.weba" +
-      "pi.ListSnapshotsRequest\032%.agni.v1.webapi" +
-      ".ListSnapshotsResponse\022Q\n\016UpdateSnapshot" +
-      "\022%.agni.v1.webapi.UpdateSnapshotRequest\032" +
-      "\030.agni.v1.webapi.Snapshot\022O\n\016DeleteSnaps" +
-      "hot\022%.agni.v1.webapi.DeleteSnapshotReque" +
-      "st\032\026.google.protobuf.Empty\022V\n\013UploadBlob" +
-      "s\022\".agni.v1.webapi.UploadBlobsRequest\032#." +
-      "agni.v1.webapi.UploadBlobsResponseB\270\001\n\037i" +
-      "o.github.panyam.agni.v1.webapiB\rSnapshot" +
-      "ProtoP\001Z,github.com/panyam/agni/gen/go/a" +
-      "gni/v1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016A" +
-      "gni\\V1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetada" +
-      "ta\352\002\020Agni::V1::Webapib\006proto3"
+      "resh\022\026\n\006design\030\016 \001(\tR\006design\022\024\n\005packs\030\017 " +
+      "\003(\tR\005packs\"N\n\014SnapshotFile\022\022\n\004path\030\001 \001(\t" +
+      "R\004path\022\026\n\006sha256\030\002 \001(\tR\006sha256\022\022\n\004size\030\003" +
+      " \001(\003R\004size\"\270\001\n\rSnapshotTiers\022\037\n\013netlist_" +
+      "uri\030\001 \001(\tR\nnetlistUri\022\033\n\tboard_uri\030\002 \001(\t" +
+      "R\010boardUri\022!\n\014geometry_uri\030\003 \001(\tR\013geomet" +
+      "ryUri\022\035\n\nboard_read\030\004 \001(\010R\tboardRead\022\'\n\017" +
+      "board_persisted\030\005 \001(\010R\016boardPersisted\"\257\001" +
+      "\n\023SnapshotConsistency\022\035\n\nboard_only\030\001 \003(" +
+      "\tR\tboardOnly\022(\n\020board_only_count\030\002 \001(\005R\016" +
+      "boardOnlyCount\022!\n\014netlist_only\030\003 \003(\tR\013ne" +
+      "tlistOnly\022,\n\022netlist_only_count\030\004 \001(\005R\020n" +
+      "etlistOnlyCount\"\205\001\n\rIngestRequest\0224\n\010sna" +
+      "pshot\030\001 \001(\0132\030.agni.v1.webapi.SnapshotR\010s" +
+      "napshot\022\037\n\013snapshot_id\030\002 \001(\tR\nsnapshotId" +
+      "\022\035\n\nread_board\030\003 \001(\010R\treadBoard\"(\n\022GetSn" +
+      "apshotRequest\022\022\n\004name\030\001 \001(\tR\004name\"j\n\024Lis" +
+      "tSnapshotsRequest\022\033\n\tpage_size\030\001 \001(\005R\010pa" +
+      "geSize\022\035\n\npage_token\030\002 \001(\tR\tpageToken\022\026\n" +
+      "\006filter\030\003 \001(\tR\006filter\"w\n\025ListSnapshotsRe" +
+      "sponse\0226\n\tsnapshots\030\001 \003(\0132\030.agni.v1.weba" +
+      "pi.SnapshotR\tsnapshots\022&\n\017next_page_toke" +
+      "n\030\002 \001(\tR\rnextPageToken\"\251\001\n\025UpdateSnapsho" +
+      "tRequest\0224\n\010snapshot\030\001 \001(\0132\030.agni.v1.web" +
+      "api.SnapshotR\010snapshot\022;\n\013update_mask\030\002 " +
+      "\001(\0132\032.google.protobuf.FieldMaskR\nupdateM" +
+      "ask\022\035\n\nread_board\030\003 \001(\010R\treadBoard\"+\n\025De" +
+      "leteSnapshotRequest\022\022\n\004name\030\001 \001(\tR\004name\"" +
+      "&\n\014BlobsMissing\022\026\n\006sha256\030\001 \003(\tR\006sha256\"" +
+      "0\n\022UploadBlobsRequest\022\032\n\010contents\030\001 \003(\014R" +
+      "\010contents\"-\n\023UploadBlobsResponse\022\026\n\006sha2" +
+      "56\030\001 \003(\tR\006sha256\"\317\001\n\023SnapshotUnavailable" +
+      "\022\022\n\004name\030\001 \001(\tR\004name\022B\n\006reason\030\002 \001(\0162*.a" +
+      "gni.v1.webapi.SnapshotUnavailable.Reason" +
+      "R\006reason\022\030\n\007changed\030\003 \003(\tR\007changed\"F\n\006Re" +
+      "ason\022\026\n\022REASON_UNSPECIFIED\020\000\022\022\n\016REASON_M" +
+      "ISSING\020\001\022\020\n\014REASON_STALE\020\0022\373\003\n\017SnapshotS" +
+      "ervice\022A\n\006Ingest\022\035.agni.v1.webapi.Ingest" +
+      "Request\032\030.agni.v1.webapi.Snapshot\022K\n\013Get" +
+      "Snapshot\022\".agni.v1.webapi.GetSnapshotReq" +
+      "uest\032\030.agni.v1.webapi.Snapshot\022\\\n\rListSn" +
+      "apshots\022$.agni.v1.webapi.ListSnapshotsRe" +
+      "quest\032%.agni.v1.webapi.ListSnapshotsResp" +
+      "onse\022Q\n\016UpdateSnapshot\022%.agni.v1.webapi." +
+      "UpdateSnapshotRequest\032\030.agni.v1.webapi.S" +
+      "napshot\022O\n\016DeleteSnapshot\022%.agni.v1.weba" +
+      "pi.DeleteSnapshotRequest\032\026.google.protob" +
+      "uf.Empty\022V\n\013UploadBlobs\022\".agni.v1.webapi" +
+      ".UploadBlobsRequest\032#.agni.v1.webapi.Upl" +
+      "oadBlobsResponseB\270\001\n\037io.github.panyam.ag" +
+      "ni.v1.webapiB\rSnapshotProtoP\001Z,github.co" +
+      "m/panyam/agni/gen/go/agni/v1/webapi\242\002\003AV" +
+      "W\252\002\016Agni.V1.Webapi\312\002\016Agni\\V1\\Webapi\342\002\032Ag" +
+      "ni\\V1\\Webapi\\GPBMetadata\352\002\020Agni::V1::Web" +
+      "apib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -188,7 +189,7 @@ public final class SnapshotProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_webapi_Snapshot_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_Snapshot_descriptor,
-        new java.lang.String[] { "Name", "RevisionId", "Uri", "BoardUri", "GeometryUri", "AsNamed", "Overlay", "Tiers", "Consistency", "Project", "Files", "FlattenHierarchy", "Refresh", "Design", });
+        new java.lang.String[] { "Name", "RevisionId", "Uri", "BoardUri", "GeometryUri", "AsNamed", "Overlay", "Tiers", "Consistency", "Project", "Files", "FlattenHierarchy", "Refresh", "Design", "Packs", });
     internal_static_agni_v1_webapi_SnapshotFile_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_agni_v1_webapi_SnapshotFile_fieldAccessorTable = new

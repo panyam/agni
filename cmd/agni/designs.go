@@ -18,9 +18,11 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"gopkg.in/yaml.v3"
 
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
 // designsCmd groups the commands that keep designs on a server (agni issue 1696). A design on a
@@ -205,7 +207,9 @@ holding two designs is refused, naming both.
 
 The design is created when the server lacks it, and its artifacts are replaced in one write when it
 has it. An artifact the folder no longer holds is left in place; agni designs rm removes it. A
-design.yaml in the folder sets the default title and series, and its intent is not sent.`,
+design.yaml in the folder sets the default title and series, and its intent is kept as the design's
+own. A design.yaml with no intent leaves the stored intent as it was. Its extends is not followed:
+push the project.yaml with agni packs push, and check the design with --pack.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := client(cmd)
@@ -433,17 +437,19 @@ func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, s
 	if len(all.files) == 0 {
 		return fmt.Errorf("%s holds no files", dir)
 	}
-	if id == "" || title == "" || series == "" {
-		declared := readLocalDescriptor(filepath.Join(dir, service.DesignDescriptorName))
-		if id == "" {
-			id = declared.Name
-		}
-		if title == "" {
-			title = declared.Title
-		}
-		if series == "" {
-			series = declared.Series
-		}
+	declared := readLocalDescriptor(filepath.Join(dir, service.DesignDescriptorName))
+	declaredIntent, err := declared.intent()
+	if err != nil {
+		return fmt.Errorf("%s: %w", filepath.Join(dir, service.DesignDescriptorName), err)
+	}
+	if id == "" {
+		id = declared.Name
+	}
+	if title == "" {
+		title = declared.Title
+	}
+	if series == "" {
+		series = declared.Series
 	}
 	if id == "" {
 		id = strings.ToLower(filepath.Base(filepath.Clean(dir)))
@@ -451,13 +457,17 @@ func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, s
 	name := designName(id)
 	created := false
 	if _, err := unary(ctx, c.designs.GetDesign, &webapi.GetDesignRequest{Name: name}); connect.CodeOf(err) == connect.CodeNotFound {
-		if _, err := unary(ctx, c.designs.CreateDesign, &webapi.CreateDesignRequest{DesignId: designID(id), Design: &webapi.Design{Title: title, Series: series}}); err != nil {
+		var cfg *webapi.AnalysisConfig
+		if declaredIntent != nil {
+			cfg = &webapi.AnalysisConfig{Intent: declaredIntent}
+		}
+		if _, err := unary(ctx, c.designs.CreateDesign, &webapi.CreateDesignRequest{DesignId: designID(id), Design: &webapi.Design{Title: title, Series: series, Config: cfg}}); err != nil {
 			return err
 		}
 		created = true
 	} else if err != nil {
 		return err
-	} else if title != "" || series != "" {
+	} else if title != "" || series != "" || declaredIntent != nil {
 		var paths []string
 		if title != "" {
 			paths = append(paths, "title")
@@ -465,7 +475,12 @@ func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, s
 		if series != "" {
 			paths = append(paths, "series")
 		}
-		if _, err := unary(ctx, c.designs.UpdateDesign, &webapi.UpdateDesignRequest{Design: &webapi.Design{Name: name, Title: title, Series: series}, UpdateMask: &fieldmaskpb.FieldMask{Paths: paths}}); err != nil {
+		in := &webapi.Design{Name: name, Title: title, Series: series}
+		if declaredIntent != nil {
+			paths = append(paths, "config.intent")
+			in.Config = &webapi.AnalysisConfig{Intent: declaredIntent}
+		}
+		if _, err := unary(ctx, c.designs.UpdateDesign, &webapi.UpdateDesignRequest{Design: in, UpdateMask: &fieldmaskpb.FieldMask{Paths: paths}}); err != nil {
 			return err
 		}
 	}
@@ -500,9 +515,19 @@ func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, s
 // ProposeDesigns does, since push sends no descriptor and internal/projects checks one strictly where
 // one is read as a design.
 type localDescriptor struct {
-	Name   string `yaml:"name"`
-	Title  string `yaml:"title"`
-	Series string `yaml:"series"`
+	Name   string    `yaml:"name"`
+	Title  string    `yaml:"title"`
+	Series string    `yaml:"series"`
+	Intent yaml.Node `yaml:"intent"`
+}
+
+// intent binds the descriptor's intent section, nil when it has none. A section that does not bind
+// is an error, since pushing the design without it would check the board as if it declared nothing.
+func (d localDescriptor) intent() (*configpb.DesignIntent, error) {
+	if d.Intent.IsZero() || d.Intent.Tag == "!!null" {
+		return nil, nil
+	}
+	return intent.DecodeSection(&d.Intent)
 }
 
 // readLocalDescriptor reads a design.yaml's name, title and series. A missing or unreadable one gives

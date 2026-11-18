@@ -91,9 +91,9 @@ private static final long serialVersionUID = 0L;
   private com.google.protobuf.FieldMask updateMask_;
   /**
    * <pre>
-   * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-   * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-   * files again, and that refreshes a stale snapshot.
+   * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+   * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+   * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -105,9 +105,9 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-   * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-   * files again, and that refreshes a stale snapshot.
+   * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+   * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+   * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -119,9 +119,9 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-   * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-   * files again, and that refreshes a stale snapshot.
+   * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+   * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+   * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -685,9 +685,9 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder> updateMaskBuilder_;
     /**
      * <pre>
-     * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-     * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-     * files again, and that refreshes a stale snapshot.
+     * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+     * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+     * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -698,9 +698,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-     * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-     * files again, and that refreshes a stale snapshot.
+     * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+     * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+     * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -715,9 +715,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-     * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-     * files again, and that refreshes a stale snapshot.
+     * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+     * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+     * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -735,9 +735,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-     * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-     * files again, and that refreshes a stale snapshot.
+     * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+     * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+     * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -755,9 +755,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-     * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-     * files again, and that refreshes a stale snapshot.
+     * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+     * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+     * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -782,9 +782,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-     * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-     * files again, and that refreshes a stale snapshot.
+     * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+     * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+     * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -801,9 +801,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-     * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-     * files again, and that refreshes a stale snapshot.
+     * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+     * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+     * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -815,9 +815,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-     * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-     * files again, and that refreshes a stale snapshot.
+     * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+     * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+     * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>
@@ -832,9 +832,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-     * overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-     * files again, and that refreshes a stale snapshot.
+     * update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+     * as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+     * Sending the same definition again reads the files again, and that refreshes a stale snapshot.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 2 [json_name = "updateMask"];</code>

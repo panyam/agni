@@ -20,8 +20,8 @@ import "google/protobuf/timestamp.proto";
 // and deleted. Mounted folders declare designs too, and those are read-only. A design id is unique
 // across both. Nothing on this service names a folder, so each store decides how it keeps a design.
 service DesignService {
-  // CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
-  // from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+  // CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
+  // intent come from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
   // --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
   // same way.
   rpc CreateDesign(CreateDesignRequest) returns (Design);
@@ -33,7 +33,7 @@ service DesignService {
   // ListDesigns returns the designs this server holds, ordered by resource name.
   rpc ListDesigns(ListDesignsRequest) returns (ListDesignsResponse);
 
-  // UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+  // UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, the fields
   // update_mask names. A design declared in a mounted folder is read-only, and a write to it is
   // FAILED_PRECONDITION.
   rpc UpdateDesign(UpdateDesignRequest) returns (Design);
@@ -83,7 +83,8 @@ message CreateDesignRequest {
   string design_id = 1;
   reserved 2;
   reserved "files";
-  // design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+  // design carries the new design's title, series and flatten_hierarchy, and its config's intent
+  // (agni issue 1704). Its name is ignored.
   Design design = 3;
 }
 
@@ -116,8 +117,10 @@ message UpdateDesignRequest {
   reserved "name", "files";
   // design names the design to change, "designs/{design}", and carries the new values.
   Design design = 3;
-  // update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
-  // empty mask changes all three. Any other path is INVALID_ARGUMENT.
+  // update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
+  // `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
+  // INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
+  // under.
   google.protobuf.FieldMask update_mask = 4;
 }
 
