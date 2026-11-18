@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -32,7 +34,8 @@ func remoteFlag(cmd *cobra.Command, remote *string) {
 		"send this command's request to the agni serve at this URL instead of reading the design here. "+
 			"The design's files go with it, those the server does not already hold, so the server needs "+
 			"no copy of them, and one that kept what it read answers from that. The output is the same; "+
-			"only where the engine ran changes")
+			"only where the engine ran changes. An argument designs/<id> that names no path here names a design "+
+			"the server keeps, and nothing is sent")
 }
 
 // remoteServer is a running `agni serve` this command sends its request to.
@@ -65,8 +68,27 @@ func dialRemote(ctx context.Context, raw string) (*remoteServer, error) {
 // mounts. Under --remote the design's files are sent with the request (agni issue 1061). The server
 // then needs no mount of its own over the path, and every locator in the answer reads as a local
 // run's does.
+//
+// An argument naming a design the server holds, designs/{d}, with no such path here, passes through as
+// that name (agni issue 1695). ingest then sends it as the snapshot's design, and the server reads its
+// own copy, so no file goes with the request.
 func (r *remoteServer) uri(arg string) (string, error) {
+	if storedDesignArg(arg) {
+		return arg, nil
+	}
 	return cliArgURI(arg)
+}
+
+var storedDesignPattern = regexp.MustCompile(`^designs/[a-z0-9][a-z0-9._-]*$`)
+
+// storedDesignArg reports whether a command-line argument names a design on a server rather than a
+// path here. A path that exists wins, so a local folder called designs/gw is still read as a folder.
+func storedDesignArg(arg string) bool {
+	if !storedDesignPattern.MatchString(arg) {
+		return false
+	}
+	_, err := os.Stat(arg)
+	return err != nil
 }
 
 // refuseLocalOnly names the flags a --remote run cannot honour. Each one configures the engine that
@@ -115,6 +137,9 @@ type (
 		CreateReview(context.Context, *webapi.CreateReviewRequest) (*webapi.Review, error)
 		RenderReviewReport(context.Context, *webapi.RenderReviewReportRequest) (*webapi.RenderReviewReportResponse, error)
 	}
+	diffAPI interface {
+		DiffDesigns(context.Context, *webapi.DiffDesignsRequest) (*webapi.DiffDesignsResponse, error)
+	}
 	snapshotAPI interface {
 		Ingest(context.Context, *webapi.IngestRequest) (*webapi.Snapshot, error)
 		DeleteSnapshot(context.Context, *webapi.DeleteSnapshotRequest) (*emptypb.Empty, error)
@@ -157,6 +182,11 @@ func (r *remoteServer) snapshots() snapshotAPI {
 // design sends the manifest alone (agni issue 1061).
 func (r remoteSnapshot) Ingest(ctx context.Context, req *webapi.IngestRequest) (*webapi.Snapshot, error) {
 	req = proto.Clone(req).(*webapi.IngestRequest)
+	if def := req.GetSnapshot(); storedDesignPattern.MatchString(def.GetUri()) {
+		// A design the server holds is named, and the server reads its own files (agni issue 1695).
+		def.Design, def.Uri = def.GetUri(), ""
+		return unary(ctx, r.c.Ingest, req)
+	}
 	read, err := sendFiles(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
@@ -281,6 +311,18 @@ func unary[Req, Resp any](ctx context.Context, call func(context.Context, *conne
 		return nil, err
 	}
 	return resp.Msg, nil
+}
+
+type remoteDiff struct {
+	c webapiconnect.DiffServiceClient
+}
+
+func (r *remoteServer) diff() diffAPI {
+	return remoteDiff{webapiconnect.NewDiffServiceClient(r.http, r.url)}
+}
+
+func (r remoteDiff) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRequest) (*webapi.DiffDesignsResponse, error) {
+	return unary(ctx, r.c.DiffDesigns, req)
 }
 
 type remoteCheck struct {

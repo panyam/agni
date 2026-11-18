@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # The design-store mission's exercise (agni issues 1691, 1696). It starts its own agni serve over a
 # fresh --store-dir, pushes Jetson 1.1.2 and 1.1.3 as two designs of one series, replaces 1.1.3's
-# schematic, restarts the server over the same store, and lists everything again. #1695 and #1704
-# add the report and diff steps. It kills only the server it started.
+# schematic, restarts the server over the same store, and lists everything again. Then it checks and
+# diffs the stored designs by name (agni issue 1695) and compares each answer with the same command on
+# the folders. #1704 adds packs. It kills only the server it started.
 set -euo pipefail
 
 agni=${AGNI:-bin/agni}
@@ -47,6 +48,26 @@ step "list the series"
 
 "$agni" designs artifacts bb-1.1.3 --remote "$url" | grep /schematic | tee "$out/schematic-before.txt"
 
+# findings counts a check's findings, and changes lists a diff's changed parts and nets, from JSON.
+findings() { python3 -c 'import json,sys; print(len(json.load(sys.stdin)["findings"]))'; }
+changes() { python3 -c 'import json,sys
+d=json.load(sys.stdin)
+for k in ("componentStatus","netStatus"):
+    for n,v in sorted(d.get(k,{}).items()):
+        if v!="equal": print(k,n,v)'; }
+
+step "check bb-1.1.3 by name, with the folder's intent, against agni check on the folder"
+f3=$revs/jetson-agx-thor-baseboard-1.1.3
+{ echo "name: jetson-agx-thor-baseboard-1.1.3"; awk '/^intent:/ { found=1 } found' "$f3/design.yaml"; } >"$out/intent-1.1.3.yaml"
+stored=$("$agni" check designs/bb-1.1.3 --intent-path "$out/intent-1.1.3.yaml" --remote "$url" --format json | findings)
+folder=$("$agni" check "$f3" --format json | findings)
+echo "stored: $stored findings; folder: $folder findings"
+
+step "diff 1.1.2 and 1.1.3 by name against agni diff on the folders"
+"$agni" diff designs/bb-1.1.2 designs/bb-1.1.3 --remote "$url" --format json | changes >"$out/diff-stored.txt"
+"$agni" diff "$revs/jetson-agx-thor-baseboard-1.1.2" "$f3" --format json | changes >"$out/diff-folder.txt"
+echo "stored: $(wc -l <"$out/diff-stored.txt" | tr -d " ") changes; folder: $(wc -l <"$out/diff-folder.txt" | tr -d " ") changes"
+
 step "replace 1.1.3's schematic, every sheet in one write"
 edited=$out/schematic-1.1.3
 mkdir -p "$edited"
@@ -66,10 +87,24 @@ serve
 step "result"
 before=$(grep -o 'content [0-9a-f]*' "$out/schematic-before.txt")
 after=$(grep /schematic "$out/artifacts-after-restart.txt" | grep -o 'content [0-9a-f]*')
+fail=0
 if [ "$(wc -l <"$out/series-after-restart.txt")" -eq 2 ] && grep -q 'bb-1.1.3.*latest' "$out/series-after-restart.txt" &&
   [ -n "$before" ] && [ -n "$after" ] && [ "$before" != "$after" ]; then
   echo "PASS: both designs and the series survived the restart, 1.1.3 is latest, and its schematic holds the replaced files ($before, now $after)"
 else
   echo "FAIL: the series after the restart differs; see $out" >&2
-  exit 1
+  fail=1
 fi
+if [ "$stored" -gt 0 ] && [ "$stored" = "$folder" ]; then
+  echo "PASS: a check on designs/bb-1.1.3 gives the folder's $folder findings"
+else
+  echo "FAIL: a check on designs/bb-1.1.3 gives $stored findings, and the folder $folder" >&2
+  fail=1
+fi
+if [ -s "$out/diff-stored.txt" ] && cmp -s "$out/diff-stored.txt" "$out/diff-folder.txt"; then
+  echo "PASS: the diff by name lists the folders' $(wc -l <"$out/diff-folder.txt" | tr -d ' ') changes"
+else
+  echo "FAIL: the diff by name and the folders' diff differ; see $out/diff-stored.txt and $out/diff-folder.txt" >&2
+  fail=1
+fi
+exit $fail

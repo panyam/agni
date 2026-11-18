@@ -40,6 +40,10 @@ type ProjectResolver struct {
 	// answered after ingesting it again, and so is one a restart lost when the store outlives the
 	// process (agni issue 1639). Nil means an in-memory store.
 	Snapshots SnapshotStore
+	// Designs looks a design up by its resource name, "designs/{design}", for a snapshot that names
+	// its design instead of a URI (agni issue 1695). A DesignCatalog satisfies it. Nil means this host
+	// resolves no design names, and such an ingest is refused.
+	Designs DesignLookup
 
 	snapMu sync.Mutex
 	snaps  *snapshotRegistry

@@ -12,8 +12,8 @@ import (
 // one message with the same content, sheet and placement maps included (agni issue 737).
 // EmitUnpopulated keeps empty lists and maps present, so a no-change diff is still a well-formed
 // object rather than fields that appear and vanish per run.
-func diffViaService(cmd *cobra.Command, a, b string, renameApprox, includeEqual bool) error {
-	resp, err := diffResponse(cmd, a, b, renameApprox, includeEqual)
+func diffViaService(cmd *cobra.Command, a, b, remote string, renameApprox, includeEqual bool) error {
+	resp, err := diffResponse(cmd, a, b, remote, renameApprox, includeEqual)
 	if err != nil {
 		return err
 	}
@@ -25,19 +25,32 @@ func diffViaService(cmd *cobra.Command, a, b string, renameApprox, includeEqual 
 	return err
 }
 
-// diffResponse asks the DiffDesigns rpc, over the CLI's local loader, for the diff of a and b. The
-// json and the csv both read it, so neither composes the diff a second way.
-func diffResponse(cmd *cobra.Command, a, b string, renameApprox, includeEqual bool) (*webapi.DiffDesignsResponse, error) {
-	aURI, err := cliArgURI(a)
+// diffResponse asks the DiffDesigns rpc for the diff of a and b, over the CLI's local loader or, with
+// remote, on that server (agni issue 1695). The json and the csv both read it, so neither composes the
+// diff a second way. A server reads a and b from its own copies when they name its designs,
+// designs/{d}, and from the files sent with the request otherwise.
+func diffResponse(cmd *cobra.Command, a, b, remote string, renameApprox, includeEqual bool) (*webapi.DiffDesignsResponse, error) {
+	addr := cliArgURI
+	var snaps snapshotAPI
+	var svc diffAPI
+	if remote != "" {
+		r, err := dialRemote(cmd.Context(), remote)
+		if err != nil {
+			return nil, err
+		}
+		addr, snaps, svc = r.uri, r.snapshots(), r.diff()
+	} else {
+		ll := &localLoader{loader: newLoader()}
+		snaps, svc = service.NewSnapshotService(ll, cliProjects(), nil, ""), service.NewDiffService(ll, cliProjects())
+	}
+	aURI, err := addr(a)
 	if err != nil {
 		return nil, err
 	}
-	bURI, err := cliArgURI(b)
+	bURI, err := addr(b)
 	if err != nil {
 		return nil, err
 	}
-	ll := &localLoader{loader: newLoader()}
-	snaps := service.NewSnapshotService(ll, cliProjects(), nil, "")
 	// Each side is a snapshot of its own, resolved as the text diff resolves it (C32).
 	aSnap, dropA, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: aURI, AsNamed: readAsNamed})
 	if err != nil {
@@ -49,7 +62,6 @@ func diffResponse(cmd *cobra.Command, a, b string, renameApprox, includeEqual bo
 		return nil, rpcFailed(err)
 	}
 	defer dropB()
-	svc := service.NewDiffService(ll, cliProjects())
 	req := &webapi.DiffDesignsRequest{ASnapshot: aSnap, BSnapshot: bSnap, IncludeEqual: includeEqual}
 	if renameApprox {
 		req.NearRenames = &webapi.NearRenameOptions{} // the calibrated thresholds

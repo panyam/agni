@@ -343,4 +343,36 @@ public interface SnapshotOrBuilder extends
    * @return The refresh.
    */
   boolean getRefresh();
+
+  /**
+   * <pre>
+   * design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+   * issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+   * without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+   * recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+   * both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+   * opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+   * every client that opens one design share one snapshot. Part of the definition.
+   * </pre>
+   *
+   * <code>string design = 14 [json_name = "design"];</code>
+   * @return The design.
+   */
+  java.lang.String getDesign();
+  /**
+   * <pre>
+   * design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+   * issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+   * without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+   * recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+   * both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+   * opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+   * every client that opens one design share one snapshot. Part of the definition.
+   * </pre>
+   *
+   * <code>string design = 14 [json_name = "design"];</code>
+   * @return The bytes for design.
+   */
+  com.google.protobuf.ByteString
+      getDesignBytes();
 }

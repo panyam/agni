@@ -40,6 +40,7 @@ private static final long serialVersionUID = 0L;
     geometryUri_ = "";
     project_ = "";
     files_ = java.util.Collections.emptyList();
+    design_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -622,6 +623,65 @@ private static final long serialVersionUID = 0L;
     return refresh_;
   }
 
+  public static final int DESIGN_FIELD_NUMBER = 14;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object design_ = "";
+  /**
+   * <pre>
+   * design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+   * issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+   * without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+   * recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+   * both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+   * opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+   * every client that opens one design share one snapshot. Part of the definition.
+   * </pre>
+   *
+   * <code>string design = 14 [json_name = "design"];</code>
+   * @return The design.
+   */
+  @java.lang.Override
+  public java.lang.String getDesign() {
+    java.lang.Object ref = design_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      design_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+   * issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+   * without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+   * recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+   * both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+   * opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+   * every client that opens one design share one snapshot. Part of the definition.
+   * </pre>
+   *
+   * <code>string design = 14 [json_name = "design"];</code>
+   * @return The bytes for design.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDesignBytes() {
+    java.lang.Object ref = design_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      design_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -674,6 +734,9 @@ private static final long serialVersionUID = 0L;
     }
     if (refresh_ != false) {
       output.writeBool(13, refresh_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(design_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 14, design_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -729,6 +792,9 @@ private static final long serialVersionUID = 0L;
     if (refresh_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(13, refresh_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(design_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(14, design_);
     }
     return size;
   }
@@ -789,6 +855,8 @@ private static final long serialVersionUID = 0L;
         != other.getFlattenHierarchy()) return false;
     if (getRefresh()
         != other.getRefresh()) return false;
+    if (!getDesign()
+        .equals(other.getDesign())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -837,6 +905,8 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + REFRESH_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getRefresh());
+    hash = (37 * hash) + DESIGN_FIELD_NUMBER;
+    hash = (53 * hash) + getDesign().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1013,6 +1083,7 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000400);
       flattenHierarchy_ = false;
       refresh_ = false;
+      design_ = "";
       return this;
     }
 
@@ -1105,6 +1176,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00001000) != 0)) {
         result.refresh_ = refresh_;
       }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.design_ = design_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1193,6 +1267,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getRefresh() != false) {
         setRefresh(other.getRefresh());
+      }
+      if (!other.getDesign().isEmpty()) {
+        design_ = other.design_;
+        bitField0_ |= 0x00002000;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1297,6 +1376,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00001000;
               break;
             } // case 104
+            case 114: {
+              design_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 114
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2950,6 +3034,128 @@ private static final long serialVersionUID = 0L;
     public Builder clearRefresh() {
       bitField0_ = (bitField0_ & ~0x00001000);
       refresh_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object design_ = "";
+    /**
+     * <pre>
+     * design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+     * issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+     * without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+     * recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+     * both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+     * opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+     * every client that opens one design share one snapshot. Part of the definition.
+     * </pre>
+     *
+     * <code>string design = 14 [json_name = "design"];</code>
+     * @return The design.
+     */
+    public java.lang.String getDesign() {
+      java.lang.Object ref = design_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        design_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+     * issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+     * without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+     * recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+     * both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+     * opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+     * every client that opens one design share one snapshot. Part of the definition.
+     * </pre>
+     *
+     * <code>string design = 14 [json_name = "design"];</code>
+     * @return The bytes for design.
+     */
+    public com.google.protobuf.ByteString
+        getDesignBytes() {
+      java.lang.Object ref = design_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        design_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+     * issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+     * without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+     * recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+     * both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+     * opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+     * every client that opens one design share one snapshot. Part of the definition.
+     * </pre>
+     *
+     * <code>string design = 14 [json_name = "design"];</code>
+     * @param value The design to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDesign(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      design_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+     * issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+     * without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+     * recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+     * both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+     * opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+     * every client that opens one design share one snapshot. Part of the definition.
+     * </pre>
+     *
+     * <code>string design = 14 [json_name = "design"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDesign() {
+      design_ = getDefaultInstance().getDesign();
+      bitField0_ = (bitField0_ & ~0x00002000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+     * issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+     * without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+     * recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+     * both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+     * opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+     * every client that opens one design share one snapshot. Part of the definition.
+     * </pre>
+     *
+     * <code>string design = 14 [json_name = "design"];</code>
+     * @param value The bytes for design to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDesignBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      design_ = value;
+      bitField0_ |= 0x00002000;
       onChanged();
       return this;
     }

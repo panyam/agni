@@ -395,7 +395,7 @@ func (s *SnapshotService) Ingest(ctx context.Context, req *webapi.IngestRequest)
 			if !same {
 				return nil, fmt.Errorf("%w: %s holds a different definition; update it instead", ErrAlreadyExists, name)
 			}
-			if !req.GetReadBoard() {
+			if !req.GetReadBoard() && !s.designMoved(ctx, e, def) {
 				return e.out(), nil
 			}
 		}
@@ -494,8 +494,10 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 				def.FlattenHierarchy = next.GetFlattenHierarchy()
 			case "refresh":
 				def.Refresh = next.GetRefresh()
+			case "design":
+				def.Design = next.GetDesign()
 			default:
-				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, board_uri, geometry_uri, as_named, overlay, files, flatten_hierarchy and refresh", ErrInvalidArgument, p)
+				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, design, board_uri, geometry_uri, as_named, overlay, files, flatten_hierarchy and refresh", ErrInvalidArgument, p)
 			}
 		}
 	}
@@ -530,7 +532,11 @@ func (s *SnapshotService) DeleteSnapshot(ctx context.Context, req *webapi.Delete
 // load resolves a definition and reads it, into an entry not yet in the registry.
 func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Snapshot, readBoard bool) (*snapshotEntry, error) {
 	defer timing.Begin(ctx, "ingest")()
-	u, err := ParseArtifactURI(def.GetUri())
+	uri, err := s.designURI(ctx, def)
+	if err != nil {
+		return nil, err
+	}
+	u, err := ParseArtifactURI(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -627,6 +633,58 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 	return e, nil
 }
 
+// designURI is the URI a definition reads: its uri, or the entry of the design it names.
+func (s *SnapshotService) designURI(ctx context.Context, def *webapi.Snapshot) (string, error) {
+	name := def.GetDesign()
+	if name == "" {
+		return def.GetUri(), nil
+	}
+	if def.GetUri() != "" || len(def.GetFiles()) > 0 {
+		return "", fmt.Errorf("%w: a snapshot names its design by design or by uri and files, not both", ErrInvalidArgument)
+	}
+	if s.projects == nil || s.projects.Designs == nil {
+		return "", fmt.Errorf("%w: this host looks up no design names; ingest the design by uri", ErrFailedPrecondition)
+	}
+	d, err := s.projects.Designs.Design(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	if d.GetEntryUri() == "" {
+		return "", fmt.Errorf("%w: %s has no artifact a reader opens yet; put its netlist, schematic or board first", ErrFailedPrecondition, name)
+	}
+	return d.GetEntryUri(), nil
+}
+
+// designMoved reports whether a snapshot that names its design must be read again on a repeat
+// ingest: its files changed since they were read, or the design's entry is another file now. A
+// repeat ingest by design name then reads the design as it is, rather than returning a snapshot
+// every question would refuse as stale.
+func (s *SnapshotService) designMoved(ctx context.Context, e *snapshotEntry, def *webapi.Snapshot) bool {
+	if def.GetDesign() == "" {
+		return false
+	}
+	if e.touched.Len() > 0 && !e.touched.Unchanged() {
+		return true
+	}
+	uri, err := s.designURI(ctx, def)
+	return err != nil || uri != e.snap.Design.String()
+}
+
+// DesignLookup finds a design by its resource name, "designs/{design}". An unknown name is
+// ErrNotFound.
+type DesignLookup interface {
+	Design(ctx context.Context, name string) (*webapi.Design, error)
+}
+
+// DesignSnapshotID is the snapshot id every client uses for a snapshot that names a design and no
+// other definition, "d-" and the first 16 hex digits of the name's SHA-256 (agni issue 1695). Two
+// clients opening one design then ingest once, since Ingest returns the snapshot an id already holds
+// for the same definition. The viewer derives the same id in TypeScript.
+func DesignSnapshotID(design string) string {
+	sum := sha256.Sum256([]byte(design))
+	return "d-" + hex.EncodeToString(sum[:])[:16]
+}
+
 // out is a copy of the entry's definition and outputs.
 func (e *snapshotEntry) out() *webapi.Snapshot {
 	e.mu.Lock()
@@ -644,6 +702,7 @@ func definitionOf(s *webapi.Snapshot) *webapi.Snapshot {
 		Overlay:     s.GetOverlay(),
 		Files:       s.GetFiles(),
 		Refresh:     s.GetRefresh(),
+		Design:      s.GetDesign(),
 
 		FlattenHierarchy: s.GetFlattenHierarchy(),
 	}
