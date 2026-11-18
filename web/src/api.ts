@@ -147,6 +147,12 @@ export function designClient(baseUrl?: string): Client<typeof DesignService> {
   return createClient(DesignService, newTransport(baseUrl));
 }
 
+// uploadsClient is the SnapshotService the library page sends file contents through (UploadBlobs,
+// agni issue 1719). It skips snapshot recovery, since an upload names no snapshot.
+export function uploadsClient(baseUrl = "/"): Client<typeof SnapshotService> {
+  return createClient(SnapshotService, newTransport(baseUrl, false));
+}
+
 // queryClient returns a typed client for QueryService (ad-hoc datalog queries over a design's
 // fact base, the same engine `agni query` runs; WS9-036, WS3-029).
 export function queryClient(baseUrl?: string): Client<typeof QueryService> {

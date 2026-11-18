@@ -83,7 +83,7 @@ beforeAll(async () => {
   // does not implement. Recording it is the assertion, since Open's only job is to hand off a URL.
   Object.defineProperty(window, "location", {
     configurable: true,
-    value: { ...window.location, pathname: "/designs/", assign: (u: string) => navigated.push(u) },
+    value: { ...window.location, pathname: "/files/", assign: (u: string) => navigated.push(u) },
   });
 
   document.body.innerHTML = pageBody();
@@ -123,7 +123,7 @@ describe("choose a design, see it, open it", () => {
   it("hands the design's work-page URL to a real navigation", async () => {
     (el("browse-open") as HTMLButtonElement).click();
     await vi.waitFor(() => expect(navigated).toHaveLength(1));
-    expect(navigated[0]).toBe("/designs/m/board.edn/view");
+    expect(navigated[0]).toBe("/files/m/board.edn/view");
   });
 
   // A folder is a place to look rather than a thing to open, so choosing one re-addresses the URL
@@ -132,6 +132,6 @@ describe("choose a design, see it, open it", () => {
     buttonFor("m")!.click();
     await vi.waitFor(() => expect(el("browse-preview").style.display).toBe("none"));
     expect((el("browse-open") as HTMLButtonElement).disabled).toBe(true);
-    expect(window.history.state === null || window.location.pathname.startsWith("/designs/")).toBe(true);
+    expect(window.history.state === null || window.location.pathname.startsWith("/files/")).toBe(true);
   });
 });

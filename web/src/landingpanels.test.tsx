@@ -43,9 +43,9 @@ beforeEach(() => {
 
 describe("openUrl", () => {
   // Each half goes through its own page's URL builder, so these assertions are what pins the two
-  // spaces apart. A datasheet routed into the /designs/ space would open a page that cannot show it.
+  // spaces apart. A datasheet routed into the /files/ space would open a page that cannot show it.
   it("routes a design to the viewer and a datasheet to the workbench", () => {
-    expect(openUrl("design", "m", "boards/a.edn")).toBe("/designs/m/boards/a.edn/view");
+    expect(openUrl("design", "m", "boards/a.edn")).toBe("/files/m/boards/a.edn/view");
     expect(openUrl("datasheet", "m", "vendor/x.pdf", "http://ds:8090")).toBe("http://ds:8090/datasheets/files/m/vendor/x.pdf");
   });
 });
@@ -75,7 +75,7 @@ describe("recents island", () => {
 
     const el = mount((e) => recentsIsland(e, null, 2000, "http://ds:8090"));
     await settle();
-    expect(links(el)).toEqual(["http://ds:8090/datasheets/files/ds/vendor/x.pdf", "/designs/m/boards/a.edn/view"]);
+    expect(links(el)).toEqual(["http://ds:8090/datasheets/files/ds/vendor/x.pdf", "/files/m/boards/a.edn/view"]);
     expect(rows(el)[0]).toContain("x.pdf");
     expect(rows(el)[0]).toContain("just now");
   });
@@ -88,7 +88,7 @@ describe("recents island", () => {
 
     const el = mount((e) => recentsIsland(e, null, 2000));
     await settle();
-    expect(links(el)).toEqual(["/designs/m/boards/a.edn/view"]);
+    expect(links(el)).toEqual(["/files/m/boards/a.edn/view"]);
   });
 
   it("clears the list from the page", async () => {
@@ -114,7 +114,7 @@ describe("projects island", () => {
     const el = mount((e) => projectsIsland(e, null));
     await vi.waitFor(() => expect(rows(el)).toHaveLength(1));
     expect(el.textContent).toContain("Sample Board project");
-    expect(links(el)).toEqual(["/designs/m/gateway/gw.edn/view"]);
+    expect(links(el)).toEqual(["/files/m/gateway/gw.edn/view"]);
   });
 
   // A deployment with no descriptors is the ordinary case (project.proto says so), and so is a

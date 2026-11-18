@@ -64,7 +64,7 @@ async function openBoardView(page: Page): Promise<string> {
 describe("a WebGL view draws only when it changes", () => {
   it("leaves the board alone while the reader pans the schematic, and draws it when the board moves", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/designs/tut/designs/gateway/view?mode=webgl`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/files/tut/designs/gateway/view?mode=webgl`, { waitUntil: "networkidle" });
       await page.waitForFunction((s) => Number((document.querySelector(s) as HTMLElement | null)?.dataset.draws ?? "0") > 0, CANVAS, { timeout: 30_000 });
       await page.waitForFunction(() => !document.getElementById("render-busy")?.dataset.busy, null, { timeout: 60_000 });
       const board = await openBoardView(page);
@@ -89,7 +89,7 @@ describe("a WebGL view draws only when it changes", () => {
 
   it("still draws a locked view when its peer moves the camera", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/designs/tut/designs/gateway/view?mode=webgl`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/files/tut/designs/gateway/view?mode=webgl`, { waitUntil: "networkidle" });
       await page.waitForFunction((s) => Number((document.querySelector(s) as HTMLElement | null)?.dataset.draws ?? "0") > 0, CANVAS, { timeout: 30_000 });
       await page.waitForFunction(() => !document.getElementById("render-busy")?.dataset.busy, null, { timeout: 60_000 });
       const first = await openBoardView(page);

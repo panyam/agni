@@ -49,7 +49,7 @@ func TestAQueryLinksBackIntoTheViewer(t *testing.T) {
 	q := `component.net(?r, ?n), ?n = ?net => ?r`
 	_, stderr := runQueryBoth(t, "mount://demo/showcase.fires.kicad_sch", q, "--bind", "net=GND", "--title", "On ground", "--server", urlBaseFlag)
 	u := linkIn(t, stderr, "look at it: ")
-	if u.Path != "/designs/demo/showcase.fires.kicad_sch/view" {
+	if u.Path != "/files/demo/showcase.fires.kicad_sch/view" {
 		t.Errorf("link path %q, want the design's view", u.Path)
 	}
 	v := u.Query()
@@ -132,7 +132,7 @@ func TestSelfMintsTheLinkItServes(t *testing.T) {
 	q := queryLinker(cmd, spec, design)(func(meta rpt.Report) string { return rpt.QueryURL(meta, "component.net(?r, ?n) => ?r", "", nil) })
 	tr := traceLink(cmd, spec, design, "J1.1", "U1.1", 6)
 	for name, u := range map[string]string{"query": q, "trace": tr} {
-		if !strings.HasPrefix(u, spec.base()+"/designs/demo/showcase.fires.kicad_sch/view?") {
+		if !strings.HasPrefix(u, spec.base()+"/files/demo/showcase.fires.kicad_sch/view?") {
 			t.Errorf("%s under --server self minted %q, want a link on %s", name, u, spec.base())
 		}
 	}

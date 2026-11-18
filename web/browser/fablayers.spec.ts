@@ -34,7 +34,7 @@ describe("a board's fab layers", () => {
   for (const mode of ["svg", "webgl"] as const) {
     it(`start hidden and show with the all preset (${mode})`, async () => {
       await withPage(browser, async (page) => {
-        await page.goto(`${base()}/designs/probe/designs/jetson-cut/view?mode=${mode}&sheet=board`, { waitUntil: "networkidle" });
+        await page.goto(`${base()}/files/probe/designs/jetson-cut/view?mode=${mode}&sheet=board`, { waitUntil: "networkidle" });
         await page.waitForFunction(() => performance.getEntriesByName("agni:sheet-drawn").length > 0, null, { timeout: 60_000 });
         await page.waitForFunction(() => !document.getElementById("render-busy")?.dataset.busy, null, { timeout: 60_000 });
         const fab = page.locator('.board-layer-row input[aria-label="F.Fab"]').first();

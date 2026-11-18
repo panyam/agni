@@ -45,7 +45,7 @@ func freshWorkspace(t *testing.T) {
 }
 
 // mountedShowcase runs the showcase board through a named mount. A link needs one, because the
-// viewer's path is /designs/<mount>/<path>/view and a CLI reading a loose file has no mount to put
+// viewer's path is /files/<mount>/<path>/view and a CLI reading a loose file has no mount to put
 // there.
 func mountedShowcase(t *testing.T, args ...string) string {
 	t.Helper()
@@ -62,7 +62,7 @@ func TestVerdictRowsCarryAProofURL(t *testing.T) {
 		{"text", mountedShowcase(t)},
 		{"csv", mountedShowcase(t, "--format", "csv")},
 	} {
-		if !strings.Contains(tc.out, urlBaseFlag+"/designs/demo/showcase.fires.kicad_sch/view?verdict=") {
+		if !strings.Contains(tc.out, urlBaseFlag+"/files/demo/showcase.fires.kicad_sch/view?verdict=") {
 			t.Errorf("%s: no verdict link in:\n%s", tc.name, tc.out)
 		}
 		// The link also carries the hash, so a stale link can be told apart from a live one. The id
@@ -109,7 +109,7 @@ func TestNoURLBaseMeansNoLinks(t *testing.T) {
 // report's. Two spellings of the link can drift apart through that split.
 func TestEveryFormatComposesTheSameLink(t *testing.T) {
 	text, csv, html := mountedShowcase(t), mountedShowcase(t, "--format", "csv"), mountedShowcase(t, "--format", "html")
-	const want = urlBaseFlag + "/designs/demo/showcase.fires.kicad_sch/view?verdict=esd-protection%3A%28net%3A%2FUSB_D%2B%29"
+	const want = urlBaseFlag + "/files/demo/showcase.fires.kicad_sch/view?verdict=esd-protection%3A%28net%3A%2FUSB_D%2B%29"
 	for name, out := range map[string]string{"text": text, "csv": csv, "html": html} {
 		if !strings.Contains(out, want) {
 			t.Errorf("%s does not carry the shared link form %q", name, want)
@@ -124,7 +124,7 @@ func TestAPlainPathThroughADeclaredMountIsLinkable(t *testing.T) {
 	withMount(t)
 	plain := runCheck(t, "--verdicts", "--format", "csv", "--server", urlBaseFlag,
 		"testdata/conformance/showcase.fires.kicad_sch")
-	if !strings.Contains(plain, urlBaseFlag+"/designs/demo/showcase.fires.kicad_sch/view?verdict=") {
+	if !strings.Contains(plain, urlBaseFlag+"/files/demo/showcase.fires.kicad_sch/view?verdict=") {
 		t.Fatalf("a plain path under a declared mount must be linkable:\n%s", plain)
 	}
 
@@ -295,7 +295,7 @@ func withDeclaredMount(t *testing.T, dir string) {
 // come from the caller's argument while its hash came from the resolved entry, and the difference
 // has no symptom until the argument is not the entry (agni issue 489).
 //
-// A design FOLDER produced /designs/<mount>/<dir>/view, which the viewer's URL space reads as the
+// A design FOLDER produced /files/<mount>/<dir>/view, which the viewer's URL space reads as the
 // FILE at <dir>. GetSummary refuses it and the page loads nothing, on the form the tutorial teaches.
 // A declared COMPANION produced its own path carrying the entry's hash, so the viewer compared two
 // different files and drew the stale-link banner over a design that was in sync.

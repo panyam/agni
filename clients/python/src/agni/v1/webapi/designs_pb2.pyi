@@ -140,3 +140,19 @@ class DeleteArtifactRequest(_message.Message):
     NAME_FIELD_NUMBER: _ClassVar[int]
     name: str
     def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class ImportDesignFilesRequest(_message.Message):
+    __slots__ = ("parent", "files")
+    PARENT_FIELD_NUMBER: _ClassVar[int]
+    FILES_FIELD_NUMBER: _ClassVar[int]
+    parent: str
+    files: _containers.RepeatedCompositeFieldContainer[_snapshot_pb2.SnapshotFile]
+    def __init__(self, parent: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ...) -> None: ...
+
+class ImportDesignFilesResponse(_message.Message):
+    __slots__ = ("artifacts", "unread")
+    ARTIFACTS_FIELD_NUMBER: _ClassVar[int]
+    UNREAD_FIELD_NUMBER: _ClassVar[int]
+    artifacts: _containers.RepeatedCompositeFieldContainer[Artifact]
+    unread: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, artifacts: _Optional[_Iterable[_Union[Artifact, _Mapping]]] = ..., unread: _Optional[_Iterable[str]] = ...) -> None: ...

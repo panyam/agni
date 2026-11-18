@@ -82,14 +82,15 @@ service owns which RPC.
 
 ## The pages
 
-There are five server-rendered shells, each with its own bundle, so a page downloads what it uses and no more.
+There are six server-rendered shells, each with its own bundle, so a page downloads what it uses and no more.
 
 | URL | Page | Bundle | What it is |
 |---|---|---|---|
 | `/` | `LandingPage` | `landing.js` | Where am I going: the destinations, this browser's recents, and the designs the server's projects declare. Also the catch-all, so an unmatched URL offers choices instead of 404ing |
-| `/designs/<mount>/<dir>/` | `BrowsePage` | `browse.js` | The design tree plus a read-only first-sheet preview |
-| `/designs/<mount>/<path>/view` | `ViewerPage` | `app.js` | The work page: the canvas in SVG or WebGL, sheet views, checks, query, diff |
-| `/designs/<mount>/<path>/load`, `/designs/local/load/` | `LoadPage` | `load.js` | Reads a design into the engine's store before the viewer opens it, step by step, then opens the viewer at the same address (agni issue 1072). With no design, the browser mount's page takes dropped files and lists the kept drops |
+| `/files/<mount>/<dir>/` | `BrowsePage` | `browse.js` | The design tree plus a read-only first-sheet preview |
+| `/files/<mount>/<path>/view` | `ViewerPage` | `app.js` | The work page: the canvas in SVG or WebGL, sheet views, checks, query, diff |
+| `/files/<mount>/<path>/load`, `/files/local/load/` | `LoadPage` | `load.js` | Reads a design into the engine's store before the viewer opens it, step by step, then opens the viewer at the same address (agni issue 1072). With no design, the browser mount's page takes dropped files and lists the kept drops |
+| `/designs/`, `/designs/<id>` | `LibraryPage` | `library.js` | Every design the server holds, stored and mounted (agni issue 1719): the list by series with each series' latest marked and a form that makes a design from a dropped folder, or one design's artifacts, each replaced or deleted there. The server groups a dropped folder into artifacts (`ImportDesignFiles`). A longer `/designs/...` path is a link from before the folder browser moved, and redirects to `/files/...` |
 
 `agnids` serves the extraction workbench, rather than `agni serve` (agni issue 744). The workbench
 is `DatasheetsPage` at `/datasheets/files/<mount>/<path>`, with its own bundle `datasheets.js`. It
@@ -99,7 +100,7 @@ TS modules in `web-shared/` (URIs, recents, pan and zoom maths, the workbench's 
 pruned-mount note), and the landing page links the workbench only when `agni serve --datasheets-url`
 names where it runs.
 
-The `/designs/` space holds three pages behind one pattern, split by the trailing `/view` or `/load`,
+The `/files/` space holds three pages behind one pattern, split by the trailing `/view` or `/load`,
 because a `ServeMux` pattern's `{path...}` wildcard must be its last segment. The viewer opens a
 design only if the Load page recorded reading it on this engine and build. It sends any other design
 to its `/load` with the query whole (`web/src/admit.ts`), so every link into the viewer still reaches
@@ -199,9 +200,9 @@ choice.
   `core/review/testdata/tally_twin.json`, and check their implementation against it. The two must
   agree on `covered`. A client that bucketed a verdict differently would report a checklist as
   answered when nobody had answered it.
-- **URLs are deep-linkable.** The viewer's path is `/designs/<mount>/<path>/view`, with query
+- **URLs are deep-linkable.** The viewer's path is `/files/<mount>/<path>/view`, with query
   parameters for the sheet, the render mode, the layout, and symbol paths. A directory opens the
-  browse page at `/designs/<mount>/<dir>/`. The presenter reports location changes and the composition root reflects them
+  browse page at `/files/<mount>/<dir>/`. The presenter reports location changes and the composition root reflects them
   into the browser URL.
 - **The composition root is tested, because testing everything else hid its bugs.** Every other
   web test constructs its subject with collaborators supplied. Nothing constructs `main.ts`. It

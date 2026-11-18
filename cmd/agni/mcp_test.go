@@ -230,7 +230,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 				t.Fatal(err)
 			}
 			sameTables(t, "query", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Query{Query: resp.Msg}}))
-			if !strings.Contains(a.Link, "/designs/tut/designs/gateway/gateway.edn/view?") || !strings.Contains(a.Link, "query=") {
+			if !strings.Contains(a.Link, "/files/tut/designs/gateway/gateway.edn/view?") || !strings.Contains(a.Link, "query=") {
 				t.Errorf("the link opens %q, want the design's entry with the query", a.Link)
 			}
 			appliesLink(t, "query", a.Page, a.Link)
@@ -433,7 +433,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 			}
 			sameTables(t, "diff", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Diff{Diff: resp.Msg}}))
 			// One link opens the earlier revision comparing against the later (agni issue 1126).
-			want := s.url + "/designs/" + a1 + "/view?against=" + url.QueryEscape(b1)
+			want := s.url + "/files/" + a1 + "/view?against=" + url.QueryEscape(b1)
 			if a.Link != want || a.NoLink != "" || !strings.Contains(res.Content[0].Text, "open in the viewer: "+want+"\n") {
 				t.Errorf("diff link %q (no_link %q), want %q; text:\n%s", a.Link, a.NoLink, want, res.Content[0].Text)
 			}

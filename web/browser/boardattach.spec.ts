@@ -28,7 +28,7 @@ const JOB = "common/odb/gateway-layout";
 const BOARD = `${JOB}/matrix/matrix`;
 
 async function open(page: Page, query = ""): Promise<void> {
-  await page.goto(`${base()}/designs/${DESIGN}/view${query}`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/files/${DESIGN}/view${query}`, { waitUntil: "networkidle" });
   await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
 }
 
@@ -89,7 +89,7 @@ describe("saving an attached board to the design's design.yaml", () => {
 
   it("writes a dropped design's descriptor, and the design then reads the board with no ?board=", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/files/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
       await page.setInputFiles("#drop-folder-input", odbFolder);
       const dialog = page.locator("#drop-dialog");
@@ -97,10 +97,10 @@ describe("saving an attached board to the design's design.yaml", () => {
       await dialog.locator(".drop-design", { has: page.locator(".drop-design-name", { hasText: /^gateway\s+\(/ }) }).locator(".drop-design-open").click();
       await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
       const viewer = new URL(page.url());
-      expect(viewer.pathname).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/odb\/gateway\.edn\/view/);
+      expect(viewer.pathname).toMatch(/\/files\/local\/drop-[a-z0-9]+\/odb\/gateway\.edn\/view/);
       expect(await tiles(page)).not.toContain("Board");
 
-      const folder = viewer.pathname.replace(/^.*\/designs\/(local\/drop-[a-z0-9]+\/odb)\/gateway\.edn\/view$/, "$1");
+      const folder = viewer.pathname.replace(/^.*\/files\/(local\/drop-[a-z0-9]+\/odb)\/gateway\.edn\/view$/, "$1");
       await page.goto(`${viewer.origin}${viewer.pathname}?engine=wasm&board=${folder}/gateway-layout/matrix/matrix`, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => [...document.querySelectorAll(".sheet-tile-name")].some((n) => n.textContent?.trim() === "Board"), null, { timeout: 60_000 });
       await showPanel(page, "overview");

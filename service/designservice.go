@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 
 	"strings"
 
@@ -198,6 +199,59 @@ func (s *DesignService) BatchUpdateArtifacts(ctx context.Context, req *webapi.Ba
 		return nil, err
 	}
 	return &webapi.BatchUpdateArtifactsResponse{Artifacts: out}, nil
+}
+
+// ImportDesignFiles groups a folder's files into artifacts with PlanArtifacts and writes them all in
+// one write, creating or replacing each.
+func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.ImportDesignFilesRequest) (*webapi.ImportDesignFilesResponse, error) {
+	if _, ok := StandaloneDesignID(req.GetParent()); !ok {
+		return nil, fmt.Errorf("%w: %q is not a design resource name, designs/{design}", ErrInvalidArgument, req.GetParent())
+	}
+	if len(req.GetFiles()) == 0 {
+		return nil, fmt.Errorf("%w: the import holds no files", ErrInvalidArgument)
+	}
+	byPath := map[string]*webapi.SnapshotFile{}
+	var paths, missing []string
+	for _, f := range req.GetFiles() {
+		if _, dup := byPath[f.GetPath()]; dup {
+			return nil, fmt.Errorf("%w: %q is listed twice", ErrInvalidArgument, f.GetPath())
+		}
+		byPath[f.GetPath()] = f
+		paths = append(paths, f.GetPath())
+		if _, ok := s.blobs(ctx, f.GetSha256()); !ok {
+			missing = append(missing, f.GetSha256())
+		}
+	}
+	if len(missing) > 0 {
+		slices.Sort(missing)
+		return nil, &BlobsMissingError{Hashes: slices.Compact(missing)}
+	}
+	plan, err := PlanArtifacts(paths, func(p string) ([]byte, error) {
+		f, ok := byPath[p]
+		if !ok {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, p)
+		}
+		b, _ := s.blobs(ctx, f.GetSha256())
+		return b, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	id, _ := StandaloneDesignID(req.GetParent())
+	var writes []ArtifactWrite
+	for _, a := range plan.IDs {
+		w := ArtifactWrite{ID: a, AllowMissing: true}
+		for _, pf := range plan.Files[a] {
+			f := byPath[pf.Folder]
+			w.Files = append(w.Files, &webapi.SnapshotFile{Path: pf.Rel, Sha256: f.GetSha256(), Size: f.GetSize()})
+		}
+		writes = append(writes, w)
+	}
+	arts, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(id), writes, s.blobs)
+	if err != nil {
+		return nil, err
+	}
+	return &webapi.ImportDesignFilesResponse{Artifacts: arts, Unread: plan.Unread}, nil
 }
 
 // DeleteArtifact removes one artifact of a stored design.

@@ -24,7 +24,7 @@ afterAll(async () => {
 });
 
 async function openCut(page: Page): Promise<void> {
-  await page.goto(`${base()}/designs/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/files/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
   await page.waitForSelector(`${SHEET} svg`, { timeout: 60_000 });
 }
 

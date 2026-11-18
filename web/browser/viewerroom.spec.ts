@@ -114,7 +114,7 @@ const text = (r: CallResult): string => (r.content ?? []).map((c) => c.text ?? "
 
 async function openTab(design: string, agents: boolean): Promise<Page> {
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
-  await page.goto(`${server.base}/designs/${design}/view?devpage`);
+  await page.goto(`${server.base}/files/${design}/view?devpage`);
   await page.locator(".sheet-tile-name").first().waitFor({ state: "attached", timeout: 60_000 });
   // The switch shows once the tab is in its design's room.
   const box = page.locator("#agents-switch input[type=checkbox]");

@@ -22,7 +22,7 @@ describe("a located subject", () => {
       const context = await browser.newContext({ viewport: { width: 1400, height: 1000 }, reducedMotion: motion });
       const page = await context.newPage();
       try {
-        await page.goto(`${base()}/designs/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
+        await page.goto(`${base()}/files/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
         await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
         await page.keyboard.press("Control+f");
         await page.keyboard.type("TP76");

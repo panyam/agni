@@ -450,7 +450,7 @@ prefixes a repeated page id with its owning cell view and a repeated name with t
 where two sheets share a name (`Power/1`, `IO/1`) and nests each sheet under its `parent_id`, as the
 file tree does through the shared `sheetForest` (agni issue 1141).
 `readers/kicad/testdata/hier_numeric_root.kicad_sch` is the public fixture for that shape. `make
-serve` mounts it as `kicad`, so it opens at `/designs/kicad/hier_numeric_root.kicad_sch/view`
+serve` mounts it as `kicad`, so it opens at `/files/kicad/hier_numeric_root.kicad_sch/view`
 (agni issue 1143).
 
 `severitySections` is the deliberate exception. It is the parity oracle for the server report

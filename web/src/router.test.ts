@@ -8,13 +8,13 @@ function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
 }
 
 describe("router", () => {
-  it("builds a resourceful /designs/ URL with the sheet and knobs in the query", () => {
+  it("builds a resourceful /files/ URL with the sheet and knobs in the query", () => {
     const url = locationToUrl(loc({ mount: "corpus", path: "boards/board.eds", sheet: "root", mode: "svg", layout: "grid", symbols: true }));
-    expect(url).toBe("/designs/corpus/boards/board.eds/view?sheet=root&mode=svg&layout=grid&sym=1");
+    expect(url).toBe("/files/corpus/boards/board.eds/view?sheet=root&mode=svg&layout=grid&sym=1");
   });
 
   it("omits absent knobs and keeps the nested path", () => {
-    expect(locationToUrl(loc({ mount: "m", path: "a/b/c.kicad_sch" }))).toBe("/designs/m/a/b/c.kicad_sch/view");
+    expect(locationToUrl(loc({ mount: "m", path: "a/b/c.kicad_sch" }))).toBe("/files/m/a/b/c.kicad_sch/view");
   });
 
   it("collapses to / when no file is open", () => {
@@ -31,7 +31,7 @@ describe("router", () => {
 
   it("carries the rule alongside the verdict it qualifies", () => {
     const url = locationToUrl(loc({ mount: "m", path: "b.edn", verdict: "i2c-pull-up:net:SDA", rule: "i2c-pull-up" }));
-    expect(url).toBe("/designs/m/b.edn/view?verdict=i2c-pull-up%3Anet%3ASDA&rule=i2c-pull-up");
+    expect(url).toBe("/files/m/b.edn/view?verdict=i2c-pull-up%3Anet%3ASDA&rule=i2c-pull-up");
   });
 
   it("drops a rule with no verdict to qualify", () => {
@@ -40,25 +40,25 @@ describe("router", () => {
   });
 
   it("reads the rule back out of the query", () => {
-    const parsed = parseUrl("/designs/m/b.edn/view", "?verdict=i2c-pull-up%3Anet%3ASDA&rule=i2c-pull-up");
+    const parsed = parseUrl("/files/m/b.edn/view", "?verdict=i2c-pull-up%3Anet%3ASDA&rule=i2c-pull-up");
     expect(parsed.rule).toBe("i2c-pull-up");
   });
 
   it("reads a rule-less link as one that names no rule", () => {
-    const parsed = parseUrl("/designs/m/b.edn/view", "?verdict=i2c-pull-up%3Anet%3ASDA");
+    const parsed = parseUrl("/files/m/b.edn/view", "?verdict=i2c-pull-up%3Anet%3ASDA");
     expect(parsed.rule).toBe("");
   });
 
   it("carries the link's revision hash alongside the verdict it qualifies", () => {
     const url = locationToUrl(loc({ mount: "m", path: "b.edn", verdict: "i2c-pull-up:net:SDA", hash: "sha256:abc" }));
-    expect(url).toBe("/designs/m/b.edn/view?verdict=i2c-pull-up%3Anet%3ASDA&hash=sha256%3Aabc");
+    expect(url).toBe("/files/m/b.edn/view?verdict=i2c-pull-up%3Anet%3ASDA&hash=sha256%3Aabc");
   });
 
   // The hash is provenance FOR a verdict, so it must not outlive one in the address bar. Every path
   // that replaces the highlight drops the verdict, and a hash left behind would keep asserting a
   // revision that nothing on screen still depends on.
   it("drops the hash when no verdict is focused", () => {
-    expect(locationToUrl(loc({ mount: "m", path: "b.edn", hash: "sha256:abc" }))).toBe("/designs/m/b.edn/view");
+    expect(locationToUrl(loc({ mount: "m", path: "b.edn", hash: "sha256:abc" }))).toBe("/files/m/b.edn/view");
   });
 
   it("round-trips a verdict link with its hash", () => {
@@ -69,7 +69,7 @@ describe("router", () => {
   });
 
   it("splits mount from the rest of the path and decodes segments", () => {
-    const parsed = parseUrl("/designs/my%20mount/deep/dir/board.eds/view", "");
+    const parsed = parseUrl("/files/my%20mount/deep/dir/board.eds/view", "");
     expect(parsed.mount).toBe("my mount");
     expect(parsed.path).toBe("deep/dir/board.eds");
   });
@@ -84,54 +84,54 @@ describe("router", () => {
   });
 
   it("needs both a mount and a path segment, else empty", () => {
-    expect(hasFile(parseUrl("/designs/onlymount/view", ""))).toBe(false);
-    expect(hasFile(parseUrl("/designs/m/board.eds/view", ""))).toBe(true);
+    expect(hasFile(parseUrl("/files/onlymount/view", ""))).toBe(false);
+    expect(hasFile(parseUrl("/files/m/board.eds/view", ""))).toBe(true);
   });
 
   it("needs the trailing /view to address a design", () => {
-    expect(hasFile(parseUrl("/designs/m/board.eds", ""))).toBe(false);
-    expect(parseUrl("/designs/m/board.eds", "")).toEqual(emptyLocation());
+    expect(hasFile(parseUrl("/files/m/board.eds", ""))).toBe(false);
+    expect(parseUrl("/files/m/board.eds", "")).toEqual(emptyLocation());
   });
 
   it("rejects a garbage ?mode= rather than passing it through", () => {
-    expect(parseUrl("/designs/m/board.eds/view", "?mode=bogus").mode).toBe("");
-    expect(parseUrl("/designs/m/board.eds/view", "?mode=webgl").mode).toBe("webgl");
+    expect(parseUrl("/files/m/board.eds/view", "?mode=bogus").mode).toBe("");
+    expect(parseUrl("/files/m/board.eds/view", "?mode=webgl").mode).toBe("webgl");
   });
 
   it("reads sym only when it is exactly 1", () => {
-    expect(parseUrl("/designs/m/b.eds/view", "?sym=1").symbols).toBe(true);
-    expect(parseUrl("/designs/m/b.eds/view", "?sym=0").symbols).toBe(false);
-    expect(parseUrl("/designs/m/b.eds/view", "").symbols).toBe(false);
+    expect(parseUrl("/files/m/b.eds/view", "?sym=1").symbols).toBe(true);
+    expect(parseUrl("/files/m/b.eds/view", "?sym=0").symbols).toBe(false);
+    expect(parseUrl("/files/m/b.eds/view", "").symbols).toBe(false);
   });
 
   it("carries flatten through every address the viewer writes (agni issue 1102)", () => {
     const url = locationToUrl(loc({ mount: "m", path: "b.edn", sheet: "root", flatten: true }));
-    expect(url).toBe("/designs/m/b.edn/view?sheet=root&flatten=1");
-    expect(parseUrl("/designs/m/b.edn/view", "?sheet=root&flatten=1").flatten).toBe(true);
-    expect(parseUrl("/designs/m/b.edn/view", "?flatten=0").flatten).toBe(false);
-    expect(parseUrl("/designs/m/b.edn/view", "").flatten).toBe(false);
+    expect(url).toBe("/files/m/b.edn/view?sheet=root&flatten=1");
+    expect(parseUrl("/files/m/b.edn/view", "?sheet=root&flatten=1").flatten).toBe(true);
+    expect(parseUrl("/files/m/b.edn/view", "?flatten=0").flatten).toBe(false);
+    expect(parseUrl("/files/m/b.edn/view", "").flatten).toBe(false);
     expect(pageFlattens("?flatten=1&timing=1")).toBe(true);
     expect(pageFlattens("?timing=1")).toBe(false);
-    expect(withFlatten("/designs/m/b.edn/view?sheet=root")).toBe("/designs/m/b.edn/view?sheet=root&flatten=1");
+    expect(withFlatten("/files/m/b.edn/view?sheet=root")).toBe("/files/m/b.edn/view?sheet=root&flatten=1");
   });
 
   it("carries an attached board through every address the viewer writes (agni issue 1367)", () => {
     const url = locationToUrl(loc({ mount: "m", path: "odb/gateway.edn", sheet: "graph", board: "m/odb/gateway-layout" }));
-    expect(url).toBe("/designs/m/odb/gateway.edn/view?sheet=graph&board=m%2Fodb%2Fgateway-layout");
-    expect(parseUrl("/designs/m/odb/gateway.edn/view", "?board=m%2Fodb%2Fgateway-layout").board).toBe("m/odb/gateway-layout");
-    expect(parseUrl("/designs/m/odb/gateway.edn/view", "").board).toBe("");
+    expect(url).toBe("/files/m/odb/gateway.edn/view?sheet=graph&board=m%2Fodb%2Fgateway-layout");
+    expect(parseUrl("/files/m/odb/gateway.edn/view", "?board=m%2Fodb%2Fgateway-layout").board).toBe("m/odb/gateway-layout");
+    expect(parseUrl("/files/m/odb/gateway.edn/view", "").board).toBe("");
     expect(pageBoard("?board=m%2Fodb%2Fgateway-layout&timing=1")).toBe("mount://m/odb/gateway-layout");
     expect(pageBoard("?timing=1")).toBe("");
-    expect(withBoard("/designs/m/x.edn/view?sheet=graph", "m/b.kicad_pcb")).toBe("/designs/m/x.edn/view?sheet=graph&board=m%2Fb.kicad_pcb");
-    expect(withBoard("/designs/m/x.edn/view?sheet=graph&board=m%2Fb.kicad_pcb", "")).toBe("/designs/m/x.edn/view?sheet=graph");
+    expect(withBoard("/files/m/x.edn/view?sheet=graph", "m/b.kicad_pcb")).toBe("/files/m/x.edn/view?sheet=graph&board=m%2Fb.kicad_pcb");
+    expect(withBoard("/files/m/x.edn/view?sheet=graph&board=m%2Fb.kicad_pcb", "")).toBe("/files/m/x.edn/view?sheet=graph");
   });
 
   it("marks a folder with a trailing slash and carries no view knobs", () => {
-    expect(locationToUrl(loc({ mount: "corpus", path: "boards/rev2", isDir: true, sheet: "root", mode: "svg" }))).toBe("/designs/corpus/boards/rev2/");
+    expect(locationToUrl(loc({ mount: "corpus", path: "boards/rev2", isDir: true, sheet: "root", mode: "svg" }))).toBe("/files/corpus/boards/rev2/");
   });
 
-  it("addresses a mount root as /designs/<mount>/", () => {
-    expect(locationToUrl(loc({ mount: "corpus", isDir: true }))).toBe("/designs/corpus/");
+  it("addresses a mount root as /files/<mount>/", () => {
+    expect(locationToUrl(loc({ mount: "corpus", isDir: true }))).toBe("/files/corpus/");
   });
 
   it("round-trips a folder through build then parse", () => {
@@ -145,20 +145,20 @@ describe("router", () => {
   });
 
   it("classifies folder vs design by the trailing slash and /view", () => {
-    expect(hasDir(parseUrl("/designs/corpus/boards/", ""))).toBe(true);
-    expect(hasFile(parseUrl("/designs/corpus/boards/", ""))).toBe(false);
-    expect(hasDir(parseUrl("/designs/corpus/boards/b.eds/view", ""))).toBe(false);
-    expect(hasFile(parseUrl("/designs/corpus/boards/b.eds/view", ""))).toBe(true);
+    expect(hasDir(parseUrl("/files/corpus/boards/", ""))).toBe(true);
+    expect(hasFile(parseUrl("/files/corpus/boards/", ""))).toBe(false);
+    expect(hasDir(parseUrl("/files/corpus/boards/b.eds/view", ""))).toBe(false);
+    expect(hasFile(parseUrl("/files/corpus/boards/b.eds/view", ""))).toBe(true);
   });
 
   it("addresses a folder literally named view, not the design under it", () => {
     // The two markers cannot collide: /view ends a design, a trailing slash ends a folder.
-    expect(hasDir(parseUrl("/designs/corpus/view/", ""))).toBe(true);
-    expect(parseUrl("/designs/corpus/view/", "").path).toBe("view");
+    expect(hasDir(parseUrl("/files/corpus/view/", ""))).toBe(true);
+    expect(parseUrl("/files/corpus/view/", "").path).toBe("view");
   });
 
   it("drops a folder query string (folders pin no sheet or knobs)", () => {
-    const parsed = parseUrl("/designs/corpus/boards/", "?sheet=root&mode=svg");
+    const parsed = parseUrl("/files/corpus/boards/", "?sheet=root&mode=svg");
     expect(parsed.sheet).toBe("");
     expect(parsed.mode).toBe("");
   });
@@ -192,7 +192,7 @@ describe("a trace in the URL", () => {
   // clamping would ask a question nobody wrote.
   it("ignores a radius that is not a positive integer", () => {
     for (const bad of ["0", "-2", "2.5", "lots", ""]) {
-      expect(parseUrl("/designs/m/b.edn/view", `?trace=U1.3,J1.1&hops=${bad}`).traceHops).toBe(0);
+      expect(parseUrl("/files/m/b.edn/view", `?trace=U1.3,J1.1&hops=${bad}`).traceHops).toBe(0);
     }
   });
 });
@@ -200,7 +200,7 @@ describe("a trace in the URL", () => {
 describe("a comparison in the URL (agni issue 1126)", () => {
   // core/report.DiffURL writes a link that escapes the slashes, and the router reads it back whole.
   it("reads the design to compare against from the link agni diff --server prints", () => {
-    const loc = parseUrl("/designs/tut/designs/gateway/gateway.edn/view", "?against=tut%2Fdesigns%2Fgateway%2Fgateway-rev-c.edn");
+    const loc = parseUrl("/files/tut/designs/gateway/gateway.edn/view", "?against=tut%2Fdesigns%2Fgateway%2Fgateway-rev-c.edn");
     expect(loc.path).toBe("designs/gateway/gateway.edn");
     expect(againstTarget(loc.against)).toEqual({ mount: "tut", path: "designs/gateway/gateway-rev-c.edn" });
   });
@@ -213,9 +213,9 @@ describe("a comparison in the URL (agni issue 1126)", () => {
   // A diff that paired near-renames (agni diff --rename-approx) says so, and the link carries it only
   // beside a design to compare against, since alone it asks nothing.
   it("reads rename_approx beside against, and drops it alone", () => {
-    expect(parseUrl("/designs/m/b.edn/view", "?against=m%2Fc.edn&rename_approx=1").renameApprox).toBe(true);
-    expect(parseUrl("/designs/m/b.edn/view", "?against=m%2Fc.edn").renameApprox).toBe(false);
-    expect(parseUrl("/designs/m/b.edn/view", "?rename_approx=1").renameApprox).toBe(false);
+    expect(parseUrl("/files/m/b.edn/view", "?against=m%2Fc.edn&rename_approx=1").renameApprox).toBe(true);
+    expect(parseUrl("/files/m/b.edn/view", "?against=m%2Fc.edn").renameApprox).toBe(false);
+    expect(parseUrl("/files/m/b.edn/view", "?rename_approx=1").renameApprox).toBe(false);
     const back = parseUrl(...splitHref(locationToUrl(loc({ mount: "m", path: "b.edn", against: "m/c.edn", renameApprox: true }))));
     expect(back.renameApprox).toBe(true);
     expect(locationToUrl(loc({ mount: "m", path: "b.edn", renameApprox: true }))).not.toContain("rename_approx");
@@ -237,13 +237,13 @@ describe("the router under a base path, on a static host (agni issue 856)", () =
     setBase("/agni/demo/");
     setStaticHost(true);
     try {
-      const loc = parseUrl("/agni/demo/designs/rb/board.kicad_sch/view/", "?sheet=root");
+      const loc = parseUrl("/agni/demo/files/rb/board.kicad_sch/view/", "?sheet=root");
       expect(hasFile(loc)).toBe(true);
       expect(loc.mount).toBe("rb");
       expect(loc.path).toBe("board.kicad_sch");
       expect(loc.sheet).toBe("root");
-      expect(locationToUrl(loc)).toBe("/agni/demo/designs/rb/board.kicad_sch/view?sheet=root");
-      expect(hasFile(parseUrl("/designs/rb/board.kicad_sch/view", ""))).toBe(false);
+      expect(locationToUrl(loc)).toBe("/agni/demo/files/rb/board.kicad_sch/view?sheet=root");
+      expect(hasFile(parseUrl("/files/rb/board.kicad_sch/view", ""))).toBe(false);
       expect(locationToUrl(parseUrl("/agni/demo/", ""))).toBe("/agni/demo/");
     } finally {
       setBase("/");
@@ -256,31 +256,31 @@ describe("the router under a base path, on a static host (agni issue 856)", () =
 // same query (agni issue 1072).
 describe("the Load page's address", () => {
   it("reads a /load address as the design it names, with its query", () => {
-    const l = parseUrl("/designs/m/boards/b.edn/load", "?verdict=v1&rule=r");
+    const l = parseUrl("/files/m/boards/b.edn/load", "?verdict=v1&rule=r");
     expect(hasFile(l)).toBe(true);
     expect([l.mount, l.path, l.verdict, l.rule]).toEqual(["m", "boards/b.edn", "v1", "r"]);
-    expect(locationToUrl(l, "load")).toBe("/designs/m/boards/b.edn/load?verdict=v1&rule=r");
-    expect(pageOf("/designs/m/boards/b.edn/load")).toBe("load");
-    expect(pageOf("/designs/m/boards/b.edn/view")).toBe("view");
-    expect(pageOf("/designs/m/boards/")).toBe("");
+    expect(locationToUrl(l, "load")).toBe("/files/m/boards/b.edn/load?verdict=v1&rule=r");
+    expect(pageOf("/files/m/boards/b.edn/load")).toBe("load");
+    expect(pageOf("/files/m/boards/b.edn/view")).toBe("view");
+    expect(pageOf("/files/m/boards/")).toBe("");
   });
 
   it("swaps between the two pages keeping the query whole", () => {
-    expect(swapPage("/designs/m/b.edn/view", "?timing=1&verdict=v", "load")).toBe("/designs/m/b.edn/load?timing=1&verdict=v");
-    expect(swapPage("/agni/demo/designs/m/b.edn/load/", "?sheet=s", "view")).toBe("/agni/demo/designs/m/b.edn/view/?sheet=s");
+    expect(swapPage("/files/m/b.edn/view", "?timing=1&verdict=v", "load")).toBe("/files/m/b.edn/load?timing=1&verdict=v");
+    expect(swapPage("/agni/demo/files/m/b.edn/load/", "?sheet=s", "view")).toBe("/agni/demo/files/m/b.edn/view/?sheet=s");
   });
 
   // A drop opened from a page asked with ?timing keeps it, so the Load page and the viewer report
   // their timings as a seed's do.
   it("carries ?timing onto the address a drop opens, and adds nothing without it", () => {
-    expect(keepTiming("/designs/local/drop-a/g/load?engine=wasm", "?engine=wasm&timing=1")).toBe("/designs/local/drop-a/g/load?engine=wasm&timing=1");
-    expect(keepTiming("/designs/local/load/?d=drop-a%2Fg", "?timing=memory")).toBe("/designs/local/load/?d=drop-a%2Fg&timing=memory");
-    expect(keepTiming("/designs/local/drop-a/g/load", "?engine=wasm")).toBe("/designs/local/drop-a/g/load");
+    expect(keepTiming("/files/local/drop-a/g/load?engine=wasm", "?engine=wasm&timing=1")).toBe("/files/local/drop-a/g/load?engine=wasm&timing=1");
+    expect(keepTiming("/files/local/load/?d=drop-a%2Fg", "?timing=memory")).toBe("/files/local/load/?d=drop-a%2Fg&timing=memory");
+    expect(keepTiming("/files/local/drop-a/g/load", "?engine=wasm")).toBe("/files/local/drop-a/g/load");
   });
 
   it("names the drop page with a trailing slash on every host", () => {
-    expect(dropPageUrl()).toBe("/designs/local/load/");
-    expect(hasFile(parseUrl("/designs/local/load/", ""))).toBe(false);
+    expect(dropPageUrl()).toBe("/files/local/load/");
+    expect(hasFile(parseUrl("/files/local/load/", ""))).toBe(false);
   });
 
   // A static host serves only the pages `agni site` wrote, so a dropped design's path goes in the
@@ -291,13 +291,13 @@ describe("the Load page's address", () => {
     try {
       const l = loc({ mount: "local", path: "drop-abc/gateway.zip", sheet: "s1" });
       const view = locationToUrl(l);
-      expect(view).toBe("/agni/demo/designs/local/view/?d=drop-abc%2Fgateway.zip&sheet=s1");
-      expect(locationToUrl(l, "load")).toBe("/agni/demo/designs/local/load/?d=drop-abc%2Fgateway.zip&sheet=s1");
+      expect(view).toBe("/agni/demo/files/local/view/?d=drop-abc%2Fgateway.zip&sheet=s1");
+      expect(locationToUrl(l, "load")).toBe("/agni/demo/files/local/load/?d=drop-abc%2Fgateway.zip&sheet=s1");
       const q = view.indexOf("?");
       expect(parseUrl(view.slice(0, q), view.slice(q))).toEqual(l);
-      expect(parseUrl("/agni/demo/designs/local/load/", "?d=drop-abc/gateway.zip").path).toBe("drop-abc/gateway.zip");
+      expect(parseUrl("/agni/demo/files/local/load/", "?d=drop-abc/gateway.zip").path).toBe("drop-abc/gateway.zip");
       // A served mount keeps its path in the address.
-      expect(locationToUrl(loc({ mount: "rb", path: "b.kicad_sch" }), "load")).toBe("/agni/demo/designs/rb/b.kicad_sch/load");
+      expect(locationToUrl(loc({ mount: "rb", path: "b.kicad_sch" }), "load")).toBe("/agni/demo/files/rb/b.kicad_sch/load");
     } finally {
       setBase("/");
       setStaticHost(false);
@@ -305,7 +305,7 @@ describe("the Load page's address", () => {
   });
 
   it("keeps a dropped design's path in the address on a server", () => {
-    expect(locationToUrl(loc({ mount: "local", path: "drop-abc/g.zip" }))).toBe("/designs/local/drop-abc/g.zip/view");
+    expect(locationToUrl(loc({ mount: "local", path: "drop-abc/g.zip" }))).toBe("/files/local/drop-abc/g.zip/view");
   });
 });
 
@@ -325,7 +325,7 @@ describe("query links", () => {
   it("round-trips a set member by name, and drops a set without its query", () => {
     const back = reparse(locationToUrl({ ...emptyLocation(), mount: "m", path: "b.edn", set: "power-review", q: "Rails" }));
     expect([back.set, back.q]).toEqual(["power-review", "Rails"]);
-    expect(parseUrl("/designs/m/b.edn/view", "?set=power-review").set).toBe("");
+    expect(parseUrl("/files/m/b.edn/view", "?set=power-review").set).toBe("");
   });
 
   it("reads bindings as --bind spells them, a quoted value as text without its quotes", () => {
@@ -366,12 +366,12 @@ describe("a verdict link's subjects", () => {
   it("carries the subjects with their verdict, and none without one", () => {
     const l = loc({ mount: "m", path: "b.edn", verdict: "v", rule: "r", subjects: ["net:SDA", "pin:U7.3"] });
     const url = locationToUrl(l);
-    expect(url).toBe("/designs/m/b.edn/view?verdict=v&rule=r&subject=net%3ASDA&subject=pin%3AU7.3");
+    expect(url).toBe("/files/m/b.edn/view?verdict=v&rule=r&subject=net%3ASDA&subject=pin%3AU7.3");
     const q = url.indexOf("?");
     expect(parseUrl(url.slice(0, q), url.slice(q)).subjects).toEqual(["net:SDA", "pin:U7.3"]);
     expect(locationToUrl(loc({ mount: "m", path: "b.edn", subjects: ["net:SDA"] }))).not.toContain("subject=");
-    expect(parseUrl("/designs/m/b.edn/view", "?subject=net:SDA").subjects).toEqual([]);
+    expect(parseUrl("/files/m/b.edn/view", "?subject=net:SDA").subjects).toEqual([]);
     // A spelling no scope covers is dropped rather than asked.
-    expect(parseUrl("/designs/m/b.edn/view", "?verdict=v&subject=bus:D&subject=net:SDA").subjects).toEqual(["net:SDA"]);
+    expect(parseUrl("/files/m/b.edn/view", "?verdict=v&subject=bus:D&subject=net:SDA").subjects).toEqual(["net:SDA"]);
   });
 });

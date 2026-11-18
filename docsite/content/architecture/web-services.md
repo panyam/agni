@@ -106,6 +106,7 @@ dropped files already reach it through its `local` mount.
 | Project | CreateProject, UpdateProject, DeleteProject | a stored project, a title and a list of designs; a mounted one is read-only (agni issue 1694) |
 | Design | CreateDesign, UpdateDesign, DeleteDesign | a stored design and its title and series; a mounted one is read-only (agni issue 1694) |
 | Design | GetArtifact, ListArtifacts, UpdateArtifact, BatchUpdateArtifacts, DeleteArtifact | a stored design's artifacts, each one source such as a schematic with its sheets or a board, sent as a manifest with contents through UploadBlobs and replaced whole (agni issue 1696) |
+| Design | ImportDesignFiles | a folder's files sent as one manifest, grouped by the server into artifacts the way ProposeDesigns groups a dropped folder, and written in one write; `agni designs push` and the library page both send it (agni issue 1719) |
 | Design | GetDesign, ListDesigns | a design's identity, `designs/{design}`, and which file around it is which; the list filters by series or project and marks each series' latest |
 | Project | ResolveDesign | whether a file belongs to a declared design, and which; resolving to nothing is a normal answer |
 
@@ -245,13 +246,13 @@ the same messages. The page's clients reach the worker through the `fetch` funct
 Connect transport, so no panel knows which host answered (agni issue 178).
 
 A design keeps one URL whichever engine reads it, because the two choices are separate (agni issue
-853). The MOUNT in `/designs/<mount>/<path>` says where the design's files live, and the ENGINE,
+853). The MOUNT in `/files/<mount>/<path>` says where the design's files live, and the ENGINE,
 `server` or `wasm`, says who analyses them. `agni serve --engine wasm` writes the engine into the
 viewer's shell, and a page's `?engine=` overrides it.
 
 ```
 make wasm serve EXTRA_MOUNTS="--mount tut=examples/tutorial-project"
-open http://localhost:8080/designs/tut/designs/gateway/view?engine=wasm
+open http://localhost:8080/files/tut/designs/gateway/view?engine=wasm
 ```
 
 An engine can only analyse files it can reach. On the `wasm` engine the page brings a design's
@@ -267,7 +268,7 @@ timeout of its own. Before this, seeds on the deployed demo timed out at 180 s o
 with nothing saying why. Under `?timing` the page logs each file as `agni fetch <file>` with its
 size, time and attempts.
 
-A visitor can drop files on the Load page's drop target (`/designs/local/load/`), or pick them with
+A visitor can drop files on the Load page's drop target (`/files/local/load/`), or pick them with
 its "Open files" and "Open folder" buttons. The files go into the browser mount `local` under a
 folder of their own and into the browser's IndexedDB, and nowhere else (agni issues 854 and 1072). A
 `.zip`, `.tar`, `.7z` or compressed tar among them reads as the folder it was made from. The page asks the worker for
@@ -381,7 +382,7 @@ the browser rather than from the contract.
   at 548 MB was replaced after every request, and each query fetched the design's files again and
   restored its board.
 - **A design is read on its Load page before the viewer opens it** (agni issue 1072). A design's
-  address has two pages, `/designs/<mount>/<path>/load` and `/view`, with the same query. The Load
+  address has two pages, `/files/<mount>/<path>/load` and `/view`, with the same query. The Load
   page asks `GetDesign`, which parses the drawing, and then sends an `Ingest` with `read_board`,
   which builds the same model as a `CheckDesign`, board included, and runs nothing. The page answers
   that `Ingest` on a third lane, `prepare`. The lane starts a worker for the request and ends it

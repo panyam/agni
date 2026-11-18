@@ -278,7 +278,7 @@ const findOnBoard: Step[] = [
   {
     caption: "Open the schematic",
     run: async (r, d) => {
-      await r.page.goto(`${r.base}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
+      await r.page.goto(`${r.base}/files/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
       await r.page.waitForSelector(`${SHEET} svg`, { timeout: 60_000 });
     },
   },
@@ -371,7 +371,7 @@ export const journeys: Journey[] = [
       {
         caption: (d) => `Open ${revision(d).from} of ${d.label}`,
         run: async (r, d) => {
-          await r.page.goto(`${r.base}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
+          await r.page.goto(`${r.base}/files/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
           await r.page.waitForSelector(`${SHEET} svg`, { timeout: 60_000 });
         },
       },
@@ -442,7 +442,7 @@ export const journeys: Journey[] = [
       {
         caption: "Open the schematic",
         run: async (r, d) => {
-          await r.page.goto(`${r.base}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
+          await r.page.goto(`${r.base}/files/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
           await r.page.waitForSelector(`${SHEET} svg`, { timeout: 60_000 });
         },
       },

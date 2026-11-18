@@ -347,7 +347,7 @@ for (const name of chosen) {
         // Two controls, which pass today. The design opens and lists both the part's sheet and its
         // board, and the board draws the part's footprint with its data-ref key.
         await step("open", {}, async () => {
-          await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?mode=svg`, { waitUntil: "networkidle" });
+          await page.goto(`${base()}/files/${walk.mount}/${walk.path}/view?mode=svg`, { waitUntil: "networkidle" });
           await page.waitForFunction(() => document.querySelectorAll("#svg-view svg *").length > 0, null, { timeout: 60_000 });
           for (const title of [`/${part.sheet}`, `/${footprint.sheet}`, "board"]) {
             await page.locator(`#sheet-overview .sheet-tile[title="${title}"]`).waitFor({ state: "attached", timeout: 30_000 });
@@ -772,7 +772,7 @@ for (const name of chosen) {
         // This one leaves the page, so it goes after the page error check, and a page error on the way
         // out does not fail it. The bookmark step moved to the markup walk (#1612).
         await step("open an ODB++ job packed in a .7z", {}, async () => {
-          await page.goto(`${base()}/designs/probe/designs/jetson-cut-odb/view?mode=svg`, { waitUntil: "networkidle" });
+          await page.goto(`${base()}/files/probe/designs/jetson-cut-odb/view?mode=svg`, { waitUntil: "networkidle" });
           // Earlier steps may have closed the Sheets panel, so the tile need only be in the page.
           await page.locator('#sheet-overview .sheet-tile[title="board"]').waitFor({ state: "attached", timeout: 30_000 });
           await page.locator('#svg-view svg [data-ref="C133"]').first().waitFor({ state: "attached", timeout: 30_000 });

@@ -5,7 +5,7 @@ This file covers the engine as it runs in the browser, and the traps in its work
 ## What it is
 
 - **The engine also runs in the browser.** `cmd/agni-wasm` runs on goapplib's `wasmhost`, and `internal/wasmengine` composes it over `fshost`. `fshost` implements the service ports over `fs.FS` mounts.
-- A design keeps one URL, `/designs/<mount>/<path>/view`. The ENGINE is a separate per-page choice, made by `agni serve --engine wasm`, a page's `?engine=`, or a static page.
+- A design keeps one URL, `/files/<mount>/<path>/view`. The ENGINE is a separate per-page choice, made by `agni serve --engine wasm`, a page's `?engine=`, or a static page.
 - On wasm the page lists a design's files (`ListDesignFiles`) and fetches them from `/raw/<mount>/<path>`.
 - The page sends a design over `--wasm-max-bytes` to the server instead. The limit is 128 MB, measured with `make wasm-bench`.
 - The engine runs as a `serve` worker and a `jobs` worker (#911).
