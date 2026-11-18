@@ -52,6 +52,19 @@ You ->> Agni: UpdatePack(house, new rail pattern)
 Agni -->> You: packs/house, hash B
 ```
 
+## Check a design against the pack, and keep the run {#report}
+
+> A report checks a stored design against packs and keeps the run under the design, `designs/{design}/reports/{report}`. It records the design's content hash and each pack's hash. Replace the design's netlist and the report stays, marked as run on earlier files, so last week's result is still there to compare.
+
+```mermaid
+sequenceDiagram
+You ->> Agni: CreateReport(designs/mixer-rev-b, packs/house)
+Agni -->> You: designs/mixer-rev-b/reports/<id>
+You ->> Agni: UpdateArtifact(netlist, new files)
+You ->> Agni: GetReport(<id>)
+Agni -->> You: design_changed true
+```
+
 ## Group them in a project {#group}
 
 > The project lists the two stored revisions and the mounted `designs/mixer` together. A design's name says nothing about where its files live, so one project can hold designs from any store.

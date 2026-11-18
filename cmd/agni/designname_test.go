@@ -41,7 +41,7 @@ func designServer(t *testing.T, store, uploads string) *httptest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, packSvc, err := storeServices(ms, store, uploads, projectStore, resolver, io.Discard)
+	projectSvc, designSvc, packSvc, err := storeServices(ms, store, uploads, projectStore, resolver, checkSvc, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

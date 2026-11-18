@@ -10,10 +10,14 @@ import (
 
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
+	"github.com/panyam/agni"
+	"github.com/panyam/agni/fshost"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/service"
+	_ "github.com/panyam/agni/stdlib/relations"     // the fact base every datalog rule reads
+	_ "github.com/panyam/agni/stdlib/rules/builtin" // the built-in rule catalog a report runs
 )
 
 // tour holds the services a server answers designs, projects and packs with, over a store in a
@@ -23,6 +27,7 @@ type tour struct {
 	designs  *service.DesignService
 	projects *service.ProjectService
 	packs    *service.PackService
+	checks   *service.CheckService
 	uploaded map[string][]byte
 	root     string
 }
@@ -47,6 +52,26 @@ func newTour(root, mounted string) (*tour, error) {
 		return nil, err
 	}
 	t.packs = service.NewPackService(packs, t.blob)
+	// A report runs a check, so the tour serves the uploads mount through fshost, the way the lexicon
+	// example serves a folder, and checks a stored design by name under its packs (agni issue 1704).
+	reports, err := projects.NewDirReports(filepath.Join(root, "reports"))
+	if err != nil {
+		return nil, err
+	}
+	eng, err := agni.New()
+	if err != nil {
+		return nil, err
+	}
+	up := fshost.Mount{Name: "uploads", FS: os.DirFS(projects.ViewsRoot(filepath.Join(root, "uploads")))}
+	host := fshost.New(up)
+	resolver := &service.ProjectResolver{
+		Store:   projects.NewFSStore(projects.Tree{Mount: up.Name, FS: up.FS}),
+		Config:  &fshost.ConfigResolver{Mounts: []fshost.Mount{up}},
+		Designs: catalog,
+		Packs:   t.packs,
+	}
+	t.checks = service.NewCheckService(host, eng.Catalog(), nil, "", host, resolver)
+	t.designs.WithReports(reports, t.checks, t.packs)
 	return t, nil
 }
 
@@ -113,4 +138,26 @@ func (t *tour) keepPack(ctx context.Context) (before, after *webapi.Pack, err er
 	}
 	after, err = t.packs.UpdatePack(ctx, &webapi.UpdatePackRequest{Pack: &webapi.Pack{Name: "packs/house", Config: houseRules("^(VCC|VDD)_")}, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"config"}}})
 	return before, after, err
+}
+
+// report checks mixer-rev-b under packs/house and keeps the run, then replaces its netlist with rev
+// A's and reads the report again (agni issue 1704). It returns the report as kept and as read after.
+func (t *tour) report(ctx context.Context) (kept, after *webapi.Report, err error) {
+	kept, err = t.designs.CreateReport(ctx, &webapi.CreateReportRequest{Parent: "designs/mixer-rev-b", Report: &webapi.Report{Packs: []string{"packs/house"}}})
+	if err != nil {
+		return nil, nil, err
+	}
+	b, err := os.ReadFile("../common/designs/rev-a.edn")
+	if err != nil {
+		return nil, nil, err
+	}
+	files, contents := manifest(map[string][]byte{"rev-b.edn": b})
+	for h, c := range contents {
+		t.uploaded[h] = c
+	}
+	if _, err := t.designs.UpdateArtifact(ctx, &webapi.UpdateArtifactRequest{Artifact: &webapi.Artifact{Name: service.ArtifactName("mixer-rev-b", "netlist"), Files: files}}); err != nil {
+		return nil, nil, err
+	}
+	after, err = t.designs.GetReport(ctx, &webapi.GetReportRequest{Name: kept.GetName()})
+	return kept, after, err
 }

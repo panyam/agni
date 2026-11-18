@@ -1712,6 +1712,93 @@ pub mod design_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn create_report(
+            &mut self,
+            request: impl tonic::IntoRequest<super::CreateReportRequest>,
+        ) -> std::result::Result<tonic::Response<super::Report>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/CreateReport",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "CreateReport"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_report(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetReportRequest>,
+        ) -> std::result::Result<tonic::Response<super::Report>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/GetReport",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "GetReport"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn list_reports(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListReportsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListReportsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/ListReports",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "ListReports"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn delete_report(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DeleteReportRequest>,
+        ) -> std::result::Result<tonic::Response<::pbjson_types::Empty>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/DeleteReport",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "DeleteReport"));
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated client implementations.

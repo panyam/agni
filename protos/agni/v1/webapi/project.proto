@@ -105,6 +105,12 @@ message Project {
   // a mounted folder lists the designs whose `extends` names it, and that list is output only.
   repeated string designs = 10;
 
+  // default_packs names the packs a report on one of this project's designs applies first, each
+  // "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+  // when it names this project, and the packs it names layer over them. A stored project keeps the
+  // list the caller wrote. A mounted project has none.
+  repeated string default_packs = 11;
+
   // conventions, profile_uris, param_uris, checklist_uri and conventions_uri, which moved into config.
   reserved 4, 5, 6, 7, 8;
 }
@@ -206,7 +212,8 @@ message CreateProjectRequest {
 message UpdateProjectRequest {
   // project names the project and carries the new values.
   Project project = 1;
-  // update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+  // update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+  // changes all three.
   google.protobuf.FieldMask update_mask = 2;
 }
 

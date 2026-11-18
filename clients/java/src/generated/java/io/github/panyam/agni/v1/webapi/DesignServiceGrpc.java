@@ -363,6 +363,130 @@ public final class DesignServiceGrpc {
     return getDeleteArtifactMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateReportRequest,
+      io.github.panyam.agni.v1.webapi.Report> getCreateReportMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreateReport",
+      requestType = io.github.panyam.agni.v1.webapi.CreateReportRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Report.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateReportRequest,
+      io.github.panyam.agni.v1.webapi.Report> getCreateReportMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateReportRequest, io.github.panyam.agni.v1.webapi.Report> getCreateReportMethod;
+    if ((getCreateReportMethod = DesignServiceGrpc.getCreateReportMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getCreateReportMethod = DesignServiceGrpc.getCreateReportMethod) == null) {
+          DesignServiceGrpc.getCreateReportMethod = getCreateReportMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.CreateReportRequest, io.github.panyam.agni.v1.webapi.Report>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateReport"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.CreateReportRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Report.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("CreateReport"))
+              .build();
+        }
+      }
+    }
+    return getCreateReportMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetReportRequest,
+      io.github.panyam.agni.v1.webapi.Report> getGetReportMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetReport",
+      requestType = io.github.panyam.agni.v1.webapi.GetReportRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Report.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetReportRequest,
+      io.github.panyam.agni.v1.webapi.Report> getGetReportMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetReportRequest, io.github.panyam.agni.v1.webapi.Report> getGetReportMethod;
+    if ((getGetReportMethod = DesignServiceGrpc.getGetReportMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getGetReportMethod = DesignServiceGrpc.getGetReportMethod) == null) {
+          DesignServiceGrpc.getGetReportMethod = getGetReportMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetReportRequest, io.github.panyam.agni.v1.webapi.Report>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetReport"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.GetReportRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Report.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("GetReport"))
+              .build();
+        }
+      }
+    }
+    return getGetReportMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListReportsRequest,
+      io.github.panyam.agni.v1.webapi.ListReportsResponse> getListReportsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListReports",
+      requestType = io.github.panyam.agni.v1.webapi.ListReportsRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.ListReportsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListReportsRequest,
+      io.github.panyam.agni.v1.webapi.ListReportsResponse> getListReportsMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListReportsRequest, io.github.panyam.agni.v1.webapi.ListReportsResponse> getListReportsMethod;
+    if ((getListReportsMethod = DesignServiceGrpc.getListReportsMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getListReportsMethod = DesignServiceGrpc.getListReportsMethod) == null) {
+          DesignServiceGrpc.getListReportsMethod = getListReportsMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.ListReportsRequest, io.github.panyam.agni.v1.webapi.ListReportsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListReports"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.ListReportsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.ListReportsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("ListReports"))
+              .build();
+        }
+      }
+    }
+    return getListReportsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteReportRequest,
+      com.google.protobuf.Empty> getDeleteReportMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DeleteReport",
+      requestType = io.github.panyam.agni.v1.webapi.DeleteReportRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteReportRequest,
+      com.google.protobuf.Empty> getDeleteReportMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteReportRequest, com.google.protobuf.Empty> getDeleteReportMethod;
+    if ((getDeleteReportMethod = DesignServiceGrpc.getDeleteReportMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getDeleteReportMethod = DesignServiceGrpc.getDeleteReportMethod) == null) {
+          DesignServiceGrpc.getDeleteReportMethod = getDeleteReportMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.DeleteReportRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DeleteReport"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.DeleteReportRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("DeleteReport"))
+              .build();
+        }
+      }
+    }
+    return getDeleteReportMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -568,6 +692,51 @@ public final class DesignServiceGrpc {
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteArtifactMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * CreateReport checks a stored design against packs and keeps the run as
+     * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
+     * own intent: the default packs of the project the request names, then the packs the report names.
+     * The run is a full check of the catalog the packs compose, as `agni check` with no --rule runs. A
+     * report on a mounted design is FAILED_PRECONDITION, since only a stored design has the content
+     * hash a report records. A server without --store answers FAILED_PRECONDITION.
+     * </pre>
+     */
+    default void createReport(io.github.panyam.agni.v1.webapi.CreateReportRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Report> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateReportMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * GetReport returns one report, and says whether the design or a pack changed since it ran.
+     * </pre>
+     */
+    default void getReport(io.github.panyam.agni.v1.webapi.GetReportRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Report> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetReportMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ListReports returns a design's reports, newest first, each saying what changed since it ran.
+     * </pre>
+     */
+    default void listReports(io.github.panyam.agni.v1.webapi.ListReportsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListReportsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListReportsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * DeleteReport removes one report. DeleteDesign removes a design's reports with it.
+     * </pre>
+     */
+    default void deleteReport(io.github.panyam.agni.v1.webapi.DeleteReportRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteReportMethod(), responseObserver);
+    }
   }
 
   /**
@@ -760,6 +929,55 @@ public final class DesignServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getDeleteArtifactMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * CreateReport checks a stored design against packs and keeps the run as
+     * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
+     * own intent: the default packs of the project the request names, then the packs the report names.
+     * The run is a full check of the catalog the packs compose, as `agni check` with no --rule runs. A
+     * report on a mounted design is FAILED_PRECONDITION, since only a stored design has the content
+     * hash a report records. A server without --store answers FAILED_PRECONDITION.
+     * </pre>
+     */
+    public void createReport(io.github.panyam.agni.v1.webapi.CreateReportRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Report> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreateReportMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * GetReport returns one report, and says whether the design or a pack changed since it ran.
+     * </pre>
+     */
+    public void getReport(io.github.panyam.agni.v1.webapi.GetReportRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Report> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetReportMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ListReports returns a design's reports, newest first, each saying what changed since it ran.
+     * </pre>
+     */
+    public void listReports(io.github.panyam.agni.v1.webapi.ListReportsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListReportsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListReportsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * DeleteReport removes one report. DeleteDesign removes a design's reports with it.
+     * </pre>
+     */
+    public void deleteReport(io.github.panyam.agni.v1.webapi.DeleteReportRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDeleteReportMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -920,6 +1138,51 @@ public final class DesignServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getDeleteArtifactMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * CreateReport checks a stored design against packs and keeps the run as
+     * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
+     * own intent: the default packs of the project the request names, then the packs the report names.
+     * The run is a full check of the catalog the packs compose, as `agni check` with no --rule runs. A
+     * report on a mounted design is FAILED_PRECONDITION, since only a stored design has the content
+     * hash a report records. A server without --store answers FAILED_PRECONDITION.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Report createReport(io.github.panyam.agni.v1.webapi.CreateReportRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCreateReportMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * GetReport returns one report, and says whether the design or a pack changed since it ran.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Report getReport(io.github.panyam.agni.v1.webapi.GetReportRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetReportMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ListReports returns a design's reports, newest first, each saying what changed since it ran.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.ListReportsResponse listReports(io.github.panyam.agni.v1.webapi.ListReportsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListReportsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteReport removes one report. DeleteDesign removes a design's reports with it.
+     * </pre>
+     */
+    public com.google.protobuf.Empty deleteReport(io.github.panyam.agni.v1.webapi.DeleteReportRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getDeleteReportMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -1079,6 +1342,51 @@ public final class DesignServiceGrpc {
     public com.google.protobuf.Empty deleteArtifact(io.github.panyam.agni.v1.webapi.DeleteArtifactRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getDeleteArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * CreateReport checks a stored design against packs and keeps the run as
+     * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
+     * own intent: the default packs of the project the request names, then the packs the report names.
+     * The run is a full check of the catalog the packs compose, as `agni check` with no --rule runs. A
+     * report on a mounted design is FAILED_PRECONDITION, since only a stored design has the content
+     * hash a report records. A server without --store answers FAILED_PRECONDITION.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Report createReport(io.github.panyam.agni.v1.webapi.CreateReportRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreateReportMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * GetReport returns one report, and says whether the design or a pack changed since it ran.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Report getReport(io.github.panyam.agni.v1.webapi.GetReportRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetReportMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ListReports returns a design's reports, newest first, each saying what changed since it ran.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.ListReportsResponse listReports(io.github.panyam.agni.v1.webapi.ListReportsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListReportsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteReport removes one report. DeleteDesign removes a design's reports with it.
+     * </pre>
+     */
+    public com.google.protobuf.Empty deleteReport(io.github.panyam.agni.v1.webapi.DeleteReportRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDeleteReportMethod(), getCallOptions(), request);
     }
   }
 
@@ -1251,6 +1559,55 @@ public final class DesignServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getDeleteArtifactMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * CreateReport checks a stored design against packs and keeps the run as
+     * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
+     * own intent: the default packs of the project the request names, then the packs the report names.
+     * The run is a full check of the catalog the packs compose, as `agni check` with no --rule runs. A
+     * report on a mounted design is FAILED_PRECONDITION, since only a stored design has the content
+     * hash a report records. A server without --store answers FAILED_PRECONDITION.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Report> createReport(
+        io.github.panyam.agni.v1.webapi.CreateReportRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreateReportMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * GetReport returns one report, and says whether the design or a pack changed since it ran.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Report> getReport(
+        io.github.panyam.agni.v1.webapi.GetReportRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetReportMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * ListReports returns a design's reports, newest first, each saying what changed since it ran.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.ListReportsResponse> listReports(
+        io.github.panyam.agni.v1.webapi.ListReportsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListReportsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteReport removes one report. DeleteDesign removes a design's reports with it.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> deleteReport(
+        io.github.panyam.agni.v1.webapi.DeleteReportRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDeleteReportMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_DESIGN = 0;
@@ -1264,6 +1621,10 @@ public final class DesignServiceGrpc {
   private static final int METHODID_BATCH_UPDATE_ARTIFACTS = 8;
   private static final int METHODID_IMPORT_DESIGN_FILES = 9;
   private static final int METHODID_DELETE_ARTIFACT = 10;
+  private static final int METHODID_CREATE_REPORT = 11;
+  private static final int METHODID_GET_REPORT = 12;
+  private static final int METHODID_LIST_REPORTS = 13;
+  private static final int METHODID_DELETE_REPORT = 14;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1324,6 +1685,22 @@ public final class DesignServiceGrpc {
           break;
         case METHODID_DELETE_ARTIFACT:
           serviceImpl.deleteArtifact((io.github.panyam.agni.v1.webapi.DeleteArtifactRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_CREATE_REPORT:
+          serviceImpl.createReport((io.github.panyam.agni.v1.webapi.CreateReportRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Report>) responseObserver);
+          break;
+        case METHODID_GET_REPORT:
+          serviceImpl.getReport((io.github.panyam.agni.v1.webapi.GetReportRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Report>) responseObserver);
+          break;
+        case METHODID_LIST_REPORTS:
+          serviceImpl.listReports((io.github.panyam.agni.v1.webapi.ListReportsRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListReportsResponse>) responseObserver);
+          break;
+        case METHODID_DELETE_REPORT:
+          serviceImpl.deleteReport((io.github.panyam.agni.v1.webapi.DeleteReportRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
         default:
@@ -1421,6 +1798,34 @@ public final class DesignServiceGrpc {
               io.github.panyam.agni.v1.webapi.DeleteArtifactRequest,
               com.google.protobuf.Empty>(
                 service, METHODID_DELETE_ARTIFACT)))
+        .addMethod(
+          getCreateReportMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.CreateReportRequest,
+              io.github.panyam.agni.v1.webapi.Report>(
+                service, METHODID_CREATE_REPORT)))
+        .addMethod(
+          getGetReportMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.GetReportRequest,
+              io.github.panyam.agni.v1.webapi.Report>(
+                service, METHODID_GET_REPORT)))
+        .addMethod(
+          getListReportsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.ListReportsRequest,
+              io.github.panyam.agni.v1.webapi.ListReportsResponse>(
+                service, METHODID_LIST_REPORTS)))
+        .addMethod(
+          getDeleteReportMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.DeleteReportRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_DELETE_REPORT)))
         .build();
   }
 
@@ -1480,6 +1885,10 @@ public final class DesignServiceGrpc {
               .addMethod(getBatchUpdateArtifactsMethod())
               .addMethod(getImportDesignFilesMethod())
               .addMethod(getDeleteArtifactMethod())
+              .addMethod(getCreateReportMethod())
+              .addMethod(getGetReportMethod())
+              .addMethod(getListReportsMethod())
+              .addMethod(getDeleteReportMethod())
               .build();
         }
       }

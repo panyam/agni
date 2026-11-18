@@ -769,6 +769,37 @@ func (a *ServerInfo) GetServerInfo(ctx context.Context, req *connect.Request[web
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Design) CreateReport(ctx context.Context, req *connect.Request[webapi.CreateReportRequest]) (*connect.Response[webapi.Report], error) {
+	resp, err := a.svc.CreateReport(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) GetReport(ctx context.Context, req *connect.Request[webapi.GetReportRequest]) (*connect.Response[webapi.Report], error) {
+	resp, err := a.svc.GetReport(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) ListReports(ctx context.Context, req *connect.Request[webapi.ListReportsRequest]) (*connect.Response[webapi.ListReportsResponse], error) {
+	resp, err := a.svc.ListReports(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) DeleteReport(ctx context.Context, req *connect.Request[webapi.DeleteReportRequest]) (*connect.Response[emptypb.Empty], error) {
+	if err := a.svc.DeleteReport(ctx, req.Msg); err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
 // Pack adapts service.PackService to the generated Connect handler interface (agni issue 1704).
 type Pack struct {
 	webapiconnect.UnimplementedPackServiceHandler

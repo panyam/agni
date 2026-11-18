@@ -2026,6 +2026,12 @@ pub struct Project {
     /// a mounted folder lists the designs whose `extends` names it, and that list is output only.
     #[prost(string, repeated, tag="10")]
     pub designs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// default_packs names the packs a report on one of this project's designs applies first, each
+    /// "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+    /// when it names this project, and the packs it names layer over them. A stored project keeps the
+    /// list the caller wrote. A mounted project has none.
+    #[prost(string, repeated, tag="11")]
+    pub default_packs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Design is one declared design: an identity, an entry file, and its companion views.
 ///
@@ -2140,7 +2146,8 @@ pub struct UpdateProjectRequest {
     /// project names the project and carries the new values.
     #[prost(message, optional, tag="1")]
     pub project: ::core::option::Option<Project>,
-    /// update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+    /// update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+    /// changes all three.
     #[prost(message, optional, tag="2")]
     pub update_mask: ::core::option::Option<::pbjson_types::FieldMask>,
 }
@@ -2443,6 +2450,98 @@ pub mod snapshot_unavailable {
             }
         }
     }
+}
+/// Report is one check of a stored design against packs, kept under the design (agni issue 1704). It
+/// records the design's content hash and each pack's hash as they were when it ran, so a later read
+/// can say the run is on earlier files or earlier rules.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Report {
+    /// "designs/{design}/reports/{report}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// packs are the packs the run applied, each "packs/{pack}", in the order they layered: the
+    /// project's default packs, then the ones the request named. CreateReport reads the request's from
+    /// here.
+    #[prost(string, repeated, tag="2")]
+    pub packs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// project is the project whose default packs applied first, "projects/{project}", empty for none.
+    #[prost(string, tag="3")]
+    pub project: ::prost::alloc::string::String,
+    /// design_hash names the design's artifacts and intent as the run read them, "sha256:<hex>". Output
+    /// only.
+    #[prost(string, tag="4")]
+    pub design_hash: ::prost::alloc::string::String,
+    /// pack_hashes is each pack's hash as the run read it, in the order of packs. Output only.
+    #[prost(string, repeated, tag="5")]
+    pub pack_hashes: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// results is the run: its findings, the rules it skipped, and the rest of a CheckDesign answer.
+    /// Output only.
+    #[prost(message, optional, tag="6")]
+    pub results: ::core::option::Option<CheckDesignResponse>,
+    /// create_time is when the run was kept. Output only.
+    #[prost(message, optional, tag="7")]
+    pub create_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    /// design_changed is true when the design's artifacts or intent differ now from what the run read,
+    /// or the design is gone. Computed on every read. Output only.
+    #[prost(bool, tag="8")]
+    pub design_changed: bool,
+    /// packs_changed names each pack whose hash differs now from what the run read, or which is gone.
+    /// Computed on every read. Output only.
+    #[prost(string, repeated, tag="9")]
+    pub packs_changed: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CreateReportRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub parent: ::prost::alloc::string::String,
+    /// report_id is the new report's id, lowercase letters, digits, '.', '_' or '-'. Empty lets the
+    /// server assign one that sorts by creation time.
+    #[prost(string, tag="2")]
+    pub report_id: ::prost::alloc::string::String,
+    /// report carries the packs to apply, after the project's defaults. Its other fields are ignored.
+    #[prost(message, optional, tag="3")]
+    pub report: ::core::option::Option<Report>,
+    /// project names a project, "projects/{project}", whose default packs apply first. Empty applies
+    /// none.
+    #[prost(string, tag="4")]
+    pub project: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetReportRequest {
+    /// "designs/{design}/reports/{report}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListReportsRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub parent: ::prost::alloc::string::String,
+    /// page_size is the maximum number of reports to return. 0 uses the server default.
+    #[prost(int32, tag="2")]
+    pub page_size: i32,
+    /// page_token continues a previous call. An empty token starts at the newest report.
+    #[prost(string, tag="3")]
+    pub page_token: ::prost::alloc::string::String,
+    /// filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+    /// rather than ignored, since a client that believed it had filtered would read the wrong reports.
+    #[prost(string, tag="4")]
+    pub filter: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListReportsResponse {
+    #[prost(message, repeated, tag="1")]
+    pub reports: ::prost::alloc::vec::Vec<Report>,
+    /// next_page_token is empty when the last page has been reached.
+    #[prost(string, tag="2")]
+    pub next_page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteReportRequest {
+    /// "designs/{design}/reports/{report}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateDesignRequest {

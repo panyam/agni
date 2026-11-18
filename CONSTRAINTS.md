@@ -711,13 +711,23 @@ server who uploads a board's files. Without a stored home, the upload has nothin
 and it is gone at the next restart. A write that names a mounted resource is refused rather than
 written. Scaffolding design intent stays out of scope either way. Writing `intent:` from a design is a
 judgment step with a confidentiality boundary, so the server never generates one. A stored design
-carries no intent yet, and agni issue 1704 decides how a user's own intent reaches one. A later
+keeps the intent its user gives it (agni issue 1704). A later
 version of a board is a design of its own, and designs that name one `series` group as its versions.
 A stored design's files are its ARTIFACTS, a child resource `designs/{d}/artifacts/{a}` (agni issue
 1696), each one source such as a schematic with its sheets. An artifact has `Get`, `List`, `Delete`,
 and `UpdateArtifact` with `allow_missing` in place of `Create` (AIP-134), since a client puts the
 same files whether or not the server holds them yet. `BatchUpdateArtifacts` writes several in one
 step.
+
+**As amended by agni issue 1704, a pack is a full resource, and a run on a design no project owns
+nests under the design.** A pack, `packs/{pack}`, is config with a lifetime of its own, so it has all
+five standard methods. A report is a check of one stored design against packs, and it nests under
+that design, `designs/{d}/reports/{r}`. A review run nests under a project because it predates designs
+that stand alone. A stored design belongs to no project, and a run is about one design, so the design
+is the report's parent. The project whose default packs applied is a field on the report, not a
+parent. A report has `Create`, `Get`, `List` and `Delete` and no `Update`, since a run is what it
+found when it ran. A read says whether the design or a pack changed since, from hashes the report
+recorded. The server assigns the id unless the request names one.
 
 **A snapshot is a full resource whose create is a custom method, `Ingest`** (agni issue 1061, AIP-136).
 It is the server's state: a loaded design with its tiers and config resolved, held until it is
@@ -757,13 +767,16 @@ what was never stable, and eventually ask why deleting it does not work.
 standard methods and no bespoke mutator, meaning the four of them for a server-assigned id (with
 `Ingest` in `Create`'s place for a snapshot), `Get` and `List` alone for a declared one, and all
 five for a stored project or design, where a write to a mounted one is refused
-(`TestADesignServiceRefusesWhatItCannotWrite`, `TestAProjectServiceRefusesWhatItCannotWrite`); every rpc
+(`TestADesignServiceRefusesWhatItCannotWrite`, `TestAProjectServiceRefusesWhatItCannotWrite`), and
+for a pack, with a report's four nested under its design (`TestReportsKeepEachRunAndSayWhatChanged`,
+`TestAReportAppliesItsProjectsDefaultPacks`); every rpc
 that reads a design and returns a derived view takes a snapshot and returns no `name`
 (`TestC22AnalysisRequestsNameASnapshot`); a resource's `List` carries `page_size`, `page_token`, and
 `filter`, and its service rejects a filter it does not implement rather than ignoring it
-(`service.parseReviewFilter`, `service.parseProjectFilter`, `DesignService.parseFilter`).
+(`service.parseReviewFilter`, `service.parseProjectFilter`, `DesignService.parseFilter`,
+`service.noFilter` for packs and reports).
 
-**Known limitation:** stored reviews are visible to every client of a server, because `agni serve`
+**Known limitation:** stored reviews, packs and reports are visible to every client of a server, because `agni serve`
 has no authentication at all. That is a deployment assumption (one team, one trusted network), not
 an access-control boundary, and it is recorded rather than implied so nobody reads the resource
 model as having brought isolation with it. Auth is deliberately deferred; see

@@ -65,7 +65,12 @@ type Project struct {
 	// design can sit in many projects, and deleting a project deletes none of them. A stored project
 	// keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
 	// a mounted folder lists the designs whose `extends` names it, and that list is output only.
-	Designs       []string `protobuf:"bytes,10,rep,name=designs,proto3" json:"designs,omitempty"`
+	Designs []string `protobuf:"bytes,10,rep,name=designs,proto3" json:"designs,omitempty"`
+	// default_packs names the packs a report on one of this project's designs applies first, each
+	// "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+	// when it names this project, and the packs it names layer over them. A stored project keeps the
+	// list the caller wrote. A mounted project has none.
+	DefaultPacks  []string `protobuf:"bytes,11,rep,name=default_packs,json=defaultPacks,proto3" json:"default_packs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -131,6 +136,13 @@ func (x *Project) GetConfig() *AnalysisConfig {
 func (x *Project) GetDesigns() []string {
 	if x != nil {
 		return x.Designs
+	}
+	return nil
+}
+
+func (x *Project) GetDefaultPacks() []string {
+	if x != nil {
+		return x.DefaultPacks
 	}
 	return nil
 }
@@ -525,7 +537,8 @@ type UpdateProjectRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// project names the project and carries the new values.
 	Project *Project `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	// update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+	// update_mask names the fields to change, `title`, `designs` or `default_packs`. An empty mask
+	// changes all three.
 	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -737,14 +750,15 @@ var File_agni_v1_webapi_project_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\n" +
-	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a google/protobuf/field_mask.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb5\x01\n" +
+	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a google/protobuf/field_mask.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xda\x01\n" +
 	"\aProject\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x126\n" +
 	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12\x18\n" +
 	"\adesigns\x18\n" +
-	" \x03(\tR\adesignsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\x9c\x03\n" +
+	" \x03(\tR\adesigns\x12#\n" +
+	"\rdefault_packs\x18\v \x03(\tR\fdefaultPacksJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\x9c\x03\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +

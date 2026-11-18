@@ -66,6 +66,17 @@ const (
 	// DesignServiceDeleteArtifactProcedure is the fully-qualified name of the DesignService's
 	// DeleteArtifact RPC.
 	DesignServiceDeleteArtifactProcedure = "/agni.v1.webapi.DesignService/DeleteArtifact"
+	// DesignServiceCreateReportProcedure is the fully-qualified name of the DesignService's
+	// CreateReport RPC.
+	DesignServiceCreateReportProcedure = "/agni.v1.webapi.DesignService/CreateReport"
+	// DesignServiceGetReportProcedure is the fully-qualified name of the DesignService's GetReport RPC.
+	DesignServiceGetReportProcedure = "/agni.v1.webapi.DesignService/GetReport"
+	// DesignServiceListReportsProcedure is the fully-qualified name of the DesignService's ListReports
+	// RPC.
+	DesignServiceListReportsProcedure = "/agni.v1.webapi.DesignService/ListReports"
+	// DesignServiceDeleteReportProcedure is the fully-qualified name of the DesignService's
+	// DeleteReport RPC.
+	DesignServiceDeleteReportProcedure = "/agni.v1.webapi.DesignService/DeleteReport"
 )
 
 // DesignServiceClient is a client for the agni.v1.webapi.DesignService service.
@@ -116,6 +127,19 @@ type DesignServiceClient interface {
 	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
 	// design unable to be read until another is put.
 	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
+	// CreateReport checks a stored design against packs and keeps the run as
+	// "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
+	// own intent: the default packs of the project the request names, then the packs the report names.
+	// The run is a full check of the catalog the packs compose, as `agni check` with no --rule runs. A
+	// report on a mounted design is FAILED_PRECONDITION, since only a stored design has the content
+	// hash a report records. A server without --store answers FAILED_PRECONDITION.
+	CreateReport(context.Context, *connect.Request[webapi.CreateReportRequest]) (*connect.Response[webapi.Report], error)
+	// GetReport returns one report, and says whether the design or a pack changed since it ran.
+	GetReport(context.Context, *connect.Request[webapi.GetReportRequest]) (*connect.Response[webapi.Report], error)
+	// ListReports returns a design's reports, newest first, each saying what changed since it ran.
+	ListReports(context.Context, *connect.Request[webapi.ListReportsRequest]) (*connect.Response[webapi.ListReportsResponse], error)
+	// DeleteReport removes one report. DeleteDesign removes a design's reports with it.
+	DeleteReport(context.Context, *connect.Request[webapi.DeleteReportRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewDesignServiceClient constructs a client for the agni.v1.webapi.DesignService service. By
@@ -195,6 +219,30 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("DeleteArtifact")),
 			connect.WithClientOptions(opts...),
 		),
+		createReport: connect.NewClient[webapi.CreateReportRequest, webapi.Report](
+			httpClient,
+			baseURL+DesignServiceCreateReportProcedure,
+			connect.WithSchema(designServiceMethods.ByName("CreateReport")),
+			connect.WithClientOptions(opts...),
+		),
+		getReport: connect.NewClient[webapi.GetReportRequest, webapi.Report](
+			httpClient,
+			baseURL+DesignServiceGetReportProcedure,
+			connect.WithSchema(designServiceMethods.ByName("GetReport")),
+			connect.WithClientOptions(opts...),
+		),
+		listReports: connect.NewClient[webapi.ListReportsRequest, webapi.ListReportsResponse](
+			httpClient,
+			baseURL+DesignServiceListReportsProcedure,
+			connect.WithSchema(designServiceMethods.ByName("ListReports")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteReport: connect.NewClient[webapi.DeleteReportRequest, emptypb.Empty](
+			httpClient,
+			baseURL+DesignServiceDeleteReportProcedure,
+			connect.WithSchema(designServiceMethods.ByName("DeleteReport")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -211,6 +259,10 @@ type designServiceClient struct {
 	batchUpdateArtifacts *connect.Client[webapi.BatchUpdateArtifactsRequest, webapi.BatchUpdateArtifactsResponse]
 	importDesignFiles    *connect.Client[webapi.ImportDesignFilesRequest, webapi.ImportDesignFilesResponse]
 	deleteArtifact       *connect.Client[webapi.DeleteArtifactRequest, emptypb.Empty]
+	createReport         *connect.Client[webapi.CreateReportRequest, webapi.Report]
+	getReport            *connect.Client[webapi.GetReportRequest, webapi.Report]
+	listReports          *connect.Client[webapi.ListReportsRequest, webapi.ListReportsResponse]
+	deleteReport         *connect.Client[webapi.DeleteReportRequest, emptypb.Empty]
 }
 
 // CreateDesign calls agni.v1.webapi.DesignService.CreateDesign.
@@ -268,6 +320,26 @@ func (c *designServiceClient) DeleteArtifact(ctx context.Context, req *connect.R
 	return c.deleteArtifact.CallUnary(ctx, req)
 }
 
+// CreateReport calls agni.v1.webapi.DesignService.CreateReport.
+func (c *designServiceClient) CreateReport(ctx context.Context, req *connect.Request[webapi.CreateReportRequest]) (*connect.Response[webapi.Report], error) {
+	return c.createReport.CallUnary(ctx, req)
+}
+
+// GetReport calls agni.v1.webapi.DesignService.GetReport.
+func (c *designServiceClient) GetReport(ctx context.Context, req *connect.Request[webapi.GetReportRequest]) (*connect.Response[webapi.Report], error) {
+	return c.getReport.CallUnary(ctx, req)
+}
+
+// ListReports calls agni.v1.webapi.DesignService.ListReports.
+func (c *designServiceClient) ListReports(ctx context.Context, req *connect.Request[webapi.ListReportsRequest]) (*connect.Response[webapi.ListReportsResponse], error) {
+	return c.listReports.CallUnary(ctx, req)
+}
+
+// DeleteReport calls agni.v1.webapi.DesignService.DeleteReport.
+func (c *designServiceClient) DeleteReport(ctx context.Context, req *connect.Request[webapi.DeleteReportRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.deleteReport.CallUnary(ctx, req)
+}
+
 // DesignServiceHandler is an implementation of the agni.v1.webapi.DesignService service.
 type DesignServiceHandler interface {
 	// CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
@@ -316,6 +388,19 @@ type DesignServiceHandler interface {
 	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
 	// design unable to be read until another is put.
 	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
+	// CreateReport checks a stored design against packs and keeps the run as
+	// "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
+	// own intent: the default packs of the project the request names, then the packs the report names.
+	// The run is a full check of the catalog the packs compose, as `agni check` with no --rule runs. A
+	// report on a mounted design is FAILED_PRECONDITION, since only a stored design has the content
+	// hash a report records. A server without --store answers FAILED_PRECONDITION.
+	CreateReport(context.Context, *connect.Request[webapi.CreateReportRequest]) (*connect.Response[webapi.Report], error)
+	// GetReport returns one report, and says whether the design or a pack changed since it ran.
+	GetReport(context.Context, *connect.Request[webapi.GetReportRequest]) (*connect.Response[webapi.Report], error)
+	// ListReports returns a design's reports, newest first, each saying what changed since it ran.
+	ListReports(context.Context, *connect.Request[webapi.ListReportsRequest]) (*connect.Response[webapi.ListReportsResponse], error)
+	// DeleteReport removes one report. DeleteDesign removes a design's reports with it.
+	DeleteReport(context.Context, *connect.Request[webapi.DeleteReportRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewDesignServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -391,6 +476,30 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("DeleteArtifact")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceCreateReportHandler := connect.NewUnaryHandler(
+		DesignServiceCreateReportProcedure,
+		svc.CreateReport,
+		connect.WithSchema(designServiceMethods.ByName("CreateReport")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceGetReportHandler := connect.NewUnaryHandler(
+		DesignServiceGetReportProcedure,
+		svc.GetReport,
+		connect.WithSchema(designServiceMethods.ByName("GetReport")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceListReportsHandler := connect.NewUnaryHandler(
+		DesignServiceListReportsProcedure,
+		svc.ListReports,
+		connect.WithSchema(designServiceMethods.ByName("ListReports")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceDeleteReportHandler := connect.NewUnaryHandler(
+		DesignServiceDeleteReportProcedure,
+		svc.DeleteReport,
+		connect.WithSchema(designServiceMethods.ByName("DeleteReport")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.DesignService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DesignServiceCreateDesignProcedure:
@@ -415,6 +524,14 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceImportDesignFilesHandler.ServeHTTP(w, r)
 		case DesignServiceDeleteArtifactProcedure:
 			designServiceDeleteArtifactHandler.ServeHTTP(w, r)
+		case DesignServiceCreateReportProcedure:
+			designServiceCreateReportHandler.ServeHTTP(w, r)
+		case DesignServiceGetReportProcedure:
+			designServiceGetReportHandler.ServeHTTP(w, r)
+		case DesignServiceListReportsProcedure:
+			designServiceListReportsHandler.ServeHTTP(w, r)
+		case DesignServiceDeleteReportProcedure:
+			designServiceDeleteReportHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -466,4 +583,20 @@ func (UnimplementedDesignServiceHandler) ImportDesignFiles(context.Context, *con
 
 func (UnimplementedDesignServiceHandler) DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.DeleteArtifact is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) CreateReport(context.Context, *connect.Request[webapi.CreateReportRequest]) (*connect.Response[webapi.Report], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.CreateReport is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) GetReport(context.Context, *connect.Request[webapi.GetReportRequest]) (*connect.Response[webapi.Report], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.GetReport is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) ListReports(context.Context, *connect.Request[webapi.ListReportsRequest]) (*connect.Response[webapi.ListReportsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.ListReports is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) DeleteReport(context.Context, *connect.Request[webapi.DeleteReportRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.DeleteReport is not implemented"))
 }

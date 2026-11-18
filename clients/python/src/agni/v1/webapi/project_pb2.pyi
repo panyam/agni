@@ -13,18 +13,20 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Project(_message.Message):
-    __slots__ = ("name", "title", "uri", "config", "designs")
+    __slots__ = ("name", "title", "uri", "config", "designs", "default_packs")
     NAME_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
     CONFIG_FIELD_NUMBER: _ClassVar[int]
     DESIGNS_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_PACKS_FIELD_NUMBER: _ClassVar[int]
     name: str
     title: str
     uri: str
     config: _config_pb2.AnalysisConfig
     designs: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., designs: _Optional[_Iterable[str]] = ...) -> None: ...
+    default_packs: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., designs: _Optional[_Iterable[str]] = ..., default_packs: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class Design(_message.Message):
     __slots__ = ("name", "title", "uri", "entry_uri", "companion_uris", "config", "series", "flatten_hierarchy", "update_time", "series_latest", "artifacts")

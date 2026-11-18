@@ -301,6 +301,22 @@ func (s *ProjectService) ListProjects(ctx context.Context, req *webapi.ListProje
 	return resp, nil
 }
 
+// packNames checks a project's default packs, each "packs/{pack}" and named once (agni issue 1704). A
+// pack named here need not exist yet, as a design a project lists need not.
+func packNames(names []string) ([]string, error) {
+	seen := map[string]bool{}
+	for _, n := range names {
+		if _, ok := PackID(n); !ok {
+			return nil, fmt.Errorf("%w: %q is not a pack resource name, packs/{pack}", ErrInvalidArgument, n)
+		}
+		if seen[n] {
+			return nil, fmt.Errorf("%w: %s is named twice", ErrInvalidArgument, n)
+		}
+		seen[n] = true
+	}
+	return names, nil
+}
+
 // CreateProject stores a new project. Its id must be one no mounted folder declares.
 func (s *ProjectService) CreateProject(ctx context.Context, req *webapi.CreateProjectRequest) (*webapi.Project, error) {
 	if s.records == nil {
@@ -325,14 +341,19 @@ func (s *ProjectService) CreateProject(ctx context.Context, req *webapi.CreatePr
 	if err != nil {
 		return nil, err
 	}
-	p := &webapi.Project{Name: name, Title: orID(req.GetProject().GetTitle(), id), Designs: designs}
+	packs, err := packNames(req.GetProject().GetDefaultPacks())
+	if err != nil {
+		return nil, err
+	}
+	p := &webapi.Project{Name: name, Title: orID(req.GetProject().GetTitle(), id), Designs: designs, DefaultPacks: packs}
 	if err := s.records.Put(ctx, id, p); err != nil {
 		return nil, err
 	}
 	return p, nil
 }
 
-// UpdateProject changes a stored project's title or designs, the fields update_mask names.
+// UpdateProject changes a stored project's title, designs or default packs, the fields update_mask
+// names.
 func (s *ProjectService) UpdateProject(ctx context.Context, req *webapi.UpdateProjectRequest) (*webapi.Project, error) {
 	id, p, err := s.stored(ctx, req.GetProject().GetName())
 	if err != nil {
@@ -340,7 +361,7 @@ func (s *ProjectService) UpdateProject(ctx context.Context, req *webapi.UpdatePr
 	}
 	paths := req.GetUpdateMask().GetPaths()
 	if len(paths) == 0 {
-		paths = []string{"title", "designs"}
+		paths = []string{"title", "designs", "default_packs"}
 	}
 	for _, f := range paths {
 		switch f {
@@ -350,8 +371,12 @@ func (s *ProjectService) UpdateProject(ctx context.Context, req *webapi.UpdatePr
 			if p.Designs, err = designNames(req.GetProject().GetDesigns()); err != nil {
 				return nil, err
 			}
+		case "default_packs":
+			if p.DefaultPacks, err = packNames(req.GetProject().GetDefaultPacks()); err != nil {
+				return nil, err
+			}
 		default:
-			return nil, fmt.Errorf("%w: update_mask names %q; a stored project's title and designs can change", ErrInvalidArgument, f)
+			return nil, fmt.Errorf("%w: update_mask names %q; a stored project's title, designs and default_packs can change", ErrInvalidArgument, f)
 		}
 	}
 	if err := s.records.Put(ctx, id, p); err != nil {

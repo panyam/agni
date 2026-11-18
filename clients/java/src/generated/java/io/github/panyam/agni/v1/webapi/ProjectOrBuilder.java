@@ -187,4 +187,57 @@ public interface ProjectOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDesignsBytes(int index);
+
+  /**
+   * <pre>
+   * default_packs names the packs a report on one of this project's designs applies first, each
+   * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+   * when it names this project, and the packs it names layer over them. A stored project keeps the
+   * list the caller wrote. A mounted project has none.
+   * </pre>
+   *
+   * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+   * @return A list containing the defaultPacks.
+   */
+  java.util.List<java.lang.String>
+      getDefaultPacksList();
+  /**
+   * <pre>
+   * default_packs names the packs a report on one of this project's designs applies first, each
+   * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+   * when it names this project, and the packs it names layer over them. A stored project keeps the
+   * list the caller wrote. A mounted project has none.
+   * </pre>
+   *
+   * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+   * @return The count of defaultPacks.
+   */
+  int getDefaultPacksCount();
+  /**
+   * <pre>
+   * default_packs names the packs a report on one of this project's designs applies first, each
+   * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+   * when it names this project, and the packs it names layer over them. A stored project keeps the
+   * list the caller wrote. A mounted project has none.
+   * </pre>
+   *
+   * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+   * @param index The index of the element to return.
+   * @return The defaultPacks at the given index.
+   */
+  java.lang.String getDefaultPacks(int index);
+  /**
+   * <pre>
+   * default_packs names the packs a report on one of this project's designs applies first, each
+   * "packs/{pack}", in order (agni issue 1704). CreateReport layers them over the design's own intent
+   * when it names this project, and the packs it names layer over them. A stored project keeps the
+   * list the caller wrote. A mounted project has none.
+   * </pre>
+   *
+   * <code>repeated string default_packs = 11 [json_name = "defaultPacks"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the defaultPacks at the given index.
+   */
+  com.google.protobuf.ByteString
+      getDefaultPacksBytes(int index);
 }

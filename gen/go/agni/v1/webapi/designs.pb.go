@@ -85,6 +85,417 @@ func (ArtifactType) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{0}
 }
 
+// Report is one check of a stored design against packs, kept under the design (agni issue 1704). It
+// records the design's content hash and each pack's hash as they were when it ran, so a later read
+// can say the run is on earlier files or earlier rules.
+type Report struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "designs/{design}/reports/{report}"
+	// packs are the packs the run applied, each "packs/{pack}", in the order they layered: the
+	// project's default packs, then the ones the request named. CreateReport reads the request's from
+	// here.
+	Packs []string `protobuf:"bytes,2,rep,name=packs,proto3" json:"packs,omitempty"`
+	// project is the project whose default packs applied first, "projects/{project}", empty for none.
+	Project string `protobuf:"bytes,3,opt,name=project,proto3" json:"project,omitempty"`
+	// design_hash names the design's artifacts and intent as the run read them, "sha256:<hex>". Output
+	// only.
+	DesignHash string `protobuf:"bytes,4,opt,name=design_hash,json=designHash,proto3" json:"design_hash,omitempty"`
+	// pack_hashes is each pack's hash as the run read it, in the order of packs. Output only.
+	PackHashes []string `protobuf:"bytes,5,rep,name=pack_hashes,json=packHashes,proto3" json:"pack_hashes,omitempty"`
+	// results is the run: its findings, the rules it skipped, and the rest of a CheckDesign answer.
+	// Output only.
+	Results *CheckDesignResponse `protobuf:"bytes,6,opt,name=results,proto3" json:"results,omitempty"`
+	// create_time is when the run was kept. Output only.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// design_changed is true when the design's artifacts or intent differ now from what the run read,
+	// or the design is gone. Computed on every read. Output only.
+	DesignChanged bool `protobuf:"varint,8,opt,name=design_changed,json=designChanged,proto3" json:"design_changed,omitempty"`
+	// packs_changed names each pack whose hash differs now from what the run read, or which is gone.
+	// Computed on every read. Output only.
+	PacksChanged  []string `protobuf:"bytes,9,rep,name=packs_changed,json=packsChanged,proto3" json:"packs_changed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Report) Reset() {
+	*x = Report{}
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Report) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Report) ProtoMessage() {}
+
+func (x *Report) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Report.ProtoReflect.Descriptor instead.
+func (*Report) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Report) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Report) GetPacks() []string {
+	if x != nil {
+		return x.Packs
+	}
+	return nil
+}
+
+func (x *Report) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *Report) GetDesignHash() string {
+	if x != nil {
+		return x.DesignHash
+	}
+	return ""
+}
+
+func (x *Report) GetPackHashes() []string {
+	if x != nil {
+		return x.PackHashes
+	}
+	return nil
+}
+
+func (x *Report) GetResults() *CheckDesignResponse {
+	if x != nil {
+		return x.Results
+	}
+	return nil
+}
+
+func (x *Report) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *Report) GetDesignChanged() bool {
+	if x != nil {
+		return x.DesignChanged
+	}
+	return false
+}
+
+func (x *Report) GetPacksChanged() []string {
+	if x != nil {
+		return x.PacksChanged
+	}
+	return nil
+}
+
+type CreateReportRequest struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Parent string                 `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"` // "designs/{design}"
+	// report_id is the new report's id, lowercase letters, digits, '.', '_' or '-'. Empty lets the
+	// server assign one that sorts by creation time.
+	ReportId string `protobuf:"bytes,2,opt,name=report_id,json=reportId,proto3" json:"report_id,omitempty"`
+	// report carries the packs to apply, after the project's defaults. Its other fields are ignored.
+	Report *Report `protobuf:"bytes,3,opt,name=report,proto3" json:"report,omitempty"`
+	// project names a project, "projects/{project}", whose default packs apply first. Empty applies
+	// none.
+	Project       string `protobuf:"bytes,4,opt,name=project,proto3" json:"project,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateReportRequest) Reset() {
+	*x = CreateReportRequest{}
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateReportRequest) ProtoMessage() {}
+
+func (x *CreateReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateReportRequest.ProtoReflect.Descriptor instead.
+func (*CreateReportRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CreateReportRequest) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
+}
+
+func (x *CreateReportRequest) GetReportId() string {
+	if x != nil {
+		return x.ReportId
+	}
+	return ""
+}
+
+func (x *CreateReportRequest) GetReport() *Report {
+	if x != nil {
+		return x.Report
+	}
+	return nil
+}
+
+func (x *CreateReportRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+type GetReportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "designs/{design}/reports/{report}"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReportRequest) Reset() {
+	*x = GetReportRequest{}
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReportRequest) ProtoMessage() {}
+
+func (x *GetReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReportRequest.ProtoReflect.Descriptor instead.
+func (*GetReportRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetReportRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type ListReportsRequest struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Parent string                 `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"` // "designs/{design}"
+	// page_size is the maximum number of reports to return. 0 uses the server default.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// page_token continues a previous call. An empty token starts at the newest report.
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+	// rather than ignored, since a client that believed it had filtered would read the wrong reports.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReportsRequest) Reset() {
+	*x = ListReportsRequest{}
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReportsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReportsRequest) ProtoMessage() {}
+
+func (x *ListReportsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReportsRequest.ProtoReflect.Descriptor instead.
+func (*ListReportsRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListReportsRequest) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
+}
+
+func (x *ListReportsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListReportsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListReportsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
+type ListReportsResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Reports []*Report              `protobuf:"bytes,1,rep,name=reports,proto3" json:"reports,omitempty"`
+	// next_page_token is empty when the last page has been reached.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReportsResponse) Reset() {
+	*x = ListReportsResponse{}
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReportsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReportsResponse) ProtoMessage() {}
+
+func (x *ListReportsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReportsResponse.ProtoReflect.Descriptor instead.
+func (*ListReportsResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListReportsResponse) GetReports() []*Report {
+	if x != nil {
+		return x.Reports
+	}
+	return nil
+}
+
+func (x *ListReportsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type DeleteReportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "designs/{design}/reports/{report}"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteReportRequest) Reset() {
+	*x = DeleteReportRequest{}
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteReportRequest) ProtoMessage() {}
+
+func (x *DeleteReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteReportRequest.ProtoReflect.Descriptor instead.
+func (*DeleteReportRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DeleteReportRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 type CreateDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// design_id is the new design's id, lowercase letters, digits, '.', '_' or '-'.
@@ -98,7 +509,7 @@ type CreateDesignRequest struct {
 
 func (x *CreateDesignRequest) Reset() {
 	*x = CreateDesignRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -110,7 +521,7 @@ func (x *CreateDesignRequest) String() string {
 func (*CreateDesignRequest) ProtoMessage() {}
 
 func (x *CreateDesignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -123,7 +534,7 @@ func (x *CreateDesignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDesignRequest.ProtoReflect.Descriptor instead.
 func (*CreateDesignRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateDesignRequest) GetDesignId() string {
@@ -149,7 +560,7 @@ type GetDesignRequest struct {
 
 func (x *GetDesignRequest) Reset() {
 	*x = GetDesignRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -161,7 +572,7 @@ func (x *GetDesignRequest) String() string {
 func (*GetDesignRequest) ProtoMessage() {}
 
 func (x *GetDesignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -174,7 +585,7 @@ func (x *GetDesignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDesignRequest.ProtoReflect.Descriptor instead.
 func (*GetDesignRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetDesignRequest) GetName() string {
@@ -200,7 +611,7 @@ type ListDesignsRequest struct {
 
 func (x *ListDesignsRequest) Reset() {
 	*x = ListDesignsRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -212,7 +623,7 @@ func (x *ListDesignsRequest) String() string {
 func (*ListDesignsRequest) ProtoMessage() {}
 
 func (x *ListDesignsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -225,7 +636,7 @@ func (x *ListDesignsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDesignsRequest.ProtoReflect.Descriptor instead.
 func (*ListDesignsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListDesignsRequest) GetPageSize() int32 {
@@ -263,7 +674,7 @@ type ListDesignsResponse struct {
 
 func (x *ListDesignsResponse) Reset() {
 	*x = ListDesignsResponse{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -275,7 +686,7 @@ func (x *ListDesignsResponse) String() string {
 func (*ListDesignsResponse) ProtoMessage() {}
 
 func (x *ListDesignsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -288,7 +699,7 @@ func (x *ListDesignsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDesignsResponse.ProtoReflect.Descriptor instead.
 func (*ListDesignsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListDesignsResponse) GetDesigns() []*Design {
@@ -327,7 +738,7 @@ type UpdateDesignRequest struct {
 
 func (x *UpdateDesignRequest) Reset() {
 	*x = UpdateDesignRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -339,7 +750,7 @@ func (x *UpdateDesignRequest) String() string {
 func (*UpdateDesignRequest) ProtoMessage() {}
 
 func (x *UpdateDesignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -352,7 +763,7 @@ func (x *UpdateDesignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDesignRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDesignRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateDesignRequest) GetDesign() *Design {
@@ -378,7 +789,7 @@ type DeleteDesignRequest struct {
 
 func (x *DeleteDesignRequest) Reset() {
 	*x = DeleteDesignRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +801,7 @@ func (x *DeleteDesignRequest) String() string {
 func (*DeleteDesignRequest) ProtoMessage() {}
 
 func (x *DeleteDesignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +814,7 @@ func (x *DeleteDesignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteDesignRequest.ProtoReflect.Descriptor instead.
 func (*DeleteDesignRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteDesignRequest) GetName() string {
@@ -439,7 +850,7 @@ type Artifact struct {
 
 func (x *Artifact) Reset() {
 	*x = Artifact{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -451,7 +862,7 @@ func (x *Artifact) String() string {
 func (*Artifact) ProtoMessage() {}
 
 func (x *Artifact) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -464,7 +875,7 @@ func (x *Artifact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Artifact.ProtoReflect.Descriptor instead.
 func (*Artifact) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Artifact) GetName() string {
@@ -511,7 +922,7 @@ type GetArtifactRequest struct {
 
 func (x *GetArtifactRequest) Reset() {
 	*x = GetArtifactRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -523,7 +934,7 @@ func (x *GetArtifactRequest) String() string {
 func (*GetArtifactRequest) ProtoMessage() {}
 
 func (x *GetArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -536,7 +947,7 @@ func (x *GetArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetArtifactRequest.ProtoReflect.Descriptor instead.
 func (*GetArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetArtifactRequest) GetName() string {
@@ -559,7 +970,7 @@ type ListArtifactsRequest struct {
 
 func (x *ListArtifactsRequest) Reset() {
 	*x = ListArtifactsRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -571,7 +982,7 @@ func (x *ListArtifactsRequest) String() string {
 func (*ListArtifactsRequest) ProtoMessage() {}
 
 func (x *ListArtifactsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -584,7 +995,7 @@ func (x *ListArtifactsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListArtifactsRequest.ProtoReflect.Descriptor instead.
 func (*ListArtifactsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListArtifactsRequest) GetParent() string {
@@ -619,7 +1030,7 @@ type ListArtifactsResponse struct {
 
 func (x *ListArtifactsResponse) Reset() {
 	*x = ListArtifactsResponse{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -631,7 +1042,7 @@ func (x *ListArtifactsResponse) String() string {
 func (*ListArtifactsResponse) ProtoMessage() {}
 
 func (x *ListArtifactsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -644,7 +1055,7 @@ func (x *ListArtifactsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListArtifactsResponse.ProtoReflect.Descriptor instead.
 func (*ListArtifactsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListArtifactsResponse) GetArtifacts() []*Artifact {
@@ -675,7 +1086,7 @@ type UpdateArtifactRequest struct {
 
 func (x *UpdateArtifactRequest) Reset() {
 	*x = UpdateArtifactRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -687,7 +1098,7 @@ func (x *UpdateArtifactRequest) String() string {
 func (*UpdateArtifactRequest) ProtoMessage() {}
 
 func (x *UpdateArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -700,7 +1111,7 @@ func (x *UpdateArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateArtifactRequest.ProtoReflect.Descriptor instead.
 func (*UpdateArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateArtifactRequest) GetArtifact() *Artifact {
@@ -728,7 +1139,7 @@ type BatchUpdateArtifactsRequest struct {
 
 func (x *BatchUpdateArtifactsRequest) Reset() {
 	*x = BatchUpdateArtifactsRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -740,7 +1151,7 @@ func (x *BatchUpdateArtifactsRequest) String() string {
 func (*BatchUpdateArtifactsRequest) ProtoMessage() {}
 
 func (x *BatchUpdateArtifactsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -753,7 +1164,7 @@ func (x *BatchUpdateArtifactsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchUpdateArtifactsRequest.ProtoReflect.Descriptor instead.
 func (*BatchUpdateArtifactsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *BatchUpdateArtifactsRequest) GetParent() string {
@@ -780,7 +1191,7 @@ type BatchUpdateArtifactsResponse struct {
 
 func (x *BatchUpdateArtifactsResponse) Reset() {
 	*x = BatchUpdateArtifactsResponse{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -792,7 +1203,7 @@ func (x *BatchUpdateArtifactsResponse) String() string {
 func (*BatchUpdateArtifactsResponse) ProtoMessage() {}
 
 func (x *BatchUpdateArtifactsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -805,7 +1216,7 @@ func (x *BatchUpdateArtifactsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchUpdateArtifactsResponse.ProtoReflect.Descriptor instead.
 func (*BatchUpdateArtifactsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *BatchUpdateArtifactsResponse) GetArtifacts() []*Artifact {
@@ -824,7 +1235,7 @@ type DeleteArtifactRequest struct {
 
 func (x *DeleteArtifactRequest) Reset() {
 	*x = DeleteArtifactRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -836,7 +1247,7 @@ func (x *DeleteArtifactRequest) String() string {
 func (*DeleteArtifactRequest) ProtoMessage() {}
 
 func (x *DeleteArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -849,7 +1260,7 @@ func (x *DeleteArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteArtifactRequest.ProtoReflect.Descriptor instead.
 func (*DeleteArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *DeleteArtifactRequest) GetName() string {
@@ -870,7 +1281,7 @@ type ImportDesignFilesRequest struct {
 
 func (x *ImportDesignFilesRequest) Reset() {
 	*x = ImportDesignFilesRequest{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -882,7 +1293,7 @@ func (x *ImportDesignFilesRequest) String() string {
 func (*ImportDesignFilesRequest) ProtoMessage() {}
 
 func (x *ImportDesignFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -895,7 +1306,7 @@ func (x *ImportDesignFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportDesignFilesRequest.ProtoReflect.Descriptor instead.
 func (*ImportDesignFilesRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ImportDesignFilesRequest) GetParent() string {
@@ -924,7 +1335,7 @@ type ImportDesignFilesResponse struct {
 
 func (x *ImportDesignFilesResponse) Reset() {
 	*x = ImportDesignFilesResponse{}
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -936,7 +1347,7 @@ func (x *ImportDesignFilesResponse) String() string {
 func (*ImportDesignFilesResponse) ProtoMessage() {}
 
 func (x *ImportDesignFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_designs_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_designs_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -949,7 +1360,7 @@ func (x *ImportDesignFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportDesignFilesResponse.ProtoReflect.Descriptor instead.
 func (*ImportDesignFilesResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ImportDesignFilesResponse) GetArtifacts() []*Artifact {
@@ -970,7 +1381,38 @@ var File_agni_v1_webapi_designs_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\n" +
-	"\x1cagni/v1/webapi/designs.proto\x12\x0eagni.v1.webapi\x1a\x1cagni/v1/webapi/project.proto\x1a\x1dagni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"o\n" +
+	"\x1cagni/v1/webapi/designs.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1cagni/v1/webapi/project.proto\x1a\x1dagni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd6\x02\n" +
+	"\x06Report\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
+	"\x05packs\x18\x02 \x03(\tR\x05packs\x12\x18\n" +
+	"\aproject\x18\x03 \x01(\tR\aproject\x12\x1f\n" +
+	"\vdesign_hash\x18\x04 \x01(\tR\n" +
+	"designHash\x12\x1f\n" +
+	"\vpack_hashes\x18\x05 \x03(\tR\n" +
+	"packHashes\x12=\n" +
+	"\aresults\x18\x06 \x01(\v2#.agni.v1.webapi.CheckDesignResponseR\aresults\x12;\n" +
+	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12%\n" +
+	"\x0edesign_changed\x18\b \x01(\bR\rdesignChanged\x12#\n" +
+	"\rpacks_changed\x18\t \x03(\tR\fpacksChanged\"\x94\x01\n" +
+	"\x13CreateReportRequest\x12\x16\n" +
+	"\x06parent\x18\x01 \x01(\tR\x06parent\x12\x1b\n" +
+	"\treport_id\x18\x02 \x01(\tR\breportId\x12.\n" +
+	"\x06report\x18\x03 \x01(\v2\x16.agni.v1.webapi.ReportR\x06report\x12\x18\n" +
+	"\aproject\x18\x04 \x01(\tR\aproject\"&\n" +
+	"\x10GetReportRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"\x80\x01\n" +
+	"\x12ListReportsRequest\x12\x16\n" +
+	"\x06parent\x18\x01 \x01(\tR\x06parent\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"o\n" +
+	"\x13ListReportsResponse\x120\n" +
+	"\areports\x18\x01 \x03(\v2\x16.agni.v1.webapi.ReportR\areports\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\")\n" +
+	"\x13DeleteReportRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"o\n" +
 	"\x13CreateDesignRequest\x12\x1b\n" +
 	"\tdesign_id\x18\x01 \x01(\tR\bdesignId\x12.\n" +
 	"\x06design\x18\x03 \x01(\v2\x16.agni.v1.webapi.DesignR\x06designJ\x04\b\x02\x10\x03R\x05files\"&\n" +
@@ -1029,7 +1471,7 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x15ARTIFACT_TYPE_NETLIST\x10\x01\x12\x1b\n" +
 	"\x17ARTIFACT_TYPE_SCHEMATIC\x10\x02\x12\x17\n" +
 	"\x13ARTIFACT_TYPE_BOARD\x10\x03\x12\x17\n" +
-	"\x13ARTIFACT_TYPE_OTHER\x10\x042\xc1\a\n" +
+	"\x13ARTIFACT_TYPE_OTHER\x10\x042\xfa\t\n" +
 	"\rDesignService\x12K\n" +
 	"\fCreateDesign\x12#.agni.v1.webapi.CreateDesignRequest\x1a\x16.agni.v1.webapi.Design\x12E\n" +
 	"\tGetDesign\x12 .agni.v1.webapi.GetDesignRequest\x1a\x16.agni.v1.webapi.Design\x12V\n" +
@@ -1041,7 +1483,11 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x0eUpdateArtifact\x12%.agni.v1.webapi.UpdateArtifactRequest\x1a\x18.agni.v1.webapi.Artifact\x12q\n" +
 	"\x14BatchUpdateArtifacts\x12+.agni.v1.webapi.BatchUpdateArtifactsRequest\x1a,.agni.v1.webapi.BatchUpdateArtifactsResponse\x12h\n" +
 	"\x11ImportDesignFiles\x12(.agni.v1.webapi.ImportDesignFilesRequest\x1a).agni.v1.webapi.ImportDesignFilesResponse\x12O\n" +
-	"\x0eDeleteArtifact\x12%.agni.v1.webapi.DeleteArtifactRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x0eDeleteArtifact\x12%.agni.v1.webapi.DeleteArtifactRequest\x1a\x16.google.protobuf.Empty\x12K\n" +
+	"\fCreateReport\x12#.agni.v1.webapi.CreateReportRequest\x1a\x16.agni.v1.webapi.Report\x12E\n" +
+	"\tGetReport\x12 .agni.v1.webapi.GetReportRequest\x1a\x16.agni.v1.webapi.Report\x12V\n" +
+	"\vListReports\x12\".agni.v1.webapi.ListReportsRequest\x1a#.agni.v1.webapi.ListReportsResponse\x12K\n" +
+	"\fDeleteReport\x12#.agni.v1.webapi.DeleteReportRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_designs_proto_rawDescOnce sync.Once
@@ -1056,72 +1502,91 @@ func file_agni_v1_webapi_designs_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_webapi_designs_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_webapi_designs_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_agni_v1_webapi_designs_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_agni_v1_webapi_designs_proto_goTypes = []any{
 	(ArtifactType)(0),                    // 0: agni.v1.webapi.ArtifactType
-	(*CreateDesignRequest)(nil),          // 1: agni.v1.webapi.CreateDesignRequest
-	(*GetDesignRequest)(nil),             // 2: agni.v1.webapi.GetDesignRequest
-	(*ListDesignsRequest)(nil),           // 3: agni.v1.webapi.ListDesignsRequest
-	(*ListDesignsResponse)(nil),          // 4: agni.v1.webapi.ListDesignsResponse
-	(*UpdateDesignRequest)(nil),          // 5: agni.v1.webapi.UpdateDesignRequest
-	(*DeleteDesignRequest)(nil),          // 6: agni.v1.webapi.DeleteDesignRequest
-	(*Artifact)(nil),                     // 7: agni.v1.webapi.Artifact
-	(*GetArtifactRequest)(nil),           // 8: agni.v1.webapi.GetArtifactRequest
-	(*ListArtifactsRequest)(nil),         // 9: agni.v1.webapi.ListArtifactsRequest
-	(*ListArtifactsResponse)(nil),        // 10: agni.v1.webapi.ListArtifactsResponse
-	(*UpdateArtifactRequest)(nil),        // 11: agni.v1.webapi.UpdateArtifactRequest
-	(*BatchUpdateArtifactsRequest)(nil),  // 12: agni.v1.webapi.BatchUpdateArtifactsRequest
-	(*BatchUpdateArtifactsResponse)(nil), // 13: agni.v1.webapi.BatchUpdateArtifactsResponse
-	(*DeleteArtifactRequest)(nil),        // 14: agni.v1.webapi.DeleteArtifactRequest
-	(*ImportDesignFilesRequest)(nil),     // 15: agni.v1.webapi.ImportDesignFilesRequest
-	(*ImportDesignFilesResponse)(nil),    // 16: agni.v1.webapi.ImportDesignFilesResponse
-	(*Design)(nil),                       // 17: agni.v1.webapi.Design
-	(*fieldmaskpb.FieldMask)(nil),        // 18: google.protobuf.FieldMask
-	(*SnapshotFile)(nil),                 // 19: agni.v1.webapi.SnapshotFile
-	(*timestamppb.Timestamp)(nil),        // 20: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                // 21: google.protobuf.Empty
+	(*Report)(nil),                       // 1: agni.v1.webapi.Report
+	(*CreateReportRequest)(nil),          // 2: agni.v1.webapi.CreateReportRequest
+	(*GetReportRequest)(nil),             // 3: agni.v1.webapi.GetReportRequest
+	(*ListReportsRequest)(nil),           // 4: agni.v1.webapi.ListReportsRequest
+	(*ListReportsResponse)(nil),          // 5: agni.v1.webapi.ListReportsResponse
+	(*DeleteReportRequest)(nil),          // 6: agni.v1.webapi.DeleteReportRequest
+	(*CreateDesignRequest)(nil),          // 7: agni.v1.webapi.CreateDesignRequest
+	(*GetDesignRequest)(nil),             // 8: agni.v1.webapi.GetDesignRequest
+	(*ListDesignsRequest)(nil),           // 9: agni.v1.webapi.ListDesignsRequest
+	(*ListDesignsResponse)(nil),          // 10: agni.v1.webapi.ListDesignsResponse
+	(*UpdateDesignRequest)(nil),          // 11: agni.v1.webapi.UpdateDesignRequest
+	(*DeleteDesignRequest)(nil),          // 12: agni.v1.webapi.DeleteDesignRequest
+	(*Artifact)(nil),                     // 13: agni.v1.webapi.Artifact
+	(*GetArtifactRequest)(nil),           // 14: agni.v1.webapi.GetArtifactRequest
+	(*ListArtifactsRequest)(nil),         // 15: agni.v1.webapi.ListArtifactsRequest
+	(*ListArtifactsResponse)(nil),        // 16: agni.v1.webapi.ListArtifactsResponse
+	(*UpdateArtifactRequest)(nil),        // 17: agni.v1.webapi.UpdateArtifactRequest
+	(*BatchUpdateArtifactsRequest)(nil),  // 18: agni.v1.webapi.BatchUpdateArtifactsRequest
+	(*BatchUpdateArtifactsResponse)(nil), // 19: agni.v1.webapi.BatchUpdateArtifactsResponse
+	(*DeleteArtifactRequest)(nil),        // 20: agni.v1.webapi.DeleteArtifactRequest
+	(*ImportDesignFilesRequest)(nil),     // 21: agni.v1.webapi.ImportDesignFilesRequest
+	(*ImportDesignFilesResponse)(nil),    // 22: agni.v1.webapi.ImportDesignFilesResponse
+	(*CheckDesignResponse)(nil),          // 23: agni.v1.webapi.CheckDesignResponse
+	(*timestamppb.Timestamp)(nil),        // 24: google.protobuf.Timestamp
+	(*Design)(nil),                       // 25: agni.v1.webapi.Design
+	(*fieldmaskpb.FieldMask)(nil),        // 26: google.protobuf.FieldMask
+	(*SnapshotFile)(nil),                 // 27: agni.v1.webapi.SnapshotFile
+	(*emptypb.Empty)(nil),                // 28: google.protobuf.Empty
 }
 var file_agni_v1_webapi_designs_proto_depIdxs = []int32{
-	17, // 0: agni.v1.webapi.CreateDesignRequest.design:type_name -> agni.v1.webapi.Design
-	17, // 1: agni.v1.webapi.ListDesignsResponse.designs:type_name -> agni.v1.webapi.Design
-	17, // 2: agni.v1.webapi.UpdateDesignRequest.design:type_name -> agni.v1.webapi.Design
-	18, // 3: agni.v1.webapi.UpdateDesignRequest.update_mask:type_name -> google.protobuf.FieldMask
-	19, // 4: agni.v1.webapi.Artifact.files:type_name -> agni.v1.webapi.SnapshotFile
-	0,  // 5: agni.v1.webapi.Artifact.type:type_name -> agni.v1.webapi.ArtifactType
-	20, // 6: agni.v1.webapi.Artifact.update_time:type_name -> google.protobuf.Timestamp
-	7,  // 7: agni.v1.webapi.ListArtifactsResponse.artifacts:type_name -> agni.v1.webapi.Artifact
-	7,  // 8: agni.v1.webapi.UpdateArtifactRequest.artifact:type_name -> agni.v1.webapi.Artifact
-	11, // 9: agni.v1.webapi.BatchUpdateArtifactsRequest.requests:type_name -> agni.v1.webapi.UpdateArtifactRequest
-	7,  // 10: agni.v1.webapi.BatchUpdateArtifactsResponse.artifacts:type_name -> agni.v1.webapi.Artifact
-	19, // 11: agni.v1.webapi.ImportDesignFilesRequest.files:type_name -> agni.v1.webapi.SnapshotFile
-	7,  // 12: agni.v1.webapi.ImportDesignFilesResponse.artifacts:type_name -> agni.v1.webapi.Artifact
-	1,  // 13: agni.v1.webapi.DesignService.CreateDesign:input_type -> agni.v1.webapi.CreateDesignRequest
-	2,  // 14: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	3,  // 15: agni.v1.webapi.DesignService.ListDesigns:input_type -> agni.v1.webapi.ListDesignsRequest
-	5,  // 16: agni.v1.webapi.DesignService.UpdateDesign:input_type -> agni.v1.webapi.UpdateDesignRequest
-	6,  // 17: agni.v1.webapi.DesignService.DeleteDesign:input_type -> agni.v1.webapi.DeleteDesignRequest
-	8,  // 18: agni.v1.webapi.DesignService.GetArtifact:input_type -> agni.v1.webapi.GetArtifactRequest
-	9,  // 19: agni.v1.webapi.DesignService.ListArtifacts:input_type -> agni.v1.webapi.ListArtifactsRequest
-	11, // 20: agni.v1.webapi.DesignService.UpdateArtifact:input_type -> agni.v1.webapi.UpdateArtifactRequest
-	12, // 21: agni.v1.webapi.DesignService.BatchUpdateArtifacts:input_type -> agni.v1.webapi.BatchUpdateArtifactsRequest
-	15, // 22: agni.v1.webapi.DesignService.ImportDesignFiles:input_type -> agni.v1.webapi.ImportDesignFilesRequest
-	14, // 23: agni.v1.webapi.DesignService.DeleteArtifact:input_type -> agni.v1.webapi.DeleteArtifactRequest
-	17, // 24: agni.v1.webapi.DesignService.CreateDesign:output_type -> agni.v1.webapi.Design
-	17, // 25: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.Design
-	4,  // 26: agni.v1.webapi.DesignService.ListDesigns:output_type -> agni.v1.webapi.ListDesignsResponse
-	17, // 27: agni.v1.webapi.DesignService.UpdateDesign:output_type -> agni.v1.webapi.Design
-	21, // 28: agni.v1.webapi.DesignService.DeleteDesign:output_type -> google.protobuf.Empty
-	7,  // 29: agni.v1.webapi.DesignService.GetArtifact:output_type -> agni.v1.webapi.Artifact
-	10, // 30: agni.v1.webapi.DesignService.ListArtifacts:output_type -> agni.v1.webapi.ListArtifactsResponse
-	7,  // 31: agni.v1.webapi.DesignService.UpdateArtifact:output_type -> agni.v1.webapi.Artifact
-	13, // 32: agni.v1.webapi.DesignService.BatchUpdateArtifacts:output_type -> agni.v1.webapi.BatchUpdateArtifactsResponse
-	16, // 33: agni.v1.webapi.DesignService.ImportDesignFiles:output_type -> agni.v1.webapi.ImportDesignFilesResponse
-	21, // 34: agni.v1.webapi.DesignService.DeleteArtifact:output_type -> google.protobuf.Empty
-	24, // [24:35] is the sub-list for method output_type
-	13, // [13:24] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	23, // 0: agni.v1.webapi.Report.results:type_name -> agni.v1.webapi.CheckDesignResponse
+	24, // 1: agni.v1.webapi.Report.create_time:type_name -> google.protobuf.Timestamp
+	1,  // 2: agni.v1.webapi.CreateReportRequest.report:type_name -> agni.v1.webapi.Report
+	1,  // 3: agni.v1.webapi.ListReportsResponse.reports:type_name -> agni.v1.webapi.Report
+	25, // 4: agni.v1.webapi.CreateDesignRequest.design:type_name -> agni.v1.webapi.Design
+	25, // 5: agni.v1.webapi.ListDesignsResponse.designs:type_name -> agni.v1.webapi.Design
+	25, // 6: agni.v1.webapi.UpdateDesignRequest.design:type_name -> agni.v1.webapi.Design
+	26, // 7: agni.v1.webapi.UpdateDesignRequest.update_mask:type_name -> google.protobuf.FieldMask
+	27, // 8: agni.v1.webapi.Artifact.files:type_name -> agni.v1.webapi.SnapshotFile
+	0,  // 9: agni.v1.webapi.Artifact.type:type_name -> agni.v1.webapi.ArtifactType
+	24, // 10: agni.v1.webapi.Artifact.update_time:type_name -> google.protobuf.Timestamp
+	13, // 11: agni.v1.webapi.ListArtifactsResponse.artifacts:type_name -> agni.v1.webapi.Artifact
+	13, // 12: agni.v1.webapi.UpdateArtifactRequest.artifact:type_name -> agni.v1.webapi.Artifact
+	17, // 13: agni.v1.webapi.BatchUpdateArtifactsRequest.requests:type_name -> agni.v1.webapi.UpdateArtifactRequest
+	13, // 14: agni.v1.webapi.BatchUpdateArtifactsResponse.artifacts:type_name -> agni.v1.webapi.Artifact
+	27, // 15: agni.v1.webapi.ImportDesignFilesRequest.files:type_name -> agni.v1.webapi.SnapshotFile
+	13, // 16: agni.v1.webapi.ImportDesignFilesResponse.artifacts:type_name -> agni.v1.webapi.Artifact
+	7,  // 17: agni.v1.webapi.DesignService.CreateDesign:input_type -> agni.v1.webapi.CreateDesignRequest
+	8,  // 18: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	9,  // 19: agni.v1.webapi.DesignService.ListDesigns:input_type -> agni.v1.webapi.ListDesignsRequest
+	11, // 20: agni.v1.webapi.DesignService.UpdateDesign:input_type -> agni.v1.webapi.UpdateDesignRequest
+	12, // 21: agni.v1.webapi.DesignService.DeleteDesign:input_type -> agni.v1.webapi.DeleteDesignRequest
+	14, // 22: agni.v1.webapi.DesignService.GetArtifact:input_type -> agni.v1.webapi.GetArtifactRequest
+	15, // 23: agni.v1.webapi.DesignService.ListArtifacts:input_type -> agni.v1.webapi.ListArtifactsRequest
+	17, // 24: agni.v1.webapi.DesignService.UpdateArtifact:input_type -> agni.v1.webapi.UpdateArtifactRequest
+	18, // 25: agni.v1.webapi.DesignService.BatchUpdateArtifacts:input_type -> agni.v1.webapi.BatchUpdateArtifactsRequest
+	21, // 26: agni.v1.webapi.DesignService.ImportDesignFiles:input_type -> agni.v1.webapi.ImportDesignFilesRequest
+	20, // 27: agni.v1.webapi.DesignService.DeleteArtifact:input_type -> agni.v1.webapi.DeleteArtifactRequest
+	2,  // 28: agni.v1.webapi.DesignService.CreateReport:input_type -> agni.v1.webapi.CreateReportRequest
+	3,  // 29: agni.v1.webapi.DesignService.GetReport:input_type -> agni.v1.webapi.GetReportRequest
+	4,  // 30: agni.v1.webapi.DesignService.ListReports:input_type -> agni.v1.webapi.ListReportsRequest
+	6,  // 31: agni.v1.webapi.DesignService.DeleteReport:input_type -> agni.v1.webapi.DeleteReportRequest
+	25, // 32: agni.v1.webapi.DesignService.CreateDesign:output_type -> agni.v1.webapi.Design
+	25, // 33: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.Design
+	10, // 34: agni.v1.webapi.DesignService.ListDesigns:output_type -> agni.v1.webapi.ListDesignsResponse
+	25, // 35: agni.v1.webapi.DesignService.UpdateDesign:output_type -> agni.v1.webapi.Design
+	28, // 36: agni.v1.webapi.DesignService.DeleteDesign:output_type -> google.protobuf.Empty
+	13, // 37: agni.v1.webapi.DesignService.GetArtifact:output_type -> agni.v1.webapi.Artifact
+	16, // 38: agni.v1.webapi.DesignService.ListArtifacts:output_type -> agni.v1.webapi.ListArtifactsResponse
+	13, // 39: agni.v1.webapi.DesignService.UpdateArtifact:output_type -> agni.v1.webapi.Artifact
+	19, // 40: agni.v1.webapi.DesignService.BatchUpdateArtifacts:output_type -> agni.v1.webapi.BatchUpdateArtifactsResponse
+	22, // 41: agni.v1.webapi.DesignService.ImportDesignFiles:output_type -> agni.v1.webapi.ImportDesignFilesResponse
+	28, // 42: agni.v1.webapi.DesignService.DeleteArtifact:output_type -> google.protobuf.Empty
+	1,  // 43: agni.v1.webapi.DesignService.CreateReport:output_type -> agni.v1.webapi.Report
+	1,  // 44: agni.v1.webapi.DesignService.GetReport:output_type -> agni.v1.webapi.Report
+	5,  // 45: agni.v1.webapi.DesignService.ListReports:output_type -> agni.v1.webapi.ListReportsResponse
+	28, // 46: agni.v1.webapi.DesignService.DeleteReport:output_type -> google.protobuf.Empty
+	32, // [32:47] is the sub-list for method output_type
+	17, // [17:32] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_designs_proto_init() }
@@ -1129,6 +1594,7 @@ func file_agni_v1_webapi_designs_proto_init() {
 	if File_agni_v1_webapi_designs_proto != nil {
 		return
 	}
+	file_agni_v1_webapi_checks_proto_init()
 	file_agni_v1_webapi_project_proto_init()
 	file_agni_v1_webapi_snapshot_proto_init()
 	type x struct{}
@@ -1137,7 +1603,7 @@ func file_agni_v1_webapi_designs_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_designs_proto_rawDesc), len(file_agni_v1_webapi_designs_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

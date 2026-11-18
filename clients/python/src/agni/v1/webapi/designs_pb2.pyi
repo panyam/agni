@@ -1,5 +1,6 @@
 import datetime
 
+from agni.v1.webapi import checks_pb2 as _checks_pb2
 from agni.v1.webapi import project_pb2 as _project_pb2
 from agni.v1.webapi import snapshot_pb2 as _snapshot_pb2
 from google.protobuf import empty_pb2 as _empty_pb2
@@ -26,6 +27,72 @@ ARTIFACT_TYPE_NETLIST: ArtifactType
 ARTIFACT_TYPE_SCHEMATIC: ArtifactType
 ARTIFACT_TYPE_BOARD: ArtifactType
 ARTIFACT_TYPE_OTHER: ArtifactType
+
+class Report(_message.Message):
+    __slots__ = ("name", "packs", "project", "design_hash", "pack_hashes", "results", "create_time", "design_changed", "packs_changed")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    PACKS_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_HASH_FIELD_NUMBER: _ClassVar[int]
+    PACK_HASHES_FIELD_NUMBER: _ClassVar[int]
+    RESULTS_FIELD_NUMBER: _ClassVar[int]
+    CREATE_TIME_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_CHANGED_FIELD_NUMBER: _ClassVar[int]
+    PACKS_CHANGED_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    packs: _containers.RepeatedScalarFieldContainer[str]
+    project: str
+    design_hash: str
+    pack_hashes: _containers.RepeatedScalarFieldContainer[str]
+    results: _checks_pb2.CheckDesignResponse
+    create_time: _timestamp_pb2.Timestamp
+    design_changed: bool
+    packs_changed: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, name: _Optional[str] = ..., packs: _Optional[_Iterable[str]] = ..., project: _Optional[str] = ..., design_hash: _Optional[str] = ..., pack_hashes: _Optional[_Iterable[str]] = ..., results: _Optional[_Union[_checks_pb2.CheckDesignResponse, _Mapping]] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., design_changed: _Optional[bool] = ..., packs_changed: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class CreateReportRequest(_message.Message):
+    __slots__ = ("parent", "report_id", "report", "project")
+    PARENT_FIELD_NUMBER: _ClassVar[int]
+    REPORT_ID_FIELD_NUMBER: _ClassVar[int]
+    REPORT_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_FIELD_NUMBER: _ClassVar[int]
+    parent: str
+    report_id: str
+    report: Report
+    project: str
+    def __init__(self, parent: _Optional[str] = ..., report_id: _Optional[str] = ..., report: _Optional[_Union[Report, _Mapping]] = ..., project: _Optional[str] = ...) -> None: ...
+
+class GetReportRequest(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class ListReportsRequest(_message.Message):
+    __slots__ = ("parent", "page_size", "page_token", "filter")
+    PARENT_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    FILTER_FIELD_NUMBER: _ClassVar[int]
+    parent: str
+    page_size: int
+    page_token: str
+    filter: str
+    def __init__(self, parent: _Optional[str] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ..., filter: _Optional[str] = ...) -> None: ...
+
+class ListReportsResponse(_message.Message):
+    __slots__ = ("reports", "next_page_token")
+    REPORTS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    reports: _containers.RepeatedCompositeFieldContainer[Report]
+    next_page_token: str
+    def __init__(self, reports: _Optional[_Iterable[_Union[Report, _Mapping]]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
+
+class DeleteReportRequest(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
 
 class CreateDesignRequest(_message.Message):
     __slots__ = ("design_id", "design")

@@ -2576,6 +2576,149 @@ impl<'de> serde::Deserialize<'de> for CreateProjectRequest {
         deserializer.deserialize_struct("agni.v1.webapi.CreateProjectRequest", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for CreateReportRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.parent.is_empty() {
+            len += 1;
+        }
+        if !self.report_id.is_empty() {
+            len += 1;
+        }
+        if self.report.is_some() {
+            len += 1;
+        }
+        if !self.project.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.CreateReportRequest", len)?;
+        if !self.parent.is_empty() {
+            struct_ser.serialize_field("parent", &self.parent)?;
+        }
+        if !self.report_id.is_empty() {
+            struct_ser.serialize_field("reportId", &self.report_id)?;
+        }
+        if let Some(v) = self.report.as_ref() {
+            struct_ser.serialize_field("report", v)?;
+        }
+        if !self.project.is_empty() {
+            struct_ser.serialize_field("project", &self.project)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for CreateReportRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "parent",
+            "report_id",
+            "reportId",
+            "report",
+            "project",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Parent,
+            ReportId,
+            Report,
+            Project,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "parent" => Ok(GeneratedField::Parent),
+                            "reportId" | "report_id" => Ok(GeneratedField::ReportId),
+                            "report" => Ok(GeneratedField::Report),
+                            "project" => Ok(GeneratedField::Project),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = CreateReportRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.CreateReportRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<CreateReportRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut parent__ = None;
+                let mut report_id__ = None;
+                let mut report__ = None;
+                let mut project__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Parent => {
+                            if parent__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("parent"));
+                            }
+                            parent__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ReportId => {
+                            if report_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("reportId"));
+                            }
+                            report_id__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Report => {
+                            if report__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("report"));
+                            }
+                            report__ = map_.next_value()?;
+                        }
+                        GeneratedField::Project => {
+                            if project__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("project"));
+                            }
+                            project__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(CreateReportRequest {
+                    parent: parent__.unwrap_or_default(),
+                    report_id: report_id__.unwrap_or_default(),
+                    report: report__,
+                    project: project__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.CreateReportRequest", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for CreateReviewRequest {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -3394,6 +3537,97 @@ impl<'de> serde::Deserialize<'de> for DeleteProjectRequest {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.DeleteProjectRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for DeleteReportRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.name.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.DeleteReportRequest", len)?;
+        if !self.name.is_empty() {
+            struct_ser.serialize_field("name", &self.name)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for DeleteReportRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "name",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Name,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "name" => Ok(GeneratedField::Name),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = DeleteReportRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.DeleteReportRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<DeleteReportRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut name__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Name => {
+                            if name__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("name"));
+                            }
+                            name__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(DeleteReportRequest {
+                    name: name__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.DeleteReportRequest", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for DeleteReviewRequest {
@@ -9303,6 +9537,97 @@ impl<'de> serde::Deserialize<'de> for GetProjectRequest {
         deserializer.deserialize_struct("agni.v1.webapi.GetProjectRequest", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for GetReportRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.name.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.GetReportRequest", len)?;
+        if !self.name.is_empty() {
+            struct_ser.serialize_field("name", &self.name)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for GetReportRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "name",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Name,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "name" => Ok(GeneratedField::Name),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = GetReportRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.GetReportRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<GetReportRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut name__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Name => {
+                            if name__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("name"));
+                            }
+                            name__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(GetReportRequest {
+                    name: name__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.GetReportRequest", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for GetReviewManifestRequest {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -14267,6 +14592,261 @@ impl<'de> serde::Deserialize<'de> for ListRelationsResponse {
         deserializer.deserialize_struct("agni.v1.webapi.ListRelationsResponse", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for ListReportsRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.parent.is_empty() {
+            len += 1;
+        }
+        if self.page_size != 0 {
+            len += 1;
+        }
+        if !self.page_token.is_empty() {
+            len += 1;
+        }
+        if !self.filter.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.ListReportsRequest", len)?;
+        if !self.parent.is_empty() {
+            struct_ser.serialize_field("parent", &self.parent)?;
+        }
+        if self.page_size != 0 {
+            struct_ser.serialize_field("pageSize", &self.page_size)?;
+        }
+        if !self.page_token.is_empty() {
+            struct_ser.serialize_field("pageToken", &self.page_token)?;
+        }
+        if !self.filter.is_empty() {
+            struct_ser.serialize_field("filter", &self.filter)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ListReportsRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "parent",
+            "page_size",
+            "pageSize",
+            "page_token",
+            "pageToken",
+            "filter",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Parent,
+            PageSize,
+            PageToken,
+            Filter,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "parent" => Ok(GeneratedField::Parent),
+                            "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
+                            "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
+                            "filter" => Ok(GeneratedField::Filter),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ListReportsRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.ListReportsRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ListReportsRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut parent__ = None;
+                let mut page_size__ = None;
+                let mut page_token__ = None;
+                let mut filter__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Parent => {
+                            if parent__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("parent"));
+                            }
+                            parent__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::PageSize => {
+                            if page_size__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("pageSize"));
+                            }
+                            page_size__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::PageToken => {
+                            if page_token__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("pageToken"));
+                            }
+                            page_token__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Filter => {
+                            if filter__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("filter"));
+                            }
+                            filter__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(ListReportsRequest {
+                    parent: parent__.unwrap_or_default(),
+                    page_size: page_size__.unwrap_or_default(),
+                    page_token: page_token__.unwrap_or_default(),
+                    filter: filter__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.ListReportsRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ListReportsResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.reports.is_empty() {
+            len += 1;
+        }
+        if !self.next_page_token.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.ListReportsResponse", len)?;
+        if !self.reports.is_empty() {
+            struct_ser.serialize_field("reports", &self.reports)?;
+        }
+        if !self.next_page_token.is_empty() {
+            struct_ser.serialize_field("nextPageToken", &self.next_page_token)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ListReportsResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "reports",
+            "next_page_token",
+            "nextPageToken",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Reports,
+            NextPageToken,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "reports" => Ok(GeneratedField::Reports),
+                            "nextPageToken" | "next_page_token" => Ok(GeneratedField::NextPageToken),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ListReportsResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.ListReportsResponse")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ListReportsResponse, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut reports__ = None;
+                let mut next_page_token__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Reports => {
+                            if reports__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("reports"));
+                            }
+                            reports__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::NextPageToken => {
+                            if next_page_token__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("nextPageToken"));
+                            }
+                            next_page_token__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(ListReportsResponse {
+                    reports: reports__.unwrap_or_default(),
+                    next_page_token: next_page_token__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.ListReportsResponse", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for ListReviewsRequest {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -16850,6 +17430,9 @@ impl serde::Serialize for Project {
         if !self.designs.is_empty() {
             len += 1;
         }
+        if !self.default_packs.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Project", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -16866,6 +17449,9 @@ impl serde::Serialize for Project {
         if !self.designs.is_empty() {
             struct_ser.serialize_field("designs", &self.designs)?;
         }
+        if !self.default_packs.is_empty() {
+            struct_ser.serialize_field("defaultPacks", &self.default_packs)?;
+        }
         struct_ser.end()
     }
 }
@@ -16881,6 +17467,8 @@ impl<'de> serde::Deserialize<'de> for Project {
             "uri",
             "config",
             "designs",
+            "default_packs",
+            "defaultPacks",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -16890,6 +17478,7 @@ impl<'de> serde::Deserialize<'de> for Project {
             Uri,
             Config,
             Designs,
+            DefaultPacks,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -16916,6 +17505,7 @@ impl<'de> serde::Deserialize<'de> for Project {
                             "uri" => Ok(GeneratedField::Uri),
                             "config" => Ok(GeneratedField::Config),
                             "designs" => Ok(GeneratedField::Designs),
+                            "defaultPacks" | "default_packs" => Ok(GeneratedField::DefaultPacks),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -16940,6 +17530,7 @@ impl<'de> serde::Deserialize<'de> for Project {
                 let mut uri__ = None;
                 let mut config__ = None;
                 let mut designs__ = None;
+                let mut default_packs__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -16972,6 +17563,12 @@ impl<'de> serde::Deserialize<'de> for Project {
                             }
                             designs__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::DefaultPacks => {
+                            if default_packs__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("defaultPacks"));
+                            }
+                            default_packs__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Project {
@@ -16980,6 +17577,7 @@ impl<'de> serde::Deserialize<'de> for Project {
                     uri: uri__.unwrap_or_default(),
                     config: config__,
                     designs: designs__.unwrap_or_default(),
+                    default_packs: default_packs__.unwrap_or_default(),
                 })
             }
         }
@@ -19959,6 +20557,238 @@ impl<'de> serde::Deserialize<'de> for RenderReviewReportResponse {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.RenderReviewReportResponse", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for Report {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.name.is_empty() {
+            len += 1;
+        }
+        if !self.packs.is_empty() {
+            len += 1;
+        }
+        if !self.project.is_empty() {
+            len += 1;
+        }
+        if !self.design_hash.is_empty() {
+            len += 1;
+        }
+        if !self.pack_hashes.is_empty() {
+            len += 1;
+        }
+        if self.results.is_some() {
+            len += 1;
+        }
+        if self.create_time.is_some() {
+            len += 1;
+        }
+        if self.design_changed {
+            len += 1;
+        }
+        if !self.packs_changed.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Report", len)?;
+        if !self.name.is_empty() {
+            struct_ser.serialize_field("name", &self.name)?;
+        }
+        if !self.packs.is_empty() {
+            struct_ser.serialize_field("packs", &self.packs)?;
+        }
+        if !self.project.is_empty() {
+            struct_ser.serialize_field("project", &self.project)?;
+        }
+        if !self.design_hash.is_empty() {
+            struct_ser.serialize_field("designHash", &self.design_hash)?;
+        }
+        if !self.pack_hashes.is_empty() {
+            struct_ser.serialize_field("packHashes", &self.pack_hashes)?;
+        }
+        if let Some(v) = self.results.as_ref() {
+            struct_ser.serialize_field("results", v)?;
+        }
+        if let Some(v) = self.create_time.as_ref() {
+            struct_ser.serialize_field("createTime", v)?;
+        }
+        if self.design_changed {
+            struct_ser.serialize_field("designChanged", &self.design_changed)?;
+        }
+        if !self.packs_changed.is_empty() {
+            struct_ser.serialize_field("packsChanged", &self.packs_changed)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for Report {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "name",
+            "packs",
+            "project",
+            "design_hash",
+            "designHash",
+            "pack_hashes",
+            "packHashes",
+            "results",
+            "create_time",
+            "createTime",
+            "design_changed",
+            "designChanged",
+            "packs_changed",
+            "packsChanged",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Name,
+            Packs,
+            Project,
+            DesignHash,
+            PackHashes,
+            Results,
+            CreateTime,
+            DesignChanged,
+            PacksChanged,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "name" => Ok(GeneratedField::Name),
+                            "packs" => Ok(GeneratedField::Packs),
+                            "project" => Ok(GeneratedField::Project),
+                            "designHash" | "design_hash" => Ok(GeneratedField::DesignHash),
+                            "packHashes" | "pack_hashes" => Ok(GeneratedField::PackHashes),
+                            "results" => Ok(GeneratedField::Results),
+                            "createTime" | "create_time" => Ok(GeneratedField::CreateTime),
+                            "designChanged" | "design_changed" => Ok(GeneratedField::DesignChanged),
+                            "packsChanged" | "packs_changed" => Ok(GeneratedField::PacksChanged),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = Report;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.Report")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<Report, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut name__ = None;
+                let mut packs__ = None;
+                let mut project__ = None;
+                let mut design_hash__ = None;
+                let mut pack_hashes__ = None;
+                let mut results__ = None;
+                let mut create_time__ = None;
+                let mut design_changed__ = None;
+                let mut packs_changed__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Name => {
+                            if name__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("name"));
+                            }
+                            name__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Packs => {
+                            if packs__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("packs"));
+                            }
+                            packs__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Project => {
+                            if project__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("project"));
+                            }
+                            project__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::DesignHash => {
+                            if design_hash__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("designHash"));
+                            }
+                            design_hash__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::PackHashes => {
+                            if pack_hashes__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("packHashes"));
+                            }
+                            pack_hashes__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Results => {
+                            if results__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("results"));
+                            }
+                            results__ = map_.next_value()?;
+                        }
+                        GeneratedField::CreateTime => {
+                            if create_time__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("createTime"));
+                            }
+                            create_time__ = map_.next_value()?;
+                        }
+                        GeneratedField::DesignChanged => {
+                            if design_changed__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("designChanged"));
+                            }
+                            design_changed__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::PacksChanged => {
+                            if packs_changed__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("packsChanged"));
+                            }
+                            packs_changed__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(Report {
+                    name: name__.unwrap_or_default(),
+                    packs: packs__.unwrap_or_default(),
+                    project: project__.unwrap_or_default(),
+                    design_hash: design_hash__.unwrap_or_default(),
+                    pack_hashes: pack_hashes__.unwrap_or_default(),
+                    results: results__,
+                    create_time: create_time__,
+                    design_changed: design_changed__.unwrap_or_default(),
+                    packs_changed: packs_changed__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.Report", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for ReportLinks {

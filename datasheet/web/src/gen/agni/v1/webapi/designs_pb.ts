@@ -4,6 +4,8 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { CheckDesignResponse } from "./checks_pb";
+import { file_agni_v1_webapi_checks } from "./checks_pb";
 import type { Design, DesignSchema } from "./project_pb";
 import { file_agni_v1_webapi_project } from "./project_pb";
 import type { SnapshotFile } from "./snapshot_pb";
@@ -16,7 +18,237 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/designs.proto.
  */
 export const file_agni_v1_webapi_designs: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9kZXNpZ25zLnByb3RvEg5hZ25pLnYxLndlYmFwaSJdChNDcmVhdGVEZXNpZ25SZXF1ZXN0EhEKCWRlc2lnbl9pZBgBIAEoCRImCgZkZXNpZ24YAyABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ25KBAgCEANSBWZpbGVzIiAKEEdldERlc2lnblJlcXVlc3QSDAoEbmFtZRgBIAEoCSJLChJMaXN0RGVzaWduc1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJImwKE0xpc3REZXNpZ25zUmVzcG9uc2USJwoHZGVzaWducxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkSEwoLdW5yZWFjaGFibGUYAyADKAkihwEKE1VwZGF0ZURlc2lnblJlcXVlc3QSJgoGZGVzaWduGAMgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEi8KC3VwZGF0ZV9tYXNrGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFza0oECAEQAkoECAIQA1IEbmFtZVIFZmlsZXMiIwoTRGVsZXRlRGVzaWduUmVxdWVzdBIMCgRuYW1lGAEgASgJIrEBCghBcnRpZmFjdBIMCgRuYW1lGAEgASgJEisKBWZpbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuU25hcHNob3RGaWxlEioKBHR5cGUYAyABKA4yHC5hZ25pLnYxLndlYmFwaS5BcnRpZmFjdFR5cGUSDQoFZW50cnkYBCABKAkSLwoLdXBkYXRlX3RpbWUYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIiIKEkdldEFydGlmYWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIk0KFExpc3RBcnRpZmFjdHNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCSJdChVMaXN0QXJ0aWZhY3RzUmVzcG9uc2USKwoJYXJ0aWZhY3RzGAEgAygLMhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIloKFVVwZGF0ZUFydGlmYWN0UmVxdWVzdBIqCghhcnRpZmFjdBgBIAEoCzIYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0EhUKDWFsbG93X21pc3NpbmcYAiABKAgiZgobQmF0Y2hVcGRhdGVBcnRpZmFjdHNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRI3CghyZXF1ZXN0cxgCIAMoCzIlLmFnbmkudjEud2ViYXBpLlVwZGF0ZUFydGlmYWN0UmVxdWVzdCJLChxCYXRjaFVwZGF0ZUFydGlmYWN0c1Jlc3BvbnNlEisKCWFydGlmYWN0cxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0IiUKFURlbGV0ZUFydGlmYWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIlcKGEltcG9ydERlc2lnbkZpbGVzUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSKwoFZmlsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdEZpbGUiWAoZSW1wb3J0RGVzaWduRmlsZXNSZXNwb25zZRIrCglhcnRpZmFjdHMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5BcnRpZmFjdBIOCgZ1bnJlYWQYAiADKAkqlwEKDEFydGlmYWN0VHlwZRIdChlBUlRJRkFDVF9UWVBFX1VOU1BFQ0lGSUVEEAASGQoVQVJUSUZBQ1RfVFlQRV9ORVRMSVNUEAESGwoXQVJUSUZBQ1RfVFlQRV9TQ0hFTUFUSUMQAhIXChNBUlRJRkFDVF9UWVBFX0JPQVJEEAMSFwoTQVJUSUZBQ1RfVFlQRV9PVEhFUhAEMsEHCg1EZXNpZ25TZXJ2aWNlEksKDENyZWF0ZURlc2lnbhIjLmFnbmkudjEud2ViYXBpLkNyZWF0ZURlc2lnblJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SRQoJR2V0RGVzaWduEiAuYWduaS52MS53ZWJhcGkuR2V0RGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJWCgtMaXN0RGVzaWducxIiLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25zUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25zUmVzcG9uc2USSwoMVXBkYXRlRGVzaWduEiMuYWduaS52MS53ZWJhcGkuVXBkYXRlRGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJLCgxEZWxldGVEZXNpZ24SIy5hZ25pLnYxLndlYmFwaS5EZWxldGVEZXNpZ25SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EksKC0dldEFydGlmYWN0EiIuYWduaS52MS53ZWJhcGkuR2V0QXJ0aWZhY3RSZXF1ZXN0GhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QSXAoNTGlzdEFydGlmYWN0cxIkLmFnbmkudjEud2ViYXBpLkxpc3RBcnRpZmFjdHNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdEFydGlmYWN0c1Jlc3BvbnNlElEKDlVwZGF0ZUFydGlmYWN0EiUuYWduaS52MS53ZWJhcGkuVXBkYXRlQXJ0aWZhY3RSZXF1ZXN0GhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QScQoUQmF0Y2hVcGRhdGVBcnRpZmFjdHMSKy5hZ25pLnYxLndlYmFwaS5CYXRjaFVwZGF0ZUFydGlmYWN0c1JlcXVlc3QaLC5hZ25pLnYxLndlYmFwaS5CYXRjaFVwZGF0ZUFydGlmYWN0c1Jlc3BvbnNlEmgKEUltcG9ydERlc2lnbkZpbGVzEiguYWduaS52MS53ZWJhcGkuSW1wb3J0RGVzaWduRmlsZXNSZXF1ZXN0GikuYWduaS52MS53ZWJhcGkuSW1wb3J0RGVzaWduRmlsZXNSZXNwb25zZRJPCg5EZWxldGVBcnRpZmFjdBIlLmFnbmkudjEud2ViYXBpLkRlbGV0ZUFydGlmYWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_project, file_agni_v1_webapi_snapshot, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp]);
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9kZXNpZ25zLnByb3RvEg5hZ25pLnYxLndlYmFwaSL2AQoGUmVwb3J0EgwKBG5hbWUYASABKAkSDQoFcGFja3MYAiADKAkSDwoHcHJvamVjdBgDIAEoCRITCgtkZXNpZ25faGFzaBgEIAEoCRITCgtwYWNrX2hhc2hlcxgFIAMoCRI0CgdyZXN1bHRzGAYgASgLMiMuYWduaS52MS53ZWJhcGkuQ2hlY2tEZXNpZ25SZXNwb25zZRIvCgtjcmVhdGVfdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFgoOZGVzaWduX2NoYW5nZWQYCCABKAgSFQoNcGFja3NfY2hhbmdlZBgJIAMoCSJxChNDcmVhdGVSZXBvcnRSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIRCglyZXBvcnRfaWQYAiABKAkSJgoGcmVwb3J0GAMgASgLMhYuYWduaS52MS53ZWJhcGkuUmVwb3J0Eg8KB3Byb2plY3QYBCABKAkiIAoQR2V0UmVwb3J0UmVxdWVzdBIMCgRuYW1lGAEgASgJIlsKEkxpc3RSZXBvcnRzUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSEQoJcGFnZV9zaXplGAIgASgFEhIKCnBhZ2VfdG9rZW4YAyABKAkSDgoGZmlsdGVyGAQgASgJIlcKE0xpc3RSZXBvcnRzUmVzcG9uc2USJwoHcmVwb3J0cxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLlJlcG9ydBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoTRGVsZXRlUmVwb3J0UmVxdWVzdBIMCgRuYW1lGAEgASgJIl0KE0NyZWF0ZURlc2lnblJlcXVlc3QSEQoJZGVzaWduX2lkGAEgASgJEiYKBmRlc2lnbhgDIAEoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbkoECAIQA1IFZmlsZXMiIAoQR2V0RGVzaWduUmVxdWVzdBIMCgRuYW1lGAEgASgJIksKEkxpc3REZXNpZ25zUmVxdWVzdBIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkibAoTTGlzdERlc2lnbnNSZXNwb25zZRInCgdkZXNpZ25zGAEgAygLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRITCgt1bnJlYWNoYWJsZRgDIAMoCSKHAQoTVXBkYXRlRGVzaWduUmVxdWVzdBImCgZkZXNpZ24YAyABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SLwoLdXBkYXRlX21hc2sYBCABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrSgQIARACSgQIAhADUgRuYW1lUgVmaWxlcyIjChNEZWxldGVEZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAkisQEKCEFydGlmYWN0EgwKBG5hbWUYASABKAkSKwoFZmlsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdEZpbGUSKgoEdHlwZRgDIAEoDjIcLmFnbmkudjEud2ViYXBpLkFydGlmYWN0VHlwZRINCgVlbnRyeRgEIAEoCRIvCgt1cGRhdGVfdGltZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiIgoSR2V0QXJ0aWZhY3RSZXF1ZXN0EgwKBG5hbWUYASABKAkiTQoUTGlzdEFydGlmYWN0c1JlcXVlc3QSDgoGcGFyZW50GAEgASgJEhEKCXBhZ2Vfc2l6ZRgCIAEoBRISCgpwYWdlX3Rva2VuGAMgASgJIl0KFUxpc3RBcnRpZmFjdHNSZXNwb25zZRIrCglhcnRpZmFjdHMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5BcnRpZmFjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiWgoVVXBkYXRlQXJ0aWZhY3RSZXF1ZXN0EioKCGFydGlmYWN0GAEgASgLMhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QSFQoNYWxsb3dfbWlzc2luZxgCIAEoCCJmChtCYXRjaFVwZGF0ZUFydGlmYWN0c1JlcXVlc3QSDgoGcGFyZW50GAEgASgJEjcKCHJlcXVlc3RzGAIgAygLMiUuYWduaS52MS53ZWJhcGkuVXBkYXRlQXJ0aWZhY3RSZXF1ZXN0IksKHEJhdGNoVXBkYXRlQXJ0aWZhY3RzUmVzcG9uc2USKwoJYXJ0aWZhY3RzGAEgAygLMhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QiJQoVRGVsZXRlQXJ0aWZhY3RSZXF1ZXN0EgwKBG5hbWUYASABKAkiVwoYSW1wb3J0RGVzaWduRmlsZXNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIrCgVmaWxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLlNuYXBzaG90RmlsZSJYChlJbXBvcnREZXNpZ25GaWxlc1Jlc3BvbnNlEisKCWFydGlmYWN0cxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0Eg4KBnVucmVhZBgCIAMoCSqXAQoMQXJ0aWZhY3RUeXBlEh0KGUFSVElGQUNUX1RZUEVfVU5TUEVDSUZJRUQQABIZChVBUlRJRkFDVF9UWVBFX05FVExJU1QQARIbChdBUlRJRkFDVF9UWVBFX1NDSEVNQVRJQxACEhcKE0FSVElGQUNUX1RZUEVfQk9BUkQQAxIXChNBUlRJRkFDVF9UWVBFX09USEVSEAQy+gkKDURlc2lnblNlcnZpY2USSwoMQ3JlYXRlRGVzaWduEiMuYWduaS52MS53ZWJhcGkuQ3JlYXRlRGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJFCglHZXREZXNpZ24SIC5hZ25pLnYxLndlYmFwaS5HZXREZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduElYKC0xpc3REZXNpZ25zEiIuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbnNSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbnNSZXNwb25zZRJLCgxVcGRhdGVEZXNpZ24SIy5hZ25pLnYxLndlYmFwaS5VcGRhdGVEZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduEksKDERlbGV0ZURlc2lnbhIjLmFnbmkudjEud2ViYXBpLkRlbGV0ZURlc2lnblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSSwoLR2V0QXJ0aWZhY3QSIi5hZ25pLnYxLndlYmFwaS5HZXRBcnRpZmFjdFJlcXVlc3QaGC5hZ25pLnYxLndlYmFwaS5BcnRpZmFjdBJcCg1MaXN0QXJ0aWZhY3RzEiQuYWduaS52MS53ZWJhcGkuTGlzdEFydGlmYWN0c1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0QXJ0aWZhY3RzUmVzcG9uc2USUQoOVXBkYXRlQXJ0aWZhY3QSJS5hZ25pLnYxLndlYmFwaS5VcGRhdGVBcnRpZmFjdFJlcXVlc3QaGC5hZ25pLnYxLndlYmFwaS5BcnRpZmFjdBJxChRCYXRjaFVwZGF0ZUFydGlmYWN0cxIrLmFnbmkudjEud2ViYXBpLkJhdGNoVXBkYXRlQXJ0aWZhY3RzUmVxdWVzdBosLmFnbmkudjEud2ViYXBpLkJhdGNoVXBkYXRlQXJ0aWZhY3RzUmVzcG9uc2USaAoRSW1wb3J0RGVzaWduRmlsZXMSKC5hZ25pLnYxLndlYmFwaS5JbXBvcnREZXNpZ25GaWxlc1JlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5JbXBvcnREZXNpZ25GaWxlc1Jlc3BvbnNlEk8KDkRlbGV0ZUFydGlmYWN0EiUuYWduaS52MS53ZWJhcGkuRGVsZXRlQXJ0aWZhY3RSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EksKDENyZWF0ZVJlcG9ydBIjLmFnbmkudjEud2ViYXBpLkNyZWF0ZVJlcG9ydFJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXBvcnQSRQoJR2V0UmVwb3J0EiAuYWduaS52MS53ZWJhcGkuR2V0UmVwb3J0UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJlcG9ydBJWCgtMaXN0UmVwb3J0cxIiLmFnbmkudjEud2ViYXBpLkxpc3RSZXBvcnRzUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkxpc3RSZXBvcnRzUmVzcG9uc2USSwoMRGVsZXRlUmVwb3J0EiMuYWduaS52MS53ZWJhcGkuRGVsZXRlUmVwb3J0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_checks, file_agni_v1_webapi_project, file_agni_v1_webapi_snapshot, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp]);
+
+/**
+ * Report is one check of a stored design against packs, kept under the design (agni issue 1704). It
+ * records the design's content hash and each pack's hash as they were when it ran, so a later read
+ * can say the run is on earlier files or earlier rules.
+ *
+ * @generated from message agni.v1.webapi.Report
+ */
+export type Report = Message<"agni.v1.webapi.Report"> & {
+  /**
+   * "designs/{design}/reports/{report}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * packs are the packs the run applied, each "packs/{pack}", in the order they layered: the
+   * project's default packs, then the ones the request named. CreateReport reads the request's from
+   * here.
+   *
+   * @generated from field: repeated string packs = 2;
+   */
+  packs: string[];
+
+  /**
+   * project is the project whose default packs applied first, "projects/{project}", empty for none.
+   *
+   * @generated from field: string project = 3;
+   */
+  project: string;
+
+  /**
+   * design_hash names the design's artifacts and intent as the run read them, "sha256:<hex>". Output
+   * only.
+   *
+   * @generated from field: string design_hash = 4;
+   */
+  designHash: string;
+
+  /**
+   * pack_hashes is each pack's hash as the run read it, in the order of packs. Output only.
+   *
+   * @generated from field: repeated string pack_hashes = 5;
+   */
+  packHashes: string[];
+
+  /**
+   * results is the run: its findings, the rules it skipped, and the rest of a CheckDesign answer.
+   * Output only.
+   *
+   * @generated from field: agni.v1.webapi.CheckDesignResponse results = 6;
+   */
+  results?: CheckDesignResponse | undefined;
+
+  /**
+   * create_time is when the run was kept. Output only.
+   *
+   * @generated from field: google.protobuf.Timestamp create_time = 7;
+   */
+  createTime?: Timestamp | undefined;
+
+  /**
+   * design_changed is true when the design's artifacts or intent differ now from what the run read,
+   * or the design is gone. Computed on every read. Output only.
+   *
+   * @generated from field: bool design_changed = 8;
+   */
+  designChanged: boolean;
+
+  /**
+   * packs_changed names each pack whose hash differs now from what the run read, or which is gone.
+   * Computed on every read. Output only.
+   *
+   * @generated from field: repeated string packs_changed = 9;
+   */
+  packsChanged: string[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.Report.
+ * Use `create(ReportSchema)` to create a new message.
+ */
+export const ReportSchema: GenMessage<Report> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 0);
+
+/**
+ * @generated from message agni.v1.webapi.CreateReportRequest
+ */
+export type CreateReportRequest = Message<"agni.v1.webapi.CreateReportRequest"> & {
+  /**
+   * "designs/{design}"
+   *
+   * @generated from field: string parent = 1;
+   */
+  parent: string;
+
+  /**
+   * report_id is the new report's id, lowercase letters, digits, '.', '_' or '-'. Empty lets the
+   * server assign one that sorts by creation time.
+   *
+   * @generated from field: string report_id = 2;
+   */
+  reportId: string;
+
+  /**
+   * report carries the packs to apply, after the project's defaults. Its other fields are ignored.
+   *
+   * @generated from field: agni.v1.webapi.Report report = 3;
+   */
+  report?: Report | undefined;
+
+  /**
+   * project names a project, "projects/{project}", whose default packs apply first. Empty applies
+   * none.
+   *
+   * @generated from field: string project = 4;
+   */
+  project: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.CreateReportRequest.
+ * Use `create(CreateReportRequestSchema)` to create a new message.
+ */
+export const CreateReportRequestSchema: GenMessage<CreateReportRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 1);
+
+/**
+ * @generated from message agni.v1.webapi.GetReportRequest
+ */
+export type GetReportRequest = Message<"agni.v1.webapi.GetReportRequest"> & {
+  /**
+   * "designs/{design}/reports/{report}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.GetReportRequest.
+ * Use `create(GetReportRequestSchema)` to create a new message.
+ */
+export const GetReportRequestSchema: GenMessage<GetReportRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 2);
+
+/**
+ * @generated from message agni.v1.webapi.ListReportsRequest
+ */
+export type ListReportsRequest = Message<"agni.v1.webapi.ListReportsRequest"> & {
+  /**
+   * "designs/{design}"
+   *
+   * @generated from field: string parent = 1;
+   */
+  parent: string;
+
+  /**
+   * page_size is the maximum number of reports to return. 0 uses the server default.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize: number;
+
+  /**
+   * page_token continues a previous call. An empty token starts at the newest report.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken: string;
+
+  /**
+   * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+   * rather than ignored, since a client that believed it had filtered would read the wrong reports.
+   *
+   * @generated from field: string filter = 4;
+   */
+  filter: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListReportsRequest.
+ * Use `create(ListReportsRequestSchema)` to create a new message.
+ */
+export const ListReportsRequestSchema: GenMessage<ListReportsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 3);
+
+/**
+ * @generated from message agni.v1.webapi.ListReportsResponse
+ */
+export type ListReportsResponse = Message<"agni.v1.webapi.ListReportsResponse"> & {
+  /**
+   * @generated from field: repeated agni.v1.webapi.Report reports = 1;
+   */
+  reports: Report[];
+
+  /**
+   * next_page_token is empty when the last page has been reached.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListReportsResponse.
+ * Use `create(ListReportsResponseSchema)` to create a new message.
+ */
+export const ListReportsResponseSchema: GenMessage<ListReportsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 4);
+
+/**
+ * @generated from message agni.v1.webapi.DeleteReportRequest
+ */
+export type DeleteReportRequest = Message<"agni.v1.webapi.DeleteReportRequest"> & {
+  /**
+   * "designs/{design}/reports/{report}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.DeleteReportRequest.
+ * Use `create(DeleteReportRequestSchema)` to create a new message.
+ */
+export const DeleteReportRequestSchema: GenMessage<DeleteReportRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 5);
 
 /**
  * @generated from message agni.v1.webapi.CreateDesignRequest
@@ -43,7 +275,7 @@ export type CreateDesignRequest = Message<"agni.v1.webapi.CreateDesignRequest"> 
  * Use `create(CreateDesignRequestSchema)` to create a new message.
  */
 export const CreateDesignRequestSchema: GenMessage<CreateDesignRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 0);
+  messageDesc(file_agni_v1_webapi_designs, 6);
 
 /**
  * @generated from message agni.v1.webapi.GetDesignRequest
@@ -62,7 +294,7 @@ export type GetDesignRequest = Message<"agni.v1.webapi.GetDesignRequest"> & {
  * Use `create(GetDesignRequestSchema)` to create a new message.
  */
 export const GetDesignRequestSchema: GenMessage<GetDesignRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 1);
+  messageDesc(file_agni_v1_webapi_designs, 7);
 
 /**
  * @generated from message agni.v1.webapi.ListDesignsRequest
@@ -97,7 +329,7 @@ export type ListDesignsRequest = Message<"agni.v1.webapi.ListDesignsRequest"> & 
  * Use `create(ListDesignsRequestSchema)` to create a new message.
  */
 export const ListDesignsRequestSchema: GenMessage<ListDesignsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 2);
+  messageDesc(file_agni_v1_webapi_designs, 8);
 
 /**
  * @generated from message agni.v1.webapi.ListDesignsResponse
@@ -129,7 +361,7 @@ export type ListDesignsResponse = Message<"agni.v1.webapi.ListDesignsResponse"> 
  * Use `create(ListDesignsResponseSchema)` to create a new message.
  */
 export const ListDesignsResponseSchema: GenMessage<ListDesignsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 3);
+  messageDesc(file_agni_v1_webapi_designs, 9);
 
 /**
  * @generated from message agni.v1.webapi.UpdateDesignRequest
@@ -158,7 +390,7 @@ export type UpdateDesignRequest = Message<"agni.v1.webapi.UpdateDesignRequest"> 
  * Use `create(UpdateDesignRequestSchema)` to create a new message.
  */
 export const UpdateDesignRequestSchema: GenMessage<UpdateDesignRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 4);
+  messageDesc(file_agni_v1_webapi_designs, 10);
 
 /**
  * @generated from message agni.v1.webapi.DeleteDesignRequest
@@ -177,7 +409,7 @@ export type DeleteDesignRequest = Message<"agni.v1.webapi.DeleteDesignRequest"> 
  * Use `create(DeleteDesignRequestSchema)` to create a new message.
  */
 export const DeleteDesignRequestSchema: GenMessage<DeleteDesignRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 5);
+  messageDesc(file_agni_v1_webapi_designs, 11);
 
 /**
  * Artifact is one source of a design, such as a schematic with its sheets, a board, or a BOM. It is
@@ -234,7 +466,7 @@ export type Artifact = Message<"agni.v1.webapi.Artifact"> & {
  * Use `create(ArtifactSchema)` to create a new message.
  */
 export const ArtifactSchema: GenMessage<Artifact> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 6);
+  messageDesc(file_agni_v1_webapi_designs, 12);
 
 /**
  * @generated from message agni.v1.webapi.GetArtifactRequest
@@ -253,7 +485,7 @@ export type GetArtifactRequest = Message<"agni.v1.webapi.GetArtifactRequest"> & 
  * Use `create(GetArtifactRequestSchema)` to create a new message.
  */
 export const GetArtifactRequestSchema: GenMessage<GetArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 7);
+  messageDesc(file_agni_v1_webapi_designs, 13);
 
 /**
  * @generated from message agni.v1.webapi.ListArtifactsRequest
@@ -286,7 +518,7 @@ export type ListArtifactsRequest = Message<"agni.v1.webapi.ListArtifactsRequest"
  * Use `create(ListArtifactsRequestSchema)` to create a new message.
  */
 export const ListArtifactsRequestSchema: GenMessage<ListArtifactsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 8);
+  messageDesc(file_agni_v1_webapi_designs, 14);
 
 /**
  * @generated from message agni.v1.webapi.ListArtifactsResponse
@@ -310,7 +542,7 @@ export type ListArtifactsResponse = Message<"agni.v1.webapi.ListArtifactsRespons
  * Use `create(ListArtifactsResponseSchema)` to create a new message.
  */
 export const ListArtifactsResponseSchema: GenMessage<ListArtifactsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 9);
+  messageDesc(file_agni_v1_webapi_designs, 15);
 
 /**
  * @generated from message agni.v1.webapi.UpdateArtifactRequest
@@ -338,7 +570,7 @@ export type UpdateArtifactRequest = Message<"agni.v1.webapi.UpdateArtifactReques
  * Use `create(UpdateArtifactRequestSchema)` to create a new message.
  */
 export const UpdateArtifactRequestSchema: GenMessage<UpdateArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 10);
+  messageDesc(file_agni_v1_webapi_designs, 16);
 
 /**
  * @generated from message agni.v1.webapi.BatchUpdateArtifactsRequest
@@ -364,7 +596,7 @@ export type BatchUpdateArtifactsRequest = Message<"agni.v1.webapi.BatchUpdateArt
  * Use `create(BatchUpdateArtifactsRequestSchema)` to create a new message.
  */
 export const BatchUpdateArtifactsRequestSchema: GenMessage<BatchUpdateArtifactsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 11);
+  messageDesc(file_agni_v1_webapi_designs, 17);
 
 /**
  * @generated from message agni.v1.webapi.BatchUpdateArtifactsResponse
@@ -383,7 +615,7 @@ export type BatchUpdateArtifactsResponse = Message<"agni.v1.webapi.BatchUpdateAr
  * Use `create(BatchUpdateArtifactsResponseSchema)` to create a new message.
  */
 export const BatchUpdateArtifactsResponseSchema: GenMessage<BatchUpdateArtifactsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 12);
+  messageDesc(file_agni_v1_webapi_designs, 18);
 
 /**
  * @generated from message agni.v1.webapi.DeleteArtifactRequest
@@ -402,7 +634,7 @@ export type DeleteArtifactRequest = Message<"agni.v1.webapi.DeleteArtifactReques
  * Use `create(DeleteArtifactRequestSchema)` to create a new message.
  */
 export const DeleteArtifactRequestSchema: GenMessage<DeleteArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 13);
+  messageDesc(file_agni_v1_webapi_designs, 19);
 
 /**
  * @generated from message agni.v1.webapi.ImportDesignFilesRequest
@@ -428,7 +660,7 @@ export type ImportDesignFilesRequest = Message<"agni.v1.webapi.ImportDesignFiles
  * Use `create(ImportDesignFilesRequestSchema)` to create a new message.
  */
 export const ImportDesignFilesRequestSchema: GenMessage<ImportDesignFilesRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 14);
+  messageDesc(file_agni_v1_webapi_designs, 20);
 
 /**
  * @generated from message agni.v1.webapi.ImportDesignFilesResponse
@@ -454,7 +686,7 @@ export type ImportDesignFilesResponse = Message<"agni.v1.webapi.ImportDesignFile
  * Use `create(ImportDesignFilesResponseSchema)` to create a new message.
  */
 export const ImportDesignFilesResponseSchema: GenMessage<ImportDesignFilesResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 15);
+  messageDesc(file_agni_v1_webapi_designs, 21);
 
 /**
  * ArtifactType is what an artifact holds, found from its entry's format.
@@ -649,6 +881,51 @@ export const DesignService: GenService<{
   deleteArtifact: {
     methodKind: "unary";
     input: typeof DeleteArtifactRequestSchema;
+    output: typeof EmptySchema;
+  },
+  /**
+   * CreateReport checks a stored design against packs and keeps the run as
+   * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
+   * own intent: the default packs of the project the request names, then the packs the report names.
+   * The run is a full check of the catalog the packs compose, as `agni check` with no --rule runs. A
+   * report on a mounted design is FAILED_PRECONDITION, since only a stored design has the content
+   * hash a report records. A server without --store answers FAILED_PRECONDITION.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.CreateReport
+   */
+  createReport: {
+    methodKind: "unary";
+    input: typeof CreateReportRequestSchema;
+    output: typeof ReportSchema;
+  },
+  /**
+   * GetReport returns one report, and says whether the design or a pack changed since it ran.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.GetReport
+   */
+  getReport: {
+    methodKind: "unary";
+    input: typeof GetReportRequestSchema;
+    output: typeof ReportSchema;
+  },
+  /**
+   * ListReports returns a design's reports, newest first, each saying what changed since it ran.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.ListReports
+   */
+  listReports: {
+    methodKind: "unary";
+    input: typeof ListReportsRequestSchema;
+    output: typeof ListReportsResponseSchema;
+  },
+  /**
+   * DeleteReport removes one report. DeleteDesign removes a design's reports with it.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.DeleteReport
+   */
+  deleteReport: {
+    methodKind: "unary";
+    input: typeof DeleteReportRequestSchema;
     output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/

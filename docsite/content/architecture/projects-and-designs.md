@@ -34,6 +34,12 @@ profiles, its seeded parameters, its review checklists. A **design** owns what i
 which file is the analysis source, which files are views of it, its design intent, and which project
 it belongs to.
 
+On a server that stores designs, two more nouns join them (agni issue 1704). A **pack** holds what a
+`project.yaml` holds, as a resource of its own, `packs/{pack}`. A **report** is one check of a stored
+design against packs, kept under the design, `designs/{design}/reports/{report}`. A stored project
+then lists designs and names its default packs, and a stored design names no project at all. The
+sections from "Mounted is read-only" on cover them.
+
 Both descriptors share ONE schema (agni issue 1136), and the file's name says which role it plays.
 Only a design names its own files (`entry`, `companions`, `flatten_hierarchy`) and its `series`,
 and any of those in a `project.yaml` is a load error. Every other section is open to both, and a design's
@@ -448,9 +454,36 @@ view's `design.yaml`. Every other tier of a stored design's config comes from it
 intent is still not a server operation. Writing `intent:` from a design is a judgment step with a
 confidentiality boundary, so the server never generates one.
 
+A stored project names its default packs on `Project.default_packs`. `agni projects packs lab b200`
+sets them. A report that names the project applies them first, as the next section says.
+
+## A report keeps a check of a design against packs
+
+Picture an engineer who checks rev 1.1.3 against the team's pack, then replaces its schematic with a
+fixed one. The old result should stay, and it should say it ran on the earlier files. A report does
+that (agni issue 1704).
+
+`CreateReport` on `designs/{design}` runs a full check of the catalog its packs compose, as `agni
+check` with no `--rule` runs, and keeps it as `designs/{design}/reports/{report}`. The packs apply in
+order over the design's own intent. The default packs of the project the request names come first,
+then the packs the request names, and a pack in both applies once, where the project put it. The
+report records the design's content hash and each pack's hash. The design's hash covers its intent and
+every artifact's files by path and hash. Every `GetReport` and `ListReports` compares those with the
+hashes now and sets `design_changed` and `packs_changed`. A report is never updated, since it is what
+the run found. `DeleteDesign` removes a design's reports with it.
+
+Only a stored design takes a report. A mounted design's files belong to its folder, and the server
+has no artifacts of it to hash. The folder adapter, `DirReports`, keeps each report as
+`<design>/<report>.json` in the store. A report the server names gets an id that sorts by creation
+time, and `ListReports` returns the newest first.
+
+`agni reports create designs/bb-1.1.3 --pack jetson` runs one from a terminal, and `agni reports list
+designs/bb-1.1.3` marks each report "run on earlier design files" or "packs/<k> changed since".
+
 That makes `Project` and `Design` the declared-identity case in
 [C23](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md), with two homes. A mounted one has
-`Get` and `List`. A stored one has every standard method.
+`Get` and `List`. A stored one has every standard method. A pack is a full resource, and a report is
+one nested under its design.
 
 ## Every surface has to HOLD the resolver, and a missing one is silent
 

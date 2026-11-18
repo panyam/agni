@@ -145,7 +145,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&paramsURL, "params-url", "", "a PartSpecService to read published PartSpecs from instead of a directory, e.g. http://host:8090 for an `agnids serve --corpus`; each request fetches its design's parts in one batch, and a spec published there reaches the next request. Not with --params. A project's own params/ still wins over it")
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
-	c.Flags().StringVar(&storeURL, "store", "", "where this server keeps its records, as a URL: file:///srv/agni/meta keeps them as files in that folder, created if absent (agni issue 1732). The records are designs, each artifact's manifest of paths and hashes, projects, snapshot definitions and review runs; they hold no file bytes. Without it, snapshots live in memory, review runs are not kept, and no design can be created. In a container, mount a volume here")
+	c.Flags().StringVar(&storeURL, "store", "", "where this server keeps its records, as a URL: file:///srv/agni/meta keeps them as files in that folder, created if absent (agni issue 1732). The records are designs, each artifact's manifest of paths and hashes, projects, packs, each design's reports, snapshot definitions and review runs; they hold no file bytes. Without it, snapshots live in memory, review runs are not kept, and no design can be created. In a container, mount a volume here")
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "where this server keeps the files of designs its users upload, as a URL: file:///srv/agni/files, created if absent (agni issue 1739). It keeps each file once, by hash, and never changes one, and serves each design's files as the mount \""+uploadsMount+"\". Needs --store. Without it, a design's files cannot be written")
 	return c
 }
@@ -406,7 +406,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	projectSvc, designSvc, packSvc, err := storeServices(mounts, o.storeDir, o.uploadsDir, projectStore, projectResolver, cmd.ErrOrStderr())
+	projectSvc, designSvc, packSvc, err := storeServices(mounts, o.storeDir, o.uploadsDir, projectStore, projectResolver, checkSvc, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}
@@ -546,6 +546,7 @@ const (
 	storeProjectsDir  = "projects"
 	storeSnapshotsDir = "snapshots"
 	storePacksDir     = "packs"
+	storeReportsDir   = "reports"
 	storeReviewsDir   = "reviews"
 )
 

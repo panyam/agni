@@ -25,6 +25,10 @@ func TestTheTourKeepsTwoRevisionsAndRefusesTheMountedDesign(t *testing.T) {
 	if err != nil || before.GetHash() == "" || before.GetHash() == after.GetHash() {
 		t.Errorf("keepPack = %v, %v, %v; want a hash that moves when the rail pattern changes", before, after, err)
 	}
+	kept, read, err := tr.report(ctx)
+	if err != nil || kept.GetDesignChanged() || !read.GetDesignChanged() {
+		t.Errorf("report = %v, then %v, %v; want it current when kept and run on earlier files after the netlist changed", kept, read, err)
+	}
 	if _, err := tr.projects.CreateProject(ctx, &webapi.CreateProjectRequest{ProjectId: "lab", Project: &webapi.Project{Designs: []string{"designs/mixer", "designs/mixer-rev-a", "designs/mixer-rev-b"}}}); err != nil {
 		t.Fatal(err)
 	}

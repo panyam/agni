@@ -250,6 +250,14 @@ agni packs push ./b200 --remote http://localhost:8080
 agni check designs/memory_unit --pack b200 --remote http://localhost:8080
 ```
 
+A report keeps such a check under the design, and says later whether the design's files or the pack
+changed since it ran:
+
+```bash
+agni reports create designs/memory_unit --pack b200 --remote http://localhost:8080
+agni reports list designs/memory_unit --remote http://localhost:8080
+```
+
 `push` takes the pack's id from the project's `name:`, so its profile rules are named
 `b200-profiles/...` as they are on the folder. `--pack` repeats, and each pack layers over the one
 before it. Under `--pack` the server's catalog decides the rules, so `--rule` names go as written and
