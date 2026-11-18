@@ -127,7 +127,15 @@ type Snapshot struct {
 	// answer carries an Agni-Snapshot-Refreshed response header naming the tiers that changed, so a
 	// caller still learns its earlier answers came from older files. Without it, a question on a stale
 	// snapshot is refused with FAILED_PRECONDITION, as before. Part of the definition.
-	Refresh       bool `protobuf:"varint,13,opt,name=refresh,proto3" json:"refresh,omitempty"`
+	Refresh bool `protobuf:"varint,13,opt,name=refresh,proto3" json:"refresh,omitempty"`
+	// design names the design to read by its resource name, "designs/{design}", in place of uri (agni
+	// issue 1695). The host looks the design up and reads its entry, so a client names a stored design
+	// without knowing where the store keeps it. Each read looks the name up again, so a snapshot
+	// recovered after a restart, or ingested again, reads the design's files as they are then. Setting
+	// both design and uri, or design and files, is INVALID_ARGUMENT. A design with no file a reader
+	// opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
+	// every client that opens one design share one snapshot. Part of the definition.
+	Design        string `protobuf:"bytes,14,opt,name=design,proto3" json:"design,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -251,6 +259,13 @@ func (x *Snapshot) GetRefresh() bool {
 		return x.Refresh
 	}
 	return false
+}
+
+func (x *Snapshot) GetDesign() string {
+	if x != nil {
+		return x.Design
+	}
+	return ""
 }
 
 // SnapshotFile is one file of a design that a client sends, named within its mount.
@@ -1017,7 +1032,7 @@ var File_agni_v1_webapi_snapshot_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xf6\x03\n" +
+	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\x8e\x04\n" +
 	"\bSnapshot\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vrevision_id\x18\x02 \x01(\tR\n" +
@@ -1033,7 +1048,8 @@ const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	" \x01(\tR\aproject\x122\n" +
 	"\x05files\x18\v \x03(\v2\x1c.agni.v1.webapi.SnapshotFileR\x05files\x12+\n" +
 	"\x11flatten_hierarchy\x18\f \x01(\bR\x10flattenHierarchy\x12\x18\n" +
-	"\arefresh\x18\r \x01(\bR\arefresh\"N\n" +
+	"\arefresh\x18\r \x01(\bR\arefresh\x12\x16\n" +
+	"\x06design\x18\x0e \x01(\tR\x06design\"N\n" +
 	"\fSnapshotFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06sha256\x18\x02 \x01(\tR\x06sha256\x12\x12\n" +

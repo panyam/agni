@@ -193,7 +193,9 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 	// The page's seeded designs are read-only, the way a mounted folder is. A store of the browser's
 	// own comes with agni issue 1699.
 	projectSvc := service.NewProjectService(store)
-	designSvc := service.NewDesignService(service.NewDesignCatalog(nil, projects.NewMountedDesigns(trees...)), nil).WithProjects(projectSvc)
+	catalog := service.NewDesignCatalog(nil, projects.NewMountedDesigns(trees...))
+	resolver.Designs = catalog
+	designSvc := service.NewDesignService(catalog, nil).WithProjects(projectSvc)
 	paths := server.API{
 		Workspace:  service.NewWorkspaceService(files.Workspace()).WithDesignFiles(resolver, files.Workspace()),
 		Project:    projectSvc,

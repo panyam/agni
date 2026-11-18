@@ -413,6 +413,11 @@ companions. A design with no artifact a reader opens keeps its record in `design
 instead, since a `design.yaml` must name an entry. A database adapter would keep the same artifacts
 as rows. A mounted design has no artifacts, because its folder's `design.yaml` names its files.
 
+A snapshot names a design by `designs/{design}` in `Snapshot.design`, and the server looks the name
+up at every read (agni issue 1695). So a snapshot rebuilt after a restart, or ingested again after an
+artifact changed, reads the design's files as they are then. `DesignSnapshotID` derives one snapshot
+id from the name, so every client opening the design shares one snapshot.
+
 Scaffolding design intent is still not a server operation. Writing `intent:` from a design is a
 judgment step with a confidentiality boundary, so the server never generates one. A stored design
 carries no intent of its own yet. A pack will carry it to a design at report time (agni issue 1704).

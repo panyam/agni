@@ -216,7 +216,18 @@ agni designs put memory_unit schematic ./memory_unit-fixed/ --remote http://loca
 ```
 
 `push` puts the folder's schematic, with its sheets, and its board as two artifacts of the design.
-`put` later replaces the schematic, every sheet in one write, and leaves the board alone. The store
+`put` later replaces the schematic, every sheet in one write, and leaves the board alone. The
+`check`, `diff` and `query` commands then name the stored design instead of a folder, and the server
+reads its own copy (agni issue 1695):
+
+```bash
+agni check designs/memory_unit --remote http://localhost:8080
+agni diff designs/memory_unit designs/memory_unit-rev-b --remote http://localhost:8080 --format json
+```
+
+A snapshot can name its design the same way, `Snapshot.design`. The id
+`DesignSnapshotID` derives from the name lets every client that opens the design share one snapshot,
+and a server started with `--state-dir` rebuilds it after a restart by looking the name up again. The store
 then holds `designs/memory_unit/` with a folder per artifact and a `design.yaml` the server wrote.
 A stored design belongs to no project, so `agni check <dir>/designs/memory_unit` reads it like any
 other design folder. A project is a title and a list of design names, kept as

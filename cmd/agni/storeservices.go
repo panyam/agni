@@ -37,5 +37,9 @@ func storeServices(ms []mounts.Mount, storeDir string, projectStore service.Proj
 		projectSvc.WithRecords(records)
 	}
 	catalog := service.NewDesignCatalog(store, projects.NewMountedDesigns(mountedTrees...))
+	if resolver != nil {
+		// A snapshot may name its design, designs/{d}, and Ingest looks it up here (agni issue 1695).
+		resolver.Designs = catalog
+	}
 	return projectSvc, service.NewDesignService(catalog, resolver.Blob).WithProjects(projectSvc), nil
 }
