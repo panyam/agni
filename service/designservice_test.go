@@ -374,3 +374,35 @@ func TestImportDesignFilesGroupsAFolderIntoArtifacts(t *testing.T) {
 		t.Errorf("an import of two designs = %v, want ErrInvalidArgument", err)
 	}
 }
+
+// A folder holding sheets its root never places imports the design its design.yaml names, and the
+// other sheets are reported as not kept, as Jetson 1.1.0's folder holds two.
+func TestImportDesignFilesKeepsTheDesignItsDescriptorNames(t *testing.T) {
+	ctx := context.Background()
+	svc, b, _ := designService(t)
+	if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "bb"}); err != nil {
+		t.Fatal(err)
+	}
+	folder := map[string]string{
+		"design.yaml":     "entry: bb.kicad_sch\n",
+		"bb.kicad_pro":    "{}",
+		"bb.kicad_sch":    `(kicad_sch (sheet (property "Sheetfile" "power.kicad_sch")))`,
+		"power.kicad_sch": "(kicad_sch)",
+		"stray.kicad_sch": "(kicad_sch)",
+		"bb.kicad_pcb":    "(kicad_pcb)",
+	}
+	resp, err := svc.ImportDesignFiles(ctx, &webapi.ImportDesignFilesRequest{Parent: "designs/bb", Files: b.files(folder)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetUnread()) != 1 || resp.GetUnread()[0] != "stray.kicad_sch" {
+		t.Errorf("unread = %v, want the stray sheet alone", resp.GetUnread())
+	}
+	if d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/bb"}); err != nil || d.GetEntryUri() != "mount://store/bb/schematic/bb.kicad_sch" {
+		t.Errorf("design = %v, %v; want the descriptor's entry", d, err)
+	}
+	delete(folder, "design.yaml")
+	if _, err := svc.ImportDesignFiles(ctx, &webapi.ImportDesignFilesRequest{Parent: "designs/bb", Files: b.files(folder)}); !errors.Is(err, service.ErrInvalidArgument) {
+		t.Errorf("the same folder with no design.yaml = %v, want ErrInvalidArgument naming both designs", err)
+	}
+}

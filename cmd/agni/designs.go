@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -424,10 +423,9 @@ func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, s
 		return err
 	}
 	var all fileSet
+	// A design.yaml goes too. The server stores none of it, and reads its entry to pick the design
+	// when the folder holds sheets its root never places.
 	for _, r := range rels {
-		if b := path.Base(r); b == service.DesignDescriptorName || b == service.ProjectDescriptorName {
-			continue
-		}
 		if err := all.add(filepath.Join(dir, filepath.FromSlash(r)), r); err != nil {
 			return err
 		}

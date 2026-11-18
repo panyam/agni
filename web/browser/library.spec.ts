@@ -9,7 +9,7 @@
 
 import { afterAll, beforeAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, appendFileSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, appendFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,8 +19,11 @@ import { freePort, start, type Server } from "./childserver.js";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const samples = join(repoRoot, "tools", "samples");
 const revisions = join(samples, "revisions");
-const older = existsSync(join(revisions, "jetson-agx-thor-baseboard-1.1.2")) ? join(revisions, "jetson-agx-thor-baseboard-1.1.2") : join(samples, "boards", "jetson-agx-thor-baseboard");
-const newer = existsSync(join(revisions, "jetson-agx-thor-baseboard-1.1.3")) ? join(revisions, "jetson-agx-thor-baseboard-1.1.3") : older;
+// LIBRARY_ORACLE=1 uploads the oracle corpus's board even where the revisions were fetched, as the
+// gate does without them.
+const useRevisions = process.env.LIBRARY_ORACLE !== "1" && existsSync(join(revisions, "jetson-agx-thor-baseboard-1.1.2"));
+const older = useRevisions ? join(revisions, "jetson-agx-thor-baseboard-1.1.2") : join(samples, "boards", "jetson-agx-thor-baseboard");
+const newer = useRevisions ? join(revisions, "jetson-agx-thor-baseboard-1.1.3") : older;
 const shots = process.env.SCREENSHOT_DIR ?? "";
 
 let browser: Browser;
@@ -103,13 +106,12 @@ describe("the library page", () => {
       expect(await page.locator('[data-design="designs/bb-1.1.2"] .lb-latest').count()).toBe(0);
       await shot(page, "library.png");
 
-      // Replace 1.1.3's schematic with every sheet, one of them edited.
-      const edited = mkdtempSync(join(tmpdir(), "agni-library-sch-"));
-      for (const f of readdirSync(newer)) {
-        if (/\.kicad_/.test(f) && !f.endsWith(".kicad_pcb")) cpSync(join(newer, f), join(edited, f));
-      }
-      appendFileSync(join(edited, "power.kicad_sch"), "\n");
+      // Replace 1.1.3's schematic with the files it holds, one sheet edited. A folder's stray sheets
+      // stay out, as the server left them out of the artifact.
       const before = await artifactFiles("designs/bb-1.1.3/artifacts/schematic");
+      const edited = mkdtempSync(join(tmpdir(), "agni-library-sch-"));
+      for (const f of Object.keys(before)) cpSync(join(newer, f), join(edited, f));
+      appendFileSync(join(edited, "power.kicad_sch"), "\n");
       await page.goto(`${server.base}/library/bb-1.1.3`);
       await page.getByTestId("replace-schematic-folder").setInputFiles(edited);
       await expect.poll(async () => (await artifactFiles("designs/bb-1.1.3/artifacts/schematic"))["power.kicad_sch"], { timeout: 60_000 }).not.toBe(before["power.kicad_sch"]);
