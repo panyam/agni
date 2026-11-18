@@ -36,6 +36,10 @@ type ProjectResolver struct {
 	// UploadMaxBytes caps the uploaded content the host keeps. Past the cap the host drops the least
 	// recently used. Zero means defaultUploadBytes.
 	UploadMaxBytes int64
+	// Blobs keeps uploaded contents on disk, so they outlive a restart (agni issue 1739). Every
+	// upload is written to it as well as to the in-memory cache, and a read the cache misses falls
+	// back to it. Nil keeps uploads in memory only.
+	Blobs UploadStore
 	// Snapshots keeps snapshot definitions, so a question on a snapshot the registry evicted is
 	// answered after ingesting it again, and so is one a restart lost when the store outlives the
 	// process (agni issue 1639). Nil means an in-memory store.

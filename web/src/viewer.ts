@@ -1643,7 +1643,7 @@ export class ViewerPresenter {
   // It runs on each design load, so opening a reviewed board shows its latest verdict rather than
   // an empty panel.
   //
-  // A server started without --review-store answers FailedPrecondition, recorded as
+  // A server started without --store answers FailedPrecondition, recorded as
   // storeConfigured=false rather than as an error, because "this deployment keeps no runs" and
   // "nobody has reviewed this board" look identical in an empty list.
   private async refreshReviews(): Promise<void> {
@@ -2398,7 +2398,7 @@ export function summaryLine(path: string, name: string, layout: string, format: 
 }
 
 // isStoreUnconfigured reports the one server condition the review panel must not show as an error,
-// a deployment started without --review-store that keeps no runs. Connect maps the service's
+// a deployment started without --store that keeps no runs. Connect maps the service's
 // sentinel to FailedPrecondition, and matching on the CODE keeps this working when the message
 // wording changes.
 function isStoreUnconfigured(e: unknown): boolean {

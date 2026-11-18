@@ -36,7 +36,7 @@ func TestACatalogListsStoredAndMountedDesignsByOneName(t *testing.T) {
 	if all[0].GetConfig().GetExtends() != "projects/tut" || all[0].GetEntryUri() != "mount://tut/designs/g/g.edn" {
 		t.Errorf("mounted design g = extends %q at %s; want projects/tut at mount://tut/designs/g/g.edn", all[0].GetConfig().GetExtends(), all[0].GetEntryUri())
 	}
-	if d, err := cat.Design(ctx, "designs/mul"); err != nil || d.GetEntryUri() != "mount://store/mul/netlist/a.edn" {
+	if d, err := cat.Design(ctx, "designs/mul"); err != nil || d.GetEntryUri() != inView(t, d, "netlist/a.edn") {
 		t.Errorf("catalog design mul = %v, %v; want it read from the store", d, err)
 	}
 	if _, err := cat.Design(ctx, "projects/tut/designs/g"); !errors.Is(err, service.ErrInvalidArgument) {

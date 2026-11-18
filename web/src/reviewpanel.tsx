@@ -206,7 +206,7 @@ function ReviewPanel(props: {
         >
           <div class="rv-note">
             This server keeps no review runs, so a run here lasts until you leave the page. Start it with{" "}
-            <code>--review-store &lt;dir&gt;</code> to keep them.
+            <code>--store &lt;url&gt;</code> to keep them.
           </div>
         </Show>
       </Show>

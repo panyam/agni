@@ -13,20 +13,20 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// osSnapshotStore is the filesystem-backed service.SnapshotStore, under `agni serve --state-dir`
+// osSnapshotStore is the filesystem-backed service.SnapshotStore, under `agni serve --store`
 // (agni issue 1639). It writes one small protojson file per snapshot, the definition a client sent,
 // so a server that restarted ingests the snapshot again when a question names it. The directory is a
-// WRITABLE volume, apart from the read-only design mounts, like --review-store's.
+// WRITABLE volume, apart from the read-only design mounts, like the store's other records.
 type osSnapshotStore struct{ dir string }
 
 // newOSSnapshotStore returns a store over dir, creating it when absent. A path that exists and is
 // not a directory is an error at startup.
 func newOSSnapshotStore(dir string) (*osSnapshotStore, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return nil, fmt.Errorf("--state-dir: %w", err)
+		return nil, fmt.Errorf("--store: %w", err)
 	}
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
-		return nil, fmt.Errorf("--state-dir: %s is not a directory", dir)
+		return nil, fmt.Errorf("--store: %s is not a directory", dir)
 	}
 	return &osSnapshotStore{dir: dir}, nil
 }

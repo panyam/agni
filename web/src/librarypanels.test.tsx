@@ -58,8 +58,8 @@ describe("the library list", () => {
   });
 
   it("says when the server keeps no designs", () => {
-    const err = new ConnectError("this server keeps no designs; start it with --store-dir", Code.FailedPrecondition);
-    expect(explain(err)).toMatch(/Start it with --store-dir/);
+    const err = new ConnectError("this server keeps no designs; start it with --store", Code.FailedPrecondition);
+    expect(explain(err)).toMatch(/Start it with --store and --uploads/);
     expect(explain(new ConnectError("no design designs/x", Code.NotFound))).toBe("no design designs/x");
   });
 });

@@ -115,7 +115,7 @@ func exercise(agni, mount, design string) ([]row, error) {
 		return nil, err
 	}
 	defer stop()
-	rows := []row{{"serve", "ok", fmt.Sprintf("%s with --state-dir; the CLI reads %d components, %d nets, %d sheets, %d findings, %d query rows, and a board of %d layers, %d parts and %d tracks", server, want.Components, want.Nets, want.Sheets, want.Findings, want.QueryRows, want.BoardLayers, want.BoardParts, want.BoardTracks)}}
+	rows := []row{{"serve", "ok", fmt.Sprintf("%s with --store; the CLI reads %d components, %d nets, %d sheets, %d findings, %d query rows, and a board of %d layers, %d parts and %d tracks", server, want.Components, want.Nets, want.Sheets, want.Findings, want.QueryRows, want.BoardLayers, want.BoardParts, want.BoardTracks)}}
 	for _, l := range languages {
 		run := filepath.Join("clients", "examples", l.name, "run")
 		if _, err := os.Stat(run); err != nil {
@@ -228,7 +228,7 @@ func serve(agni, mount string) (string, func(), error) {
 	if err != nil {
 		return "", nil, err
 	}
-	cmd := exec.Command(agni, "serve", "--addr", addr, "--mount", mount, "--state-dir", filepath.Join(work, "state")) // #nosec G204 -- as above
+	cmd := exec.Command(agni, "serve", "--addr", addr, "--mount", mount, "--store", "file://"+filepath.ToSlash(filepath.Join(work, "store"))) // #nosec G204 -- as above
 	cmd.Dir = work
 	var log bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &log, &log

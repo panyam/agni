@@ -188,7 +188,7 @@ func TestNewOSReviewStoreCreatesAndValidates(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := newOSReviewStore(file); err == nil {
-		t.Error("--review-store at a regular file must fail at startup")
+		t.Error("a reviews folder at a regular file must fail at startup")
 	}
 }
 

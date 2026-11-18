@@ -23,9 +23,9 @@ type tour struct {
 	root     string
 }
 
-// newTour builds the services the way `agni serve --store-dir` does (cmd/agni/storeservices.go).
+// newTour builds the services the way `agni serve --store --uploads` does (cmd/agni/storeservices.go).
 func newTour(root, mounted string) (*tour, error) {
-	store, err := projects.NewDirStore(filepath.Join(root, "designs"), "store")
+	store, err := projects.NewDirStore(filepath.Join(root, "designs"), filepath.Join(root, "uploads"), "uploads")
 	if err != nil {
 		return nil, err
 	}

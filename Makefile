@@ -852,11 +852,12 @@ SYMBOL_FLAGS := $(foreach p,$(SYMBOL_PATH),--symbol-path $(p))
 # An overlay is per-DEPLOYMENT config: a profile named after a built-in supersedes it for every
 # design this server reads, so point it at an overlay that suits the whole mounted set.
 OVERLAY_FLAGS ?=
-# REVIEW_STORE is the WRITABLE directory stored review runs live in (--review-store), created if
-# absent. It is what the viewer's Review panel reads: without it the review resource methods answer
-# "no review store configured" and the panel can show nothing, on any design. Deliberately separate
-# from the read-only design mounts. Set it empty to serve without a store:
-#   make serve REVIEW_STORE=
+# STORE is the WRITABLE directory the server keeps its records in (--store file://<dir>), created if
+# absent: stored review runs, snapshot definitions, designs and projects (agni issue 1732). It is what
+# the viewer's Review panel reads: without it the review resource methods answer "no review store
+# configured" and the panel can show nothing, on any design. Deliberately separate from the read-only
+# design mounts. Set it empty to serve without a store:
+#   make serve STORE=
 #
 # The default is per-USER rather than per-checkout, and outside the repo on purpose. A stored run is
 # about a DESIGN, not about which clone was serving when you saved it, so several checkouts sharing
@@ -864,15 +865,15 @@ OVERLAY_FLAGS ?=
 # it. The CLI flag itself stays explicit, with no default of its own: a deployed server should say
 # where it writes rather than inherit a guess. This is the dev-convenience layer, where the cost of
 # no default is a Review panel that is empty on every design until someone finds out why.
-REVIEW_STORE ?= $(HOME)/.agni/reviews
-REVIEW_FLAGS := $(if $(strip $(REVIEW_STORE)),--review-store $(REVIEW_STORE))
+STORE ?= $(HOME)/.agni/store
+STORE_FLAGS := $(if $(strip $(STORE)),--store file://$(abspath $(STORE)))
 # DATASHEETS_URL is where the datasheets workbench (agnids, `make dsserve`) is served, so the viewer's
 # landing page links its Datasheets card there. Empty hides the card.
 #   make serve DATASHEETS_URL=http://localhost:8090
 DATASHEETS_URL ?=
 DATASHEETS_FLAG := $(if $(strip $(DATASHEETS_URL)),--datasheets-url $(DATASHEETS_URL))
 serve: ui
-	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(REVIEW_FLAGS) $(DATASHEETS_FLAG)
+	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(STORE_FLAGS) $(DATASHEETS_FLAG)
 
 # The datasheets workbench is agnids, built from the datasheet module (agni issue 744), so it serves
 # separately from the viewer. It mounts DATASHEET_DIR as `ds`, reads the workbench assets out of this
@@ -1049,7 +1050,7 @@ dockserve:
 	@MAKE='$(MAKE)' IMAGE='$(IMAGE)' ADDR='$(ADDR)' \
 	  MOUNTS='$(MOUNTS)' EXTRA_MOUNTS='$(EXTRA_MOUNTS)' DESIGNS='$(strip $(DESIGNS))' \
 	  OVERLAY_DIR='$(strip $(OVERLAY_DIR))' OVERLAY_FLAGS='$(strip $(OVERLAY_FLAGS))' \
-	  REVIEW_STORE='$(strip $(REVIEW_STORE))' NATIVE_TOOLS='$(strip $(NATIVE_TOOLS))' \
+	  STORE='$(strip $(STORE))' NATIVE_TOOLS='$(strip $(NATIVE_TOOLS))' \
 	  SYMBOL_PATH='$(strip $(SYMBOL_PATH))' \
 	  DOCKER_FLAGS='$(DOCKER_FLAGS)' DOCKER_NAME='$(DOCKER_NAME)' \
 	  CLI_SET='$(DOCKSERVE_CLI_SET)' \

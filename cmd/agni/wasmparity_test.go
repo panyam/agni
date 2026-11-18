@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"io"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -81,7 +82,7 @@ func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, err := storeServices(ms, "", resolver.Store, resolver)
+	projectSvc, designSvc, err := storeServices(ms, "", "", resolver.Store, resolver, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

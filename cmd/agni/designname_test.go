@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -20,18 +21,18 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// designServer serves what `agni serve --store-dir <store> --state-dir <state>` serves to a client
-// that checks, diffs and queries designs by name (agni issue 1695).
-func designServer(t *testing.T, store, state string) *httptest.Server {
+// designServer serves what `agni serve --store <store> --uploads <uploads>` serves to a client that
+// checks, diffs and queries designs by name (agni issues 1695, 1739).
+func designServer(t *testing.T, store, uploads string) *httptest.Server {
 	t.Helper()
-	ms, err := withStoreMount(nil, store)
+	ms, err := withUploadsMount(nil, uploads)
 	if err != nil {
 		t.Fatal(err)
 	}
 	loader := service.NewCachingLoader(&osLoader{mounts: ms, loader: newLoader()}, service.NewDesignCache(0))
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
 	resolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: ms}, Uploads: uploadedHost, UploadMaxBytes: 1 << 24}
-	snaps, err := newOSSnapshotStore(filepath.Join(state, "snapshots"))
+	snaps, err := newOSSnapshotStore(filepath.Join(store, storeSnapshotsDir))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +41,7 @@ func designServer(t *testing.T, store, state string) *httptest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, err := storeServices(ms, store, projectStore, resolver)
+	projectSvc, designSvc, err := storeServices(ms, store, uploads, projectStore, resolver, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,8 +98,8 @@ func ingestByName(ctx context.Context, c webapiconnect.SnapshotServiceClient, de
 // reuses the snapshot until the design's files change (agni issue 1695).
 func TestASnapshotNamesItsDesign(t *testing.T) {
 	ctx := context.Background()
-	store, state := t.TempDir(), t.TempDir()
-	srv := designServer(t, store, state)
+	store, uploads := t.TempDir(), t.TempDir()
+	srv := designServer(t, store, uploads)
 	if out, err := runDesigns(t, srv.URL, "push", gatewayFolder(t, gatewayRevA), "--id", "gw"); err != nil {
 		t.Fatalf("push: %v\n%s", err, out)
 	}
@@ -107,7 +108,7 @@ func TestASnapshotNamesItsDesign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.GetName() != "snapshots/"+service.DesignSnapshotID("designs/gw") || first.GetTiers().GetNetlistUri() != "mount://store/gw/netlist/gateway.edn" || first.GetDesign() != "designs/gw" {
+	if first.GetName() != "snapshots/"+service.DesignSnapshotID("designs/gw") || !inUploads("gw", "netlist/gateway.edn").MatchString(first.GetTiers().GetNetlistUri()) || first.GetDesign() != "designs/gw" {
 		t.Fatalf("ingest by name = %v; want the fixed id, the design named, and its netlist read from the store", first)
 	}
 	again, err := ingestByName(ctx, snaps, "designs/gw")
@@ -116,7 +117,7 @@ func TestASnapshotNamesItsDesign(t *testing.T) {
 	}
 	for name, def := range map[string]*webapi.Snapshot{
 		"an unknown design": {Design: "designs/none"},
-		"design and uri":    {Design: "designs/gw", Uri: "mount://store/gw/netlist/gateway.edn"},
+		"design and uri":    {Design: "designs/gw", Uri: first.GetTiers().GetNetlistUri()},
 	} {
 		_, err := snaps.Ingest(ctx, connect.NewRequest(&webapi.IngestRequest{Snapshot: def}))
 		want := connect.CodeNotFound
@@ -142,12 +143,12 @@ func TestASnapshotNamesItsDesign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if moved.GetName() != first.GetName() || moved.GetRevisionId() == first.GetRevisionId() || moved.GetTiers().GetNetlistUri() != "mount://store/gw/netlist/gateway-rev-b.edn" {
+	if moved.GetName() != first.GetName() || moved.GetRevisionId() == first.GetRevisionId() || !inUploads("gw", "netlist/gateway-rev-b.edn").MatchString(moved.GetTiers().GetNetlistUri()) {
 		t.Errorf("ingest after replacing the netlist = %v; want the same snapshot reading gateway-rev-b.edn at a new revision", moved)
 	}
 
 	// After a restart the snapshot is rebuilt from its kept definition, by looking the name up again.
-	again2 := designServer(t, store, state)
+	again2 := designServer(t, store, uploads)
 	checks := webapiconnect.NewCheckServiceClient(http.DefaultClient, again2.URL)
 	resp, err := checks.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: first.GetName()}))
 	if err != nil || len(resp.Msg.GetFindings()) == 0 {
@@ -158,8 +159,8 @@ func TestASnapshotNamesItsDesign(t *testing.T) {
 // agni check, diff and query take a stored design's name under --remote, and answer as they do on
 // the store's own folder read locally.
 func TestTheCLIAsksAboutAStoredDesignByName(t *testing.T) {
-	store := t.TempDir()
-	srv := designServer(t, store, t.TempDir())
+	uploads := t.TempDir()
+	srv := designServer(t, t.TempDir(), uploads)
 	for id, netlist := range map[string]string{"gw": gatewayRevA, "gw-b": gatewayRevB} {
 		if out, err := runDesigns(t, srv.URL, "push", gatewayFolder(t, netlist), "--id", id); err != nil {
 			t.Fatalf("push %s: %v\n%s", id, err, out)
@@ -189,14 +190,14 @@ func TestTheCLIAsksAboutAStoredDesignByName(t *testing.T) {
 		}
 		return len(doc.Findings) + changed
 	}
-	folder := filepath.Join(store, storeDesignsDir, "gw")
+	folder := currentView(t, uploads, "gw")
 	byName := count("check", "designs/gw", "--remote", srv.URL, "--format", "json")
 	local := count("check", folder, "--format", "json")
 	if byName == 0 || byName != local {
 		t.Errorf("check designs/gw --remote = %d findings, check on its folder = %d; want the same, above zero", byName, local)
 	}
 	diffName := count("diff", "designs/gw", "designs/gw-b", "--remote", srv.URL, "--format", "json")
-	diffLocal := count("diff", folder, filepath.Join(store, storeDesignsDir, "gw-b"), "--format", "json")
+	diffLocal := count("diff", folder, currentView(t, uploads, "gw-b"), "--format", "json")
 	if diffName == 0 || diffName != diffLocal {
 		t.Errorf("diff by name = %d changes, diff on the folders = %d; want the same, above zero", diffName, diffLocal)
 	}
@@ -207,6 +208,21 @@ func TestTheCLIAsksAboutAStoredDesignByName(t *testing.T) {
 	if _, err := runAgni(t, "check", "designs/none", "--remote", srv.URL); err == nil {
 		t.Error("check of a design the server lacks succeeded; want its not-found error")
 	}
+}
+
+// inUploads matches a file's URI in a stored design's current view.
+func inUploads(id, rel string) *regexp.Regexp {
+	return regexp.MustCompile(`^mount://uploads/` + regexp.QuoteMeta(id) + `/[0-9a-f]{12}/` + regexp.QuoteMeta(rel) + `$`)
+}
+
+// currentView is the one view folder a stored design has, which the CLI reads as a plain design.
+func currentView(t *testing.T, uploads, id string) string {
+	t.Helper()
+	revs, err := filepath.Glob(filepath.Join(projects.ViewsRoot(uploads), id, "*"))
+	if err != nil || len(revs) != 1 {
+		t.Fatalf("views of %s = %v, %v; want one", id, revs, err)
+	}
+	return revs[0]
 }
 
 // runAgni runs the whole CLI with args and returns what it printed to stdout.

@@ -186,7 +186,7 @@ describe("review presenter — loading", () => {
     expect(h.listDir).toHaveBeenCalledWith({ uri: artifactUri("m", "proj") });
   });
 
-  // A server with no --review-store is a DEPLOYMENT state, not a failure of this request, so it must
+  // A server with no --store is a DEPLOYMENT state, not a failure of this request, so it must
   // not surface as an error banner. The panel shows a different empty state for it.
   it("records a server that keeps no reviews as unconfigured, not as an error", async () => {
     const h = harness();
@@ -261,7 +261,7 @@ describe("review presenter — creating", () => {
   });
 
   // agni issue 931: an engine that keeps no store (the browser engine, or a server without
-  // --review-store) still scores the checklist, with validate_only, and the page holds the run.
+  // --store) still scores the checklist, with validate_only, and the page holds the run.
   it("scores without a store once the listing said there is none, and holds the run in the page", async () => {
     const h = harness();
     h.listReviews.mockRejectedValueOnce(new ConnectError("no review store configured", Code.FailedPrecondition));

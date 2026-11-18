@@ -18,7 +18,7 @@ import (
 )
 
 // osReviewStore is the filesystem-backed service.ReviewStore, writing one results document per run
-// into the directory `agni serve --review-store` names. That directory is a WRITABLE volume, mounted
+// into the reviews folder of the store `agni serve --store` names. That directory is a WRITABLE volume, mounted
 // separately from the read-only design mounts, so persisting runs never writes into a design mount.
 //
 // There is no index. Ids lead with a UTC timestamp, so filenames sort chronologically as plain
@@ -39,12 +39,12 @@ func newOSReviewStore(dir string) (*osReviewStore, error) {
 	switch {
 	case errors.Is(err, os.ErrNotExist):
 		if err := os.MkdirAll(dir, 0o700); err != nil {
-			return nil, fmt.Errorf("--review-store %s: %w", dir, err)
+			return nil, fmt.Errorf("--store, its reviews folder %s: %w", dir, err)
 		}
 	case err != nil:
-		return nil, fmt.Errorf("--review-store %s: %w", dir, err)
+		return nil, fmt.Errorf("--store, its reviews folder %s: %w", dir, err)
 	case !info.IsDir():
-		return nil, fmt.Errorf("--review-store %s: not a directory", dir)
+		return nil, fmt.Errorf("--store, its reviews folder %s: not a directory", dir)
 	}
 	return &osReviewStore{dir: dir, now: time.Now}, nil
 }

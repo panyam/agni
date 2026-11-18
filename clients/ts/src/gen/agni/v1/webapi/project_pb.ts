@@ -478,7 +478,7 @@ export const ProjectService: GenService<{
   /**
    * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
    * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
-   * without --store-dir answers FAILED_PRECONDITION.
+   * without --store answers FAILED_PRECONDITION.
    *
    * @generated from rpc agni.v1.webapi.ProjectService.CreateProject
    */

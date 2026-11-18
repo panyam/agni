@@ -15,18 +15,18 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// --store-dir mounts its designs folder as "store", and the server's project store reads a design a
-// DirStore writes there as a design of no project (agni issues 1693, 1694).
-func TestStoreDirServesAsTheStoreMount(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "not-yet")
-	ms, err := withStoreMount([]mounts.Mount{{Name: "tut", Root: t.TempDir()}}, dir)
+// --uploads serves its design views as the mount "uploads", and the server's project store reads a
+// design a DirStore writes there as a design of no project (agni issues 1693, 1694, 1739).
+func TestUploadsServeAsTheUploadsMount(t *testing.T) {
+	uploads := filepath.Join(t.TempDir(), "not-yet")
+	ms, err := withUploadsMount([]mounts.Mount{{Name: "tut", Root: t.TempDir()}}, uploads)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ms) != 2 || ms[1].Name != storeMount || ms[1].Root != filepath.Join(dir, storeDesignsDir) {
-		t.Fatalf("mounts = %v, want tut then store at %s", ms, filepath.Join(dir, storeDesignsDir))
+	if len(ms) != 2 || ms[1].Name != uploadsMount || ms[1].Root != projects.ViewsRoot(uploads) {
+		t.Fatalf("mounts = %v, want tut then uploads at %s", ms, projects.ViewsRoot(uploads))
 	}
-	ds, err := projects.NewDirStore(ms[1].Root, storeMount)
+	ds, err := projects.NewDirStore(t.TempDir(), uploads, uploadsMount)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,8 +45,12 @@ func TestStoreDirServesAsTheStoreMount(t *testing.T) {
 	if _, err := ds.WriteArtifacts(context.Background(), "memory_unit", []service.ArtifactWrite{{ID: "netlist", Files: files, AllowMissing: true}}, source); err != nil {
 		t.Fatal(err)
 	}
+	stored, err := ds.Design(context.Background(), "memory_unit")
+	if err != nil || !inUploads("memory_unit", "netlist/mem.edn").MatchString(stored.GetEntryUri()) {
+		t.Fatalf("stored design = %v, %v; want its netlist in the uploads mount", stored, err)
+	}
 	read := projects.NewFSStore(projectTrees(ms)...)
-	u, err := artifact.Parse("mount://store/memory_unit/netlist/mem.edn")
+	u, err := artifact.Parse(stored.GetEntryUri())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,9 +60,41 @@ func TestStoreDirServesAsTheStoreMount(t *testing.T) {
 	}
 }
 
-func TestStoreDirRefusesAMountNamedStore(t *testing.T) {
-	_, err := withStoreMount([]mounts.Mount{{Name: storeMount, Root: t.TempDir()}}, t.TempDir())
+func TestUploadsRefuseAMountNamedUploads(t *testing.T) {
+	_, err := withUploadsMount([]mounts.Mount{{Name: uploadsMount, Root: t.TempDir()}}, t.TempDir())
 	if err == nil || !strings.Contains(err.Error(), "already declared") {
-		t.Fatalf("withStoreMount over a mount named store = %v, want a refusal", err)
+		t.Fatalf("withUploadsMount over a mount named uploads = %v, want a refusal", err)
+	}
+}
+
+func TestStoreAndUploadsTakeFileURLs(t *testing.T) {
+	for _, tc := range []struct {
+		store, uploads string
+		wantStore      string
+		wantUploads    string
+		wantErr        string
+	}{
+		{store: "", uploads: ""},
+		{store: "file:///srv/agni/meta", wantStore: "/srv/agni/meta"},
+		{store: "file:///srv/agni/meta", uploads: "file:///srv/agni/files", wantStore: "/srv/agni/meta", wantUploads: "/srv/agni/files"},
+		{store: "file://localhost/srv/agni/meta", wantStore: "/srv/agni/meta"},
+		{store: "/srv/agni/meta", wantErr: "write it as file:///srv/agni/meta"},
+		{store: "sqlite:///srv/agni.db", wantErr: "agni issue 1733"},
+		{store: "postgres://db/agni", wantErr: "this build knows file://, sqlite://"},
+		{store: "file://server/srv/agni", wantErr: "names the host"},
+		{store: "file://relative", wantErr: "names the host"},
+		{store: "file:///srv/agni/meta", uploads: "s3://bucket/agni", wantErr: "agni issue 1730"},
+		{uploads: "file:///srv/agni/files", wantErr: "needs --store"},
+	} {
+		store, uploads, err := storeFolders(tc.store, tc.uploads)
+		if tc.wantErr != "" {
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Errorf("--store %q --uploads %q = %v, want an error naming %q", tc.store, tc.uploads, err, tc.wantErr)
+			}
+			continue
+		}
+		if err != nil || store != filepath.FromSlash(tc.wantStore) || uploads != filepath.FromSlash(tc.wantUploads) {
+			t.Errorf("--store %q --uploads %q = %q, %q, %v; want %q, %q", tc.store, tc.uploads, store, uploads, err, tc.wantStore, tc.wantUploads)
+		}
 	}
 }
