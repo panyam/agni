@@ -9,7 +9,6 @@ package dsapi
 import (
 	doc "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	param "github.com/panyam/agni/gen/go/agni/v1/param"
-	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -1207,7 +1206,7 @@ var File_agni_v1_dsapi_datasheet_proto protoreflect.FileDescriptor
 
 const file_agni_v1_dsapi_datasheet_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagni/v1/dsapi/datasheet.proto\x12\ragni.v1.dsapi\x1a\x15agni/v1/doc/doc.proto\x1a\x19agni/v1/param/param.proto\x1a\x1eagni/v1/webapi/workspace.proto\"&\n" +
+	"\x1dagni/v1/dsapi/datasheet.proto\x12\ragni.v1.dsapi\x1a\x15agni/v1/doc/doc.proto\x1a\x19agni/v1/param/param.proto\"&\n" +
 	"\x12GetDocumentRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"\x93\x01\n" +
 	"\x13GetDocumentResponse\x12\x1c\n" +
@@ -1278,11 +1277,8 @@ const file_agni_v1_dsapi_datasheet_proto_rawDesc = "" +
 	"\x16SaveAnnotationsRequest\x12.\n" +
 	"\x03set\x18\x01 \x01(\v2\x1c.agni.v1.dsapi.AnnotationSetR\x03set\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\"\x19\n" +
-	"\x17SaveAnnotationsResponse2\xec\x06\n" +
-	"\x10DatasheetService\x12S\n" +
-	"\n" +
-	"ListMounts\x12!.agni.v1.webapi.ListMountsRequest\x1a\".agni.v1.webapi.ListMountsResponse\x12J\n" +
-	"\aListDir\x12\x1e.agni.v1.webapi.ListDirRequest\x1a\x1f.agni.v1.webapi.ListDirResponse\x12T\n" +
+	"\x17SaveAnnotationsResponse2\xcb\x05\n" +
+	"\x10DatasheetService\x12T\n" +
 	"\vGetDocument\x12!.agni.v1.dsapi.GetDocumentRequest\x1a\".agni.v1.dsapi.GetDocumentResponse\x12K\n" +
 	"\bGetDraft\x12\x1e.agni.v1.dsapi.GetDraftRequest\x1a\x1f.agni.v1.dsapi.GetDraftResponse\x12Q\n" +
 	"\n" +
@@ -1308,35 +1304,31 @@ func file_agni_v1_dsapi_datasheet_proto_rawDescGZIP() []byte {
 var file_agni_v1_dsapi_datasheet_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_agni_v1_dsapi_datasheet_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_agni_v1_dsapi_datasheet_proto_goTypes = []any{
-	(ValidationProblem_Kind)(0),       // 0: agni.v1.dsapi.ValidationProblem.Kind
-	(*GetDocumentRequest)(nil),        // 1: agni.v1.dsapi.GetDocumentRequest
-	(*GetDocumentResponse)(nil),       // 2: agni.v1.dsapi.GetDocumentResponse
-	(*ExtractDocIRRequest)(nil),       // 3: agni.v1.dsapi.ExtractDocIRRequest
-	(*ExtractDocIRResponse)(nil),      // 4: agni.v1.dsapi.ExtractDocIRResponse
-	(*Draft)(nil),                     // 5: agni.v1.dsapi.Draft
-	(*GetDraftRequest)(nil),           // 6: agni.v1.dsapi.GetDraftRequest
-	(*GetDraftResponse)(nil),          // 7: agni.v1.dsapi.GetDraftResponse
-	(*ListDraftsRequest)(nil),         // 8: agni.v1.dsapi.ListDraftsRequest
-	(*ListDraftsResponse)(nil),        // 9: agni.v1.dsapi.ListDraftsResponse
-	(*SaveDraftRequest)(nil),          // 10: agni.v1.dsapi.SaveDraftRequest
-	(*SaveDraftResponse)(nil),         // 11: agni.v1.dsapi.SaveDraftResponse
-	(*PublishDraftRequest)(nil),       // 12: agni.v1.dsapi.PublishDraftRequest
-	(*PublishDraftResponse)(nil),      // 13: agni.v1.dsapi.PublishDraftResponse
-	(*ValidationProblem)(nil),         // 14: agni.v1.dsapi.ValidationProblem
-	(*RegionAnnotation)(nil),          // 15: agni.v1.dsapi.RegionAnnotation
-	(*AnnotationSet)(nil),             // 16: agni.v1.dsapi.AnnotationSet
-	(*GetAnnotationsRequest)(nil),     // 17: agni.v1.dsapi.GetAnnotationsRequest
-	(*GetAnnotationsResponse)(nil),    // 18: agni.v1.dsapi.GetAnnotationsResponse
-	(*SaveAnnotationsRequest)(nil),    // 19: agni.v1.dsapi.SaveAnnotationsRequest
-	(*SaveAnnotationsResponse)(nil),   // 20: agni.v1.dsapi.SaveAnnotationsResponse
-	(*doc.Document)(nil),              // 21: agni.v1.doc.Document
-	(*param.PartSpec)(nil),            // 22: agni.v1.param.PartSpec
-	(*doc.BBox)(nil),                  // 23: agni.v1.doc.BBox
-	(*param.Parameter)(nil),           // 24: agni.v1.param.Parameter
-	(*webapi.ListMountsRequest)(nil),  // 25: agni.v1.webapi.ListMountsRequest
-	(*webapi.ListDirRequest)(nil),     // 26: agni.v1.webapi.ListDirRequest
-	(*webapi.ListMountsResponse)(nil), // 27: agni.v1.webapi.ListMountsResponse
-	(*webapi.ListDirResponse)(nil),    // 28: agni.v1.webapi.ListDirResponse
+	(ValidationProblem_Kind)(0),     // 0: agni.v1.dsapi.ValidationProblem.Kind
+	(*GetDocumentRequest)(nil),      // 1: agni.v1.dsapi.GetDocumentRequest
+	(*GetDocumentResponse)(nil),     // 2: agni.v1.dsapi.GetDocumentResponse
+	(*ExtractDocIRRequest)(nil),     // 3: agni.v1.dsapi.ExtractDocIRRequest
+	(*ExtractDocIRResponse)(nil),    // 4: agni.v1.dsapi.ExtractDocIRResponse
+	(*Draft)(nil),                   // 5: agni.v1.dsapi.Draft
+	(*GetDraftRequest)(nil),         // 6: agni.v1.dsapi.GetDraftRequest
+	(*GetDraftResponse)(nil),        // 7: agni.v1.dsapi.GetDraftResponse
+	(*ListDraftsRequest)(nil),       // 8: agni.v1.dsapi.ListDraftsRequest
+	(*ListDraftsResponse)(nil),      // 9: agni.v1.dsapi.ListDraftsResponse
+	(*SaveDraftRequest)(nil),        // 10: agni.v1.dsapi.SaveDraftRequest
+	(*SaveDraftResponse)(nil),       // 11: agni.v1.dsapi.SaveDraftResponse
+	(*PublishDraftRequest)(nil),     // 12: agni.v1.dsapi.PublishDraftRequest
+	(*PublishDraftResponse)(nil),    // 13: agni.v1.dsapi.PublishDraftResponse
+	(*ValidationProblem)(nil),       // 14: agni.v1.dsapi.ValidationProblem
+	(*RegionAnnotation)(nil),        // 15: agni.v1.dsapi.RegionAnnotation
+	(*AnnotationSet)(nil),           // 16: agni.v1.dsapi.AnnotationSet
+	(*GetAnnotationsRequest)(nil),   // 17: agni.v1.dsapi.GetAnnotationsRequest
+	(*GetAnnotationsResponse)(nil),  // 18: agni.v1.dsapi.GetAnnotationsResponse
+	(*SaveAnnotationsRequest)(nil),  // 19: agni.v1.dsapi.SaveAnnotationsRequest
+	(*SaveAnnotationsResponse)(nil), // 20: agni.v1.dsapi.SaveAnnotationsResponse
+	(*doc.Document)(nil),            // 21: agni.v1.doc.Document
+	(*param.PartSpec)(nil),          // 22: agni.v1.param.PartSpec
+	(*doc.BBox)(nil),                // 23: agni.v1.doc.BBox
+	(*param.Parameter)(nil),         // 24: agni.v1.param.Parameter
 }
 var file_agni_v1_dsapi_datasheet_proto_depIdxs = []int32{
 	21, // 0: agni.v1.dsapi.GetDocumentResponse.document:type_name -> agni.v1.doc.Document
@@ -1353,28 +1345,24 @@ var file_agni_v1_dsapi_datasheet_proto_depIdxs = []int32{
 	15, // 11: agni.v1.dsapi.AnnotationSet.annotations:type_name -> agni.v1.dsapi.RegionAnnotation
 	16, // 12: agni.v1.dsapi.GetAnnotationsResponse.sets:type_name -> agni.v1.dsapi.AnnotationSet
 	16, // 13: agni.v1.dsapi.SaveAnnotationsRequest.set:type_name -> agni.v1.dsapi.AnnotationSet
-	25, // 14: agni.v1.dsapi.DatasheetService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
-	26, // 15: agni.v1.dsapi.DatasheetService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
-	1,  // 16: agni.v1.dsapi.DatasheetService.GetDocument:input_type -> agni.v1.dsapi.GetDocumentRequest
-	6,  // 17: agni.v1.dsapi.DatasheetService.GetDraft:input_type -> agni.v1.dsapi.GetDraftRequest
-	8,  // 18: agni.v1.dsapi.DatasheetService.ListDrafts:input_type -> agni.v1.dsapi.ListDraftsRequest
-	10, // 19: agni.v1.dsapi.DatasheetService.SaveDraft:input_type -> agni.v1.dsapi.SaveDraftRequest
-	12, // 20: agni.v1.dsapi.DatasheetService.PublishDraft:input_type -> agni.v1.dsapi.PublishDraftRequest
-	3,  // 21: agni.v1.dsapi.DatasheetService.ExtractDocIR:input_type -> agni.v1.dsapi.ExtractDocIRRequest
-	17, // 22: agni.v1.dsapi.DatasheetService.GetAnnotations:input_type -> agni.v1.dsapi.GetAnnotationsRequest
-	19, // 23: agni.v1.dsapi.DatasheetService.SaveAnnotations:input_type -> agni.v1.dsapi.SaveAnnotationsRequest
-	27, // 24: agni.v1.dsapi.DatasheetService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
-	28, // 25: agni.v1.dsapi.DatasheetService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
-	2,  // 26: agni.v1.dsapi.DatasheetService.GetDocument:output_type -> agni.v1.dsapi.GetDocumentResponse
-	7,  // 27: agni.v1.dsapi.DatasheetService.GetDraft:output_type -> agni.v1.dsapi.GetDraftResponse
-	9,  // 28: agni.v1.dsapi.DatasheetService.ListDrafts:output_type -> agni.v1.dsapi.ListDraftsResponse
-	11, // 29: agni.v1.dsapi.DatasheetService.SaveDraft:output_type -> agni.v1.dsapi.SaveDraftResponse
-	13, // 30: agni.v1.dsapi.DatasheetService.PublishDraft:output_type -> agni.v1.dsapi.PublishDraftResponse
-	4,  // 31: agni.v1.dsapi.DatasheetService.ExtractDocIR:output_type -> agni.v1.dsapi.ExtractDocIRResponse
-	18, // 32: agni.v1.dsapi.DatasheetService.GetAnnotations:output_type -> agni.v1.dsapi.GetAnnotationsResponse
-	20, // 33: agni.v1.dsapi.DatasheetService.SaveAnnotations:output_type -> agni.v1.dsapi.SaveAnnotationsResponse
-	24, // [24:34] is the sub-list for method output_type
-	14, // [14:24] is the sub-list for method input_type
+	1,  // 14: agni.v1.dsapi.DatasheetService.GetDocument:input_type -> agni.v1.dsapi.GetDocumentRequest
+	6,  // 15: agni.v1.dsapi.DatasheetService.GetDraft:input_type -> agni.v1.dsapi.GetDraftRequest
+	8,  // 16: agni.v1.dsapi.DatasheetService.ListDrafts:input_type -> agni.v1.dsapi.ListDraftsRequest
+	10, // 17: agni.v1.dsapi.DatasheetService.SaveDraft:input_type -> agni.v1.dsapi.SaveDraftRequest
+	12, // 18: agni.v1.dsapi.DatasheetService.PublishDraft:input_type -> agni.v1.dsapi.PublishDraftRequest
+	3,  // 19: agni.v1.dsapi.DatasheetService.ExtractDocIR:input_type -> agni.v1.dsapi.ExtractDocIRRequest
+	17, // 20: agni.v1.dsapi.DatasheetService.GetAnnotations:input_type -> agni.v1.dsapi.GetAnnotationsRequest
+	19, // 21: agni.v1.dsapi.DatasheetService.SaveAnnotations:input_type -> agni.v1.dsapi.SaveAnnotationsRequest
+	2,  // 22: agni.v1.dsapi.DatasheetService.GetDocument:output_type -> agni.v1.dsapi.GetDocumentResponse
+	7,  // 23: agni.v1.dsapi.DatasheetService.GetDraft:output_type -> agni.v1.dsapi.GetDraftResponse
+	9,  // 24: agni.v1.dsapi.DatasheetService.ListDrafts:output_type -> agni.v1.dsapi.ListDraftsResponse
+	11, // 25: agni.v1.dsapi.DatasheetService.SaveDraft:output_type -> agni.v1.dsapi.SaveDraftResponse
+	13, // 26: agni.v1.dsapi.DatasheetService.PublishDraft:output_type -> agni.v1.dsapi.PublishDraftResponse
+	4,  // 27: agni.v1.dsapi.DatasheetService.ExtractDocIR:output_type -> agni.v1.dsapi.ExtractDocIRResponse
+	18, // 28: agni.v1.dsapi.DatasheetService.GetAnnotations:output_type -> agni.v1.dsapi.GetAnnotationsResponse
+	20, // 29: agni.v1.dsapi.DatasheetService.SaveAnnotations:output_type -> agni.v1.dsapi.SaveAnnotationsResponse
+	22, // [22:30] is the sub-list for method output_type
+	14, // [14:22] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name
 	14, // [14:14] is the sub-list for extension extendee
 	0,  // [0:14] is the sub-list for field type_name

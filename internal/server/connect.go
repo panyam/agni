@@ -119,6 +119,14 @@ func (a *Workspace) ListMounts(ctx context.Context, req *connect.Request[webapi.
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Workspace) GetMount(ctx context.Context, req *connect.Request[webapi.GetMountRequest]) (*connect.Response[webapi.Mount], error) {
+	resp, err := a.svc.GetMount(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Workspace) ListDir(ctx context.Context, req *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {
 	resp, err := a.svc.ListDir(ctx, req.Msg)
 	if err != nil {

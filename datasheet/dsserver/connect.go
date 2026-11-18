@@ -15,7 +15,6 @@ import (
 	"github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi/dsapiconnect"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/gen/go/agni/v1/param/paramconnect"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
 
@@ -90,14 +89,6 @@ func (a *Datasheet) GetAnnotations(ctx context.Context, req *connect.Request[dsa
 
 func (a *Datasheet) SaveAnnotations(ctx context.Context, req *connect.Request[dsapi.SaveAnnotationsRequest]) (*connect.Response[dsapi.SaveAnnotationsResponse], error) {
 	return unary(ctx, req, a.svc.SaveAnnotations)
-}
-
-func (a *Datasheet) ListMounts(ctx context.Context, req *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error) {
-	return unary(ctx, req, a.svc.ListMounts)
-}
-
-func (a *Datasheet) ListDir(ctx context.Context, req *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {
-	return unary(ctx, req, a.svc.ListDir)
 }
 
 // PartSpec adapts dsservice.PartSpecService to the contract's generated PartSpecService handler.

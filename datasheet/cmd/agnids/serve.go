@@ -20,7 +20,10 @@ import (
 	"github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi/dsapiconnect"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/gen/go/agni/v1/param/paramconnect"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
+	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
 	skhttp "github.com/panyam/servicekit/http"
 )
@@ -94,10 +97,16 @@ func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerU
 	if corpusDir != "" {
 		drafts = newOSDraftStore(corpusDir)
 	}
-	svc := dsservice.NewDatasheetService(&osDocLoader{mounts: ms}, drafts,
-		&osDocExtractor{mounts: ms, cmd: pdf2doc}, &osAnnotationStore{mounts: ms}, mounts.NewWorkspace(ms))
+	// A datasheet's doc-IR and annotations live in the corpus store, keyed by the PDF's hash, so the
+	// mounts are only read (agni issue 1734).
+	d := derived{mounts: ms, corpus: corpusDir}
+	svc := dsservice.NewDatasheetService(&osDocLoader{derived: d}, drafts,
+		&osDocExtractor{derived: d, cmd: pdf2doc}, &osAnnotationStore{derived: d})
 	path, handler := dsapiconnect.NewDatasheetServiceHandler(dsserver.NewDatasheet(svc))
 	mux.Handle(path, handler)
+	// The workbench lists its folders through the engine's own WorkspaceService, over these mounts.
+	wpath, whandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(mounts.NewWorkspace(ms))))
+	mux.Handle(wpath, whandler)
 	// The published corpus's read side, for `agni serve --params-url`. Registered with no corpus too,
 	// so a caller is told to start agnids with --corpus rather than getting a 404.
 	ppath, phandler := paramconnect.NewPartSpecServiceHandler(dsserver.NewPartSpec(dsservice.NewPartSpecService(corpusStore)))
@@ -105,6 +114,15 @@ func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerU
 	// The workbench renders the source PDF with pdf.js, so its raw bytes are served from the mounts.
 	// The prefix is more specific than the page's, so ServeMux routes it here.
 	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(ms)))
+	// A workbench link from when datasheets lived under /datasheets/files/ redirects to the same path
+	// under /datasheets/mounts/, query and all (agni issue 1734).
+	mux.HandleFunc("/datasheets/files/", func(w http.ResponseWriter, r *http.Request) {
+		target := "/datasheets/mounts/" + strings.TrimPrefix(r.URL.Path, "/datasheets/files/")
+		if r.URL.RawQuery != "" {
+			target += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, target, http.StatusMovedPermanently) // #nosec G710 -- target always starts /datasheets/mounts/, so the redirect stays on this site
+	})
 	// An empty webDir serves the API alone, with no page, no bundle, and no redirect to a missing
 	// page.
 	if webDir != "" {

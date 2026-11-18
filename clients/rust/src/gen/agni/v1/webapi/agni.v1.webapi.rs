@@ -3688,6 +3688,12 @@ pub struct Mount {
     pub uri: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetMountRequest {
+    /// name is the mount's handle, as Mount.name gives it.
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListMountsRequest {
     /// opens declares what this client can open, on the same terms as ListDirRequest.opens. When it is
     /// set, the response drops each mount with none of those kinds anywhere beneath it. ListDir

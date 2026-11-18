@@ -6,7 +6,6 @@ option go_package = "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi";
 
 import "agni/v1/doc/doc.proto";
 import "agni/v1/param/param.proto";
-import "agni/v1/webapi/workspace.proto";
 
 // This file defines DatasheetService, the datasheet PRODUCER's API. It is in a package of its own
 // rather than agni.v1.webapi, so the engine's API has no producer message (C34, agni issue 744).
@@ -25,17 +24,13 @@ import "agni/v1/webapi/workspace.proto";
 // WorkspaceService lists directories, and mounts are the security boundary. This service only
 // resolves and returns doc-IR for a named datasheet.
 service DatasheetService {
-  // ListMounts and ListDir are the workbench's folder tree. They take and return the engine's own
-  // workspace messages. They answer exactly as WorkspaceService does, because the datasheet service
-  // lists through the same mounts.Workspace. With them the datasheet service serves its whole page
-  // from its own API when it is hosted apart from the engine (agni issue 744).
-  rpc ListMounts(agni.v1.webapi.ListMountsRequest) returns (agni.v1.webapi.ListMountsResponse);
-  rpc ListDir(agni.v1.webapi.ListDirRequest) returns (agni.v1.webapi.ListDirResponse);
+  // The workbench's folder tree comes from the engine's own WorkspaceService, which agnids serves
+  // beside this one over the same mounts (agni issue 1734).
 
   // GetDocument returns the doc-IR for the datasheet at (mount, path). path names the source
-  // document (the PDF the browser renders); the server resolves the datasheet's sibling doc-IR.
-  // When none has been derived yet, extracted is false and document is unset. That is a normal
-  // state, not an error.
+  // document (the PDF the browser renders). The doc-IR lives in the corpus store, keyed by the
+  // PDF's content hash. When none has been derived yet, extracted is false and document is unset.
+  // That is a normal state, not an error.
   rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse);
 
   // DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,

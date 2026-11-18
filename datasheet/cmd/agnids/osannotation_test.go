@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/datasheet/dsservice"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	"github.com/panyam/agni/mounts"
 )
@@ -27,8 +29,9 @@ func TestAnnotationsDirAndSafeAuthor(t *testing.T) {
 }
 
 func TestOsAnnotationStoreUnion(t *testing.T) {
-	dir := t.TempDir()
-	st := &osAnnotationStore{mounts: []mounts.Mount{{Name: "m", Root: dir}}}
+	dir, corpus := t.TempDir(), t.TempDir()
+	writePDF(t, filepath.Join(dir, "d.pdf"), "pdf-d")
+	st := &osAnnotationStore{derived: derived{mounts: []mounts.Mount{{Name: "m", Root: dir}}, corpus: corpus}}
 	ctx := context.Background()
 	region := func(id, typ string) []*dsapi.RegionAnnotation {
 		return []*dsapi.RegionAnnotation{{RegionId: id, Type: typ}}
@@ -66,8 +69,46 @@ func TestOsAnnotationStoreUnion(t *testing.T) {
 		t.Fatalf("after alice overwrite: %v", sets)
 	}
 
-	// The overlay was written to the per-datasheet annotation directory as <author>.json.
-	if _, err := os.Stat(filepath.Join(dir, "d.annotations", "alice.json")); err != nil {
-		t.Fatalf("alice's overlay not written to the annotation dir: %v", err)
+	// The overlay went into the corpus store, under the PDF's hash, as <author>.json, and nothing was
+	// written into the mount (agni issue 1734).
+	if _, err := os.Stat(filepath.Join(corpus, "derived", sha256Hex("pdf-d"), "annotations", "alice.json")); err != nil {
+		t.Fatalf("alice's overlay not written to the store: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "d.annotations")); !os.IsNotExist(err) {
+		t.Errorf("an annotation folder was written beside the PDF: %v", err)
+	}
+}
+
+// An older agnids wrote annotations beside the PDF. Get still reads them, and the store's overlay
+// for the same author wins. Without a corpus, Save has nowhere to write and says so.
+func TestOsAnnotationStoreReadsTheOldLayout(t *testing.T) {
+	dir, corpus := t.TempDir(), t.TempDir()
+	writePDF(t, filepath.Join(dir, "d.pdf"), "pdf-d")
+	old := filepath.Join(dir, "d.annotations")
+	if err := os.MkdirAll(old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range []string{"carol", "alice"} {
+		body := `{"docId":"d","author":"` + a + `","annotations":[{"regionId":"old.` + a + `"}]}`
+		if err := os.WriteFile(filepath.Join(old, a+".json"), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ms := []mounts.Mount{{Name: "m", Root: dir}}
+	st := &osAnnotationStore{derived: derived{mounts: ms, corpus: corpus}}
+	ctx := context.Background()
+	if err := st.Save(ctx, mustURI("m", "d.pdf"), "alice", &dsapi.AnnotationSet{DocId: "d", Author: "alice", Annotations: []*dsapi.RegionAnnotation{{RegionId: "new.alice"}}}); err != nil {
+		t.Fatal(err)
+	}
+	sets, err := st.Get(ctx, mustURI("m", "d.pdf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sets) != 2 || sets[0].GetAnnotations()[0].GetRegionId() != "new.alice" || sets[1].GetAnnotations()[0].GetRegionId() != "old.carol" {
+		t.Fatalf("union = %v, want the store's alice and the old layout's carol", sets)
+	}
+	bare := &osAnnotationStore{derived: derived{mounts: ms}}
+	if err := bare.Save(ctx, mustURI("m", "d.pdf"), "alice", &dsapi.AnnotationSet{Author: "alice"}); !errors.Is(err, dsservice.ErrNoCorpus) {
+		t.Errorf("Save with no corpus = %v, want ErrNoCorpus", err)
 	}
 }

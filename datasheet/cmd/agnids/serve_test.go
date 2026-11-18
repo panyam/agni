@@ -74,13 +74,21 @@ func TestWorkbenchServesItsWholePage(t *testing.T) {
 			t.Errorf("workbench page missing %q", want)
 		}
 	}
-	tree := do("POST", "/agni.v1.dsapi.DatasheetService/ListDir", `{"uri":"mount://ds/ti"}`)
+	// The folder tree comes from the engine's own WorkspaceService, which agnids serves over its
+	// mounts (agni issue 1734).
+	tree := do("POST", "/agni.v1.webapi.WorkspaceService/ListDir", `{"uri":"mount://ds/ti"}`)
 	if tree.Code != 200 || !strings.Contains(tree.Body.String(), "LM1117.pdf") {
-		t.Errorf("ListDir over the workbench's own API = %d %s, want LM1117.pdf listed", tree.Code, tree.Body.String())
+		t.Errorf("WorkspaceService.ListDir = %d %s, want LM1117.pdf listed", tree.Code, tree.Body.String())
 	}
-	mountsResp := do("POST", "/agni.v1.dsapi.DatasheetService/ListMounts", `{}`)
+	mountsResp := do("POST", "/agni.v1.webapi.WorkspaceService/ListMounts", `{}`)
 	if mountsResp.Code != 200 || !strings.Contains(mountsResp.Body.String(), `"ds"`) {
-		t.Errorf("ListMounts = %d %s, want the ds mount", mountsResp.Code, mountsResp.Body.String())
+		t.Errorf("WorkspaceService.ListMounts = %d %s, want the ds mount", mountsResp.Code, mountsResp.Body.String())
+	}
+	if one := do("POST", "/agni.v1.webapi.WorkspaceService/GetMount", `{"name":"ds"}`); one.Code != 200 || !strings.Contains(one.Body.String(), `"mount://ds"`) {
+		t.Errorf("WorkspaceService.GetMount = %d %s, want the ds mount", one.Code, one.Body.String())
+	}
+	if old := do("GET", "/datasheets/files/ds/ti/LM1117.pdf?page=2", ""); old.Code != 301 || old.Header().Get("Location") != "/datasheets/mounts/ds/ti/LM1117.pdf?page=2" {
+		t.Errorf("GET /datasheets/files/... = %d -> %q, want 301 to /datasheets/mounts/ds/ti/LM1117.pdf?page=2", old.Code, old.Header().Get("Location"))
 	}
 	if raw := do("GET", "/datasheets/raw/ds/ti/LM1117.pdf", ""); raw.Code != 200 || raw.Body.String() != "x" {
 		t.Errorf("raw PDF = %d %q", raw.Code, raw.Body.String())

@@ -9,7 +9,6 @@ import (
 	context "context"
 	errors "errors"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
-	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	http "net/http"
 	strings "strings"
 )
@@ -34,12 +33,6 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// DatasheetServiceListMountsProcedure is the fully-qualified name of the DatasheetService's
-	// ListMounts RPC.
-	DatasheetServiceListMountsProcedure = "/agni.v1.dsapi.DatasheetService/ListMounts"
-	// DatasheetServiceListDirProcedure is the fully-qualified name of the DatasheetService's ListDir
-	// RPC.
-	DatasheetServiceListDirProcedure = "/agni.v1.dsapi.DatasheetService/ListDir"
 	// DatasheetServiceGetDocumentProcedure is the fully-qualified name of the DatasheetService's
 	// GetDocument RPC.
 	DatasheetServiceGetDocumentProcedure = "/agni.v1.dsapi.DatasheetService/GetDocument"
@@ -68,16 +61,10 @@ const (
 
 // DatasheetServiceClient is a client for the agni.v1.dsapi.DatasheetService service.
 type DatasheetServiceClient interface {
-	// ListMounts and ListDir are the workbench's folder tree. They take and return the engine's own
-	// workspace messages. They answer exactly as WorkspaceService does, because the datasheet service
-	// lists through the same mounts.Workspace. With them the datasheet service serves its whole page
-	// from its own API when it is hosted apart from the engine (agni issue 744).
-	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
-	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 	// GetDocument returns the doc-IR for the datasheet at (mount, path). path names the source
-	// document (the PDF the browser renders); the server resolves the datasheet's sibling doc-IR.
-	// When none has been derived yet, extracted is false and document is unset. That is a normal
-	// state, not an error.
+	// document (the PDF the browser renders). The doc-IR lives in the corpus store, keyed by the
+	// PDF's content hash. When none has been derived yet, extracted is false and document is unset.
+	// That is a normal state, not an error.
 	GetDocument(context.Context, *connect.Request[dsapi.GetDocumentRequest]) (*connect.Response[dsapi.GetDocumentResponse], error)
 	// DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,
 	// and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit, so
@@ -135,18 +122,6 @@ func NewDatasheetServiceClient(httpClient connect.HTTPClient, baseURL string, op
 	baseURL = strings.TrimRight(baseURL, "/")
 	datasheetServiceMethods := dsapi.File_agni_v1_dsapi_datasheet_proto.Services().ByName("DatasheetService").Methods()
 	return &datasheetServiceClient{
-		listMounts: connect.NewClient[webapi.ListMountsRequest, webapi.ListMountsResponse](
-			httpClient,
-			baseURL+DatasheetServiceListMountsProcedure,
-			connect.WithSchema(datasheetServiceMethods.ByName("ListMounts")),
-			connect.WithClientOptions(opts...),
-		),
-		listDir: connect.NewClient[webapi.ListDirRequest, webapi.ListDirResponse](
-			httpClient,
-			baseURL+DatasheetServiceListDirProcedure,
-			connect.WithSchema(datasheetServiceMethods.ByName("ListDir")),
-			connect.WithClientOptions(opts...),
-		),
 		getDocument: connect.NewClient[dsapi.GetDocumentRequest, dsapi.GetDocumentResponse](
 			httpClient,
 			baseURL+DatasheetServiceGetDocumentProcedure,
@@ -200,8 +175,6 @@ func NewDatasheetServiceClient(httpClient connect.HTTPClient, baseURL string, op
 
 // datasheetServiceClient implements DatasheetServiceClient.
 type datasheetServiceClient struct {
-	listMounts      *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
-	listDir         *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
 	getDocument     *connect.Client[dsapi.GetDocumentRequest, dsapi.GetDocumentResponse]
 	getDraft        *connect.Client[dsapi.GetDraftRequest, dsapi.GetDraftResponse]
 	listDrafts      *connect.Client[dsapi.ListDraftsRequest, dsapi.ListDraftsResponse]
@@ -210,16 +183,6 @@ type datasheetServiceClient struct {
 	extractDocIR    *connect.Client[dsapi.ExtractDocIRRequest, dsapi.ExtractDocIRResponse]
 	getAnnotations  *connect.Client[dsapi.GetAnnotationsRequest, dsapi.GetAnnotationsResponse]
 	saveAnnotations *connect.Client[dsapi.SaveAnnotationsRequest, dsapi.SaveAnnotationsResponse]
-}
-
-// ListMounts calls agni.v1.dsapi.DatasheetService.ListMounts.
-func (c *datasheetServiceClient) ListMounts(ctx context.Context, req *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error) {
-	return c.listMounts.CallUnary(ctx, req)
-}
-
-// ListDir calls agni.v1.dsapi.DatasheetService.ListDir.
-func (c *datasheetServiceClient) ListDir(ctx context.Context, req *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {
-	return c.listDir.CallUnary(ctx, req)
 }
 
 // GetDocument calls agni.v1.dsapi.DatasheetService.GetDocument.
@@ -264,16 +227,10 @@ func (c *datasheetServiceClient) SaveAnnotations(ctx context.Context, req *conne
 
 // DatasheetServiceHandler is an implementation of the agni.v1.dsapi.DatasheetService service.
 type DatasheetServiceHandler interface {
-	// ListMounts and ListDir are the workbench's folder tree. They take and return the engine's own
-	// workspace messages. They answer exactly as WorkspaceService does, because the datasheet service
-	// lists through the same mounts.Workspace. With them the datasheet service serves its whole page
-	// from its own API when it is hosted apart from the engine (agni issue 744).
-	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
-	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 	// GetDocument returns the doc-IR for the datasheet at (mount, path). path names the source
-	// document (the PDF the browser renders); the server resolves the datasheet's sibling doc-IR.
-	// When none has been derived yet, extracted is false and document is unset. That is a normal
-	// state, not an error.
+	// document (the PDF the browser renders). The doc-IR lives in the corpus store, keyed by the
+	// PDF's content hash. When none has been derived yet, extracted is false and document is unset.
+	// That is a normal state, not an error.
 	GetDocument(context.Context, *connect.Request[dsapi.GetDocumentRequest]) (*connect.Response[dsapi.GetDocumentResponse], error)
 	// DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,
 	// and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit, so
@@ -327,18 +284,6 @@ type DatasheetServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewDatasheetServiceHandler(svc DatasheetServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	datasheetServiceMethods := dsapi.File_agni_v1_dsapi_datasheet_proto.Services().ByName("DatasheetService").Methods()
-	datasheetServiceListMountsHandler := connect.NewUnaryHandler(
-		DatasheetServiceListMountsProcedure,
-		svc.ListMounts,
-		connect.WithSchema(datasheetServiceMethods.ByName("ListMounts")),
-		connect.WithHandlerOptions(opts...),
-	)
-	datasheetServiceListDirHandler := connect.NewUnaryHandler(
-		DatasheetServiceListDirProcedure,
-		svc.ListDir,
-		connect.WithSchema(datasheetServiceMethods.ByName("ListDir")),
-		connect.WithHandlerOptions(opts...),
-	)
 	datasheetServiceGetDocumentHandler := connect.NewUnaryHandler(
 		DatasheetServiceGetDocumentProcedure,
 		svc.GetDocument,
@@ -389,10 +334,6 @@ func NewDatasheetServiceHandler(svc DatasheetServiceHandler, opts ...connect.Han
 	)
 	return "/agni.v1.dsapi.DatasheetService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case DatasheetServiceListMountsProcedure:
-			datasheetServiceListMountsHandler.ServeHTTP(w, r)
-		case DatasheetServiceListDirProcedure:
-			datasheetServiceListDirHandler.ServeHTTP(w, r)
 		case DatasheetServiceGetDocumentProcedure:
 			datasheetServiceGetDocumentHandler.ServeHTTP(w, r)
 		case DatasheetServiceGetDraftProcedure:
@@ -417,14 +358,6 @@ func NewDatasheetServiceHandler(svc DatasheetServiceHandler, opts ...connect.Han
 
 // UnimplementedDatasheetServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedDatasheetServiceHandler struct{}
-
-func (UnimplementedDatasheetServiceHandler) ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.ListMounts is not implemented"))
-}
-
-func (UnimplementedDatasheetServiceHandler) ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.ListDir is not implemented"))
-}
 
 func (UnimplementedDatasheetServiceHandler) GetDocument(context.Context, *connect.Request[dsapi.GetDocumentRequest]) (*connect.Response[dsapi.GetDocumentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.GetDocument is not implemented"))

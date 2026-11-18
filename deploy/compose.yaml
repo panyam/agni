@@ -38,10 +38,14 @@ services:
     image: ${AGNI_DS_IMAGE:-ghcr.io/panyam/agnids}:${AGNI_VERSION:-latest}
     ports:
       - "${AGNI_DATASHEETS_PORT:-8090}:8090"
+    # The datasheet folders are only read. Extracted doc-IR, annotations, drafts and published specs
+    # go in the corpus store, kept in the `corpus` volume (agni issue 1734).
     volumes:
-      - ${AGNI_DATASHEETS:-./datasheets}:/datasheets
+      - ${AGNI_DATASHEETS:-./datasheets}:/datasheets:ro
+      - corpus:/corpus
     profiles: ["datasheets"]
     restart: unless-stopped
 
 volumes:
   data:
+  corpus:

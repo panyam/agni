@@ -64,6 +64,7 @@ dropped files already reach it through its `local` mount.
 | Service | RPC | What it does |
 |---|---|---|
 | Workspace | ListMounts | the mount names to root a tree on; `opens` drops each mount holding nothing that client can open and returns how many it dropped. So when an operator configured a mount and cannot find it, the sidebar can account for it |
+| Workspace | GetMount | one mount by its name, the handle ListMounts gives; a name the server does not serve is NOT_FOUND |
 | Workspace | ListDir | one directory level, each file labeled with its reader `format` and the `kind` of client that opens it (design, datasheet, or neither); `opens` declares what the caller can open. The server then drops each folder with none of it anywhere beneath, through a bounded server-side walk, since one level of listing cannot see that far. So the two trees prune the same mounts to opposite answers |
 | Workspace | ListDesignFiles | every file read by a design's analysis (its folder, its project's descriptor, the config directories the project names), with a size and hash each. A page analysing the design in the browser fetches them from `/raw/<mount>/<path>`. Refused over 256 MB |
 | Workspace | ProposeDesigns | the designs in a folder of files, each with the `design.yaml` that would declare it, and every file left unread by any design, with the reason; a folder holding a `design.yaml` is reported as declared, and an archive reads as a folder |
@@ -112,11 +113,11 @@ dropped files already reach it through its `local` mount.
 
 `DatasheetService` is not in this table, because it is the datasheet producer's API (`agni.v1.dsapi`)
 rather than the engine's, and `agnids` serves it rather than `agni serve` (C34, agni issue 744). It
-carries the workbench's whole surface: the doc-IR and running the configured `--pdf2doc` producer
-(`GetDocument`, `ExtractDocIR`), the drafts keyed by MPN (`GetDraft`, `ListDrafts`, `SaveDraft`,
-`PublishDraft`, which need `agnids serve --corpus`), the
-per-author annotations (`GetAnnotations`, `SaveAnnotations`), and the folder tree (`ListMounts`,
-`ListDir`, which take the engine's workspace messages and answer exactly as `WorkspaceService` does).
+carries the doc-IR and running the configured `--pdf2doc` producer (`GetDocument`, `ExtractDocIR`),
+the drafts keyed by MPN (`GetDraft`, `ListDrafts`, `SaveDraft`, `PublishDraft`), and the per-author
+annotations (`GetAnnotations`, `SaveAnnotations`). Every write needs `agnids serve --corpus`, since
+the corpus store keeps a PDF's doc-IR and annotations mounts are only read. `agnids` also serves the engine's own `WorkspaceService` over its mounts, and
+the workbench lists its folder tree through it, as the viewer does (agni issue 1734).
 
 A few contract details bite if missed.
 

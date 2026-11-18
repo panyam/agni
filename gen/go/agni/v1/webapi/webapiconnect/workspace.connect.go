@@ -36,6 +36,9 @@ const (
 	// WorkspaceServiceListMountsProcedure is the fully-qualified name of the WorkspaceService's
 	// ListMounts RPC.
 	WorkspaceServiceListMountsProcedure = "/agni.v1.webapi.WorkspaceService/ListMounts"
+	// WorkspaceServiceGetMountProcedure is the fully-qualified name of the WorkspaceService's GetMount
+	// RPC.
+	WorkspaceServiceGetMountProcedure = "/agni.v1.webapi.WorkspaceService/GetMount"
 	// WorkspaceServiceListDirProcedure is the fully-qualified name of the WorkspaceService's ListDir
 	// RPC.
 	WorkspaceServiceListDirProcedure = "/agni.v1.webapi.WorkspaceService/ListDir"
@@ -56,6 +59,10 @@ type WorkspaceServiceClient interface {
 	// never fails for a running server. Set opens to leave out each mount that holds nothing the
 	// caller can open.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
+	// GetMount returns one mount by its name, the handle ListMounts gives (agni issue 1734). A page
+	// that opens on a mount's address reads that mount alone. A name the server does not serve is
+	// NOT_FOUND.
+	GetMount(context.Context, *connect.Request[webapi.GetMountRequest]) (*connect.Response[webapi.Mount], error)
 	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
 	// file is labeled with the reader that would open it. The client addresses a location by an
 	// artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -102,6 +109,12 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(workspaceServiceMethods.ByName("ListMounts")),
 			connect.WithClientOptions(opts...),
 		),
+		getMount: connect.NewClient[webapi.GetMountRequest, webapi.Mount](
+			httpClient,
+			baseURL+WorkspaceServiceGetMountProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("GetMount")),
+			connect.WithClientOptions(opts...),
+		),
 		listDir: connect.NewClient[webapi.ListDirRequest, webapi.ListDirResponse](
 			httpClient,
 			baseURL+WorkspaceServiceListDirProcedure,
@@ -132,6 +145,7 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 // workspaceServiceClient implements WorkspaceServiceClient.
 type workspaceServiceClient struct {
 	listMounts       *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
+	getMount         *connect.Client[webapi.GetMountRequest, webapi.Mount]
 	listDir          *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
 	listDesignFiles  *connect.Client[webapi.ListDesignFilesRequest, webapi.ListDesignFilesResponse]
 	proposeDesigns   *connect.Client[webapi.ProposeDesignsRequest, webapi.ProposeDesignsResponse]
@@ -141,6 +155,11 @@ type workspaceServiceClient struct {
 // ListMounts calls agni.v1.webapi.WorkspaceService.ListMounts.
 func (c *workspaceServiceClient) ListMounts(ctx context.Context, req *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error) {
 	return c.listMounts.CallUnary(ctx, req)
+}
+
+// GetMount calls agni.v1.webapi.WorkspaceService.GetMount.
+func (c *workspaceServiceClient) GetMount(ctx context.Context, req *connect.Request[webapi.GetMountRequest]) (*connect.Response[webapi.Mount], error) {
+	return c.getMount.CallUnary(ctx, req)
 }
 
 // ListDir calls agni.v1.webapi.WorkspaceService.ListDir.
@@ -169,6 +188,10 @@ type WorkspaceServiceHandler interface {
 	// never fails for a running server. Set opens to leave out each mount that holds nothing the
 	// caller can open.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
+	// GetMount returns one mount by its name, the handle ListMounts gives (agni issue 1734). A page
+	// that opens on a mount's address reads that mount alone. A name the server does not serve is
+	// NOT_FOUND.
+	GetMount(context.Context, *connect.Request[webapi.GetMountRequest]) (*connect.Response[webapi.Mount], error)
 	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
 	// file is labeled with the reader that would open it. The client addresses a location by an
 	// artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -211,6 +234,12 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 		connect.WithSchema(workspaceServiceMethods.ByName("ListMounts")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workspaceServiceGetMountHandler := connect.NewUnaryHandler(
+		WorkspaceServiceGetMountProcedure,
+		svc.GetMount,
+		connect.WithSchema(workspaceServiceMethods.ByName("GetMount")),
+		connect.WithHandlerOptions(opts...),
+	)
 	workspaceServiceListDirHandler := connect.NewUnaryHandler(
 		WorkspaceServiceListDirProcedure,
 		svc.ListDir,
@@ -239,6 +268,8 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 		switch r.URL.Path {
 		case WorkspaceServiceListMountsProcedure:
 			workspaceServiceListMountsHandler.ServeHTTP(w, r)
+		case WorkspaceServiceGetMountProcedure:
+			workspaceServiceGetMountHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListDirProcedure:
 			workspaceServiceListDirHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListDesignFilesProcedure:
@@ -258,6 +289,10 @@ type UnimplementedWorkspaceServiceHandler struct{}
 
 func (UnimplementedWorkspaceServiceHandler) ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.ListMounts is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) GetMount(context.Context, *connect.Request[webapi.GetMountRequest]) (*connect.Response[webapi.Mount], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.GetMount is not implemented"))
 }
 
 func (UnimplementedWorkspaceServiceHandler) ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {

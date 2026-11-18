@@ -75,11 +75,12 @@ A `./web` that holds templates without its bundle also stops the run. A checkout
 `make ui` is in that state. Either one is a mistake you want to hear about.
 
 The datasheets workbench is a separate service, `agnids`, built from the `datasheet/` module. It has
-its own mounts, writes into them, and holds the docling environment, so it deploys apart from the
-viewer:
+its own mounts and holds the docling environment, so it deploys apart from the viewer. It only reads
+its mounts. The doc-IR it extracts and the annotations people save go in its corpus store, keyed by
+each PDF's hash, so `--corpus` names where they are kept:
 
 ```
-agnids serve --addr :8090 --mount ds=~/datasheets --web-dir /path/to/agni/datasheet/web --viewer-url http://host:8080
+agnids serve --addr :8090 --mount ds=~/datasheets --corpus ~/corpus --web-dir /path/to/agni/datasheet/web --viewer-url http://host:8080
 ```
 
 Its web assets are its own, `datasheet/web`, built by `make ui`, so a workbench deployment needs no
@@ -299,13 +300,14 @@ with no outbound network. The docling environment makes the image about 3.7GB, w
 about 340MB, so the two are separate images.
 
 ```
-docker run -p 8090:8090 --user $(id -u):$(id -g) -v ~/datasheets/ti:/datasheets/ti -v ~/corpus:/corpus ghcr.io/panyam/agnids:latest
+docker run -p 8090:8090 --user $(id -u):$(id -g) -v ~/datasheets/ti:/datasheets/ti:ro -v ~/corpus:/corpus ghcr.io/panyam/agnids:latest
 ```
 
 Every subdirectory of `/datasheets` becomes a mount named after itself, as `/workspace` does in the
-`agni` image. Mount them read-write, since the workbench saves annotations and extracted doc-IR into
-them. `/corpus` is the corpus store, holding the workbench's drafts and the published specs that
-`agni serve --params-url` reads, so mount a directory there to keep them. To link the workbench's
+`agni` image. They can be read-only. `/corpus` is the corpus store. It holds the workbench's drafts,
+the published specs that `agni serve --params-url` reads, and under `derived/` each PDF's extracted
+doc-IR and annotations, so mount a directory there to keep them. A doc-IR or annotations folder an
+older agnids wrote beside a PDF is still read when the store has none. To link the workbench's
 heading back to a viewer, pass the whole command, because arguments after the image replace its
 default rather than adding to it:
 

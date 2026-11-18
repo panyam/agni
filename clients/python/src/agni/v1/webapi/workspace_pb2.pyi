@@ -27,6 +27,12 @@ class Mount(_message.Message):
     uri: str
     def __init__(self, name: _Optional[str] = ..., root: _Optional[str] = ..., uri: _Optional[str] = ...) -> None: ...
 
+class GetMountRequest(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
 class ListMountsRequest(_message.Message):
     __slots__ = ("opens",)
     OPENS_FIELD_NUMBER: _ClassVar[int]
