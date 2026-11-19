@@ -102,6 +102,7 @@ func TestOpenRewritesAnOlderAgnisMountRecords(t *testing.T) {
 	commit := oldRecord(t, records, uploads, "jetson", map[string]string{"hw/board.kicad_pcb": "(kicad_pcb)", "README.md": "hi"}, true)
 	oldRecord(t, records, uploads, "lost", map[string]string{"a.txt": "gone"}, false)
 
+	write(t, filepath.Join(uploads, "links", "git", strings.Repeat("c", 40)), "sha256:old")
 	var log bytes.Buffer
 	table, err := mountset.Open(mountset.Config{Uploads: uploads, Records: records, Log: &log})
 	if err != nil {
@@ -125,6 +126,9 @@ func TestOpenRewritesAnOlderAgnisMountRecords(t *testing.T) {
 		t.Errorf("the record with lost blobs wasn't kept aside and reported: %v; log %q", err, log.String())
 	}
 
+	if _, err := os.Stat(filepath.Join(uploads, "links")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("Open left #1758's git index in the uploads: %v", err)
+	}
 	again, err := mountset.Open(mountset.Config{Uploads: uploads, Records: records})
 	if err != nil {
 		t.Fatal(err)

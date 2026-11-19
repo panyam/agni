@@ -105,6 +105,11 @@ func Open(cfg Config) (*Table, error) {
 			if err := migrate(context.Background(), cfg.Records, b, cfg.Log); err != nil {
 				return nil, fmt.Errorf("--store: %w", err)
 			}
+			// #1758 kept git blob ids in <uploads>/links/git. goapplib keeps them as blob aliases,
+			// so nothing reads that folder now (agni issue 1761).
+			if err := os.RemoveAll(filepath.Join(cfg.Uploads, "links")); err != nil {
+				return nil, fmt.Errorf("--uploads: %w", err)
+			}
 			if store, err = fsstore.New(cfg.Records); err != nil {
 				return nil, fmt.Errorf("--store: %w", err)
 			}
