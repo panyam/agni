@@ -8,7 +8,7 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"strings"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -41,7 +41,7 @@ type ProjectStore interface {
 	//
 	// A MISS is (nil, nil, nil), never ErrNotFound. A ref that belongs to no declared design is the
 	// ORDINARY case on a mounted folder.
-	ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error)
+	ResolveDesign(ctx context.Context, uri mounts.URI) (*webapi.Design, *webapi.Project, error)
 }
 
 // Resource-name prefixes and separators, written once. A store deals in ids and an API deals in
@@ -210,6 +210,9 @@ const (
 type ProjectService struct {
 	store   ProjectStore
 	records ProjectRecords
+	// sourcedFrom lists the stored designs read from a mounted project's folder, and is set by
+	// WithSourcedDesigns.
+	sourcedFrom func(ctx context.Context, mount, dir string) ([]string, error)
 }
 
 // ProjectRecords keeps the projects a server stores, each a title and a list of design names (agni
@@ -258,7 +261,39 @@ func (s *ProjectService) mounted(ctx context.Context, name string) (*webapi.Proj
 	if s.store == nil {
 		return nil, fmt.Errorf("%w: no project %q", ErrNotFound, name)
 	}
-	return s.store.Project(ctx, name)
+	p, err := s.store.Project(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return s.sourced(ctx, p)
+}
+
+// WithSourcedDesigns makes a mounted project list the stored designs read from its folder, rather
+// than the names its folders' descriptors extend it with (agni issue 1756). On a server, a design in
+// a mounted folder is a design only once a person adds it (agni issue 1736), so those names name
+// nothing there. from returns the stored designs any of whose artifacts were read from mount at dir
+// or below it, each "designs/{design}", sorted.
+func (s *ProjectService) WithSourcedDesigns(from func(ctx context.Context, mount, dir string) ([]string, error)) *ProjectService {
+	s.sourcedFrom = from
+	return s
+}
+
+// sourced replaces a mounted project's designs with the stored designs read from its folder, when
+// WithSourcedDesigns set how to find them.
+func (s *ProjectService) sourced(ctx context.Context, p *webapi.Project) (*webapi.Project, error) {
+	if s.sourcedFrom == nil {
+		return p, nil
+	}
+	u, err := ParseArtifactURI(p.GetUri())
+	if err != nil {
+		return p, nil
+	}
+	names, err := s.sourcedFrom(ctx, u.Mount, u.Path)
+	if err != nil {
+		return nil, err
+	}
+	p.Designs = names
+	return p, nil
 }
 
 // ListProjects returns the projects declared in mounted folders and the ones the server stores,
@@ -272,6 +307,11 @@ func (s *ProjectService) ListProjects(ctx context.Context, req *webapi.ListProje
 	if s.store != nil {
 		if all, err = s.store.Projects(ctx); err != nil {
 			return nil, err
+		}
+		for i, p := range all {
+			if all[i], err = s.sourced(ctx, p); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if s.records != nil {
@@ -518,7 +558,7 @@ func paginate(n int, pageSize int32, pageToken string, nameAt func(int) string) 
 // mount. A URI that will not parse yields "", which never matches. A listing does not fail on a
 // stored value, and the resource itself carries the malformed URI for a client to see.
 func uriMount(s string) string {
-	u, err := artifact.Parse(s)
+	u, err := mounts.ParseURI(s)
 	if err != nil {
 		return ""
 	}

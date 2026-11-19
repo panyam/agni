@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"strings"
 	"testing"
 
@@ -32,7 +32,7 @@ func twoSheetGeom() *geom.SchematicGeometry {
 // native_available bit independently of the render path.
 type availNative struct{ noNative }
 
-func (availNative) Available(artifact.URI) bool { return true }
+func (availNative) Available(mounts.URI) bool { return true }
 
 func TestGetDesignFaithful(t *testing.T) {
 	svc := NewDesignViewService(fakeLoader{geom: twoSheetGeom()}, availNative{}, render.Style{}, nil)
@@ -193,6 +193,6 @@ type reportErrLoader struct {
 	err error
 }
 
-func (f reportErrLoader) Report(context.Context, artifact.URI, bool, ...ReadOption) (*graph.ConversionReport, error) {
+func (f reportErrLoader) Report(context.Context, mounts.URI, bool, ...ReadOption) (*graph.ConversionReport, error) {
 	return nil, f.err
 }

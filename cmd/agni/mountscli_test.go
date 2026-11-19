@@ -21,11 +21,11 @@ func runMounts(t *testing.T, args ...string) (string, error) {
 }
 
 func TestTheMountsCommandAddsListsAndRemovesAGitHubMount(t *testing.T) {
-	gh := fakeGitHub(t, "antmicro", "jetson-orin-baseboard", jetsonTree)
+	gh, fakeCommit := jetsonRepo(t)
 	dir := t.TempDir()
 	url := serveViewer(t, viewerOpts{storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL})
 
-	out, err := runMounts(t, "add", "jetson", "github://antmicro/jetson-orin-baseboard", "--ref", "1.1.2", "--remote", url)
+	out, err := runMounts(t, "add", "jetson", "github://antmicro/jetson-orin-baseboard", "--ref", fakeCommit, "--remote", url)
 	if err != nil || out != "jetson\tgithub\tgithub://antmicro/jetson-orin-baseboard@"+fakeCommit+"\truntime\n" {
 		t.Fatalf("mounts add = %q, %v", out, err)
 	}

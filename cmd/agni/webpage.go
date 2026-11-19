@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/internal/version"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
 )
@@ -17,7 +17,7 @@ import (
 // also holds where the datasheets workbench is served, when the workbench is hosted at all
 // (--datasheets-url).
 type serveApp struct {
-	mounts        *mounts.Table
+	mounts        *mountset.Table
 	datasheetsURL string
 	// engine is which engine the viewer runs a design on, "server" or "wasm" (--engine, agni issue
 	// 853). The page carries it, and a `?engine=` on the URL overrides it.
@@ -253,7 +253,7 @@ func viewDesign(w http.ResponseWriter, r *http.Request, lookup service.DesignLoo
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	u, err := artifact.Parse(d.GetEntryUri())
+	u, err := mounts.ParseURI(d.GetEntryUri())
 	if err != nil || d.GetEntryUri() == "" {
 		http.Error(w, name+" has no file a reader opens yet; put its netlist, schematic or board first", http.StatusNotFound)
 		return

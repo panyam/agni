@@ -18,7 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
@@ -208,7 +208,7 @@ func (r *DirPacks) commit(ctx context.Context, id string, in *webapi.Pack, blobs
 		if err := r.buildView(id, rev, files); err != nil {
 			return nil, err
 		}
-		u, err := artifact.New(r.mount, path.Join(packViewsDir, id, rev))
+		u, err := mounts.NewURI(r.mount, path.Join(packViewsDir, id, rev))
 		if err != nil {
 			return nil, err
 		}

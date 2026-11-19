@@ -42,7 +42,9 @@ docker run -p 8080:8080 \
 
 That gives two mounts, `boards` and `datasheets`. Each mount is a containment boundary, because the
 browser addresses files as a mount name plus a mount-relative path, never an absolute one, and the
-server rejects any path that escapes its mount.
+server rejects any path that escapes its mount. A symbolic link inside a mount is followed when it
+points at a file or folder in the same mount, written as a relative path. A link that leads out of
+the mount, or names its target by an absolute path, reads as missing (agni issue 1759).
 
 {{ includeFile "figures/mount-topology.svg" }}
 
@@ -278,8 +280,8 @@ The store keeps the design's record as `designs/memory_unit.yaml`. The uploads k
 Each write makes a new revision's folder, named by a hash of what it holds, and never changes an old
 one. So a snapshot read from the older revision keeps answering. That folder also holds a
 `design.yaml` the server writes from the record, so `agni check` on it reads it like any other
-design folder. At startup the server removes revisions and files that no record or snapshot names
-and that are over an hour old.
+design folder. At startup, and every hour while it runs, the server removes revisions and files
+that no record or snapshot names and that are over an hour old (agni issue 1742).
 
 A project is a title and a list of design names, kept as `projects/<id>.json` in the store, so one
 design can sit in several projects. `agni projects create` and `agni projects add` make one and list
@@ -306,6 +308,17 @@ agni designs add boards/memory_unit --yes --series b200 --remote http://localhos
 
 The server copies each board's files, and each artifact records the mount and folder they came
 from.
+
+Some schematics keep their parts' pins in separate symbol files: gEDA, Lepton and xschem read `.sym`
+files from the folders a `design.yaml` names under `symbols:` (agni issue 1756). An added design
+keeps each of those folders as an artifact of its own, a symbol library, even when the folder sits
+beside the board's rather than inside it. So the design reads alone. When the `design.yaml` extends
+a project, the server keeps that project as a pack, as `agni designs push` does, and the design
+reads under it. So the project's own symbol folders, profiles and conventions are shared by every
+design added from it, held once. `agni check designs/<id>` with no `--pack` reads under the design's
+packs, and says so. The files themselves are stored once by hash, however many designs copy them.
+`--no-symbol-copy` leaves the design's own symbol folders out, for a library a pack already holds,
+and names each one it left out.
 
 In a container, give the store and the uploads a volume. The image makes `/var/lib/agni/meta` and
 `/var/lib/agni/files` owned by its user, so a named volume on either starts out writable. The

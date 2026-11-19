@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // TestRawFileHandlerServesFilesInsideAMountOnly checks the read-only route's containment. A file in
@@ -18,7 +19,7 @@ func TestRawFileHandlerServesFilesInsideAMountOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(rawFileHandler(tableOf([]mounts.Mount{{Name: "tut", Root: root}})))
+	srv := httptest.NewServer(rawFileHandler(tableOf([]mounts.Mount{mountset.Folder("tut", root)})))
 	defer srv.Close()
 	get := func(p string) (int, string) {
 		t.Helper()
@@ -48,7 +49,7 @@ func TestRawFileHandlerAsksTheBrowserToRevalidate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(rawFileHandler(tableOf([]mounts.Mount{{Name: "tut", Root: root}})))
+	srv := httptest.NewServer(rawFileHandler(tableOf([]mounts.Mount{mountset.Folder("tut", root)})))
 	defer srv.Close()
 	res, err := http.Get(srv.URL + "/raw/tut/project.yaml")
 	if err != nil {

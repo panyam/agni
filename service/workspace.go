@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"sort"
 	"strings"
 
@@ -51,7 +51,7 @@ type DirEntry struct {
 // os-backed (mounts.Workspace) and the in-browser engine's is fshost's.
 type Workspace interface {
 	Mounts() []MountInfo
-	ListDir(ctx context.Context, uri artifact.URI) ([]DirEntry, error)
+	ListDir(ctx context.Context, uri mounts.URI) ([]DirEntry, error)
 }
 
 // FormatForExt returns the design format label for a file name, or "" when no reader understands
@@ -203,7 +203,7 @@ func (s *WorkspaceService) DeleteMount(ctx context.Context, req *webapi.DeleteMo
 
 // mountProto is m as the wire carries it.
 func mountProto(m MountInfo) (*webapi.Mount, error) {
-	uri, err := artifact.New(m.Name, "")
+	uri, err := mounts.NewURI(m.Name, "")
 	if err != nil {
 		return nil, fmt.Errorf("%w: mount %q cannot be addressed: %s", ErrInternal, m.Name, err)
 	}
@@ -232,7 +232,7 @@ func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMount
 		if err != nil {
 			return nil, err
 		}
-		uri, _ := artifact.New(m.Name, "")
+		uri, _ := mounts.NewURI(m.Name, "")
 		if opens != nil && !s.hasOpenableFile(ctx, uri, opens, 0, &pruneBudget) {
 			resp.PrunedMounts++
 			continue
@@ -272,7 +272,7 @@ const (
 // so the uncertain answer is the visible one.
 // isODBJob reports whether a directory holds an ODB++ job, a matrix/matrix file. A board reader
 // enters the job by that file, and the directory names the job (agni issue 1250).
-func (s *WorkspaceService) isODBJob(ctx context.Context, dir artifact.URI) bool {
+func (s *WorkspaceService) isODBJob(ctx context.Context, dir mounts.URI) bool {
 	m, err := dir.Join("matrix")
 	if err != nil {
 		return false
@@ -289,7 +289,7 @@ func (s *WorkspaceService) isODBJob(ctx context.Context, dir artifact.URI) bool 
 	return false
 }
 
-func (s *WorkspaceService) hasOpenableFile(ctx context.Context, u artifact.URI, opens map[webapi.FileKind]bool, depth int, budget *int) bool {
+func (s *WorkspaceService) hasOpenableFile(ctx context.Context, u mounts.URI, opens map[webapi.FileKind]bool, depth int, budget *int) bool {
 	if depth > pruneMaxDepth || *budget <= 0 || ctx.Err() != nil {
 		return true
 	}
@@ -300,7 +300,7 @@ func (s *WorkspaceService) hasOpenableFile(ctx context.Context, u artifact.URI, 
 	}
 	// This level's files first, subdirectories after, since a match one level down is the common
 	// case and costs one listing instead of a walk to the bottom of the first branch.
-	var subdirs []artifact.URI
+	var subdirs []mounts.URI
 	for _, de := range entries {
 		if strings.HasPrefix(de.Name, ".") {
 			continue

@@ -36,6 +36,8 @@ export function typeWord(t: ArtifactType): string {
       return "schematic";
     case ArtifactType.BOARD:
       return "board";
+    case ArtifactType.SYMBOLS:
+      return "symbol library";
     default:
       return "other files";
   }

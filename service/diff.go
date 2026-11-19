@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/num"
 	"sort"
 
@@ -24,8 +24,8 @@ const sharedPlacementCap = 50
 // sides, plus each side's default-layout geometry for the sheet-membership annotation (WS9-006).
 // Geometry is best-effort there (see annotateDiffSheets). Any Loader satisfies it.
 type DesignLoader interface {
-	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
-	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
+	Design(ctx context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error)
+	Geometry(ctx context.Context, uri mounts.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
 }
 
 // DiffService computes the semantic diff between two designs over an injected loader (C13). It

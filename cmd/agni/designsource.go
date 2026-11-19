@@ -10,14 +10,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/readers/kicad"
 	"github.com/panyam/agni/service"
 	"github.com/spf13/cobra"
@@ -170,7 +170,7 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 // sheet of fifteen gave 383 findings and a review scoring rules that judged nothing (agni issue
 // 1023). This is a note rather than a redirect, because an undeclared sibling is read as named on
 // purpose.
-func subSheetNote(root, typed string, named artifact.URI, d *webapi.Design) string {
+func subSheetNote(root, typed string, named mounts.URI, d *webapi.Design) string {
 	entry := uriPath(d.GetEntryUri())
 	if !strings.EqualFold(path.Ext(named.Path), ".kicad_sch") || !strings.EqualFold(path.Ext(entry), ".kicad_sch") || entry == named.Path {
 		return ""
@@ -278,18 +278,18 @@ func edsSiblingNote(path string) string {
 // mountRoot returns the host root a URI's mount resolves to. It reports false when the mount is
 // unknown. For the CLI that means the argument named a path that does not exist, since the workspace
 // mints a mount for anything real.
-func mountRoot(ws *cliWorkspace, uri artifact.URI) (string, bool) {
-	m, ok := mounts.Find(ws.Mounts(), uri.Mount)
+func mountRoot(ws *cliWorkspace, uri mounts.URI) (string, bool) {
+	m, ok := mountset.Find(ws.Mounts(), uri.Mount)
 	if !ok {
 		return "", false
 	}
-	return m.Root, true
+	return m.Source, true
 }
 
 // uriPath is the mount-relative path of a URI, or the string slash-normalized when it is not one, so
 // a message names a file the same way whether the caller typed a path or a URI.
 func uriPath(s string) string {
-	if u, err := artifact.Parse(s); err == nil {
+	if u, err := mounts.ParseURI(s); err == nil {
 		return u.Path
 	}
 	return filepath.ToSlash(s)
@@ -343,7 +343,7 @@ func conventionsFlag(cmd *cobra.Command, path *string) {
 
 // designsInside proposes the designs a folder or an archive holds, as `agni propose` does, over the
 // argument's mount with every archive in it read as its folder.
-func designsInside(ctx context.Context, root string, uri artifact.URI) ([]*webapi.ProposedDesign, error) {
+func designsInside(ctx context.Context, root string, uri mounts.URI) ([]*webapi.ProposedDesign, error) {
 	host := fshost.New(fshost.Mount{Name: uri.Mount, FS: fshost.ExpandArchives(os.DirFS(root))})
 	svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(nil, host.Workspace())
 	resp, err := svc.ProposeDesigns(ctx, &webapi.ProposeDesignsRequest{Uri: uri.String()})

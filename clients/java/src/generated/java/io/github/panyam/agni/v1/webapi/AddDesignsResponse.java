@@ -29,6 +29,8 @@ private static final long serialVersionUID = 0L;
   }
   private AddDesignsResponse() {
     designs_ = java.util.Collections.emptyList();
+    uncopiedSymbols_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -110,6 +112,67 @@ private static final long serialVersionUID = 0L;
     return designs_.get(index);
   }
 
+  public static final int UNCOPIED_SYMBOLS_FIELD_NUMBER = 2;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList uncopiedSymbols_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+   * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+   * a pack holding the folder.
+   * </pre>
+   *
+   * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+   * @return A list containing the uncopiedSymbols.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getUncopiedSymbolsList() {
+    return uncopiedSymbols_;
+  }
+  /**
+   * <pre>
+   * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+   * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+   * a pack holding the folder.
+   * </pre>
+   *
+   * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+   * @return The count of uncopiedSymbols.
+   */
+  public int getUncopiedSymbolsCount() {
+    return uncopiedSymbols_.size();
+  }
+  /**
+   * <pre>
+   * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+   * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+   * a pack holding the folder.
+   * </pre>
+   *
+   * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+   * @param index The index of the element to return.
+   * @return The uncopiedSymbols at the given index.
+   */
+  public java.lang.String getUncopiedSymbols(int index) {
+    return uncopiedSymbols_.get(index);
+  }
+  /**
+   * <pre>
+   * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+   * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+   * a pack holding the folder.
+   * </pre>
+   *
+   * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the uncopiedSymbols at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getUncopiedSymbolsBytes(int index) {
+    return uncopiedSymbols_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -127,6 +190,9 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < designs_.size(); i++) {
       output.writeMessage(1, designs_.get(i));
     }
+    for (int i = 0; i < uncopiedSymbols_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 2, uncopiedSymbols_.getRaw(i));
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -140,6 +206,14 @@ private static final long serialVersionUID = 0L;
           }
           size += 1 * count;
         }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < uncopiedSymbols_.size(); i++) {
+        dataSize += computeStringSizeNoTag(uncopiedSymbols_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getUncopiedSymbolsList().size();
+    }
     return size;
   }
   @java.lang.Override
@@ -166,6 +240,8 @@ private static final long serialVersionUID = 0L;
 
     if (!getDesignsList()
         .equals(other.getDesignsList())) return false;
+    if (!getUncopiedSymbolsList()
+        .equals(other.getUncopiedSymbolsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -180,6 +256,10 @@ private static final long serialVersionUID = 0L;
     if (getDesignsCount() > 0) {
       hash = (37 * hash) + DESIGNS_FIELD_NUMBER;
       hash = (53 * hash) + getDesignsList().hashCode();
+    }
+    if (getUncopiedSymbolsCount() > 0) {
+      hash = (37 * hash) + UNCOPIED_SYMBOLS_FIELD_NUMBER;
+      hash = (53 * hash) + getUncopiedSymbolsList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -319,6 +399,8 @@ private static final long serialVersionUID = 0L;
         designsBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000001);
+      uncopiedSymbols_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -365,6 +447,10 @@ private static final long serialVersionUID = 0L;
 
     private void buildPartial0(io.github.panyam.agni.v1.webapi.AddDesignsResponse result) {
       int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        uncopiedSymbols_.makeImmutable();
+        result.uncopiedSymbols_ = uncopiedSymbols_;
+      }
     }
 
     @java.lang.Override
@@ -405,6 +491,16 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (!other.uncopiedSymbols_.isEmpty()) {
+        if (uncopiedSymbols_.isEmpty()) {
+          uncopiedSymbols_ = other.uncopiedSymbols_;
+          bitField0_ |= 0x00000002;
+        } else {
+          ensureUncopiedSymbolsIsMutable();
+          uncopiedSymbols_.addAll(other.uncopiedSymbols_);
+        }
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -442,6 +538,11 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 10
+            case 18: {
+              ensureUncopiedSymbolsIsMutable();
+              uncopiedSymbols_.add(input.readStringRequireUtf8());
+              break;
+            } // case 18
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -763,6 +864,171 @@ private static final long serialVersionUID = 0L;
         designs_ = null;
       }
       return designsBuilder_;
+    }
+
+    private com.google.protobuf.LazyStringArrayList uncopiedSymbols_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureUncopiedSymbolsIsMutable() {
+      if (!uncopiedSymbols_.isModifiable()) {
+        uncopiedSymbols_ = new com.google.protobuf.LazyStringArrayList(uncopiedSymbols_);
+      }
+      bitField0_ |= 0x00000002;
+    }
+    /**
+     * <pre>
+     * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+     * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+     * a pack holding the folder.
+     * </pre>
+     *
+     * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+     * @return A list containing the uncopiedSymbols.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getUncopiedSymbolsList() {
+      uncopiedSymbols_.makeImmutable();
+      return uncopiedSymbols_;
+    }
+    /**
+     * <pre>
+     * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+     * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+     * a pack holding the folder.
+     * </pre>
+     *
+     * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+     * @return The count of uncopiedSymbols.
+     */
+    public int getUncopiedSymbolsCount() {
+      return uncopiedSymbols_.size();
+    }
+    /**
+     * <pre>
+     * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+     * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+     * a pack holding the folder.
+     * </pre>
+     *
+     * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+     * @param index The index of the element to return.
+     * @return The uncopiedSymbols at the given index.
+     */
+    public java.lang.String getUncopiedSymbols(int index) {
+      return uncopiedSymbols_.get(index);
+    }
+    /**
+     * <pre>
+     * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+     * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+     * a pack holding the folder.
+     * </pre>
+     *
+     * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the uncopiedSymbols at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getUncopiedSymbolsBytes(int index) {
+      return uncopiedSymbols_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+     * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+     * a pack holding the folder.
+     * </pre>
+     *
+     * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+     * @param index The index to set the value at.
+     * @param value The uncopiedSymbols to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUncopiedSymbols(
+        int index, java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureUncopiedSymbolsIsMutable();
+      uncopiedSymbols_.set(index, value);
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+     * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+     * a pack holding the folder.
+     * </pre>
+     *
+     * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+     * @param value The uncopiedSymbols to add.
+     * @return This builder for chaining.
+     */
+    public Builder addUncopiedSymbols(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureUncopiedSymbolsIsMutable();
+      uncopiedSymbols_.add(value);
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+     * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+     * a pack holding the folder.
+     * </pre>
+     *
+     * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+     * @param values The uncopiedSymbols to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllUncopiedSymbols(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureUncopiedSymbolsIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, uncopiedSymbols_);
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+     * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+     * a pack holding the folder.
+     * </pre>
+     *
+     * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearUncopiedSymbols() {
+      uncopiedSymbols_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000002);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+     * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+     * a pack holding the folder.
+     * </pre>
+     *
+     * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+     * @param value The bytes of the uncopiedSymbols to add.
+     * @return This builder for chaining.
+     */
+    public Builder addUncopiedSymbolsBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      ensureUncopiedSymbolsIsMutable();
+      uncopiedSymbols_.add(value);
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.AddDesignsResponse)

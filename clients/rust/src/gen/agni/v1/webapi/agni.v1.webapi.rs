@@ -2104,6 +2104,13 @@ pub struct Design {
     /// on one the server stores (agni issue 1697). Output only.
     #[prost(bool, tag="14")]
     pub read_only: bool,
+    /// packs are the packs a read of this stored design layers its config over when the request names
+    /// none, each "packs/{pack}", in order (agni issue 1756). AddDesigns sets them to the pack it keeps
+    /// from the project the design's folder extends, so every design added from one project reads one
+    /// copy of the project's symbol folders, profiles and conventions. UpdateDesign changes them with
+    /// update_mask "packs". A design in a mounted folder has none.
+    #[prost(string, repeated, tag="15")]
+    pub packs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetProjectRequest {
@@ -2694,6 +2701,10 @@ pub struct AddDesignsRequest {
     /// validate_only answers the designs the request would make, and writes nothing (AIP-163).
     #[prost(bool, tag="3")]
     pub validate_only: bool,
+    /// no_symbol_copy leaves out the symbol folders each design's design.yaml names, for a person who
+    /// serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
+    #[prost(bool, tag="4")]
+    pub no_symbol_copy: bool,
 }
 /// DesignToAdd picks one proposal and names the design it becomes.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -2719,6 +2730,11 @@ pub struct AddDesignsResponse {
     /// designs are the designs made, in the request's order.
     #[prost(message, repeated, tag="1")]
     pub designs: ::prost::alloc::vec::Vec<Design>,
+    /// uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+    /// "designs/{design}: mount://<mount>/<dir>". A read of that design finds those parts only through
+    /// a pack holding the folder.
+    #[prost(string, repeated, tag="2")]
+    pub uncopied_symbols: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetArtifactRequest {
@@ -2905,6 +2921,10 @@ pub enum ArtifactType {
     /// ARTIFACT_TYPE_OTHER is files no reader opens, such as a BOM or a PDF. They are kept with the
     /// design and never read.
     Other = 4,
+    /// ARTIFACT_TYPE_SYMBOLS is a folder of symbol files, such as gEDA, Lepton or xschem `.sym` or KiCad
+    /// `.kicad_sym`, that the design's schematic finds its parts' pins in (agni issue 1756). The view's
+    /// design.yaml names it under `symbols:`, so a read searches it.
+    Symbols = 5,
 }
 impl ArtifactType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -2918,6 +2938,7 @@ impl ArtifactType {
             Self::Schematic => "ARTIFACT_TYPE_SCHEMATIC",
             Self::Board => "ARTIFACT_TYPE_BOARD",
             Self::Other => "ARTIFACT_TYPE_OTHER",
+            Self::Symbols => "ARTIFACT_TYPE_SYMBOLS",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -2928,6 +2949,7 @@ impl ArtifactType {
             "ARTIFACT_TYPE_SCHEMATIC" => Some(Self::Schematic),
             "ARTIFACT_TYPE_BOARD" => Some(Self::Board),
             "ARTIFACT_TYPE_OTHER" => Some(Self::Other),
+            "ARTIFACT_TYPE_SYMBOLS" => Some(Self::Symbols),
             _ => None,
         }
     }

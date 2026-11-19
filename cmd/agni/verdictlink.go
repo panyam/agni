@@ -9,10 +9,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/agni/artifact"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 
 	rpt "github.com/panyam/agni/core/report"
 )
@@ -33,7 +33,7 @@ func linkTarget(ws *cliWorkspace, designURI string, selfServed bool) (path, why 
 	if ws == nil {
 		return "", "this run has no mount table"
 	}
-	u, err := artifact.Parse(designURI)
+	u, err := mounts.ParseURI(designURI)
 	if err != nil || u.Mount == "" || u.Path == "" {
 		return "", fmt.Sprintf("%s does not address a mount", designURI)
 	}
@@ -67,10 +67,10 @@ func verifyServerMount(ctx context.Context, urlBase string, want mounts.Mount) (
 		if m.GetName() != want.Name {
 			continue
 		}
-		if m.GetRoot() == want.Root {
+		if m.GetRoot() == want.Source {
 			return true, ""
 		}
-		return false, fmt.Sprintf("%s serves mount %q from %s, not %s, so every link would name a different design", urlBase, want.Name, m.GetRoot(), want.Root)
+		return false, fmt.Sprintf("%s serves mount %q from %s, not %s, so every link would name a different design", urlBase, want.Name, m.GetRoot(), want.Source)
 	}
 	return false, fmt.Sprintf("%s serves no mount named %q, so every link would resolve to nothing", urlBase, want.Name)
 }
@@ -78,7 +78,7 @@ func verifyServerMount(ctx context.Context, urlBase string, want mounts.Mount) (
 // mountURIAuthority is the mount name in an artifact URI, or "" when it names none. The link site
 // uses it to look the mount's ROOT back up in the mount table for verifyServerMount.
 func mountURIAuthority(designURI string) string {
-	u, err := artifact.Parse(designURI)
+	u, err := mounts.ParseURI(designURI)
 	if err != nil {
 		return ""
 	}
@@ -98,7 +98,7 @@ func verdictLinkTarget(ctx context.Context, ws *cliWorkspace, ll *localLoader, d
 	// A resolution failure keeps the argument rather than dropping the link, because the design has
 	// already been read and analysed by now.
 	if ll != nil {
-		if u, err := artifact.Parse(designURI); err == nil {
+		if u, err := mounts.ParseURI(designURI); err == nil {
 			if e, err := ll.designEntry(ctx, u); err == nil {
 				target = e.String()
 			}
@@ -118,7 +118,7 @@ func verdictLinkTarget(ctx context.Context, ws *cliWorkspace, ll *localLoader, d
 // An error yields "". DesignRef.content_hash documents "" as the value from a producer that did not
 // hash. The link then has no staleness parameter, and the finished run does not fail.
 func designContentHash(ctx context.Context, ll *localLoader, designURI string) string {
-	u, err := artifact.Parse(designURI)
+	u, err := mounts.ParseURI(designURI)
 	if err != nil {
 		return ""
 	}
@@ -152,7 +152,7 @@ func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, de
 	// Only a remote server is asked. Under `self`, this process is about to serve the table that the
 	// links name.
 	if spec.url != "" && mountPath != "" {
-		if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
+		if m, ok := mountset.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
 			keep, note := verifyServerMount(ctx, urlBase, m)
 			if note != "" {
 				fmt.Fprintf(cmd.ErrOrStderr(), "note: %s\n", note)

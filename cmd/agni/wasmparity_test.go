@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"io"
 	"io/fs"
 	"net/http"
@@ -15,6 +14,9 @@ import (
 	"sync"
 	"testing"
 
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/goapplib/storage/mounts"
+
 	"connectrpc.com/connect"
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/fshost"
@@ -24,7 +26,7 @@ import (
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/wasmengine"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
@@ -69,7 +71,7 @@ func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
 	prevSpecs, prevVal, prevErr := cliMountSpecs, cliWSVal, cliWSErr
 	cliMountSpecs = nil
 	for _, m := range cli {
-		cliMountSpecs = append(cliMountSpecs, m.Name+"="+m.Root)
+		cliMountSpecs = append(cliMountSpecs, m.Name+"="+m.Source)
 	}
 	cliWSOnce, cliWSVal, cliWSErr = sync.Once{}, nil, nil
 	t.Cleanup(func() {
@@ -82,7 +84,7 @@ func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, _, err := storeServices(tableOf(ms), "", "", resolver.Store, resolver, nil, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(t.Context(), tableOf(ms), "", "", resolver.Store, resolver, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +164,7 @@ func TestWasmEngineAnswersAsTheServerDoes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		hostMounts = append(hostMounts, mounts.Mount{Name: m.name, Root: root})
+		hostMounts = append(hostMounts, mountset.Folder(m.name, root))
 		memMounts = append(memMounts, fshost.Mount{Name: m.name, FS: memCopy(t, root)})
 	}
 	eng, err := wasmengine.New(memMounts...)
@@ -537,7 +539,7 @@ func TestWasmEngineAnswersAsTheServerDoesForAnAttachedBoard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	served := newParityClients(t, servedParityMux(t, []mounts.Mount{{Name: "odb", Root: root}}))
+	served := newParityClients(t, servedParityMux(t, []mounts.Mount{mountset.Folder("odb", root)}))
 	wasm := newParityClients(t, eng.Handler)
 	ctx := context.Background()
 	def := &webapi.Snapshot{Uri: "mount://odb/gateway.edn", BoardUri: "mount://odb/gateway-layout/matrix/matrix"}

@@ -28,6 +28,7 @@ class ArtifactType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ARTIFACT_TYPE_SCHEMATIC: _ClassVar[ArtifactType]
     ARTIFACT_TYPE_BOARD: _ClassVar[ArtifactType]
     ARTIFACT_TYPE_OTHER: _ClassVar[ArtifactType]
+    ARTIFACT_TYPE_SYMBOLS: _ClassVar[ArtifactType]
 REPORT_VIEW_UNSPECIFIED: ReportView
 REPORT_VIEW_BASIC: ReportView
 REPORT_VIEW_FULL: ReportView
@@ -36,6 +37,7 @@ ARTIFACT_TYPE_NETLIST: ArtifactType
 ARTIFACT_TYPE_SCHEMATIC: ArtifactType
 ARTIFACT_TYPE_BOARD: ArtifactType
 ARTIFACT_TYPE_OTHER: ArtifactType
+ARTIFACT_TYPE_SYMBOLS: ArtifactType
 
 class Report(_message.Message):
     __slots__ = ("name", "packs", "project", "design_hash", "pack_hashes", "results", "create_time", "design_changed", "packs_changed", "finding_count")
@@ -192,14 +194,16 @@ class ArtifactSource(_message.Message):
     def __init__(self, mount: _Optional[str] = ..., path: _Optional[str] = ..., ref: _Optional[str] = ..., follow: _Optional[bool] = ..., version: _Optional[str] = ..., read_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., read_hash: _Optional[str] = ...) -> None: ...
 
 class AddDesignsRequest(_message.Message):
-    __slots__ = ("uri", "designs", "validate_only")
+    __slots__ = ("uri", "designs", "validate_only", "no_symbol_copy")
     URI_FIELD_NUMBER: _ClassVar[int]
     DESIGNS_FIELD_NUMBER: _ClassVar[int]
     VALIDATE_ONLY_FIELD_NUMBER: _ClassVar[int]
+    NO_SYMBOL_COPY_FIELD_NUMBER: _ClassVar[int]
     uri: str
     designs: _containers.RepeatedCompositeFieldContainer[DesignToAdd]
     validate_only: bool
-    def __init__(self, uri: _Optional[str] = ..., designs: _Optional[_Iterable[_Union[DesignToAdd, _Mapping]]] = ..., validate_only: _Optional[bool] = ...) -> None: ...
+    no_symbol_copy: bool
+    def __init__(self, uri: _Optional[str] = ..., designs: _Optional[_Iterable[_Union[DesignToAdd, _Mapping]]] = ..., validate_only: _Optional[bool] = ..., no_symbol_copy: _Optional[bool] = ...) -> None: ...
 
 class DesignToAdd(_message.Message):
     __slots__ = ("folder", "design_id", "title", "series", "entry")
@@ -216,10 +220,12 @@ class DesignToAdd(_message.Message):
     def __init__(self, folder: _Optional[str] = ..., design_id: _Optional[str] = ..., title: _Optional[str] = ..., series: _Optional[str] = ..., entry: _Optional[str] = ...) -> None: ...
 
 class AddDesignsResponse(_message.Message):
-    __slots__ = ("designs",)
+    __slots__ = ("designs", "uncopied_symbols")
     DESIGNS_FIELD_NUMBER: _ClassVar[int]
+    UNCOPIED_SYMBOLS_FIELD_NUMBER: _ClassVar[int]
     designs: _containers.RepeatedCompositeFieldContainer[_project_pb2.Design]
-    def __init__(self, designs: _Optional[_Iterable[_Union[_project_pb2.Design, _Mapping]]] = ...) -> None: ...
+    uncopied_symbols: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, designs: _Optional[_Iterable[_Union[_project_pb2.Design, _Mapping]]] = ..., uncopied_symbols: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetArtifactRequest(_message.Message):
     __slots__ = ("name",)

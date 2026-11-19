@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/panyam/agni"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/num"
 	"github.com/panyam/agni/core/query"
@@ -106,7 +106,7 @@ func layerPass(mfs fs.FS, store service.BlobStore, design string) ([]Layer, int6
 	if err != nil {
 		return nil, 0, err
 	}
-	nu, bu, gu, err := resolver.TierURIs(ctx, u, artifact.URI{}, false)
+	nu, bu, gu, err := resolver.TierURIs(ctx, u, mounts.URI{}, false)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -157,7 +157,7 @@ func layerPass(mfs fs.FS, store service.BlobStore, design string) ([]Layer, int6
 		// A probe, dropped once measured. It builds the model as a design would hold it if its board
 		// is never read. Reading the board lazily would leave a query-only worker holding that model.
 		{"check model without the board (probe, dropped)", func() (err error) {
-			probe, err = service.BuildModel(ctx, noBoard{loader}, nu, artifact.URI{}, ov.SpecsOver(nil), opts...)
+			probe, err = service.BuildModel(ctx, noBoard{loader}, nu, mounts.URI{}, ov.SpecsOver(nil), opts...)
 			return
 		}},
 		{"board geometry", func() (err error) { bg, err = loader.Board(ctx, boardFrom); return }},
@@ -214,4 +214,4 @@ func mb(b int64) float64 { return math.Round(float64(b)/(1<<20)*1000) / 1000 }
 // noBoard is a loader whose designs have no board, for the probe.
 type noBoard struct{ service.ModelLoader }
 
-func (noBoard) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) { return nil, nil }
+func (noBoard) Board(context.Context, mounts.URI) (*geom.BoardGeometry, error) { return nil, nil }

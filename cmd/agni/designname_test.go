@@ -18,8 +18,8 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
-	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // designServer serves what `agni serve --store <store> --uploads <uploads>` serves to a client that
@@ -42,7 +42,7 @@ func designServer(t *testing.T, store, uploads string, mounted ...mounts.Mount) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, packSvc, err := storeServices(tableOf(ms), store, uploads, projectStore, resolver, checkSvc, io.Discard)
+	projectSvc, designSvc, packSvc, err := storeServices(t.Context(), tableOf(ms), store, uploads, projectStore, resolver, checkSvc, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

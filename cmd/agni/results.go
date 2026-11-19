@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
 	"github.com/panyam/agni/fshost"
@@ -181,7 +181,7 @@ func hashSource(path string) string {
 //
 // A value that is not a URI passes through unchanged, so a document written before this renders.
 func displayName(s string) string {
-	if u, err := artifact.Parse(s); err == nil {
+	if u, err := mounts.ParseURI(s); err == nil {
 		if u.Path != "" {
 			return u.Path
 		}

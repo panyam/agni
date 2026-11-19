@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/render"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -298,8 +298,8 @@ func (ix *boardIndex) draws(s *checkspb.Subject) bool {
 // cache keeps the index rather than the board, so a request after the first one copies no board
 // geometry. Without a cache it reads the board each time.
 func boardIndexFor(ctx context.Context, loader interface {
-	Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
-}, uri artifact.URI) (*boardIndex, error) {
+	Board(context.Context, mounts.URI) (*geom.BoardGeometry, error)
+}, uri mounts.URI) (*boardIndex, error) {
 	build := func(ctx context.Context) (any, error) {
 		b, err := loader.Board(ctx, uri)
 		if err != nil || b == nil {
@@ -328,7 +328,7 @@ func pinKey(ref, pin string) string { return ref + "\x00" + pin }
 // its board is the only drawing it lists (agni issue 1466). Any other design gets runBoardIndex's,
 // so a run that never read the board does not read it to badge a finding.
 func locateBoard(ctx context.Context, loader interface {
-	Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
+	Board(context.Context, mounts.URI) (*geom.BoardGeometry, error)
 }, snap Snap, m check.Model) *boardIndex {
 	if !snap.BoardOnly() {
 		return renamedIndex(ctx, loader, snap, runBoardIndex(ctx, loader, snap.BoardRead(), m), false)
@@ -359,7 +359,7 @@ func renamedIndex(ctx context.Context, loader any, snap Snap, ix *boardIndex, bu
 // those answers otherwise name the schematic's sheets alone, and reading a large board for them
 // would cost seconds a reader asking about a schematic never sees.
 func traceBoard(ctx context.Context, loader interface {
-	Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
+	Board(context.Context, mounts.URI) (*geom.BoardGeometry, error)
 }, snap Snap) *boardIndex {
 	if !snap.BoardOnly() {
 		return nil
@@ -371,8 +371,8 @@ func traceBoard(ctx context.Context, loader interface {
 // board sheet (#142's WS7-034). A model without a board gets none, and so does a board that fails
 // to index, since the run already answered and a missing badge is all that is lost.
 func runBoardIndex(ctx context.Context, loader interface {
-	Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
-}, uri artifact.URI, m check.Model) *boardIndex {
+	Board(context.Context, mounts.URI) (*geom.BoardGeometry, error)
+}, uri mounts.URI, m check.Model) *boardIndex {
 	if m == nil || !m.HasBoard() {
 		return nil
 	}

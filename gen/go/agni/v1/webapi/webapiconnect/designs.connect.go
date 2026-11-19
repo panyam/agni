@@ -141,7 +141,13 @@ type DesignServiceClient interface {
 	// Each added design is a stored one: the server copies its files by hash, groups them into
 	// artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
 	// series and intent come from the proposal and the request, so the server writes nothing into the
-	// mount. A proposal the request does not name is not added. With validate_only the server answers
+	// mount. A proposal the request does not name is not added.
+	//
+	// A design keeps the symbol folders its design.yaml names under `symbols:` as artifacts of type
+	// ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). When its design.yaml
+	// extends a project, the server keeps that project as a pack, as `agni designs push` does, and
+	// sets the design's packs to it, so the project's own symbol folders are shared rather than copied
+	// into each design. With validate_only the server answers
 	// the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
 	// design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
 	// FAILED_PRECONDITION.
@@ -477,7 +483,13 @@ type DesignServiceHandler interface {
 	// Each added design is a stored one: the server copies its files by hash, groups them into
 	// artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
 	// series and intent come from the proposal and the request, so the server writes nothing into the
-	// mount. A proposal the request does not name is not added. With validate_only the server answers
+	// mount. A proposal the request does not name is not added.
+	//
+	// A design keeps the symbol folders its design.yaml names under `symbols:` as artifacts of type
+	// ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). When its design.yaml
+	// extends a project, the server keeps that project as a pack, as `agni designs push` does, and
+	// sets the design's packs to it, so the project's own symbol folders are shared rather than copied
+	// into each design. With validate_only the server answers
 	// the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
 	// design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
 	// FAILED_PRECONDITION.

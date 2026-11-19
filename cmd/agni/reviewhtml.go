@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 )
 
 // checklistLinks settles whether a review's page may promise links, and where they point. The page
@@ -29,7 +29,7 @@ func checklistLinks(cmd *cobra.Command, ll *localLoader, designArg string, spec 
 		withheld = why
 	}
 	if urlBase != "" && mountPath != "" {
-		if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
+		if m, ok := mountset.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
 			keep, note := verifyServerMount(cmd.Context(), urlBase, m)
 			if note != "" {
 				fmt.Fprintf(cmd.ErrOrStderr(), "note: %s\n", note)

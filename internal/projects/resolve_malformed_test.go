@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/service"
 )
 
@@ -24,7 +24,7 @@ func TestResolveDesign_MalformedOwnDescriptor(t *testing.T) {
 	writeFile(t, root, "proj/designs/board/board.edn", "x")
 	s := NewFSStore(Tree{Mount: "m", FS: os.DirFS(root)})
 
-	_, _, err := s.ResolveDesign(context.Background(), artifact.URI{Mount: "m", Path: "proj/designs/board/board.edn"})
+	_, _, err := s.ResolveDesign(context.Background(), mounts.URI{Mount: "m", Path: "proj/designs/board/board.edn"})
 	if err == nil {
 		t.Fatal("a design.yaml that does not parse resolved cleanly; the run would silently use the built-in config")
 	}
@@ -44,7 +44,7 @@ func TestResolveDesign_MalformedSiblingIsNotOurProblem(t *testing.T) {
 	writeFile(t, root, "proj/designs/broken/design.yaml", "name: Not An Id\nextends: ../../project.yaml\nentry: broken.edn\n")
 	s := NewFSStore(Tree{Mount: "m", FS: os.DirFS(root)})
 
-	d, p, err := s.ResolveDesign(context.Background(), artifact.URI{Mount: "m", Path: "proj/designs/good/good.edn"})
+	d, p, err := s.ResolveDesign(context.Background(), mounts.URI{Mount: "m", Path: "proj/designs/good/good.edn"})
 	if err != nil {
 		t.Fatalf("a broken descriptor in a SIBLING folder made this design unresolvable: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestResolveDesign_MalformedSiblingIsNotOurProblem(t *testing.T) {
 // descriptor and tolerates a missing project, and it needs the two kept distinguishable to do that.
 func TestResolveDesign_UnknownMountIsNotFound(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: os.DirFS(t.TempDir())})
-	_, _, err := s.ResolveDesign(context.Background(), artifact.URI{Mount: "other", Path: "x.edn"})
+	_, _, err := s.ResolveDesign(context.Background(), mounts.URI{Mount: "other", Path: "x.edn"})
 	if !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("unknown mount gave %v, want ErrNotFound so callers can tell it from a parse failure", err)
 	}

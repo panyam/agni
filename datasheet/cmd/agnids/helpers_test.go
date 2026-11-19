@@ -7,14 +7,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // mustURI builds a mount-relative URI a test names directly, failing the test rather than the
 // assertion when the literal is malformed.
-func mustURI(mount, p string) artifact.URI {
-	u, err := artifact.New(mount, p)
+func mustURI(mount, p string) mounts.URI {
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
 		panic(err)
 	}
@@ -40,4 +40,4 @@ func sha256Hex(body string) string {
 }
 
 // tableOf is a fixed mount table over ms, as a server started with those flags serves.
-func tableOf(ms []mounts.Mount) *mounts.Table { return mounts.NewTable(ms...) }
+func tableOf(ms []mounts.Mount) *mountset.Table { return mountset.NewTable(ms...) }

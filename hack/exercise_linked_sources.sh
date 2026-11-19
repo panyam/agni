@@ -59,7 +59,7 @@ for r in 1.1.2 1.1.3; do
     case $(basename "$f") in design.yaml) ;; *) cp "$f" "$out/folder-$r/" ;; esac
   done
 done
-downloaded() { find "$uploads/links/git" -type f ! -name '.*' | wc -l | tr -d ' '; }
+downloaded() { find "$uploads/blobs/aliases/git" -type f ! -name '.*' | wc -l | tr -d ' '; }
 fail=0
 check() {
   local rev=$1 stored local_

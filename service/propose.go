@@ -11,7 +11,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/readers/formats"
 )
@@ -37,7 +37,7 @@ func (s *WorkspaceService) ProposeDesigns(ctx context.Context, req *webapi.Propo
 		return nil, err
 	}
 	read := func(p string) ([]byte, error) {
-		fu, err := artifact.New(u.Mount, p)
+		fu, err := mounts.NewURI(u.Mount, p)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func (p *proposer) free(f string) bool {
 }
 
 func (p *proposer) uri(f string) string {
-	u, err := artifact.New(p.mount, f)
+	u, err := mounts.NewURI(p.mount, f)
 	if err != nil {
 		return f
 	}

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"os"
 	"path/filepath"
 	"slices"
@@ -822,7 +822,7 @@ type fsQueryLoader struct {
 	base string
 }
 
-func (l fsQueryLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+func (l fsQueryLoader) Design(_ context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error) {
 	return (&formats.Loader{Lexicon: ReadOpts(opts...).Lexicon}).ReadDesign(filepath.Join(l.base, uri.Path))
 }
 

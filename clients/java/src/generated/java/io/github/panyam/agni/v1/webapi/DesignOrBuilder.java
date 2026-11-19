@@ -349,4 +349,61 @@ public interface DesignOrBuilder extends
    * @return The readOnly.
    */
   boolean getReadOnly();
+
+  /**
+   * <pre>
+   * packs are the packs a read of this stored design layers its config over when the request names
+   * none, each "packs/{pack}", in order (agni issue 1756). AddDesigns sets them to the pack it keeps
+   * from the project the design's folder extends, so every design added from one project reads one
+   * copy of the project's symbol folders, profiles and conventions. UpdateDesign changes them with
+   * update_mask "packs". A design in a mounted folder has none.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @return A list containing the packs.
+   */
+  java.util.List<java.lang.String>
+      getPacksList();
+  /**
+   * <pre>
+   * packs are the packs a read of this stored design layers its config over when the request names
+   * none, each "packs/{pack}", in order (agni issue 1756). AddDesigns sets them to the pack it keeps
+   * from the project the design's folder extends, so every design added from one project reads one
+   * copy of the project's symbol folders, profiles and conventions. UpdateDesign changes them with
+   * update_mask "packs". A design in a mounted folder has none.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @return The count of packs.
+   */
+  int getPacksCount();
+  /**
+   * <pre>
+   * packs are the packs a read of this stored design layers its config over when the request names
+   * none, each "packs/{pack}", in order (agni issue 1756). AddDesigns sets them to the pack it keeps
+   * from the project the design's folder extends, so every design added from one project reads one
+   * copy of the project's symbol folders, profiles and conventions. UpdateDesign changes them with
+   * update_mask "packs". A design in a mounted folder has none.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @param index The index of the element to return.
+   * @return The packs at the given index.
+   */
+  java.lang.String getPacks(int index);
+  /**
+   * <pre>
+   * packs are the packs a read of this stored design layers its config over when the request names
+   * none, each "packs/{pack}", in order (agni issue 1756). AddDesigns sets them to the pack it keeps
+   * from the project the design's folder extends, so every design added from one project reads one
+   * copy of the project's symbol folders, profiles and conventions. UpdateDesign changes them with
+   * update_mask "packs". A design in a mounted folder has none.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the packs at the given index.
+   */
+  com.google.protobuf.ByteString
+      getPacksBytes(int index);
 }

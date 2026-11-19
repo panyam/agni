@@ -5,7 +5,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/diff"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/readers/formats"
@@ -78,7 +78,7 @@ func readRenames(ctx context.Context, loader DesignLoader, snap Snap, b *geom.Bo
 // boardReader is a loader that reads boards. Every host's loader is one, and a test loader may not
 // be.
 type boardReader interface {
-	Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
+	Board(context.Context, mounts.URI) (*geom.BoardGeometry, error)
 }
 
 // renamedBoard is b with each net in renames under its schematic name. It copies the board only

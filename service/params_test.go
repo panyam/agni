@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -63,7 +63,7 @@ func TestGetComponentParams(t *testing.T) {
 // projectWithParams resolves every ref to one design in a project that declares its own params.
 type projectWithParams struct{ ProjectStore }
 
-func (projectWithParams) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (projectWithParams) ResolveDesign(context.Context, mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	return &webapi.Design{Uri: "mount://m/d"}, &webapi.Project{Name: "projects/p", Config: &webapi.AnalysisConfig{ParamUris: []string{"mount://m/params"}}}, nil
 }
 

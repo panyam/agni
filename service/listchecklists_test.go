@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
@@ -17,7 +17,7 @@ type extendingStore struct {
 	err      error
 }
 
-func (s extendingStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (s extendingStore) ResolveDesign(context.Context, mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	if s.err != nil {
 		return nil, nil, s.err
 	}

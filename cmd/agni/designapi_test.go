@@ -13,8 +13,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // newDesignSvc builds a DesignViewService over the os-backed adapters for the given mounts (no native
@@ -64,7 +65,7 @@ func edifFixtureMounts(t *testing.T) []mounts.Mount {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return []mounts.Mount{{Name: "t", Root: root}}
+	return []mounts.Mount{mountset.Folder("t", root)}
 }
 
 func TestDesignViewServiceGetSummary(t *testing.T) {
@@ -152,7 +153,7 @@ func TestDesignViewServiceCheckDesign(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "chk.edn"), []byte(fixture), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	svc := newCheckSvc([]mounts.Mount{{Name: "t", Root: dir}})
+	svc := newCheckSvc([]mounts.Mount{mountset.Folder("t", dir)})
 
 	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://t/chk.edn")})
 	if err != nil {
@@ -196,7 +197,7 @@ func TestDesignViewServiceGetCheckReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := newCheckSvc([]mounts.Mount{{Name: "t", Root: root}})
+	svc := newCheckSvc([]mounts.Mount{mountset.Folder("t", root)})
 	resp, err := svc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://t/fires.edn")})
 	if err != nil {
 		t.Fatal(err)
@@ -239,7 +240,7 @@ pending:
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	svc := newCheckSvc([]mounts.Mount{{Name: "t", Root: dir}})
+	svc := newCheckSvc([]mounts.Mount{mountset.Folder("t", dir)})
 
 	resp, err := svc.GetExpectations(context.Background(), &webapi.GetExpectationsRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://t/d.edn")})
 	if err != nil {
@@ -285,7 +286,7 @@ func TestDesignViewServiceKicadFaithful(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
+	svc := newDesignSvc([]mounts.Mount{mountset.Folder("k", root)})
 
 	t.Run("kicad_sch renders faithfully with a packed sheet", func(t *testing.T) {
 		d, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch")})
@@ -348,7 +349,7 @@ func TestDesignViewServiceGetLayoutReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
+	svc := newDesignSvc([]mounts.Mount{mountset.Folder("k", root)})
 	get := func(sym webapi.SymbolSource) *webapi.ConversionReport {
 		r, err := svc.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch"), Symbols: sym})
 		if err != nil {
@@ -454,7 +455,7 @@ func TestDesignViewServiceKicadHierarchy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
+	svc := newDesignSvc([]mounts.Mount{mountset.Folder("k", root)})
 	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/hier.kicad_sch")})
 	if err != nil {
 		t.Fatal(err)
@@ -478,7 +479,7 @@ func TestDesignViewServiceKicadHierarchy(t *testing.T) {
 func TestLayoutAxis(t *testing.T) {
 	t.Run("GetSummary reports available_layouts and grid re-derives", func(t *testing.T) {
 		root, _ := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
-		svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
+		svc := newDesignSvc([]mounts.Mount{mountset.Folder("k", root)})
 		faithful, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch")})
 		if err != nil {
 			t.Fatal(err)
@@ -548,7 +549,7 @@ func tutorialMounts(t *testing.T) []mounts.Mount {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return []mounts.Mount{{Name: "t", Root: root}}
+	return []mounts.Mount{mountset.Folder("t", root)}
 }
 
 // TestServedSheetResolvesProjectSymbolLibrary is agni issue 347 at the surface a reader actually

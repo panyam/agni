@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -27,7 +27,7 @@ func (t *twoProjects) Designs(context.Context, string) ([]*webapi.Design, error)
 	return nil, nil
 }
 
-func (t *twoProjects) ResolveDesign(_ context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (t *twoProjects) ResolveDesign(_ context.Context, uri mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	p, ok := t.byURI[uri.String()]
 	if !ok {
 		return nil, nil, nil
@@ -68,7 +68,7 @@ func TestConfigDoesNotCrossProjects(t *testing.T) {
 		{"mount://m/acme/board.edn", "acme", "globex"},
 		{"mount://m/globex/board.edn", "globex", "acme"},
 	} {
-		u, err := artifact.Parse(c.uri)
+		u, err := mounts.ParseURI(c.uri)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -93,7 +93,7 @@ func TestNoProjectGetsNoProjectConfig(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
 		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
 	})
-	u, err := artifact.Parse("mount://m/loose/board.edn")
+	u, err := mounts.ParseURI("mount://m/loose/board.edn")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestDeploymentConventionAppliesOnlyWithoutAProject(t *testing.T) {
 	})
 	ctx := context.Background()
 
-	loose, _ := artifact.Parse("mount://m/loose/board.edn")
+	loose, _ := mounts.ParseURI("mount://m/loose/board.edn")
 	ov, err := r.Overlay(ctx, loose, nil, "deployment")
 	if err != nil {
 		t.Fatal(err)
@@ -156,7 +156,7 @@ func TestDeploymentConventionAppliesOnlyWithoutAProject(t *testing.T) {
 		t.Error("a design in no project lost the deployment convention's rules")
 	}
 
-	owned, _ := artifact.Parse("mount://m/acme/board.edn")
+	owned, _ := mounts.ParseURI("mount://m/acme/board.edn")
 	ov, err = r.Overlay(ctx, owned, nil, "deployment")
 	if err != nil {
 		t.Fatal(err)
@@ -177,7 +177,7 @@ func TestRequestOverridesTheProject(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
 		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
 	})
-	u, _ := artifact.Parse("mount://m/acme/board.edn")
+	u, _ := mounts.ParseURI("mount://m/acme/board.edn")
 	ov, err := r.Overlay(context.Background(), u,
 		&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("mine", "^MINE_")}}, "")
 	if err != nil {
@@ -198,7 +198,7 @@ func TestRequestOverridesTheProject(t *testing.T) {
 func TestNilResolverKeepsTheDeploymentConvention(t *testing.T) {
 	base := deploymentCatalog(t)
 	var r *ProjectResolver
-	u, _ := artifact.Parse("mount://m/any/board.edn")
+	u, _ := mounts.ParseURI("mount://m/any/board.edn")
 	ov, err := r.Overlay(context.Background(), u, nil, "deployment")
 	if err != nil {
 		t.Fatal(err)
@@ -238,7 +238,7 @@ func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
 		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
 	})
-	owned, _ := artifact.Parse("mount://m/acme/board.edn")
+	owned, _ := mounts.ParseURI("mount://m/acme/board.edn")
 	ctx := context.Background()
 
 	plain, err := r.Overlay(ctx, owned, &webapi.OverlayConfig{IgnoreProject: true}, "")
@@ -253,7 +253,7 @@ func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
 	}
 
 	// It is the same answer a design in no project gets, so the comparison is like for like.
-	loose, _ := artifact.Parse("mount://m/loose/board.edn")
+	loose, _ := mounts.ParseURI("mount://m/loose/board.edn")
 	unowned, err := r.Overlay(ctx, loose, nil, "")
 	if err != nil {
 		t.Fatal(err)
@@ -269,7 +269,7 @@ func TestIgnoreProjectKeepsTheRequestsOwnConvention(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
 		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
 	})
-	u, _ := artifact.Parse("mount://m/acme/board.edn")
+	u, _ := mounts.ParseURI("mount://m/acme/board.edn")
 	ov, err := r.Overlay(context.Background(), u,
 		&webapi.OverlayConfig{IgnoreProject: true, Config: &webapi.AnalysisConfig{Conventions: conventionNaming("mine", "^MINE_")}}, "")
 	if err != nil {
@@ -292,7 +292,7 @@ func (e *errStore) Project(context.Context, string) (*webapi.Project, error)  { 
 func (e *errStore) Projects(context.Context) ([]*webapi.Project, error)       { return nil, nil }
 func (e *errStore) Design(context.Context, string) (*webapi.Design, error)    { return nil, nil }
 func (e *errStore) Designs(context.Context, string) ([]*webapi.Design, error) { return nil, nil }
-func (e *errStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (e *errStore) ResolveDesign(context.Context, mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	return nil, nil, e.err
 }
 
@@ -302,7 +302,7 @@ func (e *errStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design,
 // findings the project's lexicon would not have raised and 95 it would have.
 func TestOverlayRefusesMalformedDescriptor(t *testing.T) {
 	r := &ProjectResolver{Store: &errStore{err: errors.New(`design.yaml: name "My Board" is not a valid id`)}}
-	_, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, "")
+	_, err := r.Overlay(context.Background(), mounts.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, "")
 	if err == nil {
 		t.Fatal("a malformed descriptor composed cleanly; the run would silently use the built-in config")
 	}
@@ -321,7 +321,7 @@ func TestOverlayToleratesNoProject(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			r := &ProjectResolver{Store: store}
-			if _, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, ""); err != nil {
+			if _, err := r.Overlay(context.Background(), mounts.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, ""); err != nil {
 				t.Errorf("a design with no project failed to compose: %v", err)
 			}
 		})
@@ -333,7 +333,7 @@ func TestOverlayToleratesNoProject(t *testing.T) {
 // would defeat the one flag whose purpose is to run without project config.
 func TestOverlayIgnoreProjectSkipsResolution(t *testing.T) {
 	r := &ProjectResolver{Store: &errStore{err: errors.New("descriptor is broken")}}
-	if _, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{IgnoreProject: true}, ""); err != nil {
+	if _, err := r.Overlay(context.Background(), mounts.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{IgnoreProject: true}, ""); err != nil {
 		t.Errorf("ignore_project still consulted the store: %v", err)
 	}
 }

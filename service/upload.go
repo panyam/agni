@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -192,7 +192,7 @@ func (r *ProjectResolver) uploaded(mount string, files []*webapi.SnapshotFile) (
 	for _, f := range files {
 		// A path is taken as the client wrote it only when it is already clean and does not leave the
 		// mount, so two spellings of one file cannot both be listed.
-		if a, err := artifact.New(mount, f.GetPath()); err != nil || a.Path != f.GetPath() || f.GetPath() == "" {
+		if a, err := mounts.NewURI(mount, f.GetPath()); err != nil || a.Path != f.GetPath() || f.GetPath() == "" {
 			return nil, fmt.Errorf("%w: %q is not a clean path within a mount", ErrInvalidPath, f.GetPath())
 		}
 		if seen[f.GetPath()] {

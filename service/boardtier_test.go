@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -18,7 +18,7 @@ type boardOnlyAt struct {
 	board *geom.BoardGeometry
 }
 
-func (b boardOnlyAt) Board(_ context.Context, u artifact.URI) (*geom.BoardGeometry, error) {
+func (b boardOnlyAt) Board(_ context.Context, u mounts.URI) (*geom.BoardGeometry, error) {
 	if u.String() == b.at {
 		return b.board, nil
 	}

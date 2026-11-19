@@ -12,7 +12,7 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 )
 
@@ -49,7 +49,7 @@ func annotationsDir(path string) string {
 
 // safeAuthor maps a client-supplied author id to a single filename component, keeping [A-Za-z0-9_-]
 // and replacing everything else with '_', so an author cannot traverse out of its datasheet's
-// annotation directory (mounts.Resolve is the containment backstop). Distinct exotic authors may
+// annotation directory (mountset.Table.Resolve is the containment backstop). Distinct exotic authors may
 // collide after mapping.
 func safeAuthor(author string) string {
 	var b strings.Builder
@@ -71,7 +71,7 @@ func safeAuthor(author string) string {
 // reads the store, then the folder an older agnids wrote beside the PDF, and an author's overlay in
 // the store wins over the same author's beside the PDF. For a datasheet nobody has annotated, Get
 // returns (nil, nil). That is a normal state.
-func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*dsapi.AnnotationSet, error) {
+func (s *osAnnotationStore) Get(ctx context.Context, uri mounts.URI) ([]*dsapi.AnnotationSet, error) {
 	var dirs []string
 	if s.derived.corpus != "" {
 		dir, err := s.derived.dir(uri)
@@ -120,7 +120,7 @@ func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*dsapi
 // Save writes one author's overlay into the store, creating the annotation folder on first write and
 // overwriting just that author's file. A server with no corpus returns dsservice.ErrNoCorpus. The
 // per-file lock only serializes one author's concurrent writes, and there is no compare-and-swap.
-func (s *osAnnotationStore) Save(ctx context.Context, uri artifact.URI, author string, set *dsapi.AnnotationSet) error {
+func (s *osAnnotationStore) Save(ctx context.Context, uri mounts.URI, author string, set *dsapi.AnnotationSet) error {
 	derivedDir, err := s.derived.dir(uri)
 	if err != nil {
 		return err

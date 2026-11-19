@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"github.com/panyam/agni/artifact"
 	"path/filepath"
 	"testing"
 
+	"github.com/panyam/goapplib/storage/mounts"
+
 	"github.com/panyam/agni/core/graph"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/readers/formats"
 )
 
@@ -16,7 +17,7 @@ import (
 // schematic (WS1-047), so GetSummary/GetSheet/HighlightSheet (all funneling through Geometry) show
 // the design's own drawing; a netlist without a sibling falls back to the auto-layout graph.
 func TestOsLoaderCompanionGeometry(t *testing.T) {
-	l := &osLoader{mounts: tableOf([]mounts.Mount{{Name: "m", Root: filepath.Join("testdata", "review")}}), loader: &formats.Loader{}}
+	l := &osLoader{mounts: tableOf([]mounts.Mount{mountset.Folder("m", filepath.Join("testdata", "review"))}), loader: &formats.Loader{}}
 
 	// With a sibling .eds -> the companion schematic (its page sheet "P1", its named wire SIGA).
 	g, err := l.Geometry(context.Background(), mustURI("m", "companion-demo.edn"), graph.DefaultStrategy, false)
@@ -61,8 +62,8 @@ func hasWireNet(g *geom.SchematicGeometry, net string) bool {
 
 // mustURI builds an artifact URI from a mount and a path, both declared by the test itself. It panics
 // rather than returning an error, since a fixture URI that will not parse means the test is broken.
-func mustURI(mount, p string) artifact.URI {
-	u, err := artifact.New(mount, p)
+func mustURI(mount, p string) mounts.URI {
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
 		panic(err)
 	}
@@ -70,4 +71,4 @@ func mustURI(mount, p string) artifact.URI {
 }
 
 // tableOf is a fixed mount table over ms, as a server started with those flags serves.
-func tableOf(ms []mounts.Mount) *mounts.Table { return mounts.NewTable(ms...) }
+func tableOf(ms []mounts.Mount) *mountset.Table { return mountset.NewTable(ms...) }

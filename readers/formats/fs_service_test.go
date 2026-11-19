@@ -11,7 +11,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/graph"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -54,7 +54,7 @@ func (m *memLoader) loader(mount string, opts ...service.ReadOption) (*formats.L
 	return &formats.Loader{FS: fsys, Lexicon: service.ReadOpts(opts...).Lexicon}, nil
 }
 
-func (m *memLoader) Design(_ context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+func (m *memLoader) Design(_ context.Context, uri mounts.URI, opts ...service.ReadOption) (*ir.Design, error) {
 	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount, opts...)
 	if err != nil {
@@ -63,7 +63,7 @@ func (m *memLoader) Design(_ context.Context, uri artifact.URI, opts ...service.
 	return l.ReadDesign(p)
 }
 
-func (m *memLoader) Geometry(_ context.Context, uri artifact.URI, layout string, faithfulSymbols bool, _ ...service.ReadOption) (*geom.SchematicGeometry, error) {
+func (m *memLoader) Geometry(_ context.Context, uri mounts.URI, layout string, faithfulSymbols bool, _ ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount)
 	if err != nil {
@@ -76,7 +76,7 @@ func (m *memLoader) Geometry(_ context.Context, uri artifact.URI, layout string,
 	return l.ResolveGeometry(p, layout, nil, symbols)
 }
 
-func (m *memLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool, _ ...service.ReadOption) (*graph.ConversionReport, error) {
+func (m *memLoader) Report(_ context.Context, uri mounts.URI, faithfulSymbols bool, _ ...service.ReadOption) (*graph.ConversionReport, error) {
 	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount)
 	if err != nil {
@@ -89,11 +89,11 @@ func (m *memLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols 
 	return l.ConversionReport(p, symbols, nil)
 }
 
-func (m *memLoader) Expectations(context.Context, artifact.URI) (*expect.Expectations, error) {
+func (m *memLoader) Expectations(context.Context, mounts.URI) (*expect.Expectations, error) {
 	return nil, nil
 }
 
-func (m *memLoader) Board(_ context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+func (m *memLoader) Board(_ context.Context, uri mounts.URI) (*geom.BoardGeometry, error) {
 	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount)
 	if err != nil {
@@ -104,7 +104,7 @@ func (m *memLoader) Board(_ context.Context, uri artifact.URI) (*geom.BoardGeome
 
 // DesignHash has nothing to hash. This loader's designs are in-memory strings with no entry file. So
 // it reports the unhashable case rather than inventing a digest over bytes no reader would see.
-func (m *memLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+func (m *memLoader) DesignHash(context.Context, mounts.URI) (string, error) {
 	return "", nil
 }
 
@@ -150,11 +150,11 @@ func TestInMemoryServiceLoader(t *testing.T) {
 
 // uriOf builds an artifact URI for a test. It fails the test rather than returning an error. If a
 // hard-coded fixture URI will not parse, the test is broken, and that is not a condition under test.
-func uriOf(t *testing.T, mount, p string) artifact.URI {
+func uriOf(t *testing.T, mount, p string) mounts.URI {
 	t.Helper()
-	u, err := artifact.New(mount, p)
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
-		t.Fatalf("artifact.New(%q, %q): %v", mount, p, err)
+		t.Fatalf("mounts.NewURI(%q, %q): %v", mount, p, err)
 	}
 	return u
 }

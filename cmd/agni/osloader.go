@@ -5,7 +5,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/mesh"
@@ -14,20 +14,20 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/service"
 )
 
-// osLoader is the OS-backed service.Loader adapter. It resolves an artifact.URI to a host path under
+// osLoader is the OS-backed service.Loader adapter. It resolves an mounts.URI to a host path under
 // its mount root and reads it through the engine's formats.Loader, via service.LoaderIn, which also
 // records the files a cached read depends on (agni issue 895).
 type osLoader struct {
-	mounts *mounts.Table
+	mounts *mountset.Table
 	loader *formats.Loader
 }
 
-func (l *osLoader) Design(ctx context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+func (l *osLoader) Design(ctx context.Context, uri mounts.URI, opts ...service.ReadOption) (*ir.Design, error) {
 	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (l *osLoader) Design(ctx context.Context, uri artifact.URI, opts ...service
 	return service.LoaderIn(ctx, l.loader, opts...).ReadDesign(abs)
 }
 
-func (l *osLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
+func (l *osLoader) Geometry(ctx context.Context, uri mounts.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (l *osLoader) Geometry(ctx context.Context, uri artifact.URI, layout string
 	return reader.ResolveGeometry(abs, layout, nil, symbolsFor(faithfulSymbols))
 }
 
-func (l *osLoader) Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
+func (l *osLoader) Report(ctx context.Context, uri mounts.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
 	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (l *osLoader) Report(ctx context.Context, uri artifact.URI, faithfulSymbols
 
 // Expectations loads the design's `<path>.expect.yaml` sidecar. No sidecar is the normal case, so a
 // missing file returns (nil, nil). Only a bad URI or a malformed sidecar is an error.
-func (l *osLoader) Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error) {
+func (l *osLoader) Expectations(ctx context.Context, uri mounts.URI) (*expect.Expectations, error) {
 	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func symbolsFor(faithful bool) string { return formats.SymbolsFor(faithful) }
 
 // Board resolves the physical board sidecar (WS1-006) through the formats registry. A format
 // without one yields (nil, nil), and the service then lists no board sheet.
-func (l *osLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+func (l *osLoader) Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeometry, error) {
 	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (l *osLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeom
 
 // BoardMeshes reads model meshes by the keys in a board's model_instances, and resolves each as the
 // board read resolved its model (agni issue 1652).
-func (l *osLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+func (l *osLoader) BoardMeshes(ctx context.Context, uri mounts.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
 	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, nil, err
@@ -101,12 +101,12 @@ func (l *osLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []str
 // Manifest resolves and parses a review checklist manifest (YAML) under the mount (WS9-047). Unlike
 // Expectations, a manifest is a required input, so an absent or malformed file is an error rather
 // than a review over no items reporting a hollow pass.
-func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manifest, error) {
+func (l *osLoader) Manifest(ctx context.Context, uri mounts.URI) (review.Manifest, error) {
 	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return review.Manifest{}, err
 	}
-	f, err := os.Open(abs) // #nosec G304 -- abs comes from mounts.Resolve, which refuses a path outside its mount
+	f, err := os.Open(abs) // #nosec G304 -- abs comes from mountset.Resolve, which refuses a path outside its mount
 	if err != nil {
 		return review.Manifest{}, err
 	}
@@ -117,7 +117,7 @@ func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manif
 // Convention resolves and parses a naming-convention config (YAML) under the mount (WS9-128). Like a
 // review manifest it is a required input once named, so an absent or malformed file is an error
 // rather than silently falling back to the server's vocabulary.
-func (l *osLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
+func (l *osLoader) Convention(_ context.Context, uri mounts.URI) (*configpb.NamingConvention, error) {
 	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (l *osLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.Na
 // DesignHash hashes a mounted design's entry file for a stored run's provenance (WS9-053). A URI
 // escaping its mount is an error, since containment is a security boundary. An unreadable file
 // inside the mount yields "", as hashSource documents.
-func (l *osLoader) DesignHash(_ context.Context, uri artifact.URI) (string, error) {
+func (l *osLoader) DesignHash(_ context.Context, uri mounts.URI) (string, error) {
 	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return "", err

@@ -34,7 +34,7 @@ func engineSources(t *testing.T, root string) []string {
 		t.Fatalf("glob %s: %v", root, err)
 	}
 	out = slices.DeleteFunc(out, func(f string) bool { return strings.HasSuffix(f, "_test.go") })
-	for _, tier := range []string{"core", "stdlib", "readers", "internal", "cmd", "service", "datasheet", "intake", "artifact", "census"} {
+	for _, tier := range []string{"core", "stdlib", "readers", "internal", "cmd", "service", "datasheet", "intake", "mountset", "census"} {
 		out = append(out, nonTestSources(t, filepath.Join(root, tier))...)
 	}
 	return out

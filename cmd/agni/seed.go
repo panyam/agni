@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/wasmengine"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -33,7 +33,7 @@ import (
 // design, so the visit finds it built or under way. A request and a warm for one seed share one build.
 type seeds struct {
 	ws      *service.WorkspaceService
-	ms      *mounts.Table
+	ms      *mountset.Table
 	version func() string
 
 	mu       sync.Mutex
@@ -57,7 +57,7 @@ var errNoDesign = errors.New("no such design")
 // keptSeeds is how many seeds a server keeps. The oldest goes first when it is full.
 const keptSeeds = 4
 
-func newSeeds(ws *service.WorkspaceService, ms *mounts.Table, version func() string) *seeds {
+func newSeeds(ws *service.WorkspaceService, ms *mountset.Table, version func() string) *seeds {
 	return &seeds{ws: ws, ms: ms, version: version, kept: map[string][]byte{}, building: map[string]*seedBuild{}}
 }
 
@@ -95,7 +95,7 @@ func (s *seeds) warm(mount, p string) {
 // get answers a design's seed under version v from the cache, from a build already under way, or
 // from a build of its own.
 func (s *seeds) get(ctx context.Context, mount, p, v string) ([]byte, error) {
-	u, err := artifact.New(mount, p)
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
 		return nil, errNoDesign
 	}
@@ -131,7 +131,7 @@ func (s *seeds) get(ctx context.Context, mount, p, v string) ([]byte, error) {
 	}
 }
 
-func (s *seeds) build(key string, b *seedBuild, u artifact.URI, listed []*webapi.DesignFile, v string) {
+func (s *seeds) build(key string, b *seedBuild, u mounts.URI, listed []*webapi.DesignFile, v string) {
 	s.builds.Add(1)
 	b.seed, b.err = s.buildSeed(u, listed, v)
 	s.mu.Lock()
@@ -148,10 +148,10 @@ func (s *seeds) build(key string, b *seedBuild, u artifact.URI, listed []*webapi
 	close(b.done)
 }
 
-func (s *seeds) buildSeed(u artifact.URI, listed []*webapi.DesignFile, v string) ([]byte, error) {
+func (s *seeds) buildSeed(u mounts.URI, listed []*webapi.DesignFile, v string) ([]byte, error) {
 	files := make([]wasmengine.SeedFile, 0, len(listed))
 	for _, f := range listed {
-		fu, err := artifact.New(u.Mount, f.GetPath())
+		fu, err := mounts.NewURI(u.Mount, f.GetPath())
 		if err != nil {
 			return nil, errNoDesign
 		}
@@ -159,7 +159,7 @@ func (s *seeds) buildSeed(u artifact.URI, listed []*webapi.DesignFile, v string)
 		if err != nil {
 			return nil, errNoDesign
 		}
-		b, err := os.ReadFile(abs) // #nosec G304 G703 -- abs comes from mounts.Resolve, which refuses a path outside its mount
+		b, err := os.ReadFile(abs) // #nosec G304 G703 -- abs comes from mountset.Resolve, which refuses a path outside its mount
 		if err != nil {
 			return nil, errNoDesign
 		}
@@ -188,20 +188,20 @@ func warmSeeds(s *seeds) connect.UnaryInterceptorFunc {
 
 // designNamed is the design a request lists or reads. It answers false for any other request, and for
 // a design sent as files, which has no seed to warm.
-func designNamed(msg any) (artifact.URI, bool) {
+func designNamed(msg any) (mounts.URI, bool) {
 	var uri string
 	switch m := msg.(type) {
 	case *webapi.ListDesignFilesRequest:
 		uri = m.GetUri()
 	case *webapi.IngestRequest:
 		if len(m.GetSnapshot().GetFiles()) > 0 {
-			return artifact.URI{}, false
+			return mounts.URI{}, false
 		}
 		uri = m.GetSnapshot().GetUri()
 	}
 	if uri == "" {
-		return artifact.URI{}, false
+		return mounts.URI{}, false
 	}
-	u, err := artifact.Parse(uri)
+	u, err := mounts.ParseURI(uri)
 	return u, err == nil
 }

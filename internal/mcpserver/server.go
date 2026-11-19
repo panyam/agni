@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/server"
@@ -189,14 +189,14 @@ func (s *srv) prepare(ctx context.Context, tool string, a designArg) (mcp.Run, e
 
 // designURI turns an agent's design name into the artifact URI the services take. An agent names a
 // design as mount/path or as a mount:// URI.
-func designURI(design string) (artifact.URI, error) {
+func designURI(design string) (mounts.URI, error) {
 	d := strings.TrimSpace(design)
-	if !strings.HasPrefix(d, artifact.Scheme+"://") {
-		d = artifact.Scheme + "://" + strings.TrimPrefix(d, "/")
+	if !strings.HasPrefix(d, mounts.Scheme) {
+		d = mounts.Scheme + strings.TrimPrefix(d, "/")
 	}
-	u, err := artifact.Parse(d)
+	u, err := mounts.ParseURI(d)
 	if err != nil {
-		return artifact.URI{}, fmt.Errorf("design %q: %v; name one as mount/path, such as tut/designs/gateway", design, err)
+		return mounts.URI{}, fmt.Errorf("design %q: %v; name one as mount/path, such as tut/designs/gateway", design, err)
 	}
 	return u, nil
 }

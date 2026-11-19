@@ -8,7 +8,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -38,8 +38,8 @@ func (b *blockingIngester) DeleteSnapshot(context.Context, *webapi.DeleteSnapsho
 // A design being read holds up questions about itself and no other, and two questions about one
 // design still read it once (agni issue 1121).
 func TestReadingOneDesignDoesNotHoldUpAnother(t *testing.T) {
-	a, _ := artifact.Parse("mount://m/a.edn")
-	b, _ := artifact.Parse("mount://m/b.edn")
+	a, _ := mounts.ParseURI("mount://m/a.edn")
+	b, _ := mounts.ParseURI("mount://m/b.edn")
 	ing := &blockingIngester{slow: a.String(), release: make(chan struct{}), ingests: map[string]int{}}
 	d := newDesigns(ing)
 

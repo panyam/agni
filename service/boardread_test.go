@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -18,7 +18,7 @@ type boardCountingLoader struct {
 	boards *atomic.Int32
 }
 
-func (l boardCountingLoader) Board(ctx context.Context, u artifact.URI) (*geom.BoardGeometry, error) {
+func (l boardCountingLoader) Board(ctx context.Context, u mounts.URI) (*geom.BoardGeometry, error) {
 	l.boards.Add(1)
 	return l.fakeLoader.Board(ctx, u)
 }

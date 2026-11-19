@@ -11,7 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // remoteParityServer is an `agni serve` with no mounts at all. This process mounts the tutorial
@@ -23,7 +24,7 @@ func remoteParityServer(t *testing.T) (url, design string, served func() []strin
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := servedMuxFor(t, []mounts.Mount{{Name: "tut", Root: root}}, nil)
+	mux := servedMuxFor(t, []mounts.Mount{mountset.Folder("tut", root)}, nil)
 	var mu sync.Mutex
 	var procs []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

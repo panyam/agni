@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"os"
 	"path/filepath"
 	"sync"
@@ -29,19 +29,19 @@ type fsReviewLoader struct{ base string }
 // Design HONORS the read options rather than discarding them. A loader that dropped the lexicon
 // would make a per-request convention silently no-op, and a test helper that dropped it would
 // assert nothing.
-func (l fsReviewLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+func (l fsReviewLoader) Design(_ context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error) {
 	return (&formats.Loader{Lexicon: ReadOpts(opts...).Lexicon}).ReadDesign(filepath.Join(l.base, uri.Path))
 }
 
-func (l fsReviewLoader) Board(_ context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+func (l fsReviewLoader) Board(_ context.Context, uri mounts.URI) (*geom.BoardGeometry, error) {
 	return (&formats.Loader{}).BoardGeometry(filepath.Join(l.base, uri.Path))
 }
 
-func (l fsReviewLoader) DesignHash(_ context.Context, uri artifact.URI) (string, error) {
+func (l fsReviewLoader) DesignHash(_ context.Context, uri mounts.URI) (string, error) {
 	return "sha256:" + uri.Path, nil
 }
 
-func (l fsReviewLoader) Manifest(_ context.Context, uri artifact.URI) (review.Manifest, error) {
+func (l fsReviewLoader) Manifest(_ context.Context, uri mounts.URI) (review.Manifest, error) {
 	f, err := os.Open(filepath.Join(l.base, uri.Path))
 	if err != nil {
 		return review.Manifest{}, err
@@ -263,16 +263,16 @@ type stubReviewLoader struct {
 	man    review.Manifest
 }
 
-func (l stubReviewLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
+func (l stubReviewLoader) Design(context.Context, mounts.URI, ...ReadOption) (*ir.Design, error) {
 	return l.design, nil
 }
-func (l stubReviewLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
+func (l stubReviewLoader) Board(context.Context, mounts.URI) (*geom.BoardGeometry, error) {
 	return nil, nil
 }
-func (l stubReviewLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+func (l stubReviewLoader) DesignHash(context.Context, mounts.URI) (string, error) {
 	return "", nil
 }
-func (l stubReviewLoader) Manifest(context.Context, artifact.URI) (review.Manifest, error) {
+func (l stubReviewLoader) Manifest(context.Context, mounts.URI) (review.Manifest, error) {
 	return l.man, nil
 }
 

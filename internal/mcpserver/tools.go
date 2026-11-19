@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	rpt "github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -90,7 +90,7 @@ func tabulate(ctx context.Context, req *webapi.TabulateRequest) ([]*webapi.Table
 }
 
 // on runs fn over the snapshot of the design an agent named.
-func (s *srv) on(ctx context.Context, design string, fn func(*webapi.Snapshot) error) (artifact.URI, error) {
+func (s *srv) on(ctx context.Context, design string, fn func(*webapi.Snapshot) error) (mounts.URI, error) {
 	u, err := designURI(design)
 	if err != nil {
 		return u, err
@@ -317,7 +317,7 @@ type diffInput struct {
 
 func (s *srv) diff(ctx context.Context, in diffInput) (core.ToolResult, error) {
 	var resp *webapi.DiffDesignsResponse
-	var bu artifact.URI
+	var bu mounts.URI
 	var snaps [2]*webapi.Snapshot
 	au, err := s.on(ctx, in.Design, func(a *webapi.Snapshot) error {
 		var err error
@@ -416,7 +416,7 @@ func (s *srv) checklists(ctx context.Context, in checklistsInput) (core.ToolResu
 	return answer(b.String(), map[string]any{"design": u.String(), "answer": protoJSON(resp)})
 }
 
-func (s *srv) listChecklists(ctx context.Context, design string) (*webapi.ListChecklistsResponse, artifact.URI, error) {
+func (s *srv) listChecklists(ctx context.Context, design string) (*webapi.ListChecklistsResponse, mounts.URI, error) {
 	var resp *webapi.ListChecklistsResponse
 	u, err := s.on(ctx, design, func(sn *webapi.Snapshot) (err error) {
 		resp, err = s.api.Review.ListChecklists(ctx, &webapi.ListChecklistsRequest{Snapshot: sn.GetName()})
@@ -627,4 +627,4 @@ func (s *srv) listDesigns(ctx context.Context) (listed, error) {
 }
 
 // bare is a mount:// URI as the tools take it, mount/path.
-func bare(uri string) string { return strings.TrimPrefix(uri, artifact.Scheme+"://") }
+func bare(uri string) string { return strings.TrimPrefix(uri, mounts.Scheme) }

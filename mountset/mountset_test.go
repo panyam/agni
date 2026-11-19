@@ -1,10 +1,11 @@
-package mounts
+package mountset
 
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
+
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 func TestParseMounts(t *testing.T) {
@@ -19,7 +20,7 @@ func TestParseMounts(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(mounts) != 1 || mounts[0].Name != "a" || mounts[0].Root != dir {
+		if len(mounts) != 1 || mounts[0].Name != "a" || mounts[0].Source != dir {
 			t.Fatalf("got %+v", mounts)
 		}
 	})
@@ -55,33 +56,6 @@ func TestParseMounts(t *testing.T) {
 	})
 }
 
-func TestSafeResolve(t *testing.T) {
-	root := filepath.Join(string(filepath.Separator), "srv", "mount")
-
-	ok := []struct{ rel, want string }{
-		{"", root},
-		{".", root},
-		{"sub/file.edn", filepath.Join(root, "sub", "file.edn")},
-		{"a/../b", filepath.Join(root, "b")},
-	}
-	for _, tc := range ok {
-		got, err := SafeResolve(root, tc.rel)
-		if err != nil {
-			t.Fatalf("SafeResolve(%q) errored: %v", tc.rel, err)
-		}
-		if got != tc.want {
-			t.Fatalf("SafeResolve(%q) = %q, want %q", tc.rel, got, tc.want)
-		}
-	}
-
-	bad := []string{"..", "../etc", "a/../../etc", filepath.Join(root, "abs")}
-	for _, rel := range bad {
-		if _, err := SafeResolve(root, rel); err == nil {
-			t.Fatalf("SafeResolve(%q) should have been rejected", rel)
-		}
-	}
-}
-
 func TestDiscover(t *testing.T) {
 	root := t.TempDir()
 	for _, d := range []string{"boards", "datasheets", ".git"} {
@@ -101,7 +75,7 @@ func TestDiscover(t *testing.T) {
 		if len(got) != 2 || got[0].Name != "boards" || got[1].Name != "datasheets" {
 			t.Fatalf("got %+v, want boards then datasheets", got)
 		}
-		if got[0].Root != filepath.Join(root, "boards") {
+		if got[0].Source != filepath.Join(root, "boards") {
 			t.Fatalf("root not joined: %+v", got[0])
 		}
 	})
@@ -150,22 +124,22 @@ func TestDiscover(t *testing.T) {
 }
 
 func TestMerge(t *testing.T) {
-	d := []Mount{{Name: "boards", Root: "/w/boards"}, {Name: "ds", Root: "/w/ds"}}
+	d := []mounts.Mount{Folder("boards", "/w/boards"), Folder("ds", "/w/ds")}
 
 	t.Run("explicit wins a name collision", func(t *testing.T) {
-		got := Merge(d, []Mount{{Name: "boards", Root: "/elsewhere"}})
+		got := Merge(d, []mounts.Mount{Folder("boards", "/elsewhere")})
 		if len(got) != 2 {
 			t.Fatalf("got %+v, want 2", got)
 		}
 		for _, m := range got {
-			if m.Name == "boards" && m.Root != "/elsewhere" {
+			if m.Name == "boards" && m.Source != "/elsewhere" {
 				t.Fatalf("discovered mount shadowed the explicit one: %+v", got)
 			}
 		}
 	})
 
 	t.Run("non-colliding mounts all survive", func(t *testing.T) {
-		got := Merge(d, []Mount{{Name: "extra", Root: "/x"}})
+		got := Merge(d, []mounts.Mount{Folder("extra", "/x")})
 		if len(got) != 3 {
 			t.Fatalf("got %+v, want 3", got)
 		}
@@ -179,20 +153,4 @@ func TestMerge(t *testing.T) {
 			t.Fatalf("got %+v, want the explicit set", got)
 		}
 	})
-}
-
-// TestRooted holds a path from a root apart from a path from a folder, on every platform, and on
-// Windows also a drive-relative path and one from the current drive's root (agni issue 1595).
-func TestRooted(t *testing.T) {
-	cases := map[string]bool{"": false, "a": false, "a/b": false, "./a": false, "../a": false, "/srv": true}
-	if runtime.GOOS == "windows" {
-		for p, want := range map[string]bool{`\srv`: true, `C:\srv`: true, `C:srv`: true, `\\host\share\x`: true, `a\b`: false} {
-			cases[p] = want
-		}
-	}
-	for p, want := range cases {
-		if got := Rooted(p); got != want {
-			t.Errorf("Rooted(%q) = %v, want %v", p, got, want)
-		}
-	}
 }

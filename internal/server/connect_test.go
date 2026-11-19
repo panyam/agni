@@ -9,7 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/core/review"
@@ -95,7 +95,7 @@ func TestAParseErrorCarriesItsPosition(t *testing.T) {
 type memWS struct{ err error }
 
 func (m memWS) Mounts() []service.MountInfo { return []service.MountInfo{{Name: "m", Root: "/x"}} }
-func (m memWS) ListDir(context.Context, artifact.URI) ([]service.DirEntry, error) {
+func (m memWS) ListDir(context.Context, mounts.URI) ([]service.DirEntry, error) {
 	return nil, m.err
 }
 
@@ -126,16 +126,16 @@ type memReviewLoader struct {
 	err    error
 }
 
-func (m memReviewLoader) Design(context.Context, artifact.URI, ...service.ReadOption) (*ir.Design, error) {
+func (m memReviewLoader) Design(context.Context, mounts.URI, ...service.ReadOption) (*ir.Design, error) {
 	return m.design, m.err
 }
-func (m memReviewLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
+func (m memReviewLoader) Board(context.Context, mounts.URI) (*geom.BoardGeometry, error) {
 	return nil, nil
 }
-func (m memReviewLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+func (m memReviewLoader) DesignHash(context.Context, mounts.URI) (string, error) {
 	return "sha256:stub", nil
 }
-func (m memReviewLoader) Manifest(context.Context, artifact.URI) (review.Manifest, error) {
+func (m memReviewLoader) Manifest(context.Context, mounts.URI) (review.Manifest, error) {
 	return m.man, m.err
 }
 

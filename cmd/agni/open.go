@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // openCmd serves ONE design and prints the URL that shows it.
@@ -46,15 +46,15 @@ func openCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			u, err := artifact.Parse(src.NetlistURI)
+			u, err := mounts.ParseURI(src.NetlistURI)
 			if err != nil {
 				return err
 			}
-			m, ok := mounts.Find(ws.Mounts(), u.Mount)
+			m, ok := mountset.Find(ws.Mounts(), u.Mount)
 			if !ok {
 				return fmt.Errorf("%s resolved to mount %q, which this run has no root for", args[0], u.Mount)
 			}
-			if err := refuseTooBroadRoot(m.Root); err != nil {
+			if err := refuseTooBroadRoot(m.Source); err != nil {
 				return err
 			}
 			if addr == "" {
@@ -141,7 +141,7 @@ func openBanner(w io.Writer, rawURL string, m mounts.Mount, designURI, viewPath 
 	base := strings.TrimSuffix(rawURL, "/")
 	fmt.Fprintf(w, "%s%s\n", base, viewPath)
 	fmt.Fprintf(w, "\ncheck it against this server:\n  agni check --mount %s=%s %s --verdicts --server %s\n",
-		m.Name, m.Root, designURI, base)
+		m.Name, m.Source, designURI, base)
 	// The trace line is printed for the same reason as the check line. --server needs a mount the
 	// operator declared. This process minted its own mount, so a hand-built command naming another
 	// mount gives exactly the mismatch the flag's server check exists to catch. One process mints
@@ -151,6 +151,6 @@ func openBanner(w io.Writer, rawURL string, m mounts.Mount, designURI, viewPath 
 	// That is worse than a stale doc, because the line is generated for someone to copy (agni issue
 	// 636). TestOpenBannerNamesNoRemovedFlag stops the pair drifting again.
 	fmt.Fprintf(w, "\ntrace a signal on it:\n  agni trace --mount %s=%s %s --from <ref.pin> --to <ref.pin> --server %s\n",
-		m.Name, m.Root, designURI, base)
+		m.Name, m.Source, designURI, base)
 	fmt.Fprintf(w, "\nCtrl-C to stop.\n")
 }

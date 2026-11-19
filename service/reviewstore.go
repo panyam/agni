@@ -14,7 +14,7 @@ import (
 // ReviewStore persists review runs (WS9-053). Like DraftStore and AnnotationStore in
 // datasheet/dsservice, the interface is a port, and the os-backed adapter in cmd/agni owns all I/O
 // (C1/C13). Those two key on an
-// artifact.URI holding ONE current value. A design accumulates MANY runs, so this store mints
+// mounts.URI holding ONE current value. A design accumulates MANY runs, so this store mints
 // identities and lists them instead.
 //
 // Create owns identity AND time. The os adapter derives an id from the creation instant. A listing

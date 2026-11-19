@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/num"
@@ -269,7 +269,7 @@ func QuerySetProto(s query.QuerySet) *webapi.QuerySet {
 type designRead struct {
 	// The snapshot reads through loader, which is an upload's or the service's.
 	loader Loader
-	u      artifact.URI
+	u      mounts.URI
 	source string
 	model  check.Model
 	base   *query.Base

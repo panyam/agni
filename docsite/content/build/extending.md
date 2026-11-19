@@ -304,8 +304,8 @@ Two ports are worth knowing by name. `service.ProjectStore` answers what project
 and which design an artifact belongs to, so a deployment backed by a PLM system or an index
 implements it instead of walking directories. `service.ConfigResolver` resolves what a project's
 analysis config points at, returning a `service.ResolvedConfig` carrying rule sources, a parameter
-provider, and symbol paths. `ProjectStore` speaks `artifact.URI`, the `mount://` name for a file,
-so the `artifact` package is public too.
+provider, and symbol paths. `ProjectStore` speaks `mounts.URI`, the `mount://` name for a file,
+from goapplib storage's `mounts` package.
 
 Your rules reach the web console through the same path with no extra work. `CheckService.ListRules`
 maps whatever catalog it was built over to the wire, and the client resolves its filter bundles

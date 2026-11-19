@@ -8,22 +8,22 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // --uploads serves its design views as the mount "uploads", and the server's project store reads a
 // design a DirStore writes there as a design of no project (agni issues 1693, 1694, 1739).
 func TestUploadsServeAsTheUploadsMount(t *testing.T) {
 	uploads := filepath.Join(t.TempDir(), "not-yet")
-	ms, err := withUploadsMount([]mounts.Mount{{Name: "tut", Root: t.TempDir()}}, uploads)
+	ms, err := withUploadsMount([]mounts.Mount{mountset.Folder("tut", t.TempDir())}, uploads)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ms) != 2 || ms[1].Name != uploadsMount || ms[1].Root != projects.ViewsRoot(uploads) {
+	if len(ms) != 2 || ms[1].Name != uploadsMount || ms[1].Source != projects.ViewsRoot(uploads) {
 		t.Fatalf("mounts = %v, want tut then uploads at %s", ms, projects.ViewsRoot(uploads))
 	}
 	ds, err := projects.NewDirStore(t.TempDir(), uploads, uploadsMount)
@@ -50,7 +50,7 @@ func TestUploadsServeAsTheUploadsMount(t *testing.T) {
 		t.Fatalf("stored design = %v, %v; want its netlist in the uploads mount", stored, err)
 	}
 	read := projects.NewFSStore(projectTrees(ms)...)
-	u, err := artifact.Parse(stored.GetEntryUri())
+	u, err := mounts.ParseURI(stored.GetEntryUri())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestUploadsServeAsTheUploadsMount(t *testing.T) {
 }
 
 func TestUploadsRefuseAMountNamedUploads(t *testing.T) {
-	_, err := withUploadsMount([]mounts.Mount{{Name: uploadsMount, Root: t.TempDir()}}, t.TempDir())
+	_, err := withUploadsMount([]mounts.Mount{mountset.Folder(uploadsMount, t.TempDir())}, t.TempDir())
 	if err == nil || !strings.Contains(err.Error(), "already declared") {
 		t.Fatalf("withUploadsMount over a mount named uploads = %v, want a refusal", err)
 	}

@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -18,7 +18,7 @@ import (
 // os.DirFS, with symbol libraries spelled as host paths because the CLI's and the server's loaders
 // read the host filesystem.
 type osProjectConfig struct {
-	mounts *mounts.Table
+	mounts *mountset.Table
 }
 
 // ResolveConfig loads what an AnalysisConfig's URIs point at. See fshost.ConfigResolver.
@@ -26,9 +26,9 @@ func (c *osProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.Analysi
 	list := c.mounts.List()
 	ms := make([]fshost.Mount, 0, len(list))
 	for _, m := range list {
-		ms = append(ms, fshost.Mount{Name: m.Name, FS: os.DirFS(m.Root)})
+		ms = append(ms, fshost.Mount{Name: m.Name, FS: os.DirFS(c.mounts.Root(m))})
 	}
-	r := &fshost.ConfigResolver{Mounts: ms, SymbolPath: func(u artifact.URI) (string, error) {
+	r := &fshost.ConfigResolver{Mounts: ms, SymbolPath: func(u mounts.URI) (string, error) {
 		return c.mounts.Resolve(u)
 	}}
 	return r.ResolveConfig(ctx, cfg, namespace)
@@ -36,7 +36,7 @@ func (c *osProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.Analysi
 
 // dir resolves a project-config URI to a host directory inside its mount.
 func (c *osProjectConfig) dir(uri string) (string, error) {
-	u, err := artifact.Parse(uri)
+	u, err := mounts.ParseURI(uri)
 	if err != nil {
 		return "", err
 	}
@@ -68,7 +68,7 @@ func refuseProfilePathTheProjectOwns(ctx context.Context, designArg, profilePath
 	if err != nil {
 		return nil
 	}
-	cfg := &osProjectConfig{mounts: mounts.NewTable(ws.Mounts()...)}
+	cfg := &osProjectConfig{mounts: mountset.NewTable(ws.Mounts()...)}
 	for _, uri := range p.GetConfig().GetProfileUris() {
 		owned, err := cfg.dir(uri)
 		if err != nil {

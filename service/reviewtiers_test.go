@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -21,11 +21,11 @@ type boardRecordingLoader struct {
 	asked []string
 }
 
-func (l *boardRecordingLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
+func (l *boardRecordingLoader) Design(context.Context, mounts.URI, ...ReadOption) (*ir.Design, error) {
 	return &ir.Design{}, nil
 }
 
-func (l *boardRecordingLoader) Board(_ context.Context, u artifact.URI) (*geom.BoardGeometry, error) {
+func (l *boardRecordingLoader) Board(_ context.Context, u mounts.URI) (*geom.BoardGeometry, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.asked = append(l.asked, u.String())
@@ -35,11 +35,11 @@ func (l *boardRecordingLoader) Board(_ context.Context, u artifact.URI) (*geom.B
 	return nil, nil
 }
 
-func (l *boardRecordingLoader) Manifest(context.Context, artifact.URI) (review.Manifest, error) {
+func (l *boardRecordingLoader) Manifest(context.Context, mounts.URI) (review.Manifest, error) {
 	return review.Manifest{}, nil
 }
 
-func (l *boardRecordingLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+func (l *boardRecordingLoader) DesignHash(context.Context, mounts.URI) (string, error) {
 	return "", nil
 }
 

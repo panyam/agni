@@ -7,14 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/readers/formats"
 )
 
 // uriOf turns a local path into the artifact URI the CLI would address it by, through the same
 // workspace the real commands use. Building the URI by hand would test a spelling the CLI never
 // produces, so a fixture that only passes under a hand-made URI would prove nothing.
-func uriOf(t *testing.T, path string) artifact.URI {
+func uriOf(t *testing.T, path string) mounts.URI {
 	t.Helper()
 	ws, err := workspace()
 	if err != nil {

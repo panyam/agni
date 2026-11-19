@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/param"
@@ -16,14 +16,14 @@ import (
 // mount-scoped by the impl. The fat service.Loader and the review ReviewLoader both satisfy it, so
 // every service reaches BuildModel through the loader it already holds.
 type ModelLoader interface {
-	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
-	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
+	Design(ctx context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error)
+	Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeometry, error)
 }
 
 // GeometryLoader is the file surface BuildGeometry needs. The fat service.Loader and DiffService's
 // DesignLoader both satisfy it.
 type GeometryLoader interface {
-	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
+	Geometry(ctx context.Context, uri mounts.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
 }
 
 // BuildGeometry loads a design's default-layout, glyph-symbol schematic geometry for LOCATING results
@@ -36,7 +36,7 @@ type GeometryLoader interface {
 // Pass the same ReadOptions the Model was built with (agni issue 347). A geometry read without them
 // misses a project's declared symbol library, so findings are placed on sheets that lack the
 // components they name.
-func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI, opts ...ReadOption) *geom.SchematicGeometry {
+func BuildGeometry(ctx context.Context, loader GeometryLoader, uri mounts.URI, opts ...ReadOption) *geom.SchematicGeometry {
 	g, _ := locateGeometry(ctx, loader, uri, opts...)
 	return g
 }
@@ -45,7 +45,7 @@ func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI,
 // file draws an auto-layout rather than failing. So a read error means the file meant to draw the
 // design failed to read. The locate answer says so rather than calling every entity drawn nowhere
 // (agni issue 1230).
-func locateGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI, opts ...ReadOption) (g *geom.SchematicGeometry, unreadable bool) {
+func locateGeometry(ctx context.Context, loader GeometryLoader, uri mounts.URI, opts ...ReadOption) (g *geom.SchematicGeometry, unreadable bool) {
 	defer timing.Begin(ctx, "read.geometry")()
 	g, err := loader.Geometry(ctx, uri, layoutForFile(uri.Path, ""), false, opts...)
 	if err != nil {
@@ -73,7 +73,7 @@ func snapGeometry(ctx context.Context, loader GeometryLoader, snap Snap, opts ..
 // A boardURI that yields no board geometry is an error. Without that error, an explicit board
 // request that read nothing would report the board items clean without checking them. When a
 // design's OWN path has no board (a netlist), that is the normal nil-board case.
-func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, specs param.ParamProvider, opts ...ReadOption) (check.Model, error) {
+func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI mounts.URI, specs param.ParamProvider, opts ...ReadOption) (check.Model, error) {
 	return BuildModelTier(ctx, loader, uri, boardURI, specs, ReadBoard, opts...)
 }
 
@@ -94,7 +94,7 @@ const (
 // boardReadURI returns the artifact to read a model's board from. That is the separate board when
 // the request names one. Otherwise it is the design itself, and the loader finds the design's
 // sidecar or declared companion.
-func boardReadURI(uri, boardURI artifact.URI) artifact.URI {
+func boardReadURI(uri, boardURI mounts.URI) mounts.URI {
 	if !boardURI.IsZero() {
 		return boardURI
 	}
@@ -103,7 +103,7 @@ func boardReadURI(uri, boardURI artifact.URI) artifact.URI {
 
 // BuildModelTier is BuildModel with the board tier chosen by the caller. With SkipBoard the loader is
 // never asked for a board, boardURI included.
-func BuildModelTier(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, specs param.ParamProvider, board BoardTier, opts ...ReadOption) (check.Model, error) {
+func BuildModelTier(ctx context.Context, loader ModelLoader, uri, boardURI mounts.URI, specs param.ParamProvider, board BoardTier, opts ...ReadOption) (check.Model, error) {
 	endRead := timing.Begin(ctx, "read.netlist")
 	d, err := loader.Design(ctx, uri, opts...)
 	endRead()

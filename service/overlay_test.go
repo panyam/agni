@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/stdlib/profiles"
 	"os"
 	"path/filepath"
@@ -191,7 +191,7 @@ func TestDuplicateSourceErrorNamesTheServerFlag(t *testing.T) {
 // at a malformed one.
 type fsConventionLoader struct{ dir string }
 
-func (l fsConventionLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
+func (l fsConventionLoader) Convention(_ context.Context, uri mounts.URI) (*configpb.NamingConvention, error) {
 	return naming.Load(filepath.Join(l.dir, uri.Path))
 }
 

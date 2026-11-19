@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -33,7 +33,7 @@ func someSpecs() param.ParamProvider {
 // TestBuildModelAttachesTiers checks that BuildModel attaches BOTH the board and params tiers.
 // Services were building plain netlist models that dropped both, and WS9-048 closed that drift.
 func TestBuildModelAttachesTiers(t *testing.T) {
-	m, err := BuildModel(context.Background(), fakeLoader{design: &ir.Design{}, board: thinBoard()}, testURI(t, "m", "d"), artifact.URI{}, someSpecs())
+	m, err := BuildModel(context.Background(), fakeLoader{design: &ir.Design{}, board: thinBoard()}, testURI(t, "m", "d"), mounts.URI{}, someSpecs())
 	if err != nil {
 		t.Fatalf("BuildModel: %v", err)
 	}
@@ -91,11 +91,11 @@ func TestCheckDesignRunsBoardRules(t *testing.T) {
 
 // testURI builds an artifact URI for a test, failing rather than returning an error, because a
 // hard-coded fixture URI that will not parse is a broken test, not a condition under test.
-func testURI(t *testing.T, mount, p string) artifact.URI {
+func testURI(t *testing.T, mount, p string) mounts.URI {
 	t.Helper()
-	u, err := artifact.New(mount, p)
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
-		t.Fatalf("artifact.New(%q, %q): %v", mount, p, err)
+		t.Fatalf("mounts.NewURI(%q, %q): %v", mount, p, err)
 	}
 	return u
 }
@@ -123,14 +123,14 @@ func (p *prefetchSpy) Prefetch(_ context.Context, mpns []string) error {
 func TestBuildModelPrefetchesARemoteCorpus(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", Mpn: "U-SEEDED"}, {RefDes: "R1", Mpn: "RC0603"}}}
 	spy := &prefetchSpy{}
-	if _, err := BuildModel(context.Background(), fakeLoader{design: d}, testURI(t, "m", "d"), artifact.URI{}, spy); err != nil {
+	if _, err := BuildModel(context.Background(), fakeLoader{design: d}, testURI(t, "m", "d"), mounts.URI{}, spy); err != nil {
 		t.Fatal(err)
 	}
 	if len(spy.asked) != 2 || spy.asked[0] != "U-SEEDED" || spy.asked[1] != "RC0603" {
 		t.Errorf("Prefetch asked for %v, want the design's two MPNs", spy.asked)
 	}
 	spy = &prefetchSpy{err: errors.New("connection refused")}
-	_, err := BuildModel(context.Background(), fakeLoader{design: d}, testURI(t, "m", "d"), artifact.URI{}, spy)
+	_, err := BuildModel(context.Background(), fakeLoader{design: d}, testURI(t, "m", "d"), mounts.URI{}, spy)
 	if !errors.Is(err, ErrUnavailable) {
 		t.Errorf("an unreachable corpus gave %v, want ErrUnavailable", err)
 	}

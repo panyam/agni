@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/core/results"
@@ -22,7 +22,7 @@ const hierSentence = "hier.edn is hierarchical and only its top cell was read. 1
 // asks for since the manifest travels as a value.
 type manifestLoader struct{ fakeLoader }
 
-func (manifestLoader) Manifest(context.Context, artifact.URI) (review.Manifest, error) {
+func (manifestLoader) Manifest(context.Context, mounts.URI) (review.Manifest, error) {
 	return review.Manifest{}, nil
 }
 

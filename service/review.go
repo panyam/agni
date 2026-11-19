@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/num"
 	"strconv"
 	"strings"
@@ -37,16 +37,16 @@ var ErrReviewStoreNotConfigured = errors.New("no review store configured")
 // Manifest is NOT on the run path (WS9-050). CreateReview takes the checklist as a value, so only
 // GetReviewManifest calls it.
 type ReviewLoader interface {
-	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
-	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
-	Manifest(ctx context.Context, uri artifact.URI) (review.Manifest, error)
+	Design(ctx context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error)
+	Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeometry, error)
+	Manifest(ctx context.Context, uri mounts.URI) (review.Manifest, error)
 	// DesignHash returns "sha256:<hex>" over the design's bytes. That hash is the revision identity.
 	// A stored run records it so a document is never re-read against a design that has since
 	// changed. It is on the loader because hashing reads bytes and this package does no I/O (C13/C22).
 	//
 	// An unreadable design is NOT an error, since the run already succeeded. Return ("", nil), which
 	// DesignRef.content_hash allows.
-	DesignHash(ctx context.Context, uri artifact.URI) (string, error)
+	DesignHash(ctx context.Context, uri mounts.URI) (string, error)
 }
 
 // ReviewEnv holds the deployment-level provenance of a stored run. It names which overlay tiers were
@@ -181,7 +181,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 		g, unreadable := snapGeometry(ctx, gl, snap, ov.ReadOptions()...)
 		var board *boardIndex
 		if bl, ok := loader.(interface {
-			Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
+			Board(context.Context, mounts.URI) (*geom.BoardGeometry, error)
 		}); ok {
 			board = locateBoard(ctx, bl, snap, m)
 		}
@@ -378,7 +378,7 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 //
 // It returns the per-request catalog, overlay spliced on, because the stored document records the
 // rules that ACTUALLY ran.
-func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay, external []review.ExternalReport) (review.Report, *check.Catalog, check.Model, error) {
+func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designURI, boardURI mounts.URI, man review.Manifest, floor float64, ov Overlay, external []review.ExternalReport) (review.Report, *check.Catalog, check.Model, error) {
 	m, _, err := BuildModelCached(ctx, loader, designURI, boardURI, ov, s.specs)
 	if err != nil {
 		return review.Report{}, nil, nil, err

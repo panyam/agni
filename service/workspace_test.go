@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"strings"
 	"testing"
 
@@ -21,7 +21,7 @@ type memWorkspace struct {
 
 func (m *memWorkspace) Mounts() []MountInfo { return m.mounts }
 
-func (m *memWorkspace) ListDir(_ context.Context, uri artifact.URI) ([]DirEntry, error) {
+func (m *memWorkspace) ListDir(_ context.Context, uri mounts.URI) ([]DirEntry, error) {
 	if strings.Contains(uri.Path, "..") {
 		return nil, fmt.Errorf("%w: %q", ErrInvalidPath, uri.Path)
 	}

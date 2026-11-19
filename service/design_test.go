@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"reflect"
 	"sort"
 	"strings"
@@ -83,33 +83,33 @@ type fakeLoader struct {
 	hashErr error
 }
 
-func (f fakeLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
+func (f fakeLoader) Design(context.Context, mounts.URI, ...ReadOption) (*ir.Design, error) {
 	return f.design, f.err
 }
-func (f fakeLoader) Geometry(context.Context, artifact.URI, string, bool, ...ReadOption) (*geom.SchematicGeometry, error) {
+func (f fakeLoader) Geometry(context.Context, mounts.URI, string, bool, ...ReadOption) (*geom.SchematicGeometry, error) {
 	if f.geomErr != nil {
 		return nil, f.geomErr
 	}
 	return f.geom, f.err
 }
-func (f fakeLoader) Report(context.Context, artifact.URI, bool, ...ReadOption) (*graph.ConversionReport, error) {
+func (f fakeLoader) Report(context.Context, mounts.URI, bool, ...ReadOption) (*graph.ConversionReport, error) {
 	return f.report, f.err
 }
-func (f fakeLoader) Expectations(context.Context, artifact.URI) (*expect.Expectations, error) {
+func (f fakeLoader) Expectations(context.Context, mounts.URI) (*expect.Expectations, error) {
 	return f.expect, f.err
 }
-func (f fakeLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
+func (f fakeLoader) Board(context.Context, mounts.URI) (*geom.BoardGeometry, error) {
 	return f.board, f.err // nil board is normal (netlist-only); a board fixture drives the tier
 }
-func (f fakeLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+func (f fakeLoader) DesignHash(context.Context, mounts.URI) (string, error) {
 	return f.hash, f.hashErr // hashErr alone, not f.err, since a design that reads fine can still fail to hash
 }
 
 // noNative is a NativeRenderer that offers nothing (the common server default in tests).
 type noNative struct{}
 
-func (noNative) Available(artifact.URI) bool { return false }
-func (noNative) Render(context.Context, artifact.URI, int) (string, error) {
+func (noNative) Available(mounts.URI) bool { return false }
+func (noNative) Render(context.Context, mounts.URI, int) (string, error) {
 	return "", ErrNativeNoTool
 }
 
@@ -545,7 +545,7 @@ type boardLoader struct {
 	board *geom.BoardGeometry
 }
 
-func (b boardLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
+func (b boardLoader) Board(context.Context, mounts.URI) (*geom.BoardGeometry, error) {
 	return b.board, nil
 }
 
@@ -597,7 +597,7 @@ type countingBoardLoader struct {
 	reads *int
 }
 
-func (b countingBoardLoader) Board(ctx context.Context, u artifact.URI) (*geom.BoardGeometry, error) {
+func (b countingBoardLoader) Board(ctx context.Context, u mounts.URI) (*geom.BoardGeometry, error) {
 	*b.reads++
 	return b.boardLoader.Board(ctx, u)
 }
@@ -799,7 +799,7 @@ func TestNameOnlyCanvas(t *testing.T) {
 // parse is a broken test rather than a condition under test, so it panics instead of returning an
 // error nobody would check.
 func uriStr(mount, p string) string {
-	u, err := artifact.New(mount, p)
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
 		panic(err)
 	}

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -20,12 +20,12 @@ type countingLoader struct {
 	designs, geoms *int
 }
 
-func (c countingLoader) Design(ctx context.Context, u artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+func (c countingLoader) Design(ctx context.Context, u mounts.URI, opts ...ReadOption) (*ir.Design, error) {
 	*c.designs++
 	return c.fakeLoader.Design(ctx, u, opts...)
 }
 
-func (c countingLoader) Geometry(ctx context.Context, u artifact.URI, s string, b bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
+func (c countingLoader) Geometry(ctx context.Context, u mounts.URI, s string, b bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
 	*c.geoms++
 	return c.fakeLoader.Geometry(ctx, u, s, b, opts...)
 }

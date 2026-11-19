@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/panyam/agni/artifact"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/panyam/goapplib/storage/mounts"
+
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -24,7 +25,7 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 	mustWrite(t, filepath.Join(root, ".hidden.edn")) // dotfile
 	mustWrite(t, filepath.Join(root, "sub", "inner.xml"))
 
-	svc := service.NewWorkspaceService(mounts.NewWorkspace(tableOf([]mounts.Mount{{Name: "m", Root: root}})))
+	svc := service.NewWorkspaceService(mountset.NewWorkspace(tableOf([]mounts.Mount{mountset.Folder("m", root)})))
 	list := func(mount, path string) (*webapi.ListDirResponse, error) {
 		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr(mount, path)})
 		if err != nil {
@@ -150,7 +151,7 @@ func mustWrite(t *testing.T, p string) {
 }
 
 func TestWorkspaceServiceListMounts(t *testing.T) {
-	svc := service.NewWorkspaceService(mounts.NewWorkspace(tableOf([]mounts.Mount{{Name: "a", Root: "/x"}, {Name: "b", Root: "/y"}})))
+	svc := service.NewWorkspaceService(mountset.NewWorkspace(tableOf([]mounts.Mount{mountset.Folder("a", "/x"), mountset.Folder("b", "/y")})))
 	resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{})
 	if err != nil {
 		t.Fatalf("ListMounts errored: %v", err)
@@ -172,10 +173,10 @@ func TestWorkspaceServiceListMountsPrunesEmptyMounts(t *testing.T) {
 	mustMkdir(t, filepath.Join(root, "ds"))
 	mustWrite(t, filepath.Join(root, "ds", "txb0104.pdf"))
 
-	svc := service.NewWorkspaceService(mounts.NewWorkspace(tableOf([]mounts.Mount{
-		{Name: "boards", Root: filepath.Join(root, "boards")},
-		{Name: "ds", Root: filepath.Join(root, "ds")},
-		{Name: "gone", Root: filepath.Join(root, "no-such-dir")},
+	svc := service.NewWorkspaceService(mountset.NewWorkspace(tableOf([]mounts.Mount{
+		mountset.Folder("boards", filepath.Join(root, "boards")),
+		mountset.Folder("ds", filepath.Join(root, "ds")),
+		mountset.Folder("gone", filepath.Join(root, "no-such-dir")),
 	})))
 	resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{Opens: []webapi.FileKind{webapi.FileKind_FILE_KIND_DESIGN}})
 	if err != nil {
@@ -197,7 +198,7 @@ func TestWorkspaceServiceListMountsPrunesEmptyMounts(t *testing.T) {
 // parse is a broken test rather than a condition under test, so it panics instead of returning an
 // error nobody would check.
 func uriStr(mount, p string) string {
-	u, err := artifact.New(mount, p)
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
 		panic(err)
 	}

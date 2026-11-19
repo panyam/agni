@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"testing"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -28,7 +28,7 @@ func (m *memProjects) Project(_ context.Context, name string) (*webapi.Project, 
 
 func (m *memProjects) Projects(context.Context) ([]*webapi.Project, error) { return m.projects, nil }
 
-func (m *memProjects) ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (m *memProjects) ResolveDesign(ctx context.Context, uri mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	d, ok := m.resolve[uri.String()]
 	if !ok {
 		return nil, nil, nil

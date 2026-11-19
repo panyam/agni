@@ -8,9 +8,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -18,21 +22,22 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // storeServer serves the project, design and snapshot services `agni serve --store --uploads`
 // builds over dir/store and dir/uploads, with the tutorial project mounted beside them.
 func storeServer(t *testing.T, dir string) *httptest.Server {
 	t.Helper()
-	ms, err := withUploadsMount([]mounts.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}, filepath.Join(dir, "uploads"))
+	ms, err := withUploadsMount([]mounts.Mount{mountset.Folder("tut", "../../examples/tutorial-project")}, filepath.Join(dir, "uploads"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
 	resolver := &service.ProjectResolver{Store: projectStore, Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
-	projectSvc, designSvc, _, err := storeServices(tableOf(ms), filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), projectStore, resolver, nil, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(t.Context(), tableOf(ms), filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), projectStore, resolver, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +112,106 @@ func TestAServerKeepsADesignAndAProjectAcrossARestart(t *testing.T) {
 		t.Errorf("project b200 after a restart = %v, %v; want B200", p, err)
 	}
 	gw, err := projectsClient.GetProject(ctx, connect.NewRequest(&webapi.GetProjectRequest{Name: "projects/gateway"}))
-	if err != nil || len(gw.Msg.GetDesigns()) != 2 || gw.Msg.GetDesigns()[0] != "designs/gateway" || gw.Msg.GetDesigns()[1] != "designs/gateway-rev-b" {
-		t.Errorf("the mounted gateway project = %v, %v; want it to list designs/gateway and designs/gateway-rev-b", gw, err)
+	// No design was added from the tutorial's folder, so the mounted project lists none, rather than
+	// the names its folders' design.yaml files extend it with (agni issue 1756).
+	if err != nil || len(gw.Msg.GetDesigns()) != 0 {
+		t.Errorf("the mounted gateway project = %v, %v; want it to list no designs, since none was added from its folder", gw.Msg.GetDesigns(), err)
+	}
+}
+
+// A mounted project lists the stored designs added from its folder, and only those (agni issue
+// 1756).
+func TestAMountedProjectListsTheDesignsAddedFromItsFolder(t *testing.T) {
+	ctx := context.Background()
+	srv := storeServer(t, t.TempDir())
+	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	projectsClient := webapiconnect.NewProjectServiceClient(http.DefaultClient, srv.URL)
+	if _, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://tut/designs", Designs: []*webapi.DesignToAdd{{Folder: "designs/gateway", DesignId: "gw"}}})); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := designs.CreateDesign(ctx, connect.NewRequest(&webapi.CreateDesignRequest{DesignId: "elsewhere"})); err != nil {
+		t.Fatal(err)
+	}
+	gw, err := projectsClient.GetProject(ctx, connect.NewRequest(&webapi.GetProjectRequest{Name: "projects/gateway"}))
+	if err != nil || !slices.Equal(gw.Msg.GetDesigns(), []string{"designs/gw"}) {
+		t.Errorf("the mounted gateway project lists %v, %v; want the design added from its folder alone", gw.Msg.GetDesigns(), err)
+	}
+	list, err := projectsClient.ListProjects(ctx, connect.NewRequest(&webapi.ListProjectsRequest{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range list.Msg.GetProjects() {
+		if p.GetName() == "projects/gateway" && !slices.Equal(p.GetDesigns(), []string{"designs/gw"}) {
+			t.Errorf("ListProjects shows the gateway project with %v; want designs/gw", p.GetDesigns())
+		}
+	}
+}
+
+// A running server sweeps --uploads on a timer as well as at startup, so a replaced artifact's
+// files go without a restart (agni issue 1742).
+func TestARunningServerSweepsAReplacedArtifactsFiles(t *testing.T) {
+	old := sweepInterval
+	sweepInterval = 20 * time.Millisecond
+	t.Cleanup(func() { sweepInterval = old })
+	dir := t.TempDir()
+	store, uploads := filepath.Join(dir, "store"), filepath.Join(dir, "uploads")
+	ms, err := withUploadsMount(nil, uploads)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver := &service.ProjectResolver{Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
+	_, designSvc, _, err := storeServices(t.Context(), tableOf(ms), store, uploads, nil, resolver, nil, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if _, err := designSvc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "mem"}); err != nil {
+		t.Fatal(err)
+	}
+	put := func(body string) string {
+		t.Helper()
+		h, err := resolver.Blobs.Put([]byte(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := designSvc.UpdateArtifact(ctx, &webapi.UpdateArtifactRequest{AllowMissing: true,
+			Artifact: &webapi.Artifact{Name: "designs/mem/artifacts/netlist", Files: []*webapi.SnapshotFile{{Path: "mem.edn", Sha256: h, Size: int64(len(body))}}}}); err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	first := put("(edif mem 1)")
+	second := put("(edif mem 2)")
+	blobPath := func(h string) string {
+		hex := strings.TrimPrefix(h, "sha256:")
+		return filepath.Join(uploads, "blobs", "sha256", hex[:2], hex[2:])
+	}
+	// Age everything past the grace, as a server up for a day sees it.
+	aged := time.Now().Add(-48 * time.Hour)
+	if err := filepath.WalkDir(uploads, func(p string, _ os.DirEntry, err error) error {
+		if err == nil {
+			err = os.Chtimes(p, aged, aged)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		_, err := os.Stat(blobPath(first))
+		if errors.Is(err, os.ErrNotExist) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("the replaced artifact's blob %s is still there after the server ran a while", first)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if _, err := os.Stat(blobPath(second)); err != nil {
+		t.Errorf("the sweep removed the current artifact's blob: %v", err)
+	}
+	views, _ := os.ReadDir(filepath.Join(uploads, "designs", "mem"))
+	if len(views) != 1 {
+		t.Errorf("the design keeps %d views after the sweep; want only the current one", len(views))
 	}
 }

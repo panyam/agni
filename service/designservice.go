@@ -15,6 +15,7 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/stdlib/rules/intent"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // DesignService serves the design resource, "designs/{design}", over a DesignCatalog (agni issue
@@ -38,6 +39,8 @@ type DesignService struct {
 	uploadsMount string
 	// now stamps a link's read time; time.Now when nil.
 	now func() time.Time
+	// packer keeps an added design's project as a pack, and is set by WithProjectPacks.
+	packer ProjectPacker
 }
 
 // NewDesignService returns a DesignService over catalog, reading uploaded file contents from blobs.
@@ -65,7 +68,11 @@ func (s *DesignService) CreateDesign(ctx context.Context, req *webapi.CreateDesi
 		return nil, fmt.Errorf("%w: design id %q must be lowercase letters, digits, '.', '_' or '-', starting with a letter or digit", ErrInvalidArgument, req.GetDesignId())
 	}
 	d := req.GetDesign()
-	rec := DesignRecord{Title: d.GetTitle(), Series: d.GetSeries(), FlattenHierarchy: d.GetFlattenHierarchy(), Intent: d.GetConfig().GetIntent()}
+	packs, err := packNames(d.GetPacks())
+	if err != nil {
+		return nil, err
+	}
+	rec := DesignRecord{Title: d.GetTitle(), Series: d.GetSeries(), FlattenHierarchy: d.GetFlattenHierarchy(), Intent: d.GetConfig().GetIntent(), Packs: packs}
 	if err := checkDesignConfig(d.GetConfig()); err != nil {
 		return nil, err
 	}
@@ -120,8 +127,13 @@ func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesi
 		paths = []string{"title", "series", "flatten_hierarchy"}
 	}
 	for _, p := range paths {
-		if p != "title" && p != "series" && p != "flatten_hierarchy" && p != "config.intent" {
-			return nil, fmt.Errorf("%w: update_mask path %q; a design's title, series, flatten_hierarchy and config.intent can be changed", ErrInvalidArgument, p)
+		if p != "title" && p != "series" && p != "flatten_hierarchy" && p != "config.intent" && p != "packs" {
+			return nil, fmt.Errorf("%w: update_mask path %q; a design's title, series, flatten_hierarchy, config.intent and packs can be changed", ErrInvalidArgument, p)
+		}
+		if p == "packs" {
+			if _, err := packNames(in.GetPacks()); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if slices.Contains(paths, "config.intent") {
@@ -140,6 +152,8 @@ func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesi
 				r.FlattenHierarchy = in.GetFlattenHierarchy()
 			case "config.intent":
 				r.Intent = in.GetConfig().GetIntent()
+			case "packs":
+				r.Packs = in.GetPacks()
 			}
 		}
 	})
@@ -309,15 +323,46 @@ func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.Impor
 	if err := s.refuseLinked(ctx, req.GetParent(), plan.IDs); err != nil {
 		return nil, err
 	}
+	symbols, err := declaredSymbols(paths, func(p string) ([]byte, error) {
+		b, _ := s.blobs(ctx, byPath[p].GetSha256())
+		return b, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	inSymbols := func(f string) bool {
+		return slices.ContainsFunc(symbols, func(dir string) bool { return strings.HasPrefix(f, dir+"/") })
+	}
 	var writes []ArtifactWrite
 	for _, a := range plan.IDs {
 		w := ArtifactWrite{ID: a, AllowMissing: true}
 		for _, pf := range plan.Files[a] {
+			if inSymbols(pf.Folder) {
+				continue
+			}
 			f := byPath[pf.Folder]
 			w.Files = append(w.Files, &webapi.SnapshotFile{Path: pf.Rel, Sha256: f.GetSha256(), Size: f.GetSize()})
 		}
 		writes = append(writes, w)
 	}
+	// A symbol folder the design.yaml names is an artifact of its own, as AddDesigns keeps one (agni
+	// issue 1756), so a gEDA, Lepton or xschem design reads its parts' pins.
+	for i, dir := range symbols {
+		w := ArtifactWrite{ID: "symbols", AllowMissing: true}
+		if i > 0 {
+			w.ID = fmt.Sprintf("symbols-%d", i+1)
+		}
+		for _, p := range paths {
+			if rel, ok := strings.CutPrefix(p, dir+"/"); ok {
+				f := byPath[p]
+				w.Files = append(w.Files, &webapi.SnapshotFile{Path: rel, Sha256: f.GetSha256(), Size: f.GetSize()})
+			}
+		}
+		if len(w.Files) > 0 {
+			writes = append(writes, w)
+		}
+	}
+	plan.Unread = slices.DeleteFunc(plan.Unread, inSymbols)
 	arts, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(id), writes, s.blobs)
 	if err != nil {
 		return nil, err
@@ -330,6 +375,34 @@ func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.Impor
 		}
 	}
 	return &webapi.ImportDesignFilesResponse{Artifacts: arts, Unread: plan.Unread}, nil
+}
+
+// declaredSymbols reads the symbol folders a top-level design.yaml among the files names under
+// `symbols:`, each cleaned and relative to the folder. A folder outside the files, such as
+// ../shared/symbols, can't be among them and is left out. No design.yaml names none.
+func declaredSymbols(files []string, read func(string) ([]byte, error)) ([]string, error) {
+	if !slices.Contains(files, DesignDescriptorName) {
+		return nil, nil
+	}
+	raw, err := read(DesignDescriptorName)
+	if err != nil {
+		return nil, err
+	}
+	var d struct {
+		Symbols []string `yaml:"symbols"`
+	}
+	if yaml.Unmarshal(raw, &d) != nil {
+		return nil, nil
+	}
+	var out []string
+	for _, dir := range d.Symbols {
+		c, err := mounts.CleanPath(dir)
+		if err != nil || c == "" {
+			continue
+		}
+		out = append(out, c)
+	}
+	return out, nil
 }
 
 // declaredIntent reads the intent a top-level design.yaml among the files declares, nil when there is

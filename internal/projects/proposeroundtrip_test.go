@@ -10,7 +10,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/service"
 )
 
@@ -46,7 +46,7 @@ func TestProposedDescriptorsReadBackAsTheProposedDesign(t *testing.T) {
 	}
 	store := NewFSStore(Tree{Mount: "m", FS: fsys})
 	for _, want := range resp.GetDesigns() {
-		u, err := artifact.Parse(want.GetDesign().GetEntryUri())
+		u, err := mounts.ParseURI(want.GetDesign().GetEntryUri())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -84,7 +84,7 @@ func TestProposingTheTutorialGatewayRecoversItsDeclaredDesign(t *testing.T) {
 	got := resp.GetDesigns()[0].GetDesign()
 
 	store := NewFSStore(Tree{Mount: "m", FS: fsys})
-	declared, _, err := store.ResolveDesign(context.Background(), artifact.URI{Mount: "m", Path: "designs/gateway/gateway.edn"})
+	declared, _, err := store.ResolveDesign(context.Background(), mounts.URI{Mount: "m", Path: "designs/gateway/gateway.edn"})
 	if err != nil || declared == nil {
 		t.Fatalf("the declared design does not resolve: %v", err)
 	}

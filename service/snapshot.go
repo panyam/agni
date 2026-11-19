@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/num"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/timing"
@@ -77,8 +77,8 @@ type Snap struct {
 	Name string
 	// Design is the design as the definition names it. A service still needs it to find the files
 	// beside it (an expectation sidecar, a project's checklists and query sets).
-	Design                   artifact.URI
-	Netlist, Board, Geometry artifact.URI
+	Design                   mounts.URI
+	Netlist, Board, Geometry mounts.URI
 	AsNamed                  bool
 	Overlay                  Overlay
 	// Config is the overlay config the definition carried, before it was composed with the project's.
@@ -113,7 +113,7 @@ func (s Snap) ProjectsOr(r *ProjectResolver) *ProjectResolver {
 
 // BoardRead returns the artifact to read the board from. That is the board tier, or the netlist's
 // own artifact for a format that holds its own copper.
-func (s Snap) BoardRead() artifact.URI { return boardReadURI(s.Netlist, s.Board) }
+func (s Snap) BoardRead() mounts.URI { return boardReadURI(s.Netlist, s.Board) }
 
 // BoardOnly reports whether the design is drawn by its board alone. It is when no file draws its
 // schematic and its board tier holds a board, such as an ODB++ job, an Altium or Allegro board, or an
@@ -343,7 +343,7 @@ type SnapshotService struct {
 // read_board it also reads the model and its board, which needs a ModelLoader. Every service's
 // loader satisfies it, so a test can ingest through whichever loader the service under test holds.
 type SnapshotLoader interface {
-	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
+	Design(ctx context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error)
 }
 
 // NewSnapshotService ingests designs into projects' snapshots. baseConvention is the catalog source
@@ -611,7 +611,7 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 		return nil, err
 	} else if b.model.HasBoard() {
 		out.Tiers.BoardRead = true
-		if p, ok := ld.(interface{ BoardPersisted(artifact.URI) bool }); ok {
+		if p, ok := ld.(interface{ BoardPersisted(mounts.URI) bool }); ok {
 			out.Tiers.BoardPersisted = p.BoardPersisted(boardReadURI(nu, bu))
 		}
 		if bg, err := ml.Board(rctx, boardReadURI(nu, bu)); err == nil && bg != nil {
@@ -621,7 +621,7 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 	// Only the netlist's entry is hashed. An open hashes that file anyway for its verdict links.
 	// Hashing every tier hashed Jetson's 81 MB board on every ingest, about a second in wasm on each
 	// worker.
-	tiers := []artifact.URI{nu, bu, gu}
+	tiers := []mounts.URI{nu, bu, gu}
 	hash := tierHash(rctx, ld, nu)
 	e.snap.Revision = revisionOf(def, tiers, hash)
 	e.changedTiers = func(ctx context.Context) []string {
@@ -668,14 +668,15 @@ func (s *SnapshotService) designURI(ctx context.Context, def *webapi.Snapshot) (
 // definitionPacks looks up the packs a definition names and returns them with each one's hash, in
 // order (agni issue 1704). A definition naming none returns nil.
 func (s *SnapshotService) definitionPacks(ctx context.Context, def *webapi.Snapshot) ([]*webapi.Pack, []string, error) {
-	if len(def.GetPacks()) == 0 {
-		return nil, nil, nil
+	names, err := s.packNamesOf(ctx, def)
+	if err != nil || len(names) == 0 {
+		return nil, nil, err
 	}
 	var lookup PackLookup
 	if s.projects != nil {
 		lookup = s.projects.Packs
 	}
-	packs, err := ResolvePacks(ctx, lookup, def.GetPacks())
+	packs, err := ResolvePacks(ctx, lookup, names)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -688,11 +689,22 @@ func (s *SnapshotService) definitionPacks(ctx context.Context, def *webapi.Snaps
 
 // packsMoved reports whether a pack the entry read under has changed or gone since.
 func (s *SnapshotService) packsMoved(ctx context.Context, e *snapshotEntry, def *webapi.Snapshot) bool {
-	if len(def.GetPacks()) == 0 {
-		return false
-	}
 	_, now, err := s.definitionPacks(ctx, def)
 	return err != nil || !slices.Equal(now, e.packHashes)
+}
+
+// packNamesOf is the packs a definition reads under: the ones it names, else the stored design's
+// own packs when it names a design (agni issue 1756), so a design added from a project reads under
+// that project's pack with no --pack.
+func (s *SnapshotService) packNamesOf(ctx context.Context, def *webapi.Snapshot) ([]string, error) {
+	if len(def.GetPacks()) > 0 || def.GetDesign() == "" || s.projects == nil || s.projects.Designs == nil {
+		return def.GetPacks(), nil
+	}
+	d, err := s.projects.Designs.Design(ctx, def.GetDesign())
+	if err != nil {
+		return nil, err
+	}
+	return d.GetPacks(), nil
 }
 
 // designMoved reports whether a snapshot that names its design must be read again on a repeat
@@ -757,9 +769,9 @@ func definitionOf(s *webapi.Snapshot) *webapi.Snapshot {
 }
 
 // tierHash is the content hash of a tier's entry file, for a loader that hashes, or "".
-func tierHash(ctx context.Context, loader SnapshotLoader, t artifact.URI) string {
+func tierHash(ctx context.Context, loader SnapshotLoader, t mounts.URI) string {
 	hasher, _ := loader.(interface {
-		DesignHash(ctx context.Context, uri artifact.URI) (string, error)
+		DesignHash(ctx context.Context, uri mounts.URI) (string, error)
 	})
 	if hasher == nil || t.IsZero() {
 		return ""
@@ -770,7 +782,7 @@ func tierHash(ctx context.Context, loader SnapshotLoader, t artifact.URI) string
 
 // revisionOf hashes a definition with the tiers it resolved to and its netlist entry's content, so
 // two hosts that read one definition over the same netlist name one revision.
-func revisionOf(def *webapi.Snapshot, tiers []artifact.URI, netlistHash string) string {
+func revisionOf(def *webapi.Snapshot, tiers []mounts.URI, netlistHash string) string {
 	h := sha256.New()
 	b, _ := proto.MarshalOptions{Deterministic: true}.Marshal(def)
 	h.Write(b)

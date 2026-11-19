@@ -136,7 +136,7 @@ func serveSelf(cmd *cobra.Command, spec serverSpec) error {
 		return fmt.Errorf("--server self: this run resolved no mount, so there is nothing to serve")
 	}
 	for _, m := range table {
-		if err := refuseTooBroadRoot(m.Root); err != nil {
+		if err := refuseTooBroadRoot(m.Source); err != nil {
 			return err
 		}
 	}

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/mounts"
 	"gopkg.in/yaml.v3"
 )
 
@@ -110,7 +109,7 @@ func (c *envConfig) anchor(dir string) {
 // anchorPath resolves a relative path beside the file. A rooted one, such as /srv/boards on Windows,
 // stays as written, on the current drive (agni issue 1595).
 func anchorPath(dir, p string) string {
-	if p == "" || mounts.Rooted(p) || strings.Contains(p, "://") {
+	if p == "" || rooted(p) || strings.Contains(p, "://") {
 		return p
 	}
 	return filepath.Join(dir, p)
@@ -157,4 +156,12 @@ func sortStrings(s []string) {
 			s[j], s[j-1] = s[j-1], s[j]
 		}
 	}
+}
+
+// rooted reports whether a host path names a place from a root rather than from a folder: an
+// absolute path, a path with a volume such as C: or \\server\share, or a path that starts with a
+// separator. On Windows `\srv` and `C:srv` are rooted without being absolute, so filepath.IsAbs
+// alone would treat them as relative and join them under another folder (agni issue 1595).
+func rooted(p string) bool {
+	return filepath.IsAbs(p) || filepath.VolumeName(p) != "" || (p != "" && os.IsPathSeparator(p[0]))
 }

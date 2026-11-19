@@ -5,19 +5,19 @@ import (
 	"os"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/agni/mountset"
 )
 
 // rawFileHandler serves one file inside a mount at /raw/<mount>/<path>, for a page that analyses a
 // design in the browser and fetches the files ListDesignFiles named (agni issue 853). It answers
 // files only. A directory, an unknown mount and a path escaping its mount are all not found, since
 // the listing is the only index a client gets.
-func rawFileHandler(ms *mounts.Table) http.Handler {
+func rawFileHandler(ms *mountset.Table) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rest := strings.TrimPrefix(r.URL.Path, "/raw/")
 		mount, p, _ := strings.Cut(rest, "/")
-		u, err := artifact.New(mount, p)
+		u, err := mounts.NewURI(mount, p)
 		if err != nil || p == "" {
 			http.NotFound(w, r)
 			return
@@ -27,7 +27,7 @@ func rawFileHandler(ms *mounts.Table) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		f, err := os.Open(abs) // #nosec G304 G703 -- abs comes from mounts.Resolve, which refuses a path outside its mount
+		f, err := os.Open(abs) // #nosec G304 G703 -- abs comes from mountset.Resolve, which refuses a path outside its mount
 		if err != nil {
 			http.NotFound(w, r)
 			return

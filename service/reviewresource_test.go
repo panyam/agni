@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,16 +23,16 @@ import (
 // With a manifest value alone there is no file to go stale.
 type dirReviewLoader struct{ dir string }
 
-func (l dirReviewLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
+func (l dirReviewLoader) Design(context.Context, mounts.URI, ...ReadOption) (*ir.Design, error) {
 	return &ir.Design{}, nil
 }
-func (l dirReviewLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
+func (l dirReviewLoader) Board(context.Context, mounts.URI) (*geom.BoardGeometry, error) {
 	return nil, nil
 }
-func (l dirReviewLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+func (l dirReviewLoader) DesignHash(context.Context, mounts.URI) (string, error) {
 	return "sha256:fixed", nil
 }
-func (l dirReviewLoader) Manifest(_ context.Context, uri artifact.URI) (review.Manifest, error) {
+func (l dirReviewLoader) Manifest(_ context.Context, uri mounts.URI) (review.Manifest, error) {
 	f, err := os.Open(filepath.Join(l.dir, uri.Path))
 	if err != nil {
 		return review.Manifest{}, err

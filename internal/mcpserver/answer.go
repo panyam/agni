@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/query"
 	rpt "github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -19,7 +19,7 @@ import (
 // once, for both its text and its structured content.
 type answering struct {
 	s      *srv
-	design artifact.URI
+	design mounts.URI
 	snap   *webapi.Snapshot
 
 	// ctx is the call's context. baseFor keeps it for presenting, since jaala hands Format and Data
@@ -156,7 +156,7 @@ func (s *srv) linkMeta(snap *webapi.Snapshot) (rpt.Report, string) {
 	if entry == "" {
 		entry = snap.GetUri()
 	}
-	u, err := artifact.Parse(entry)
+	u, err := mounts.ParseURI(entry)
 	if err != nil || u.Path == "" {
 		return rpt.Report{}, fmt.Sprintf("%s names no file in a mount", entry)
 	}

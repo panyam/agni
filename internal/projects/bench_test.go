@@ -3,7 +3,7 @@ package projects
 import (
 	"context"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"os"
 	"path/filepath"
 	"testing"
@@ -109,7 +109,7 @@ func BenchmarkResolveDesign(b *testing.B) {
 		b.Run(c.name, func(b *testing.B) {
 			s := NewFSStore(benchDir(b, c.projects, c.designs, c.noise))
 			ctx := context.Background()
-			u, err := artifact.New("m", "p00/designs/d00/board.edn")
+			u, err := mounts.NewURI("m", "p00/designs/d00/board.edn")
 			if err != nil {
 				b.Fatal(err)
 			}

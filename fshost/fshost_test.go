@@ -12,7 +12,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/service"
 )
 
@@ -39,14 +39,14 @@ func TestRootIsAnFS(t *testing.T) {
 func TestHostResolvesAURIOnlyInsideItsMount(t *testing.T) {
 	h := New(testMounts()...)
 	cases := []struct {
-		uri  artifact.URI
+		uri  mounts.URI
 		want string
 		err  error
 	}{
-		{artifact.URI{Mount: "b", Path: "x/y.txt"}, "b/x/y.txt", nil},
-		{artifact.URI{Mount: "b", Path: ""}, "b", nil},
-		{artifact.URI{Mount: "nope", Path: "x"}, "", service.ErrNotFound},
-		{artifact.URI{Mount: "b", Path: "../a/one.txt"}, "", service.ErrInvalidPath},
+		{mounts.URI{Mount: "b", Path: "x/y.txt"}, "b/x/y.txt", nil},
+		{mounts.URI{Mount: "b", Path: ""}, "b", nil},
+		{mounts.URI{Mount: "nope", Path: "x"}, "", service.ErrNotFound},
+		{mounts.URI{Mount: "b", Path: "../a/one.txt"}, "", service.ErrInvalidPath},
 	}
 	for _, c := range cases {
 		got, err := h.name(c.uri)
@@ -54,7 +54,7 @@ func TestHostResolvesAURIOnlyInsideItsMount(t *testing.T) {
 			t.Errorf("name(%+v) = %q, %v; want %q, %v", c.uri, got, err, c.want, c.err)
 		}
 	}
-	entries, err := h.Workspace().ListDir(context.Background(), artifact.URI{Mount: "b", Path: ""})
+	entries, err := h.Workspace().ListDir(context.Background(), mounts.URI{Mount: "b", Path: ""})
 	if err != nil || len(entries) != 2 {
 		t.Errorf("ListDir(b) = %v, %v; want top.txt and x", entries, err)
 	}

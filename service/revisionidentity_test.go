@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -17,7 +17,7 @@ import (
 // hashing the right artifact. So this bug survived a suite that already had a hash fixture.
 type perArtifactHash struct{ fakeLoader }
 
-func (perArtifactHash) DesignHash(_ context.Context, u artifact.URI) (string, error) {
+func (perArtifactHash) DesignHash(_ context.Context, u mounts.URI) (string, error) {
 	return "sha256:" + u.Path, nil
 }
 
@@ -60,7 +60,7 @@ type hashRecordingLoader struct {
 	hashed []string
 }
 
-func (l *hashRecordingLoader) DesignHash(_ context.Context, u artifact.URI) (string, error) {
+func (l *hashRecordingLoader) DesignHash(_ context.Context, u mounts.URI) (string, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.hashed = append(l.hashed, u.String())

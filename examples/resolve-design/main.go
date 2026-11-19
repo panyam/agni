@@ -17,7 +17,7 @@ import (
 
 	"github.com/panyam/demokit"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/examples/common"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
@@ -105,7 +105,7 @@ func main() {
 		// addressed the same way, so the comparison is of what was READ rather than how it was
 		// spelled. Turning a URI back into a path happens once, here, at the file edge.
 		for _, r := range []struct{ label, uri string }{{"as named", named}, {"the design's entry", entry}} {
-			u, err := artifact.Parse(r.uri)
+			u, err := mounts.ParseURI(r.uri)
 			if err != nil {
 				return demokit.Errf("parse %s: %v", r.uri, err)
 			}
@@ -125,7 +125,7 @@ func main() {
 // artifactUri names a file inside the bundled fixture tree. The example declares one mount, so the
 // authority is fixed and only the path varies. A server does the same with the operator's mounts.
 func artifactUri(rel string) string {
-	u, err := artifact.New(mount, rel)
+	u, err := mounts.NewURI(mount, rel)
 	if err != nil {
 		return rel
 	}

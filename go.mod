@@ -7,7 +7,8 @@ require (
 	github.com/bodgit/sevenzip v1.6.5
 	github.com/ebitengine/purego v0.8.4
 	github.com/klauspost/compress v1.19.1
-	github.com/panyam/goapplib v0.7.13
+	github.com/panyam/goapplib v0.7.15
+	github.com/panyam/goapplib/storage v0.7.15
 	github.com/panyam/jaala/frontends/mcp v0.1.101
 	github.com/panyam/jaala/frontends/nl v0.1.101
 	github.com/panyam/massrelay v0.3.7
@@ -74,7 +75,7 @@ require (
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/net v0.61.0 // indirect
-	golang.org/x/oauth2 v0.37.0 // indirect
+	golang.org/x/oauth2 v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 )
 
@@ -83,7 +84,7 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/panyam/gocurrent v0.1.2 // indirect
-	github.com/panyam/goutils v0.1.14
+	github.com/panyam/goutils v0.1.15
 	github.com/panyam/jaala v0.1.101
 	github.com/panyam/templar v0.1.2 // indirect
 	golang.org/x/sys v0.49.0 // indirect
