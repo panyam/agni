@@ -2709,6 +2709,10 @@ pub struct DesignToAdd {
     pub title: ::prost::alloc::string::String,
     #[prost(string, tag="4")]
     pub series: ::prost::alloc::string::String,
+    /// entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+    /// and a sheet its root never reaches, and then entry names the one to add.
+    #[prost(string, tag="5")]
+    pub entry: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AddDesignsResponse {

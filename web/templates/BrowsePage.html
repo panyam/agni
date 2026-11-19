@@ -18,6 +18,15 @@
   #browse-preview { position: absolute; inset: 0; overflow: hidden; background: #fff; display: none; }
   .br-note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: #777; }
   .br-note.error { color: #b00; }
+  /* A folder's designs and boards (agni issue 1736) cover the preview while a folder is chosen. */
+  #browse-folder { position: absolute; inset: 0; overflow: auto; background: #fff; display: none; padding: 14px 18px; z-index: 1; }
+  .br-folder h2 { font-size: 15px; margin: 0 0 10px; color: #222; }
+  .br-folder h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: #888; margin: 16px 0 6px; }
+  .br-folder-list { list-style: none; margin: 0; padding: 0; }
+  .br-folder-list li { padding: 3px 0; }
+  .br-folder-note { color: #888; font-size: 12px; }
+  .br-folder-name { font-family: ui-monospace, monospace; font-size: 12px; }
+  .br-folder .br-open { margin-left: 0; }
 </style>
 {{ end }}
 
@@ -42,6 +51,7 @@
       <!-- The read-only preview: a static first-sheet SVG, no presenter and no WebGL context. -->
       <div id="browse-preview"></div>
       <div id="browse-note" class="br-note">Select a design to preview it.</div>
+      <div id="browse-folder" data-component="folder-designs"></div>
     </div>
   </div>
 </div>

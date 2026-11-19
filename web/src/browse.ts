@@ -12,6 +12,7 @@ import { SvgView } from "./svgview.js";
 import { DesignPreview } from "./preview.js";
 import { browseStage, type StageElements } from "./browsestage.js";
 import { designViewClient } from "./api.js";
+import { folderDesignsIsland } from "./folderdesigns.jsx";
 import { currentLocation, emptyLocation, hasDir, locationToUrl, type ViewerLocation } from "./router.js";
 
 // syncUrl reflects the browsed folder into the address bar. Only folders are addressable here. A
@@ -26,6 +27,8 @@ class BrowseRoot extends BaseComponent {
   // revealDir expands the tree to a folder URL on restore (deep link / back-forward), set once the
   // file-tree island is built.
   revealDir: (mount: string, path: string) => void = () => {};
+  // showFolder points the folder panel at a folder, set once the panel is built.
+  showFolder: (mount: string, path: string) => void = () => {};
 
   override performLocalInit(): LCMComponent[] {
     const children: LCMComponent[] = [];
@@ -45,8 +48,15 @@ class BrowseRoot extends BaseComponent {
 
     // The viewer's own file tree, reused whole. No presenter feeds it sheets here, so it shows a flat
     // file list and keeps its lazy directory listing, auto-reveal and no-reader filter.
+    // A folder shows the designs read from it and the boards it holds (agni issue 1736).
+    const folderEl = document.getElementById("browse-folder");
+    const folder = folderEl ? folderDesignsIsland(folderEl, this._eventBus) : null;
+    if (folder) children.push(folder.island);
+    this.showFolder = (mount, path) => folder?.show({ mount, path });
+
     const tree = fileTreeIsland(treeEl, this._eventBus, {
       onFileSelect: (mount, path) => {
+        folder?.show(null);
         stage.setTarget({ mount, path });
         tree.view.setState({ mount, path, sheets: [], activeId: "" }); // highlight it in the list
         void preview.show(mount, path);
@@ -57,6 +67,7 @@ class BrowseRoot extends BaseComponent {
         stage.setTarget(null);
         tree.view.setState({ mount: "", path: "", sheets: [], activeId: "" });
         preview.clear();
+        folder?.show({ mount, path });
         syncUrl({ ...emptyLocation(), mount, path, isDir: true });
       },
       // No sheet ever reaches this tree (nothing pushes sheet state), so this cannot fire.
@@ -88,7 +99,10 @@ void controller
     // Revealing pushes no URL, so unlike the viewer's restore this needs no re-entrancy guard.
     const applyUrl = (): void => {
       const loc = currentLocation();
-      if (hasDir(loc)) root.revealDir(loc.mount, loc.path);
+      if (hasDir(loc)) {
+        root.revealDir(loc.mount, loc.path);
+        root.showFolder(loc.mount, loc.path);
+      }
     };
     window.addEventListener("popstate", applyUrl);
     applyUrl();

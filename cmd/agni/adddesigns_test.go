@@ -162,3 +162,51 @@ func TestTwoReleasesOfOneBoardGetTwoIDs(t *testing.T) {
 		}
 	}
 }
+
+// A folder holding two boards proposes both, and adding the folder alone would be a guess. The
+// request names the board by its entry, and a request naming only the folder is refused with both
+// entries listed (agni issue 1736).
+func TestTwoBoardsInOneFolderAreAddedByEntry(t *testing.T) {
+	ctx := context.Background()
+	lab := t.TempDir()
+	for from, to := range map[string]string{gatewayRevA: "gateway.edn", gatewayRevB: "spare.edn"} {
+		b, err := os.ReadFile(from)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(lab, to), b, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srv := designServer(t, t.TempDir(), t.TempDir(), mounts.Mount{Name: "lab", Root: lab})
+	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	proposed, err := webapiconnect.NewWorkspaceServiceClient(http.DefaultClient, srv.URL).ProposeDesigns(ctx, connect.NewRequest(&webapi.ProposeDesignsRequest{Uri: "mount://lab"}))
+	if err != nil || len(proposed.Msg.GetDesigns()) != 2 {
+		t.Fatalf("ProposeDesigns = %v, %v; want two proposals", proposed, err)
+	}
+	var spare string
+	for _, p := range proposed.Msg.GetDesigns() {
+		if strings.HasSuffix(p.GetDesign().GetEntryUri(), "/spare.edn") {
+			spare = p.GetDesign().GetEntryUri()
+		}
+	}
+	if spare == "" {
+		t.Fatalf("ProposeDesigns = %v; want one entry at spare.edn", proposed.Msg.GetDesigns())
+	}
+
+	_, err = designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://lab", Designs: []*webapi.DesignToAdd{{Folder: ""}}}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument || !strings.Contains(err.Error(), "spare.edn") || !strings.Contains(err.Error(), "gateway.edn") {
+		t.Fatalf("AddDesigns naming only a shared folder = %v; want INVALID_ARGUMENT naming both entries", err)
+	}
+	added, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://lab", Designs: []*webapi.DesignToAdd{{Folder: "", Entry: spare}}}))
+	if err != nil || len(added.Msg.GetDesigns()) != 1 || added.Msg.GetDesigns()[0].GetName() != "designs/spare" {
+		t.Fatalf("AddDesigns naming spare.edn = %v, %v; want designs/spare", added, err)
+	}
+	arts, err := designs.ListArtifacts(ctx, connect.NewRequest(&webapi.ListArtifactsRequest{Parent: "designs/spare"}))
+	if err != nil || len(arts.Msg.GetArtifacts()) != 1 {
+		t.Fatalf("ListArtifacts(designs/spare) = %v, %v; want one artifact", arts, err)
+	}
+	if files := arts.Msg.GetArtifacts()[0].GetFiles(); len(files) != 1 || !strings.HasSuffix(files[0].GetPath(), "spare.edn") {
+		t.Fatalf("designs/spare's files = %v; want spare.edn alone", files)
+	}
+}

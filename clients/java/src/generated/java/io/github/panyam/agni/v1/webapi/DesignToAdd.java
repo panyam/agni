@@ -36,6 +36,7 @@ private static final long serialVersionUID = 0L;
     designId_ = "";
     title_ = "";
     series_ = "";
+    entry_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -236,6 +237,55 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int ENTRY_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object entry_ = "";
+  /**
+   * <pre>
+   * entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+   * and a sheet its root never reaches, and then entry names the one to add.
+   * </pre>
+   *
+   * <code>string entry = 5 [json_name = "entry"];</code>
+   * @return The entry.
+   */
+  @java.lang.Override
+  public java.lang.String getEntry() {
+    java.lang.Object ref = entry_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      entry_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+   * and a sheet its root never reaches, and then entry names the one to add.
+   * </pre>
+   *
+   * <code>string entry = 5 [json_name = "entry"];</code>
+   * @return The bytes for entry.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEntryBytes() {
+    java.lang.Object ref = entry_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      entry_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -262,6 +312,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(series_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 4, series_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(entry_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, entry_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -277,6 +330,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(series_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(4, series_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(entry_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, entry_);
     }
     return size;
   }
@@ -310,6 +366,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getTitle())) return false;
     if (!getSeries()
         .equals(other.getSeries())) return false;
+    if (!getEntry()
+        .equals(other.getEntry())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -329,6 +387,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getTitle().hashCode();
     hash = (37 * hash) + SERIES_FIELD_NUMBER;
     hash = (53 * hash) + getSeries().hashCode();
+    hash = (37 * hash) + ENTRY_FIELD_NUMBER;
+    hash = (53 * hash) + getEntry().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -468,6 +528,7 @@ private static final long serialVersionUID = 0L;
       designId_ = "";
       title_ = "";
       series_ = "";
+      entry_ = "";
       return this;
     }
 
@@ -513,6 +574,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000008) != 0)) {
         result.series_ = series_;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.entry_ = entry_;
+      }
     }
 
     @java.lang.Override
@@ -545,6 +609,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getSeries().isEmpty()) {
         series_ = other.series_;
         bitField0_ |= 0x00000008;
+        onChanged();
+      }
+      if (!other.getEntry().isEmpty()) {
+        entry_ = other.entry_;
+        bitField0_ |= 0x00000010;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -591,6 +660,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 34
+            case 42: {
+              entry_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -952,6 +1026,103 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       series_ = value;
       bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object entry_ = "";
+    /**
+     * <pre>
+     * entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+     * and a sheet its root never reaches, and then entry names the one to add.
+     * </pre>
+     *
+     * <code>string entry = 5 [json_name = "entry"];</code>
+     * @return The entry.
+     */
+    public java.lang.String getEntry() {
+      java.lang.Object ref = entry_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        entry_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+     * and a sheet its root never reaches, and then entry names the one to add.
+     * </pre>
+     *
+     * <code>string entry = 5 [json_name = "entry"];</code>
+     * @return The bytes for entry.
+     */
+    public com.google.protobuf.ByteString
+        getEntryBytes() {
+      java.lang.Object ref = entry_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        entry_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+     * and a sheet its root never reaches, and then entry names the one to add.
+     * </pre>
+     *
+     * <code>string entry = 5 [json_name = "entry"];</code>
+     * @param value The entry to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEntry(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      entry_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+     * and a sheet its root never reaches, and then entry names the one to add.
+     * </pre>
+     *
+     * <code>string entry = 5 [json_name = "entry"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEntry() {
+      entry_ = getDefaultInstance().getEntry();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+     * and a sheet its root never reaches, and then entry names the one to add.
+     * </pre>
+     *
+     * <code>string entry = 5 [json_name = "entry"];</code>
+     * @param value The bytes for entry to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEntryBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      entry_ = value;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }

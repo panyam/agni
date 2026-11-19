@@ -275,7 +275,7 @@ With neither --yes nor --only, add lists the proposals and keeps nothing. --yes 
 					fmt.Fprintf(cmd.OutOrStdout(), "proposed\t%s\t%s\t%d files\t%s\n", displayFolder(p.GetFolder()), id, len(p.GetFiles()), p.GetNote())
 					continue
 				}
-				picks = append(picks, &webapi.DesignToAdd{Folder: p.GetFolder(), DesignId: id, Series: addSeries})
+				picks = append(picks, &webapi.DesignToAdd{Folder: p.GetFolder(), Entry: p.GetDesign().GetEntryUri(), DesignId: id, Series: addSeries})
 			}
 			if len(picks) == 0 {
 				if len(proposed.GetDesigns()) == 0 {

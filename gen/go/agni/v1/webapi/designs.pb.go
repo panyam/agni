@@ -1186,8 +1186,11 @@ type DesignToAdd struct {
 	// design_id is the new design's id. Empty takes the proposal's name, lowercased.
 	DesignId string `protobuf:"bytes,2,opt,name=design_id,json=designId,proto3" json:"design_id,omitempty"`
 	// title and series are the new design's. An empty title takes the proposal's.
-	Title         string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
-	Series        string `protobuf:"bytes,4,opt,name=series,proto3" json:"series,omitempty"`
+	Title  string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Series string `protobuf:"bytes,4,opt,name=series,proto3" json:"series,omitempty"`
+	// entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+	// and a sheet its root never reaches, and then entry names the one to add.
+	Entry         string `protobuf:"bytes,5,opt,name=entry,proto3" json:"entry,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1246,6 +1249,13 @@ func (x *DesignToAdd) GetTitle() string {
 func (x *DesignToAdd) GetSeries() string {
 	if x != nil {
 		return x.Series
+	}
+	return ""
+}
+
+func (x *DesignToAdd) GetEntry() string {
+	if x != nil {
+		return x.Entry
 	}
 	return ""
 }
@@ -2144,12 +2154,13 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x11AddDesignsRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\x125\n" +
 	"\adesigns\x18\x02 \x03(\v2\x1b.agni.v1.webapi.DesignToAddR\adesigns\x12#\n" +
-	"\rvalidate_only\x18\x03 \x01(\bR\fvalidateOnly\"p\n" +
+	"\rvalidate_only\x18\x03 \x01(\bR\fvalidateOnly\"\x86\x01\n" +
 	"\vDesignToAdd\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x1b\n" +
 	"\tdesign_id\x18\x02 \x01(\tR\bdesignId\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12\x16\n" +
-	"\x06series\x18\x04 \x01(\tR\x06series\"F\n" +
+	"\x06series\x18\x04 \x01(\tR\x06series\x12\x14\n" +
+	"\x05entry\x18\x05 \x01(\tR\x05entry\"F\n" +
 	"\x12AddDesignsResponse\x120\n" +
 	"\adesigns\x18\x01 \x03(\v2\x16.agni.v1.webapi.DesignR\adesigns\"(\n" +
 	"\x12GetArtifactRequest\x12\x12\n" +

@@ -279,15 +279,19 @@ function Library() {
     <div class="lb-library">
       <StoreNav here="designs" />
       <p class="lb-tagline">
-        The designs this server holds, kept here or in a mounted folder. <a href="/mounts/">Browse the mounted folders</a> for a file that is not a design yet.
+        The designs this server keeps. <a href="/mounts/">Browse the mounted folders</a> to add the boards in one as designs, or open a file that is not a design.
       </p>
       <div class="lb-filter" data-testid="design-filter">
         <input type="search" name="text" placeholder="Filter by id, title or series" value={text()} onInput={(e) => setText(e.currentTarget.value)} />
-        <select name="where" value={where()} onChange={(e) => setWhere(e.currentTarget.value)}>
-          <option value={ALL_WHERES}>Kept anywhere</option>
-          <option value={KEPT_HERE}>Kept on this server</option>
-          <For each={wheres(designs())}>{(m) => <option value={m}>In the mount {m}</option>}</For>
-        </select>
+        {/* Only the browser engine still lists mounted designs (agni issue 1736), so the choice of
+            where shows only when there is one to make. */}
+        <Show when={wheres(designs()).length > 0}>
+          <select name="where" value={where()} onChange={(e) => setWhere(e.currentTarget.value)}>
+            <option value={ALL_WHERES}>Kept anywhere</option>
+            <option value={KEPT_HERE}>Kept on this server</option>
+            <For each={wheres(designs())}>{(m) => <option value={m}>In the mount {m}</option>}</For>
+          </select>
+        </Show>
       </div>
       <p class="lb-status" data-testid="library-status">
         {status()}

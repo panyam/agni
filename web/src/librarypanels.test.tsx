@@ -108,6 +108,13 @@ describe("a design's page", () => {
 });
 
 describe("the library's filter", () => {
+  it("offers no choice of where when every design is kept on the server", async () => {
+    fake.designs = [create(DesignSchema, { name: "designs/bb", entryUri: "mount://uploads/bb/r/schematic/bb.kicad_sch" })];
+    const el = mount((e) => libraryIsland(e, null));
+    await vi.waitFor(() => expect(el.querySelectorAll(".lb-row").length).toBe(1));
+    expect(el.querySelector('select[name="where"]')).toBeNull();
+  });
+
   it("narrows the list by text and by where a design is kept", async () => {
     fake.designs = [
       create(DesignSchema, { name: "designs/bb-1.1.3", title: "Baseboard", series: "bb", entryUri: "mount://uploads/bb-1.1.3/r/schematic/bb.kicad_sch" }),
