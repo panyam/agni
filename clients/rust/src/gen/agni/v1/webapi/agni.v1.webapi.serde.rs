@@ -9853,9 +9853,17 @@ impl serde::Serialize for GetReportRequest {
         if !self.name.is_empty() {
             len += 1;
         }
+        if self.view != 0 {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.GetReportRequest", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
+        }
+        if self.view != 0 {
+            let v = ReportView::try_from(self.view)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", self.view)))?;
+            struct_ser.serialize_field("view", &v)?;
         }
         struct_ser.end()
     }
@@ -9868,11 +9876,13 @@ impl<'de> serde::Deserialize<'de> for GetReportRequest {
     {
         const FIELDS: &[&str] = &[
             "name",
+            "view",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Name,
+            View,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -9895,6 +9905,7 @@ impl<'de> serde::Deserialize<'de> for GetReportRequest {
                     {
                         match value {
                             "name" => Ok(GeneratedField::Name),
+                            "view" => Ok(GeneratedField::View),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -9915,6 +9926,7 @@ impl<'de> serde::Deserialize<'de> for GetReportRequest {
                     V: serde::de::MapAccess<'de>,
             {
                 let mut name__ = None;
+                let mut view__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -9923,10 +9935,17 @@ impl<'de> serde::Deserialize<'de> for GetReportRequest {
                             }
                             name__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::View => {
+                            if view__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("view"));
+                            }
+                            view__ = Some(map_.next_value::<ReportView>()? as i32);
+                        }
                     }
                 }
                 Ok(GetReportRequest {
                     name: name__.unwrap_or_default(),
+                    view: view__.unwrap_or_default(),
                 })
             }
         }
@@ -15043,6 +15062,9 @@ impl serde::Serialize for ListReportsRequest {
         if !self.filter.is_empty() {
             len += 1;
         }
+        if self.view != 0 {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.ListReportsRequest", len)?;
         if !self.parent.is_empty() {
             struct_ser.serialize_field("parent", &self.parent)?;
@@ -15055,6 +15077,11 @@ impl serde::Serialize for ListReportsRequest {
         }
         if !self.filter.is_empty() {
             struct_ser.serialize_field("filter", &self.filter)?;
+        }
+        if self.view != 0 {
+            let v = ReportView::try_from(self.view)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", self.view)))?;
+            struct_ser.serialize_field("view", &v)?;
         }
         struct_ser.end()
     }
@@ -15072,6 +15099,7 @@ impl<'de> serde::Deserialize<'de> for ListReportsRequest {
             "page_token",
             "pageToken",
             "filter",
+            "view",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -15080,6 +15108,7 @@ impl<'de> serde::Deserialize<'de> for ListReportsRequest {
             PageSize,
             PageToken,
             Filter,
+            View,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -15105,6 +15134,7 @@ impl<'de> serde::Deserialize<'de> for ListReportsRequest {
                             "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
                             "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
                             "filter" => Ok(GeneratedField::Filter),
+                            "view" => Ok(GeneratedField::View),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -15128,6 +15158,7 @@ impl<'de> serde::Deserialize<'de> for ListReportsRequest {
                 let mut page_size__ = None;
                 let mut page_token__ = None;
                 let mut filter__ = None;
+                let mut view__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Parent => {
@@ -15156,6 +15187,12 @@ impl<'de> serde::Deserialize<'de> for ListReportsRequest {
                             }
                             filter__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::View => {
+                            if view__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("view"));
+                            }
+                            view__ = Some(map_.next_value::<ReportView>()? as i32);
+                        }
                     }
                 }
                 Ok(ListReportsRequest {
@@ -15163,6 +15200,7 @@ impl<'de> serde::Deserialize<'de> for ListReportsRequest {
                     page_size: page_size__.unwrap_or_default(),
                     page_token: page_token__.unwrap_or_default(),
                     filter: filter__.unwrap_or_default(),
+                    view: view__.unwrap_or_default(),
                 })
             }
         }
@@ -21206,6 +21244,9 @@ impl serde::Serialize for Report {
         if !self.packs_changed.is_empty() {
             len += 1;
         }
+        if self.finding_count != 0 {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Report", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -21234,6 +21275,9 @@ impl serde::Serialize for Report {
         if !self.packs_changed.is_empty() {
             struct_ser.serialize_field("packsChanged", &self.packs_changed)?;
         }
+        if self.finding_count != 0 {
+            struct_ser.serialize_field("findingCount", &self.finding_count)?;
+        }
         struct_ser.end()
     }
 }
@@ -21258,6 +21302,8 @@ impl<'de> serde::Deserialize<'de> for Report {
             "designChanged",
             "packs_changed",
             "packsChanged",
+            "finding_count",
+            "findingCount",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -21271,6 +21317,7 @@ impl<'de> serde::Deserialize<'de> for Report {
             CreateTime,
             DesignChanged,
             PacksChanged,
+            FindingCount,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -21301,6 +21348,7 @@ impl<'de> serde::Deserialize<'de> for Report {
                             "createTime" | "create_time" => Ok(GeneratedField::CreateTime),
                             "designChanged" | "design_changed" => Ok(GeneratedField::DesignChanged),
                             "packsChanged" | "packs_changed" => Ok(GeneratedField::PacksChanged),
+                            "findingCount" | "finding_count" => Ok(GeneratedField::FindingCount),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -21329,6 +21377,7 @@ impl<'de> serde::Deserialize<'de> for Report {
                 let mut create_time__ = None;
                 let mut design_changed__ = None;
                 let mut packs_changed__ = None;
+                let mut finding_count__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -21385,6 +21434,14 @@ impl<'de> serde::Deserialize<'de> for Report {
                             }
                             packs_changed__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::FindingCount => {
+                            if finding_count__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("findingCount"));
+                            }
+                            finding_count__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
                     }
                 }
                 Ok(Report {
@@ -21397,6 +21454,7 @@ impl<'de> serde::Deserialize<'de> for Report {
                     create_time: create_time__,
                     design_changed: design_changed__.unwrap_or_default(),
                     packs_changed: packs_changed__.unwrap_or_default(),
+                    finding_count: finding_count__.unwrap_or_default(),
                 })
             }
         }
@@ -21528,6 +21586,80 @@ impl<'de> serde::Deserialize<'de> for ReportLinks {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.ReportLinks", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ReportView {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unspecified => "REPORT_VIEW_UNSPECIFIED",
+            Self::Basic => "REPORT_VIEW_BASIC",
+            Self::Full => "REPORT_VIEW_FULL",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for ReportView {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "REPORT_VIEW_UNSPECIFIED",
+            "REPORT_VIEW_BASIC",
+            "REPORT_VIEW_FULL",
+        ];
+
+        struct GeneratedVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ReportView;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", &FIELDS)
+            }
+
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                    })
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                    })
+            }
+
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "REPORT_VIEW_UNSPECIFIED" => Ok(ReportView::Unspecified),
+                    "REPORT_VIEW_BASIC" => Ok(ReportView::Basic),
+                    "REPORT_VIEW_FULL" => Ok(ReportView::Full),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
     }
 }
 impl serde::Serialize for RequestTiming {

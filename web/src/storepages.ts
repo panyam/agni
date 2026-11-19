@@ -96,6 +96,34 @@ export function diffUrl(a: Design, b: Design): string {
   return locationToUrl({ ...emptyLocation(), mount: uriMount(a.entryUri), path: uriPath(a.entryUri), against: `${uriMount(b.entryUri)}/${uriPath(b.entryUri)}` });
 }
 
+// designViewUrl opens the viewer on a stored design read by name under packs, in order (agni issue
+// 1697). The server redirects it to the design's current entry.
+export function designViewUrl(design: string, packs: string[]): string {
+  const q = new URLSearchParams();
+  for (const k of packs) q.append("pack", lastSegment(k));
+  const qs = q.toString();
+  return `${DESIGNS}${encodeURIComponent(design.replace(/^designs\//, ""))}/view${qs ? `?${qs}` : ""}`;
+}
+
+// ReportFinding is the part of a report's finding a link reads.
+interface ReportFinding {
+  rule: string;
+  verdictIds: string[];
+}
+
+// findingUrl opens the viewer on the verdict a report's finding was projected from, read under the
+// report's packs, or "" for a finding of a rule that states no verdicts (agni issue 1753). The link
+// names the rule, so the viewer runs that one rule to find the verdict.
+export function findingUrl(design: string, packs: string[], f: ReportFinding): string {
+  const id = f.verdictIds[0];
+  if (!id) return "";
+  const q = new URLSearchParams();
+  q.set("verdict", id);
+  q.set("rule", f.rule);
+  const base = designViewUrl(design, packs);
+  return `${base}${base.includes("?") ? "&" : "?"}${q.toString()}`;
+}
+
 // PacksClient is the part of PackService the packs page's upload calls.
 export interface PacksClient {
   importPackFiles(req: { packId: string; title: string; files: SnapshotFile[] }): Promise<Pack>;

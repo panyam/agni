@@ -123,6 +123,20 @@ message Report {
   // packs_changed names each pack whose hash differs now from what the run read, or which is gone.
   // Computed on every read. Output only.
   repeated string packs_changed = 9;
+  // finding_count is how many findings results holds, set on every read, so a BASIC view that leaves
+  // results out still says it (agni issue 1753). Output only.
+  int32 finding_count = 10;
+}
+
+// ReportView is how much of a report a read returns (AIP-157). A report keeps its whole run, every
+// verdict included, which runs to megabytes on a large board, so a listing leaves the run out.
+enum ReportView {
+  // REPORT_VIEW_UNSPECIFIED is BASIC for ListReports and FULL for GetReport.
+  REPORT_VIEW_UNSPECIFIED = 0;
+  // REPORT_VIEW_BASIC leaves results out, keeping finding_count.
+  REPORT_VIEW_BASIC = 1;
+  // REPORT_VIEW_FULL includes results.
+  REPORT_VIEW_FULL = 2;
 }
 
 message CreateReportRequest {
@@ -139,6 +153,8 @@ message CreateReportRequest {
 
 message GetReportRequest {
   string name = 1; // "designs/{design}/reports/{report}"
+  // view is how much of the report to return. Unspecified returns it whole.
+  ReportView view = 2;
 }
 
 message ListReportsRequest {
@@ -150,6 +166,9 @@ message ListReportsRequest {
   // filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
   // rather than ignored, since a client that believed it had filtered would read the wrong reports.
   string filter = 4;
+  // view is how much of each report to return. Unspecified leaves each report's results out, so a
+  // client draws a list without fetching every run, and GetReport fetches the one it opens.
+  ReportView view = 5;
 }
 
 message ListReportsResponse {

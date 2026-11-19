@@ -12,10 +12,9 @@ import type { Design } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 import { ArtifactType, type Artifact, type Report } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
 import type { Pack } from "@panyam/agni-client/gen/agni/v1/webapi/packs_pb";
 import type { Project } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
-import { uriMount, uriPath } from "@agni/web-shared/uri.js";
+import { uriMount } from "@agni/web-shared/uri.js";
 import { designClient, packClient, projectClient, uploadsClient } from "./api.js";
-import { diffUrl, filterDesigns, KEPT_HERE, lastSegment, packUrl, projectUrl, reportState, wheres } from "./storepages.js";
-import { openUrl } from "./landingpanels.jsx";
+import { designViewUrl, diffUrl, filterDesigns, findingUrl, KEPT_HERE, lastSegment, packUrl, projectUrl, reportState, wheres } from "./storepages.js";
 import { designId, groupBySeries, importFolder, libraryUrl, replaceArtifact, type DesignsClient, type Picked, type UploadsClient } from "./libraryupload.js";
 
 // noStore words the answer of a server started without --store or --uploads.
@@ -52,7 +51,7 @@ export function when(d: { updateTime?: { seconds: bigint } }): string {
 function viewerLink(d: Design): JSX.Element {
   return (
     <Show when={d.entryUri} fallback={<span class="lb-note">nothing to open yet</span>}>
-      <a class="lb-open" href={openUrl("design", uriMount(d.entryUri), uriPath(d.entryUri))}>
+      <a class="lb-open" href={designViewUrl(d.name, [])}>
         Open in viewer
       </a>
     </Show>
@@ -415,8 +414,9 @@ export { listPacks };
 function ReportView(props: { report: Report; onDelete: () => void }) {
   const findings = () => props.report.results?.findings ?? [];
   const groups = createMemo(() => findingsByRule(findings()));
+  const design = () => props.report.name.replace(/\/reports\/.*$/, "");
   return (
-    <div class="lb-report" data-testid="report" data-report={props.report.name} data-total={findings().length}>
+    <div class="lb-report" data-testid="report" data-report={props.report.name} data-total={props.report.findingCount}>
       <p class="lb-meta">
         {props.report.packs.length ? "Packs " : "No pack"}
         <For each={props.report.packs}>
@@ -438,7 +438,11 @@ function ReportView(props: { report: Report; onDelete: () => void }) {
         {reportState(props.report)}
       </p>
       <p class="lb-note">
-        {findings().length} findings from {groups().length} rules{" "}
+        <a class="lb-open" data-testid="report-view" href={designViewUrl(design(), props.report.packs)}>
+          Open in the viewer under {props.report.packs.length ? "these packs" : "no pack"}
+        </a>
+        {" · "}
+        {props.report.findingCount} findings from {groups().length} rules{" "}
         <button type="button" class="lb-delete" onClick={props.onDelete}>
           Delete report
         </button>
@@ -452,11 +456,20 @@ function ReportView(props: { report: Report; onDelete: () => void }) {
               </summary>
               <ul>
                 <For each={g.findings}>
-                  {(f) => (
-                    <li>
-                      <span class="lb-subject">{f.subject ? `${f.subject.kind} ${f.subject.ref}` : "design"}</span> {f.message}
-                    </li>
-                  )}
+                  {(f) => {
+                    const href = findingUrl(design(), props.report.packs, f);
+                    const subject = f.subject ? `${f.subject.kind} ${f.subject.ref}` : "design";
+                    return (
+                      <li>
+                        <Show when={href} fallback={<span class="lb-subject" title="This rule states no verdicts, so the viewer has nothing to open it on.">{subject}</span>}>
+                          <a class="lb-subject" href={href}>
+                            {subject}
+                          </a>
+                        </Show>{" "}
+                        {f.message}
+                      </li>
+                    );
+                  }}
                 </For>
               </ul>
             </details>
@@ -554,23 +567,40 @@ function Reports(props: { design: string }) {
   const [reports, setReports] = createSignal<Report[]>([]);
   const [selected, setSelected] = createSignal("");
   const [status, setStatus] = createSignal("");
+  // full holds each report's whole run once its tab is opened. The listing leaves runs out, since a
+  // run with every verdict runs to megabytes on a large board (agni issue 1753).
+  const [full, setFull] = createSignal<Record<string, Report>>({});
+  const open = (name: string) => {
+    setSelected(name);
+    if (!name || full()[name]) return;
+    void designClient()
+      .getReport({ name })
+      .then((r) => setFull({ ...full(), [name]: r }))
+      .catch((err) => setStatus(explain(err)));
+  };
   const load = async (select?: string) => {
     const rs = await listReports(props.design);
     setReports(rs);
-    if (select) setSelected(select);
-    else if (!rs.some((r) => r.name === selected())) setSelected(rs[0]?.name ?? "");
+    if (select) open(select);
+    else if (!rs.some((r) => r.name === selected())) open(rs[0]?.name ?? "");
   };
   void load().catch((err) => setStatus(explain(err)));
-  const current = () => reports().find((r) => r.name === selected());
+  const current = () => full()[selected()];
   return (
     <section class="lb-reports" data-testid="reports">
       <h2>Reports</h2>
-      <Validate design={props.design} onMade={(r) => void load(r.name).catch((err) => setStatus(explain(err)))} />
+      <Validate
+        design={props.design}
+        onMade={(r) => {
+          setFull({ ...full(), [r.name]: r });
+          void load(r.name).catch((err) => setStatus(explain(err)));
+        }}
+      />
       <Show when={reports().length > 0} fallback={<p class="lb-note">No reports yet.</p>}>
         <div class="lb-tabs" role="tablist">
           <For each={reports()}>
             {(r) => (
-              <button type="button" role="tab" class="lb-tab" classList={{ "lb-tab-on": r.name === selected(), "lb-stale": reportState(r) !== "current" }} aria-selected={r.name === selected()} data-report={r.name} onClick={() => setSelected(r.name)}>
+              <button type="button" role="tab" class="lb-tab" classList={{ "lb-tab-on": r.name === selected(), "lb-stale": reportState(r) !== "current" }} aria-selected={r.name === selected()} data-report={r.name} onClick={() => open(r.name)}>
                 {lastSegment(r.name)}
               </button>
             )}

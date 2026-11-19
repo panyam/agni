@@ -2493,6 +2493,10 @@ pub struct Report {
     /// Computed on every read. Output only.
     #[prost(string, repeated, tag="9")]
     pub packs_changed: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// finding_count is how many findings results holds, set on every read, so a BASIC view that leaves
+    /// results out still says it (agni issue 1753). Output only.
+    #[prost(int32, tag="10")]
+    pub finding_count: i32,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateReportRequest {
@@ -2516,6 +2520,9 @@ pub struct GetReportRequest {
     /// "designs/{design}/reports/{report}"
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
+    /// view is how much of the report to return. Unspecified returns it whole.
+    #[prost(enumeration="ReportView", tag="2")]
+    pub view: i32,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListReportsRequest {
@@ -2532,6 +2539,10 @@ pub struct ListReportsRequest {
     /// rather than ignored, since a client that believed it had filtered would read the wrong reports.
     #[prost(string, tag="4")]
     pub filter: ::prost::alloc::string::String,
+    /// view is how much of each report to return. Unspecified leaves each report's results out, so a
+    /// client draws a list without fetching every run, and GetReport fetches the one it opens.
+    #[prost(enumeration="ReportView", tag="5")]
+    pub view: i32,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListReportsResponse {
@@ -2709,6 +2720,40 @@ pub struct ImportDesignFilesResponse {
     /// unread names the files no reader opens, such as a README. They are not stored.
     #[prost(string, repeated, tag="2")]
     pub unread: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// ReportView is how much of a report a read returns (AIP-157). A report keeps its whole run, every
+/// verdict included, which runs to megabytes on a large board, so a listing leaves the run out.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ReportView {
+    /// REPORT_VIEW_UNSPECIFIED is BASIC for ListReports and FULL for GetReport.
+    Unspecified = 0,
+    /// REPORT_VIEW_BASIC leaves results out, keeping finding_count.
+    Basic = 1,
+    /// REPORT_VIEW_FULL includes results.
+    Full = 2,
+}
+impl ReportView {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "REPORT_VIEW_UNSPECIFIED",
+            Self::Basic => "REPORT_VIEW_BASIC",
+            Self::Full => "REPORT_VIEW_FULL",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "REPORT_VIEW_UNSPECIFIED" => Some(Self::Unspecified),
+            "REPORT_VIEW_BASIC" => Some(Self::Basic),
+            "REPORT_VIEW_FULL" => Some(Self::Full),
+            _ => None,
+        }
+    }
 }
 /// ArtifactType is what an artifact holds, found from its entry's format.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]

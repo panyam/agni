@@ -145,5 +145,5 @@ func printReport(w io.Writer, r *webapi.Report) {
 	if len(changed) > 0 {
 		note = strings.Join(changed, "; ")
 	}
-	fmt.Fprintf(w, "%s\t%s\t%d findings\t%s\n", r.GetName(), strings.Join(r.GetPacks(), ","), len(r.GetResults().GetFindings()), note)
+	fmt.Fprintf(w, "%s\t%s\t%d findings\t%s\n", r.GetName(), strings.Join(r.GetPacks(), ","), r.GetFindingCount(), note)
 }

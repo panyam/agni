@@ -55,10 +55,28 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 	// Timing wraps every handler, outermost, so a request's total includes the budget's own work.
 	timed := connect.WithInterceptors(append([]connect.Interceptor{a.Timing.Interceptor(), refreshedHeader()}, a.Hooks...)...)
 	queried := append([]connect.HandlerOption{timed}, queryOpts...)
-	add(webapiconnect.NewWorkspaceServiceHandler(NewWorkspace(a.Workspace), timed))
-	add(webapiconnect.NewProjectServiceHandler(NewProject(a.Project), timed))
-	add(webapiconnect.NewSnapshotServiceHandler(NewSnapshot(a.Snapshot), timed))
-	add(webapiconnect.NewDesignViewServiceHandler(NewDesignView(a.DesignView), timed))
+	// A service the host left nil answers UNIMPLEMENTED, rather than a wrapper calling a nil service
+	// and panicking in the handler (agni issue 1753).
+	add(pick(a.Workspace == nil, func() (string, http.Handler) {
+		return webapiconnect.NewWorkspaceServiceHandler(webapiconnect.UnimplementedWorkspaceServiceHandler{}, timed)
+	}, func() (string, http.Handler) {
+		return webapiconnect.NewWorkspaceServiceHandler(NewWorkspace(a.Workspace), timed)
+	}))
+	add(pick(a.Project == nil, func() (string, http.Handler) {
+		return webapiconnect.NewProjectServiceHandler(webapiconnect.UnimplementedProjectServiceHandler{}, timed)
+	}, func() (string, http.Handler) {
+		return webapiconnect.NewProjectServiceHandler(NewProject(a.Project), timed)
+	}))
+	add(pick(a.Snapshot == nil, func() (string, http.Handler) {
+		return webapiconnect.NewSnapshotServiceHandler(webapiconnect.UnimplementedSnapshotServiceHandler{}, timed)
+	}, func() (string, http.Handler) {
+		return webapiconnect.NewSnapshotServiceHandler(NewSnapshot(a.Snapshot), timed)
+	}))
+	add(pick(a.DesignView == nil, func() (string, http.Handler) {
+		return webapiconnect.NewDesignViewServiceHandler(webapiconnect.UnimplementedDesignViewServiceHandler{}, timed)
+	}, func() (string, http.Handler) {
+		return webapiconnect.NewDesignViewServiceHandler(NewDesignView(a.DesignView), timed)
+	}))
 	design := a.Design
 	if design == nil {
 		design = service.NewDesignService(nil, nil)
@@ -69,14 +87,32 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 		pack = service.NewPackService(nil, nil)
 	}
 	add(webapiconnect.NewPackServiceHandler(NewPack(pack), timed))
-	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queried...))
+	add(pick(a.Check == nil, func() (string, http.Handler) {
+		return webapiconnect.NewCheckServiceHandler(webapiconnect.UnimplementedCheckServiceHandler{}, queried...)
+	}, func() (string, http.Handler) {
+		return webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queried...)
+	}))
 	// The lexicon questions run the check service's catalog over its loader, so they are built from
 	// the check service. A field would let a host fill in a different catalog (agni issue 1266).
-	add(webapiconnect.NewLexiconServiceHandler(NewLexicon(service.NewLexiconService(a.Check)), queried...))
-	add(webapiconnect.NewDiffServiceHandler(NewDiff(a.Diff), timed))
+	add(pick(a.Check == nil, func() (string, http.Handler) {
+		return webapiconnect.NewLexiconServiceHandler(webapiconnect.UnimplementedLexiconServiceHandler{}, queried...)
+	}, func() (string, http.Handler) {
+		return webapiconnect.NewLexiconServiceHandler(NewLexicon(service.NewLexiconService(a.Check)), queried...)
+	}))
+	add(pick(a.Diff == nil, func() (string, http.Handler) {
+		return webapiconnect.NewDiffServiceHandler(webapiconnect.UnimplementedDiffServiceHandler{}, timed)
+	}, func() (string, http.Handler) { return webapiconnect.NewDiffServiceHandler(NewDiff(a.Diff), timed) }))
 	add(webapiconnect.NewTableServiceHandler(NewTable(), timed))
-	add(webapiconnect.NewQueryServiceHandler(NewQuery(a.Query), queried...))
-	add(webapiconnect.NewReviewServiceHandler(NewReview(a.Review), queried...))
+	add(pick(a.Query == nil, func() (string, http.Handler) {
+		return webapiconnect.NewQueryServiceHandler(webapiconnect.UnimplementedQueryServiceHandler{}, queried...)
+	}, func() (string, http.Handler) {
+		return webapiconnect.NewQueryServiceHandler(NewQuery(a.Query), queried...)
+	}))
+	add(pick(a.Review == nil, func() (string, http.Handler) {
+		return webapiconnect.NewReviewServiceHandler(webapiconnect.UnimplementedReviewServiceHandler{}, queried...)
+	}, func() (string, http.Handler) {
+		return webapiconnect.NewReviewServiceHandler(NewReview(a.Review), queried...)
+	}))
 	info := a.Info
 	if info == nil {
 		info = &service.ServerInfoService{Version: version.Version()}
@@ -102,4 +138,13 @@ func refreshedHeader() connect.UnaryInterceptorFunc {
 			return resp, err
 		}
 	}
+}
+
+// pick builds a service's handler with none when the host left the service nil, and with some
+// otherwise.
+func pick(nilService bool, none, some func() (string, http.Handler)) (string, http.Handler) {
+	if nilService {
+		return none()
+	}
+	return some()
 }

@@ -81,4 +81,25 @@ public interface ListReportsRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getFilterBytes();
+
+  /**
+   * <pre>
+   * view is how much of each report to return. Unspecified leaves each report's results out, so a
+   * client draws a list without fetching every run, and GetReport fetches the one it opens.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ReportView view = 5 [json_name = "view"];</code>
+   * @return The enum numeric value on the wire for view.
+   */
+  int getViewValue();
+  /**
+   * <pre>
+   * view is how much of each report to return. Unspecified leaves each report's results out, so a
+   * client draws a list without fetching every run, and GetReport fetches the one it opens.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ReportView view = 5 [json_name = "view"];</code>
+   * @return The view.
+   */
+  io.github.panyam.agni.v1.webapi.ReportView getView();
 }

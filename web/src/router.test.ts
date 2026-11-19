@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { againstTarget, bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageBoard, pageFlattens, pageOf, parseUrl, setBase, withBoard, withFlatten, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
+import { againstTarget, bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageBoard, pageDesign, pageFlattens, pageOf, parseUrl, setBase, withBoard, withFlatten, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -373,5 +373,17 @@ describe("a verdict link's subjects", () => {
     expect(parseUrl("/mounts/m/b.edn/view", "?subject=net:SDA").subjects).toEqual([]);
     // A spelling no scope covers is dropped rather than asked.
     expect(parseUrl("/mounts/m/b.edn/view", "?verdict=v&subject=bus:D&subject=net:SDA").subjects).toEqual(["net:SDA"]);
+  });
+});
+
+describe("a page reading a stored design by name", () => {
+  it("reads the design and its packs from the address, and keeps them in every address it writes (agni issue 1697)", () => {
+    const search = "?design=designs%2Fbb-1.1.3&pack=jetson&pack=packs%2Fhouse";
+    const path = "/mounts/uploads/bb-1.1.3/r/schematic/bb.kicad_sch/view";
+    expect(pageDesign(path, search)).toEqual({ uri: "mount://uploads/bb-1.1.3/r/schematic/bb.kicad_sch", name: "designs/bb-1.1.3", packs: ["packs/jetson", "packs/house"] });
+    expect(pageDesign(path, "?pack=jetson")).toBeUndefined();
+    const loc = parseUrl(path, search);
+    expect(loc.design).toBe("designs/bb-1.1.3");
+    expect(locationToUrl({ ...loc, sheet: "power" })).toBe(`${path}?sheet=power&design=designs%2Fbb-1.1.3&pack=jetson&pack=packs%2Fhouse`);
   });
 });

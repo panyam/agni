@@ -274,4 +274,15 @@ public interface ReportOrBuilder extends
    */
   com.google.protobuf.ByteString
       getPacksChangedBytes(int index);
+
+  /**
+   * <pre>
+   * finding_count is how many findings results holds, set on every read, so a BASIC view that leaves
+   * results out still says it (agni issue 1753). Output only.
+   * </pre>
+   *
+   * <code>int32 finding_count = 10 [json_name = "findingCount"];</code>
+   * @return The findingCount.
+   */
+  int getFindingCount();
 }

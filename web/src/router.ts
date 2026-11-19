@@ -1,3 +1,4 @@
+import { artifactUri } from "@agni/web-shared/uri.js";
 import type { Bindings } from "./query.js";
 import { parseWalkParams, walkParams, type WalkRequest } from "./walk.js";
 import type { RenderMode } from "./viewer.js";
@@ -28,6 +29,11 @@ export interface ViewerLocation {
   // page. Every snapshot the page ingests reads it (pageBoard), so every address keeps it. Absent
   // and "" both mean the design's own board.
   board?: string;
+  // design names the stored design the page reads by name, "designs/<id>", and packs the packs it
+  // reads it under (agni issue 1697). Like board they belong to the page, so every address keeps
+  // them. Absent and "" both mean the page reads its file by address.
+  design?: string;
+  packs?: string[];
   // verdict is the id of the focused verdict ("i2c-pull-up:net:SDA"), "" when none.
   //
   // It is SELECTION STATE, like `sheet`, and not the resource form. A server-resolved `GET
@@ -150,7 +156,7 @@ const BROWSER_MOUNT = "local";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, board: "", verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, walk: { start: "", kind: "", hops: 0, through: [] }, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, board: "", design: "", packs: [], verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, walk: { start: "", kind: "", hops: 0, through: [] }, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -189,6 +195,8 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
   if (loc.symbols) params.set("sym", "1");
   if (loc.flatten) params.set(FLATTEN_PARAM, "1");
   if (loc.board) params.set(BOARD_PARAM, loc.board);
+  if (loc.design) params.set(DESIGN_PARAM, loc.design);
+  if (loc.design) for (const k of loc.packs ?? []) params.append(PACK_PARAM, k);
   if (loc.verdict) params.set("verdict", loc.verdict);
   // Only alongside its verdict, or the address bar keeps asserting a provenance that nothing on
   // screen depends on.
@@ -237,6 +245,25 @@ export const BOARD_PARAM = "board";
 export function pageBoard(search: string): string {
   const b = new URLSearchParams(search).get(BOARD_PARAM) ?? "";
   return b ? `mount://${b}` : "";
+}
+
+// DESIGN_PARAM and PACK_PARAM name the stored design the page reads by name, "designs/<id>", and the
+// packs it reads it under, one `pack=` each in order (agni issue 1697). /designs/<id>/view redirects
+// to the design's entry with them set.
+export const DESIGN_PARAM = "design";
+export const PACK_PARAM = "pack";
+
+// pageDesign is the stored design the page at pathname and search reads by name, at the entry it
+// opened, or undefined when the address names none. A pack is "packs/<k>", or "<k>" as the CLI takes
+// it.
+export function pageDesign(pathname: string, search: string): { uri: string; name: string; packs: string[] } | undefined {
+  const q = new URLSearchParams(search);
+  const name = q.get(DESIGN_PARAM) ?? "";
+  if (!name.startsWith("designs/")) return undefined;
+  const loc = parseUrl(pathname, search);
+  if (!hasFile(loc)) return undefined;
+  const packs = q.getAll(PACK_PARAM).map((k) => (k.startsWith("packs/") ? k : `packs/${k}`));
+  return { uri: artifactUri(loc.mount, loc.path), name, packs };
 }
 
 // withBoard is url attaching board ("<mount>/<path>") to the page's design, every other parameter
@@ -328,6 +355,8 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   loc.symbols = params.get("sym") === "1";
   loc.flatten = params.get(FLATTEN_PARAM) === "1";
   loc.board = params.get(BOARD_PARAM) ?? "";
+  loc.design = params.get(DESIGN_PARAM) ?? "";
+  loc.packs = params.getAll(PACK_PARAM);
   loc.verdict = params.get("verdict") ?? "";
   loc.hash = params.get("hash") ?? "";
   loc.rule = params.get("rule") ?? "";
