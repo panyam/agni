@@ -216,6 +216,14 @@ jobs:
           pnpm exec playwright-core install --with-deps chromium
         working-directory: web
 
+      # The samples the specs read, including the 233 files remote pins fetch from their publishers,
+      # cached on the samples pin as every other job caches them. Without it each of the ten shards
+      # downloaded every remote file on every run.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/agni/samples
+          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+
       - name: make browser-test SHARD=${{ matrix.shard }}/10
         run: make browser-test SHARD=${{ matrix.shard }}/10
 
