@@ -567,8 +567,17 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files \
 
 `--auth tokens` needs `--store`. Without `--tls-cert` and `--tls-key` it starts only on a localhost
 address, with a warning. Signing in through an identity provider, and per-person viewer tabs, are
-agni issue 1176. `agnids` has no `--auth` yet, so anyone who can reach it can write through the
-datasheets workbench (agni issue 1765).
+agni issue 1176.
+
+`agnids` takes the same three flags and checks the same tokens, read from the `--store` it shares
+with `agni serve` (agni issue 1765). Without them, anyone who can reach it can write through the
+datasheets workbench. A browser signs in to it separately, at its own `/signin`. An `agni serve`
+with `--params-url` pointing at an `agnids` that asks for tokens sends the one in its own
+`AGNI_TOKEN`, so the operator makes a token for the server too.
+
+A team whose certificate comes from its own CA hands each client the CA's file. The TypeScript client
+on Node takes it as `ca`, Rust as `connect_with_ca`, Java as `AgniClient.create`'s `caFile`, and C++
+as `agni::Client`'s `ca_file`. Each client's README says more.
 
 ## Analysing in the visitor's browser
 

@@ -21,12 +21,13 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/gen/go/agni/v1/param/paramconnect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
+	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/storeurl"
-	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
+	"github.com/panyam/goapplib/storage/mounts"
 	skhttp "github.com/panyam/servicekit/http"
 )
 
@@ -35,6 +36,7 @@ import (
 // hosted apart from the engine's `agni serve` (agni issue 744).
 func serveCmd() *cobra.Command {
 	var addr, webDir, pdf2doc, viewerURL, mountRoot, corpusDir, storeURL, uploadsURL string
+	var auth, tlsCert, tlsKey string
 	var specs []string
 	c := &cobra.Command{
 		Use:   "serve",
@@ -46,6 +48,15 @@ func serveCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			table, err := serveTable(specs, mountRoot, storeURL, uploadsURL)
 			if err != nil {
+				return err
+			}
+			storeDir := ""
+			if storeURL != "" {
+				if storeDir, _, err = storeurl.Folders(storeURL, ""); err != nil {
+					return err
+				}
+			}
+			if err := authgate.CheckFlags(auth, storeDir, tlsCert, tlsKey, addr); err != nil {
 				return err
 			}
 			// With NO web dir named and no default one present, serve the API alone, as `agni serve`
@@ -70,12 +81,16 @@ func serveCmd() *cobra.Command {
 				}
 			}
 			mux := newWorkbenchMux(table, webDir, strings.Fields(pdf2doc), strings.TrimSuffix(viewerURL, "/"), corpusDir, store)
-			if webDir == "" {
-				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheet API at http://%s/ with %d mount(s) (Ctrl-C to stop)\n", displayAddr(addr), len(table.List()))
-			} else {
-				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at http://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, displayAddr(addr), len(table.List()))
+			scheme := "http"
+			if tlsCert != "" {
+				scheme = "https"
 			}
-			return skhttp.ListenAndServeGraceful(&http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second})
+			if webDir == "" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheet API at %s://%s/ with %d mount(s) (Ctrl-C to stop)\n", scheme, displayAddr(addr), len(table.List()))
+			} else {
+				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at %s://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, scheme, displayAddr(addr), len(table.List()))
+			}
+			return listen(&http.Server{Addr: addr, Handler: guard(mux, auth, storeDir, tlsCert != ""), ReadHeaderTimeout: 10 * time.Second}, tlsCert, tlsKey)
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8090", "address to listen on")
@@ -86,6 +101,9 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&corpusDir, "corpus", "", "the corpus store: published PartSpecs with their corpus.index.json, served over PartSpecService for `agni serve --params-url`, and the workbench's drafts under drafts/. It is indexed at start when the index is missing or stale. Empty serves neither, and the workbench cannot save")
 	c.Flags().StringVar(&storeURL, "store", "", "agni serve's --store, as a URL such as file:///srv/agni/meta; with --uploads, the workbench also serves the mounts agni serve made at runtime, such as a GitHub snapshot, and sees a new one within a second. It only reads them")
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "agni serve's --uploads, as a URL such as file:///srv/agni/files, where the runtime mounts' files are. Needs --store")
+	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` keeps in --store, the same ones agni serve accepts, and refuses a call without one (agni issue 1765). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost")
+	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with; with --tls-key")
+	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
 	c.Flags().StringVar(&pdf2doc, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 datasheet/tools/pdf2doc/pdf2doc.py\"; empty disables the workbench's Extract (first pass) action")
 	return c
 }
@@ -274,4 +292,20 @@ func (p *DatasheetsPage) Load(r *http.Request, w http.ResponseWriter, app *goal.
 	p.Title = "Agni datasheets"
 	p.ViewerURL = app.Context.viewerURL
 	return nil, false
+}
+
+// guard puts the token check in front of h when auth asks for one (agni issue 1765).
+func guard(h http.Handler, auth, storeDir string, secure bool) http.Handler {
+	if auth == "" {
+		return h
+	}
+	return authgate.New(authgate.Store(storeDir), secure).Wrap(h)
+}
+
+// listen serves srv until a signal, over TLS when certFile names a certificate.
+func listen(srv *http.Server, certFile, keyFile string) error {
+	if certFile == "" {
+		return skhttp.ListenAndServeGraceful(srv)
+	}
+	return skhttp.ListenAndServeGraceful(srv, skhttp.WithTLS(certFile, keyFile))
 }

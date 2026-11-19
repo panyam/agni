@@ -31,17 +31,19 @@ namespace agni {
 // The proto package this client was generated from. Connect refuses a server that speaks another.
 inline constexpr std::string_view kApi = "agni.v1";
 
-// GrpcTarget turns a server URL, such as http://127.0.0.1:8080, into the host:port gRPC dials. A bare
-// host:port passes through. It throws std::invalid_argument for https://, since this client can't
-// trust a CA yet (agni issue 1765), and for any other scheme.
+// GrpcTarget turns a server URL, such as http://127.0.0.1:8080 or https://agni.example:443, into the
+// host:port gRPC dials. A bare host:port passes through. It throws std::invalid_argument for any
+// other scheme.
 std::string GrpcTarget(std::string_view server);
 
 class Client {
  public:
-  // server is a URL or host:port. A non-empty token goes on every call as the metadata
-  // `authorization: Bearer <token>`. A server started with --auth tokens refuses a call without a
-  // good one (agni issue 1627).
-  explicit Client(std::string_view server, std::string token = "");
+  // server is a URL or host:port. An https:// URL speaks TLS, trusting the system's CAs, or the PEM
+  // certificates in ca_file when it names one, such as a team's own CA (agni issue 1765). It throws
+  // std::invalid_argument when ca_file can't be read. A non-empty token goes on every call as the
+  // metadata `authorization: Bearer <token>`. A server started with --auth tokens refuses a call
+  // without a good one (agni issue 1627).
+  explicit Client(std::string_view server, std::string token = "", const std::string& ca_file = "");
 
   // Connect calls ServerService.GetServerInfo and keeps the answer. A server whose api is not
   // agni.v1 is refused with FAILED_PRECONDITION and a message naming both packages. The answer is

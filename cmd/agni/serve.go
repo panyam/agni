@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/panyam/agni/internal/archivefs"
+	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/wasmengine"
 	"github.com/panyam/goapplib/storage/mounts"
 
@@ -109,7 +110,7 @@ func serveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := checkAuthFlags(auth, storeDir, tlsCert, tlsKey, addr); err != nil {
+			if err := authgate.CheckFlags(auth, storeDir, tlsCert, tlsKey, addr); err != nil {
 				return err
 			}
 			return runViewer(cmd, viewerOpts{
@@ -164,7 +165,7 @@ func serveCmd() *cobra.Command {
 	_ = c.Flags().MarkHidden("github-api")
 	c.Flags().StringVar(&githubRaw, "github-raw", "", "the host a linked github:// artifact's files are downloaded from; a test names its own")
 	_ = c.Flags().MarkHidden("github-raw")
-	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authTokens+"\" accepts the tokens `agni token create` makes in --store, and refuses a call without one (agni issue 1627). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost. Empty asks nobody")
+	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` makes in --store, and refuses a call without one (agni issue 1627). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost. Empty asks nobody")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with, HTTP/2 included, so gRPC clients reach the server over TLS; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
 	return c
@@ -246,7 +247,7 @@ type viewerOpts struct {
 	// viewer.
 	viewerRooms bool
 
-	// auth is --auth: authTokens checks every call's token, and "" checks none (agni issue 1627).
+	// auth is --auth: authgate.Tokens checks every call's token, and "" checks none (agni issue 1627).
 	auth string
 	// tlsCert and tlsKey are --tls-cert and --tls-key, the files the server speaks HTTPS with. Both
 	// empty serves cleartext.
@@ -368,7 +369,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if o.paramsURL != "" {
 		// Asked once before the listener opens, so a wrong URL fails at startup by name rather than as
 		// an unavailable error on the first check someone runs.
-		remote := paramclient.New(strings.TrimSuffix(o.paramsURL, "/"))
+		remote := paramclient.New(strings.TrimSuffix(o.paramsURL, "/"), os.Getenv(envToken))
 		if _, err := remote.Generation(cmd.Context()); err != nil {
 			return fmt.Errorf("--params-url %q: %w", o.paramsURL, err)
 		}
@@ -572,7 +573,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 
 	var handler http.Handler = mux
 	if o.auth != "" {
-		handler = newAuthGate(tokenStore(o.storeDir), o.tlsCert != "").wrap(mux)
+		handler = authgate.New(authgate.Store(o.storeDir), o.tlsCert != "").Wrap(mux)
 	}
 	srv := newHTTPServer(addr, requestQoS(handler))
 	if o.banner != nil {

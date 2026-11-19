@@ -21,7 +21,9 @@ prost = "0.14"
 pbjson = "0.8"
 pbjson-types = "0.8"
 serde = "1"
-tonic = { version = "0.14", default-features = false, features = ["transport", "codegen"] }
+# tls-ring and tls-native-roots let an https:// address trust the system's CAs or a given one (agni
+# issue 1765).
+tonic = { version = "0.14", default-features = false, features = ["transport", "codegen", "tls-ring", "tls-native-roots"] }
 tonic-prost = "0.14"
 
 [dev-dependencies]

@@ -86,7 +86,8 @@ int main() {
   Expect(agni::GrpcTarget("http://127.0.0.1:8080") == "127.0.0.1:8080", "an http URL dials host:port");
   Expect(agni::GrpcTarget("http://localhost:8080/") == "localhost:8080", "a trailing slash is dropped");
   Expect(agni::GrpcTarget("127.0.0.1:8080") == "127.0.0.1:8080", "a bare host:port passes through");
-  Expect(Throws("https://agni.example:443"), "https is refused until agni serve has TLS");
+  Expect(agni::GrpcTarget("https://agni.example:443") == "agni.example:443", "an https URL dials host:port");
+  Expect(Throws("ftp://agni.example:21"), "another scheme is refused");
   Expect(Throws("ftp://host:1") && Throws("http://host:1/api"), "another scheme or a path is refused");
 
   Expect(agni::ErrorDetails(grpc::Status(grpc::StatusCode::NOT_FOUND, "x")).empty(), "a status with no details has none");

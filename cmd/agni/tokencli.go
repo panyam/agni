@@ -9,6 +9,7 @@ import (
 	"github.com/panyam/oneauth/core"
 	oafs "github.com/panyam/oneauth/stores/fs"
 
+	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/storeurl"
 )
 
@@ -41,7 +42,7 @@ a minute, since the server trusts a token it checked for that long.`,
 		if err != nil {
 			return nil, err
 		}
-		return tokenStore(dir), nil
+		return authgate.Store(dir), nil
 	}
 
 	create := &cobra.Command{
@@ -72,7 +73,7 @@ a minute, since the server trusts a token it checked for that long.`,
 			if err != nil {
 				return err
 			}
-			keys, err := listTokens(cmd.Context(), s)
+			keys, err := authgate.List(cmd.Context(), s)
 			if err != nil {
 				return err
 			}

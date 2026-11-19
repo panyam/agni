@@ -27,8 +27,9 @@ st = client.Stub<webapi::SnapshotService>()->Ingest(&ctx, ingest, &snap);
 
 - `agni::Client` dials a server URL such as `http://127.0.0.1:8080`, or a bare `host:port`. A
   token goes on every call as `authorization: Bearer <token>`, and a server started with
-  `--auth tokens` refuses a call without a good one (agni issue 1627). An `https://` URL is refused
-  until this client can trust a CA (agni issue 1765).
+  `--auth tokens` refuses a call without a good one (agni issue 1627). An `https://` URL speaks TLS
+  and trusts the system's CAs. `agni::Client(server, token, ca_file)` trusts the PEM certificates
+  in `ca_file` instead, such as a team's own CA (agni issue 1765).
 - `Connect` calls `ServerService.GetServerInfo`, refuses a server whose `api` is not `agni.v1`, and
   keeps the answer. `HasFeature("snapshot_store")` tests the answer for a feature by name.
 - `Stub<Service>()` returns any agni service's stub on the client's channel. Each call takes its own

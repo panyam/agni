@@ -8,6 +8,7 @@
 import { create, merge, type AgniClient } from "@panyam/agni-client";
 import { BoardGeometrySchema, type BoardGeometry } from "@panyam/agni-client/gen/agni/v1/geom/geom_board_pb";
 import { createAgniClient } from "@panyam/agni-client/node";
+import { readFileSync } from "node:fs";
 
 // The query every example asks, so their answers compare. The check runs every rule.
 const resistorsOf = `component.class(?c, "resistor") => ?c`;
@@ -44,8 +45,10 @@ function flags(args: string[]): { server: string; design: string } {
 async function main(): Promise<void> {
   const { server, design } = flags(process.argv.slice(2));
   // checkServer calls GetServerInfo and refuses a server that does not speak agni.v1.
-  // A shared server asks every call for a token (agni issue 1627), passed in AGNI_TOKEN.
-  const client = createAgniClient(server, { token: process.env.AGNI_TOKEN || undefined });
+  // A shared server asks every call for a token (agni issue 1627), passed in AGNI_TOKEN, and its
+  // certificate may come from a team's own CA (agni issue 1765), passed in AGNI_CA.
+  const ca = process.env.AGNI_CA ? readFileSync(process.env.AGNI_CA) : undefined;
+  const client = createAgniClient(server, { token: process.env.AGNI_TOKEN || undefined, ca });
   const info = await client.checkServer();
   const snap = await client.snapshot.ingest({ snapshot: { uri: design } });
   try {

@@ -24,6 +24,7 @@ import (
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
+	"github.com/panyam/agni/internal/authgate"
 )
 
 // selfSigned writes a certificate and key for 127.0.0.1 into dir, and returns their paths and a
@@ -109,9 +110,9 @@ func bearer(token string) connect.Option {
 // one with no token or a bad one as unauthenticated, and stops answering a revoked token (agni
 // issue 1627).
 func TestASharedServerChecksTokensOverTLS(t *testing.T) {
-	old := authCacheTTL
-	authCacheTTL = time.Millisecond
-	t.Cleanup(func() { authCacheTTL = old })
+	old := authgate.CacheTTL
+	authgate.CacheTTL = time.Millisecond
+	t.Cleanup(func() { authgate.CacheTTL = old })
 
 	dir := t.TempDir()
 	certFile, keyFile, pool := selfSigned(t, dir)
@@ -134,7 +135,7 @@ func TestASharedServerChecksTokensOverTLS(t *testing.T) {
 	if err := os.MkdirAll(work, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	url := serveTLS(t, viewerOpts{storeDir: store, auth: authTokens, tlsCert: certFile, tlsKey: keyFile, extraMounts: nil, mountRoot: dir}, client)
+	url := serveTLS(t, viewerOpts{storeDir: store, auth: authgate.Tokens, tlsCert: certFile, tlsKey: keyFile, extraMounts: nil, mountRoot: dir}, client)
 
 	protocols := []struct {
 		name string
@@ -198,7 +199,7 @@ func TestABrowserSignsInWithAToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	token, _, _ := strings.Cut(strings.TrimSpace(out), "\n")
-	url := serveViewer(t, viewerOpts{storeDir: store, auth: authTokens})
+	url := serveViewer(t, viewerOpts{storeDir: store, auth: authgate.Tokens})
 	noFollow := &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 
 	req, _ := http.NewRequest(http.MethodGet, url+"/mounts/?x=1", nil)
@@ -231,12 +232,12 @@ func TestABrowserSignsInWithAToken(t *testing.T) {
 	}
 	var session *http.Cookie
 	for _, c := range resp.Cookies() {
-		if c.Name == sessionCookie {
+		if c.Name == authgate.SessionCookie {
 			session = c
 		}
 	}
 	if session == nil || !session.HttpOnly || session.SameSite != http.SameSiteStrictMode {
-		t.Fatalf("signing in set %+v, want an HttpOnly SameSite=Strict %s cookie", session, sessionCookie)
+		t.Fatalf("signing in set %+v, want an HttpOnly SameSite=Strict %s cookie", session, authgate.SessionCookie)
 	}
 
 	jar := &cookieClient{cookie: session}
@@ -266,7 +267,7 @@ func TestTheCLIReachesASharedServerWithAGNI_TOKEN(t *testing.T) {
 		t.Fatal(err)
 	}
 	token, _, _ := strings.Cut(strings.TrimSpace(out), "\n")
-	url := serveViewer(t, viewerOpts{storeDir: store, auth: authTokens})
+	url := serveViewer(t, viewerOpts{storeDir: store, auth: authgate.Tokens})
 	t.Setenv(envToken, "")
 	if out, err := runMounts(t, "ls", "--remote", url); err == nil || !strings.Contains(err.Error(), "unauthenticated") {
 		t.Errorf("agni mounts ls --remote with no token = %q, %v; want unauthenticated", out, err)
@@ -302,46 +303,6 @@ func TestALocalServerWithoutAuthIsUnchanged(t *testing.T) {
 	for _, m := range mounts.Msg.GetMounts() {
 		if m.GetRoot() == "" {
 			t.Errorf("mount %s answered no root on a local server, want its folder", m.GetName())
-		}
-	}
-}
-
-func TestCheckAuthFlags(t *testing.T) {
-	for _, c := range []struct {
-		auth, store, cert, key, addr string
-		want                         string
-	}{
-		{"", "", "", "", ":8080", ""},
-		{authTokens, "/s", "", "", "localhost:8080", ""},
-		{authTokens, "/s", "", "", "127.0.0.1:0", ""},
-		{authTokens, "/s", "c", "k", ":8080", ""},
-		{authTokens, "", "", "", "localhost:8080", "needs --store"},
-		{authTokens, "/s", "", "", ":8080", "in the clear"},
-		{authTokens, "/s", "", "", "10.0.0.5:8080", "in the clear"},
-		{"", "", "c", "", ":8080", "go together"},
-		{"oauth", "/s", "", "", "localhost:8080", "the one kind"},
-	} {
-		err := checkAuthFlags(c.auth, c.store, c.cert, c.key, c.addr)
-		switch {
-		case c.want == "" && err != nil:
-			t.Errorf("checkAuthFlags(%q, %q, %q, %q, %q) = %v, want nil", c.auth, c.store, c.cert, c.key, c.addr, err)
-		case c.want != "" && (err == nil || !strings.Contains(err.Error(), c.want)):
-			t.Errorf("checkAuthFlags(%q, %q, %q, %q, %q) = %v, want %q", c.auth, c.store, c.cert, c.key, c.addr, err, c.want)
-		}
-	}
-}
-
-func TestSafeNext(t *testing.T) {
-	for in, want := range map[string]string{
-		"/designs/x?y=1":       "/designs/x?y=1",
-		"":                     "/",
-		"//evil.example/":      "/",
-		"/\\evil.example":      "/",
-		"https://evil.example": "/",
-		"designs":              "/",
-	} {
-		if got := safeNext(in); got != want {
-			t.Errorf("safeNext(%q) = %q, want %q", in, got, want)
 		}
 	}
 }

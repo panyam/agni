@@ -11,12 +11,15 @@ import (
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/datasheet/corpus"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
+	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/paramclient"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/oneauth/core"
 )
 
 // This test covers the whole read path of `agni serve --params-url`. agnids serves a published
@@ -34,7 +37,7 @@ func TestParamsURLReadsThePublishedCorpus(t *testing.T) {
 	srv := httptest.NewServer(newWorkbenchMux(nil, "", nil, "", dir, store))
 	defer srv.Close()
 
-	remote := param.NewRemote(paramclient.New(srv.URL), 0) // re-check the generation on every prefetch
+	remote := param.NewRemote(paramclient.New(srv.URL, ""), 0) // re-check the generation on every prefetch
 	ctx := context.Background()
 	if err := remote.Prefetch(ctx, []string{"acme-buck-3v3", "ACME-LDO-1V8", "UNSEEDED"}); err != nil {
 		t.Fatal(err)
@@ -63,7 +66,7 @@ func TestParamsURLReadsThePublishedCorpus(t *testing.T) {
 func TestPartSpecServiceWithoutACorpusSaysSo(t *testing.T) {
 	srv := httptest.NewServer(newWorkbenchMux(nil, "", nil, "", "", nil))
 	defer srv.Close()
-	_, err := paramclient.New(srv.URL).Generation(context.Background())
+	_, err := paramclient.New(srv.URL, "").Generation(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "failed_precondition") || !strings.Contains(err.Error(), "--corpus") {
 		t.Fatalf("Generation against a server with no corpus = %v", err)
 	}
@@ -85,7 +88,7 @@ func TestServeWithNoWebDirIsTheAPIAlone(t *testing.T) {
 	if resp, err := http.Get(srv.URL + "/datasheets/"); err != nil || resp.StatusCode != http.StatusNotFound {
 		t.Errorf("the workbench page with no web dir = %v, %v; want 404", resp, err)
 	}
-	if g, err := paramclient.New(srv.URL).Generation(context.Background()); err != nil || g != 1 {
+	if g, err := paramclient.New(srv.URL, "").Generation(context.Background()); err != nil || g != 1 {
 		t.Errorf("PartSpecService with no web dir = %d, %v", g, err)
 	}
 }
@@ -140,5 +143,37 @@ func TestServeIndexesTheCorpusAtStart(t *testing.T) {
 	}
 	if _, err := openCorpus(dir, io.Discard); err == nil || !strings.Contains(err.Error(), "broken.textproto") {
 		t.Errorf("a corpus that does not validate started: %v", err)
+	}
+}
+
+// agnids --auth tokens refuses a PartSpec call with no token or a bad one as unauthenticated, and
+// answers one carrying a token `agni token create` made in the shared store, the way agni serve's
+// --params-url sends it (agni issue 1765).
+func TestAnAgnidsWithAuthAsksForAToken(t *testing.T) {
+	dir := draftCorpus(t)
+	if _, err := runAgnids(t, "index", dir); err != nil {
+		t.Fatal(err)
+	}
+	corpus, err := openCorpus(dir, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	storeDir := t.TempDir()
+	made, err := authgate.Store(storeDir).CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "agni-serve", Name: "agni-serve"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(guard(newWorkbenchMux(nil, "", nil, "", dir, corpus), authgate.Tokens, storeDir, false))
+	defer srv.Close()
+	for _, bad := range []string{"", "oa_0_wrong"} {
+		if _, err := paramclient.New(srv.URL, bad).Generation(context.Background()); connect.CodeOf(err) != connect.CodeUnauthenticated {
+			t.Errorf("PartSpecService with token %q = %v, want unauthenticated", bad, err)
+		}
+	}
+	if g, err := paramclient.New(srv.URL, made.FullKey).Generation(context.Background()); err != nil || g != 1 {
+		t.Errorf("PartSpecService with a good token = %d, %v", g, err)
+	}
+	if resp, err := http.Get(srv.URL + "/healthz"); err != nil || resp.StatusCode != http.StatusOK {
+		t.Errorf("/healthz with no token = %v, %v; want 200, so a load balancer can check it", resp, err)
 	}
 }

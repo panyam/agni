@@ -53,9 +53,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 `checks()` and `queries()`. Every other generated client takes `client.transport()`, as in
 `DiffServiceClient::new(client.transport())`, and so carries the token too.
 
-A server started with `--auth tokens` refuses a call without a good token (agni issue 1627). For
-TLS, build a `tonic::transport::Channel` with the settings and pass it to `Client::with_channel`.
-A simpler way to trust a CA waits on agni issue 1765.
+A server started with `--auth tokens` refuses a call without a good token (agni issue 1627). An
+`https://` address speaks TLS and trusts the system's CAs. `Client::connect_with_ca(address, token,
+Some(&pem))` also trusts the PEM certificates in `pem`, such as a team's own CA (agni issue 1765).
+For other TLS settings, build a `tonic::transport::Channel` and pass it to `Client::with_channel`.
 
 ## Errors
 
