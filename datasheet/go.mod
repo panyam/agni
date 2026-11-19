@@ -24,7 +24,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/panyam/gocurrent v0.1.2 // indirect
-	github.com/panyam/goutils v0.1.14 // indirect
+	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
 	github.com/panyam/templar v0.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
