@@ -7,7 +7,7 @@ require (
 	github.com/bodgit/sevenzip v1.6.5
 	github.com/ebitengine/purego v0.8.4
 	github.com/klauspost/compress v1.19.1
-	github.com/panyam/goapplib v0.7.12
+	github.com/panyam/goapplib v0.7.13
 	github.com/panyam/jaala/frontends/mcp v0.1.101
 	github.com/panyam/jaala/frontends/nl v0.1.101
 	github.com/panyam/massrelay v0.3.7
@@ -44,10 +44,9 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/panyam/jaala/frontends/cypher v0.1.101 // indirect
-	github.com/panyam/oneauth v0.3.2 // indirect
+	github.com/panyam/oneauth v0.3.7 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
