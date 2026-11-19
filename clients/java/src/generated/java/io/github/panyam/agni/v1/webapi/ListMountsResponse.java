@@ -107,6 +107,22 @@ private static final long serialVersionUID = 0L;
     return prunedMounts_;
   }
 
+  public static final int CAN_CREATE_MOUNTS_FIELD_NUMBER = 3;
+  private boolean canCreateMounts_ = false;
+  /**
+   * <pre>
+   * can_create_mounts says whether CreateMount can succeed on this server, which needs --store and
+   * --uploads (agni issue 1749). A client offers to add a mount only when it is set.
+   * </pre>
+   *
+   * <code>bool can_create_mounts = 3 [json_name = "canCreateMounts"];</code>
+   * @return The canCreateMounts.
+   */
+  @java.lang.Override
+  public boolean getCanCreateMounts() {
+    return canCreateMounts_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -127,6 +143,9 @@ private static final long serialVersionUID = 0L;
     if (prunedMounts_ != 0) {
       output.writeInt32(2, prunedMounts_);
     }
+    if (canCreateMounts_ != false) {
+      output.writeBool(3, canCreateMounts_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -143,6 +162,10 @@ private static final long serialVersionUID = 0L;
     if (prunedMounts_ != 0) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(2, prunedMounts_);
+    }
+    if (canCreateMounts_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(3, canCreateMounts_);
     }
     return size;
   }
@@ -172,6 +195,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getMountsList())) return false;
     if (getPrunedMounts()
         != other.getPrunedMounts()) return false;
+    if (getCanCreateMounts()
+        != other.getCanCreateMounts()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -189,6 +214,9 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + PRUNED_MOUNTS_FIELD_NUMBER;
     hash = (53 * hash) + getPrunedMounts();
+    hash = (37 * hash) + CAN_CREATE_MOUNTS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getCanCreateMounts());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -328,6 +356,7 @@ private static final long serialVersionUID = 0L;
       }
       bitField0_ = (bitField0_ & ~0x00000001);
       prunedMounts_ = 0;
+      canCreateMounts_ = false;
       return this;
     }
 
@@ -377,6 +406,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.prunedMounts_ = prunedMounts_;
       }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.canCreateMounts_ = canCreateMounts_;
+      }
     }
 
     @java.lang.Override
@@ -420,6 +452,9 @@ private static final long serialVersionUID = 0L;
       if (other.getPrunedMounts() != 0) {
         setPrunedMounts(other.getPrunedMounts());
       }
+      if (other.getCanCreateMounts() != false) {
+        setCanCreateMounts(other.getCanCreateMounts());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -462,6 +497,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 16
+            case 24: {
+              canCreateMounts_ = input.readBool();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 24
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -759,6 +799,53 @@ private static final long serialVersionUID = 0L;
     public Builder clearPrunedMounts() {
       bitField0_ = (bitField0_ & ~0x00000002);
       prunedMounts_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private boolean canCreateMounts_ ;
+    /**
+     * <pre>
+     * can_create_mounts says whether CreateMount can succeed on this server, which needs --store and
+     * --uploads (agni issue 1749). A client offers to add a mount only when it is set.
+     * </pre>
+     *
+     * <code>bool can_create_mounts = 3 [json_name = "canCreateMounts"];</code>
+     * @return The canCreateMounts.
+     */
+    @java.lang.Override
+    public boolean getCanCreateMounts() {
+      return canCreateMounts_;
+    }
+    /**
+     * <pre>
+     * can_create_mounts says whether CreateMount can succeed on this server, which needs --store and
+     * --uploads (agni issue 1749). A client offers to add a mount only when it is set.
+     * </pre>
+     *
+     * <code>bool can_create_mounts = 3 [json_name = "canCreateMounts"];</code>
+     * @param value The canCreateMounts to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanCreateMounts(boolean value) {
+
+      canCreateMounts_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * can_create_mounts says whether CreateMount can succeed on this server, which needs --store and
+     * --uploads (agni issue 1749). A client offers to add a mount only when it is set.
+     * </pre>
+     *
+     * <code>bool can_create_mounts = 3 [json_name = "canCreateMounts"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCanCreateMounts() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      canCreateMounts_ = false;
       onChanged();
       return this;
     }

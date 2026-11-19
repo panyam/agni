@@ -1,6 +1,6 @@
 import { createEffect, createSignal, For, Show, type Accessor } from "solid-js";
 import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
-import type { Client } from "@connectrpc/connect";
+import { ConnectError, type Client } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { FileKind, WorkspaceService, type DirEntry, type Mount } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
@@ -38,7 +38,20 @@ interface Ctx extends TreeHandlers {
   client: WsClient;
   sheets: Accessor<SheetsState>;
   revealTarget: Accessor<RevealTarget>;
+  // manage turns on adding a GitHub mount and removing a runtime one (agni issue 1749). Only the
+  // /mounts/ browse page sets it, so the viewer's sidebar stays a plain tree.
+  manage: boolean;
+  reveal: (mount: string, path: string) => void;
 }
+
+// TreeOptions are the island's switches beyond its handlers.
+export interface TreeOptions {
+  manageMounts?: boolean;
+}
+
+// errorText is what a failed call says to a person: the server's own message for a Connect error,
+// which names the flag or the ref that was wrong, and the error's text otherwise.
+const errorText = (e: unknown): string => (e instanceof ConnectError ? e.rawMessage : String(e));
 
 type SheetNodeData = SheetTreeNode<SheetRef>;
 
@@ -110,7 +123,7 @@ function revealsTarget(mount: string, dirPath: string, t: RevealTarget): boolean
 
 // DirNode is a directory (mount root or subdirectory). It lazily lists one level on expand, and
 // auto-expands to reveal the deep-linked file when a restore makes a descendant the open file.
-function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; depth: number }) {
+function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; depth: number; onRemove?: () => void }) {
   const [open, setOpen] = createSignal(false);
   const [entries, setEntries] = createSignal<DirEntry[] | null>(null);
   const [error, setError] = createSignal<string | null>(null);
@@ -150,10 +163,19 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   });
 
   return (
-    <li>
+    <li classList={{ removable: !!props.onRemove }}>
+      {/* The folder's button stays the li's direct child, since pages and specs find a folder as
+          `li > button.node.dir`. The remove control sits over the row's right end instead. */}
       <button class="node dir" style={{ "padding-left": `${props.depth * 12 + 4}px` }} onClick={toggle}>
         <span class="twist">{open() ? "▾" : "▸"}</span> {props.label}
       </button>
+      <Show when={props.onRemove}>
+        {(remove) => (
+          <button class="mount-rm" type="button" title={`Remove the mount ${props.label}`} aria-label={`Remove the mount ${props.label}`} onClick={() => remove()()}>
+            ×
+          </button>
+        )}
+      </Show>
       <Show when={open()}>
         <ul class="children">
           <Show when={error()}>{(msg) => <li class="error">{msg()}</li>}</Show>
@@ -176,27 +198,110 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   );
 }
 
+// AddMountForm makes a runtime mount over a GitHub repo. The server downloads the repo at the ref
+// before it answers, so the form says it is working and stays disabled until then. A refusal shows
+// the server's own message, such as a ref GitHub does not know.
+function AddMountForm(props: { client: WsClient; onAdded: (name: string) => void }) {
+  const [busy, setBusy] = createSignal(false);
+  const [msg, setMsg] = createSignal("");
+  const submit = async (e: SubmitEvent): Promise<void> => {
+    e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const field = (n: string) => ((form.elements.namedItem(n) as HTMLInputElement | null)?.value ?? "").trim();
+    const name = field("name");
+    const repo = field("repo")
+      .replace(/^https?:\/\/github\.com\//, "")
+      .replace(/^github:\/\//, "")
+      .replace(/\.git$/, "");
+    setBusy(true);
+    setMsg(`Downloading ${repo}…`);
+    try {
+      await props.client.createMount({ name, source: `github://${repo}`, ref: field("ref") });
+      setMsg("");
+      form.reset();
+      props.onAdded(name);
+    } catch (err) {
+      setMsg(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <li class="mount-add">
+      <details>
+        <summary>Add a GitHub mount</summary>
+        <form onSubmit={(e) => void submit(e)}>
+          <input name="name" placeholder="name" required aria-label="Mount name" />
+          <input name="repo" placeholder="owner/repo" required aria-label="GitHub repo" />
+          <input name="ref" placeholder="ref (default branch)" aria-label="Tag, branch or commit" />
+          <button type="submit" disabled={busy()}>
+            Add
+          </button>
+        </form>
+        <Show when={msg()}>{(m) => <div class="mount-add-msg">{m()}</div>}</Show>
+      </details>
+    </li>
+  );
+}
+
 function FileTree(props: { ctx: Ctx }) {
   const [mounts, setMounts] = createSignal<Mount[]>([]);
   const [pruned, setPruned] = createSignal(0);
+  const [canCreate, setCanCreate] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   // The same declaration applies to the roots, since a mount serving only datasheets or only
   // library files is one this tree can never show anything in. The datasheets tree roots on the
   // same mounts and declares the other kind, so it keeps exactly the ones this drops.
-  props.ctx.client
-    .listMounts({ opens: DESIGN_OPENS })
-    .then((r) => {
-      setMounts(r.mounts);
-      setPruned(r.prunedMounts);
-    })
-    .catch((e) => setError(String(e)));
+  const load = (): Promise<void> =>
+    props.ctx.client
+      .listMounts({ opens: DESIGN_OPENS })
+      .then((r) => {
+        setMounts(r.mounts);
+        setPruned(r.prunedMounts);
+        setCanCreate(r.canCreateMounts);
+        setError(null);
+      })
+      .catch((e) => {
+        setError(String(e));
+      });
+  void load();
+
+  // remove deletes a runtime mount after the person confirms, since its snapshot goes with it.
+  const remove = async (name: string): Promise<void> => {
+    if (!window.confirm(`Remove the mount ${name}? Its snapshot is deleted from this server.`)) return;
+    try {
+      await props.ctx.client.deleteMount({ name });
+      await load();
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
 
   return (
     <ul class="tree">
       <Show when={error()}>{(msg) => <li class="error">{msg()}</li>}</Show>
-      <For each={mounts()}>{(m) => <DirNode ctx={props.ctx} mount={m.name} path="" label={m.name} depth={0} />}</For>
+      <For each={mounts()}>
+        {(m) => (
+          <DirNode
+            ctx={props.ctx}
+            mount={m.name}
+            path=""
+            label={m.name}
+            depth={0}
+            onRemove={props.ctx.manage && !m.fixed ? () => void remove(m.name) : undefined}
+          />
+        )}
+      </For>
       <Show when={pruned() > 0}>
         <li class="note">{hiddenNote(pruned(), mounts().length, "designs")}</li>
+      </Show>
+      <Show when={props.ctx.manage && canCreate()}>
+        <AddMountForm
+          client={props.ctx.client}
+          onAdded={(name) => {
+            void load().then(() => props.ctx.reveal(name, ""));
+          }}
+        />
       </Show>
     </ul>
   );
@@ -210,10 +315,14 @@ export function fileTreeIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
   handlers: TreeHandlers,
+  options: TreeOptions = {},
 ): { island: SolidIsland; view: SheetsView; revealDir: (mount: string, path: string) => void } {
   const [sheets, setSheets] = signalView<SheetsState>({ mount: "", path: "", sheets: [], activeId: "" });
   const [revealTarget, setRevealTarget] = createSignal<RevealTarget>(null);
-  const ctx: Ctx = { client: workspaceClient(), sheets, revealTarget, ...handlers };
+  const reveal = (mount: string, path: string): void => {
+    setRevealTarget({ mount, path });
+  };
+  const ctx: Ctx = { client: workspaceClient(), sheets, revealTarget, manage: options.manageMounts ?? false, reveal, ...handlers };
   const island = new SolidIsland("file-tree", el, () => <FileTree ctx={ctx} />, eventBus);
-  return { island, view: { setState: setSheets }, revealDir: (mount, path) => setRevealTarget({ mount, path }) };
+  return { island, view: { setState: setSheets }, revealDir: reveal };
 }

@@ -5,8 +5,9 @@
 # store holds records and no file, and that a --mount cannot be deleted. It kills only the server it
 # started.
 #
-# It reads GitHub, so it is run by hand and not in the gate. The Go test
-# TestServeMakesAGitHubMountOverConnect runs the same steps against a fake GitHub.
+# It drives the server with `agni mounts` (agni issue 1749), and reads the tree over the API. It reads
+# GitHub, so it is run by hand and not in the gate. The Go tests TestServeMakesAGitHubMountOverConnect
+# and TestTheMountsCommandAddsListsAndRemovesAGitHubMount run the same steps against a fake GitHub.
 set -euo pipefail
 
 agni=${AGNI:-bin/agni}
@@ -44,9 +45,9 @@ step() { printf '\n== %s\n' "$*"; }
 rpc() { curl -sS -X POST -H 'Content-Type: application/json' -d "$2" "$url/agni.v1.webapi.WorkspaceService/$1"; }
 
 serve
-step "make the mount jetson over $source at $ref"
-rpc CreateMount "{\"name\":\"jetson\",\"source\":\"$source\",\"ref\":\"$ref\"}" | tee "$out/create.json"
-grep -q "\"commit\":\"$ref\"" "$out/create.json" || { echo "CreateMount did not snapshot $ref" >&2; exit 1; }
+step "agni mounts add jetson $source --ref $ref"
+"$agni" mounts add jetson "$source" --ref "$ref" --remote "$url" | tee "$out/create.txt"
+grep -q "@$ref"$'\t'"runtime$" "$out/create.txt" || { echo "agni mounts add did not snapshot $ref" >&2; exit 1; }
 
 step "browse mount://jetson"
 rpc ListDir '{"uri":"mount://jetson"}' | python3 -c 'import json,sys
@@ -57,9 +58,8 @@ curl -fs -o /dev/null "$url/mounts/jetson/" || echo "(the /mounts/ page needs th
 step "restart over the same --store and --uploads"
 stop
 serve
-rpc ListMounts '{}' | python3 -c 'import json,sys
-for m in json.load(sys.stdin)["mounts"]: print(m["name"], m.get("kind",""), m.get("commit",""), "fixed" if m.get("fixed") else "runtime")' | tee "$out/mounts-after.txt"
-grep -q "^jetson MOUNT_KIND_GITHUB $ref runtime$" "$out/mounts-after.txt"
+"$agni" mounts ls --remote "$url" | tee "$out/mounts-after.txt"
+grep -q "^jetson"$'\t'"github"$'\t'"$source@$ref"$'\t'"runtime$" "$out/mounts-after.txt"
 rpc ListDir '{"uri":"mount://jetson"}' | python3 -c 'import json,sys
 for e in json.load(sys.stdin).get("entries",[]): print(e["name"], e.get("kind",""))' > "$out/list-after.txt"
 diff "$out/list-before.txt" "$out/list-after.txt" && echo "the mount lists the same after the restart"
@@ -71,8 +71,16 @@ if find "$store" -type f ! -name '*.yaml' | grep .; then
 fi
 echo "store: $(find "$store" -type f | wc -l | tr -d ' ') record(s), uploads: $(du -sh "$uploads" | cut -f1)"
 
-step "a --mount cannot be deleted"
-rpc DeleteMount '{"name":"boards"}' | tee "$out/delete-boards.json"
-grep -q failed_precondition "$out/delete-boards.json"
+step "a --mount cannot be removed, and a runtime one can"
+if "$agni" mounts rm boards --remote "$url" 2>"$out/rm-boards.txt"; then
+  echo "agni mounts rm boards removed a --mount" >&2
+  exit 1
+fi
+grep -q "comes from the server's flags" "$out/rm-boards.txt" && cat "$out/rm-boards.txt"
+"$agni" mounts rm jetson --remote "$url"
+if "$agni" mounts ls --remote "$url" | grep -q '^jetson'; then
+  echo "jetson is still listed after agni mounts rm" >&2
+  exit 1
+fi
 echo
 echo "exercise-mounts: ok"

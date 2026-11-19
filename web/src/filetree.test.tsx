@@ -2,7 +2,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import { FileKind } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
-import { fileTreeIsland } from "./filetree.jsx";
+import { Code, ConnectError } from "@connectrpc/connect";
+import { fileTreeIsland, type TreeOptions } from "./filetree.jsx";
 import type { SheetsState } from "./sheets.js";
 
 // The island builds its own client via workspaceClient(); the mock swaps in an in-memory
@@ -11,15 +12,30 @@ const fake = vi.hoisted(() => ({
   calls: [] as string[],
   opens: [] as (FileKind[] | undefined)[],
   prunedMounts: 0,
-  mounts: [{ name: "m", root: "/m" }] as { name: string; root: string }[],
+  mounts: [{ name: "m", root: "/m" }] as { name: string; root: string; fixed?: boolean }[],
   mountOpens: [] as (FileKind[] | undefined)[],
   dirs: {} as Record<string, unknown[]>,
+  canCreateMounts: false,
+  created: [] as { name: string; source: string; ref: string }[],
+  deleted: [] as string[],
+  createError: null as Error | null,
 }));
 vi.mock("./api.js", () => ({
   workspaceClient: () => ({
     listMounts: async ({ opens }: { opens?: FileKind[] } = {}) => {
       fake.mountOpens.push(opens);
-      return { mounts: fake.mounts, prunedMounts: fake.prunedMounts };
+      return { mounts: fake.mounts, prunedMounts: fake.prunedMounts, canCreateMounts: fake.canCreateMounts };
+    },
+    createMount: async (req: { name: string; source: string; ref: string }) => {
+      if (fake.createError) throw fake.createError;
+      fake.created.push(req);
+      fake.mounts = [...fake.mounts, { name: req.name, root: "/v", fixed: false }];
+      return { name: req.name };
+    },
+    deleteMount: async ({ name }: { name: string }) => {
+      fake.deleted.push(name);
+      fake.mounts = fake.mounts.filter((m) => m.name !== name);
+      return {};
     },
     listDir: async ({ uri, opens }: { uri: string; opens?: FileKind[] }) => {
       const path = uriPath(uri);
@@ -43,7 +59,7 @@ const file = (name: string, path: string, format = "edif") => ({
   kind: format ? FileKind.DESIGN : FileKind.UNSPECIFIED,
 });
 
-function mountTree() {
+function mountTree(options: TreeOptions = {}) {
   const handlers = {
     onFileSelect: vi.fn(),
     onDirSelect: vi.fn(),
@@ -51,7 +67,7 @@ function mountTree() {
   };
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const tree = fileTreeIsland(el, null, handlers);
+  const tree = fileTreeIsland(el, null, handlers, options);
   tree.island.activate();
   return { el, tree, handlers };
 }
@@ -81,7 +97,11 @@ beforeEach(() => {
   fake.opens = [];
   fake.mountOpens = [];
   fake.prunedMounts = 0;
-  fake.mounts = [{ name: "m", root: "/m" }];
+  fake.mounts = [{ name: "m", root: "/m", fixed: true }];
+  fake.canCreateMounts = false;
+  fake.created = [];
+  fake.deleted = [];
+  fake.createError = null;
   fake.dirs = {
     "": [dir("a", "a"), dir("z", "z"), file("top.edn", "top.edn"), file("notes.txt", "notes.txt", "")],
     a: [dir("b", "a/b"), file("mid.edn", "a/mid.edn")],
@@ -184,5 +204,77 @@ describe("filetree island", () => {
     await vi.waitFor(() => expect(buttonFor(el, "mid.edn")).toBeTruthy());
     expect(buttonFor(el, "zonly.edn")).toBeUndefined();
     expect(buttons(el)).toContain("z");
+  });
+});
+
+// Managing mounts happens on the /mounts/ browse page only (agni issue 1749).
+describe("managing mounts", () => {
+  const submitForm = (el: HTMLElement, values: Record<string, string>) => {
+    const form = el.querySelector(".mount-add form") as HTMLFormElement;
+    for (const [k, v] of Object.entries(values)) (form.elements.namedItem(k) as HTMLInputElement).value = v;
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  };
+
+  it("offers nothing in the viewer's tree, even on a server that makes mounts", async () => {
+    fake.canCreateMounts = true;
+    fake.mounts = [
+      { name: "m", root: "/m", fixed: true },
+      { name: "gh", root: "/v", fixed: false },
+    ];
+    const { el } = mountTree();
+    await vi.waitFor(() => expect(buttonFor(el, "gh")).toBeTruthy());
+    expect(el.querySelector(".mount-add")).toBeNull();
+    expect(el.querySelector(".mount-rm")).toBeNull();
+  });
+
+  it("shows the add form only when the server says it can make mounts", async () => {
+    const off = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(buttonFor(off.el, "m")).toBeTruthy());
+    expect(off.el.querySelector(".mount-add")).toBeNull();
+
+    fake.canCreateMounts = true;
+    const on = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(on.el.querySelector(".mount-add")).not.toBeNull());
+  });
+
+  it("adds a GitHub mount from a pasted repo URL and lists it as a new root", async () => {
+    fake.canCreateMounts = true;
+    const { el } = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(el.querySelector(".mount-add form")).not.toBeNull());
+    submitForm(el, { name: "jetson", repo: "https://github.com/antmicro/jetson-agx-thor-baseboard.git", ref: "main" });
+    await vi.waitFor(() => expect(buttonFor(el, "jetson")).toBeTruthy());
+    expect(fake.created).toEqual([{ name: "jetson", source: "github://antmicro/jetson-agx-thor-baseboard", ref: "main" }]);
+    expect(el.querySelector(".mount-add-msg")).toBeNull();
+  });
+
+  it("shows the server's own message when it refuses a mount", async () => {
+    fake.canCreateMounts = true;
+    fake.createError = new ConnectError("GitHub has no /repos/antmicro/x/commits/9.9", Code.NotFound);
+    const { el } = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(el.querySelector(".mount-add form")).not.toBeNull());
+    submitForm(el, { name: "x", repo: "antmicro/x", ref: "9.9" });
+    await vi.waitFor(() => expect(el.querySelector(".mount-add-msg")?.textContent).toBe("GitHub has no /repos/antmicro/x/commits/9.9"));
+  });
+
+  it("removes a runtime mount after a confirm, and never offers to remove a fixed one", async () => {
+    fake.mounts = [
+      { name: "m", root: "/m", fixed: true },
+      { name: "gh", root: "/v", fixed: false },
+    ];
+    const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const { el } = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(buttonFor(el, "gh")).toBeTruthy());
+    const rm = [...el.querySelectorAll<HTMLButtonElement>(".mount-rm")];
+    expect(rm.map((b) => b.getAttribute("aria-label"))).toEqual(["Remove the mount gh"]);
+
+    rm[0].click();
+    await settle();
+    expect(fake.deleted).toEqual([]);
+
+    rm[0].click();
+    await vi.waitFor(() => expect(buttonFor(el, "gh")).toBeUndefined());
+    expect(fake.deleted).toEqual(["gh"]);
+    expect(confirm).toHaveBeenCalledTimes(2);
+    confirm.mockRestore();
   });
 });

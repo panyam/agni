@@ -154,6 +154,17 @@
     /* The tree's account of what it pruned. Quiet on purpose: it explains an absence, so it must
        be findable when someone goes looking for a mount and invisible the rest of the time. */
     .tree .note { color: #999; font-size: 11px; padding: 6px 4px; }
+    /* Managing mounts on the browse page (agni issue 1749): a remove control on a runtime mount's
+       row, and a folded form to add a GitHub mount under the roots. */
+    .tree > li.removable { position: relative; }
+    .tree > li.removable > .node { padding-right: 22px; }
+    .mount-rm { position: absolute; top: 1px; right: 0; border: 0; background: none; color: #999; cursor: pointer; padding: 0 6px; font-size: 14px; line-height: 20px; }
+    .mount-rm:hover { color: #b00; }
+    .mount-add { padding: 8px 4px; font-size: 12px; }
+    .mount-add summary { color: #2563eb; cursor: pointer; }
+    .mount-add form { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+    .mount-add input { font: inherit; padding: 3px 4px; }
+    .mount-add-msg { color: #555; margin-top: 4px; word-break: break-word; }
     .findings-title { margin-top: 14px; }
     .findings-empty { color: #999; font-size: 12px; }
     .checks-error, .rules-error { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 6px 8px; margin: 4px 0; font-size: 12px; }

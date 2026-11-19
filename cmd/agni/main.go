@@ -114,7 +114,7 @@ func rootCmd() *cobra.Command {
 		"NAME=dir: a path variable a footprint's 3D model names, such as Antmicro's ANT3DMDL, and the "+
 			"folder it stands for. A KiCad board takes a part's height from the model it finds there "+
 			"(repeatable). Defaults to "+envModelVars+" when unset.")
-	root.AddCommand(statsCmd(), withTiming(checkCmd(), false), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), mcpCmd(), openCmd(), nativeCmd(), withTiming(queryCmd(), true), withTiming(traceCmd(), false), withTiming(walkCmd(), false), pinmapCmd(), lexiconCmd(), withTiming(reviewCmd(), false), designsCmd(), packsCmd(), reportsCmd(), projectsCmd(), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), opscmd.Healthcheck("agni", "localhost:8080"), opscmd.Version("agni"), paramsCmd(), tabulateCmd(), checklistsCmd(), proposeCmd(), siteCmd(), trialCmd(), stackupCmd(), boardCmd())
+	root.AddCommand(statsCmd(), withTiming(checkCmd(), false), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), mcpCmd(), openCmd(), nativeCmd(), withTiming(queryCmd(), true), withTiming(traceCmd(), false), withTiming(walkCmd(), false), pinmapCmd(), lexiconCmd(), withTiming(reviewCmd(), false), designsCmd(), mountsCmd(), packsCmd(), reportsCmd(), projectsCmd(), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), opscmd.Healthcheck("agni", "localhost:8080"), opscmd.Version("agni"), paramsCmd(), tabulateCmd(), checklistsCmd(), proposeCmd(), siteCmd(), trialCmd(), stackupCmd(), boardCmd())
 	return root
 }
 

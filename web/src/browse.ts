@@ -61,7 +61,9 @@ class BrowseRoot extends BaseComponent {
       },
       // No sheet ever reaches this tree (nothing pushes sheet state), so this cannot fire.
       onSheetSelect: () => {},
-    });
+      // The browse page is where mounts are managed: add a GitHub mount, remove a runtime one
+      // (agni issue 1749).
+    }, { manageMounts: true });
     this.revealDir = tree.revealDir;
 
     // Double-click and Enter open the CURRENT selection, which a plain click has already set, so

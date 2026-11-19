@@ -13983,12 +13983,18 @@ impl serde::Serialize for ListMountsResponse {
         if self.pruned_mounts != 0 {
             len += 1;
         }
+        if self.can_create_mounts {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.ListMountsResponse", len)?;
         if !self.mounts.is_empty() {
             struct_ser.serialize_field("mounts", &self.mounts)?;
         }
         if self.pruned_mounts != 0 {
             struct_ser.serialize_field("prunedMounts", &self.pruned_mounts)?;
+        }
+        if self.can_create_mounts {
+            struct_ser.serialize_field("canCreateMounts", &self.can_create_mounts)?;
         }
         struct_ser.end()
     }
@@ -14003,12 +14009,15 @@ impl<'de> serde::Deserialize<'de> for ListMountsResponse {
             "mounts",
             "pruned_mounts",
             "prunedMounts",
+            "can_create_mounts",
+            "canCreateMounts",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Mounts,
             PrunedMounts,
+            CanCreateMounts,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -14032,6 +14041,7 @@ impl<'de> serde::Deserialize<'de> for ListMountsResponse {
                         match value {
                             "mounts" => Ok(GeneratedField::Mounts),
                             "prunedMounts" | "pruned_mounts" => Ok(GeneratedField::PrunedMounts),
+                            "canCreateMounts" | "can_create_mounts" => Ok(GeneratedField::CanCreateMounts),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -14053,6 +14063,7 @@ impl<'de> serde::Deserialize<'de> for ListMountsResponse {
             {
                 let mut mounts__ = None;
                 let mut pruned_mounts__ = None;
+                let mut can_create_mounts__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Mounts => {
@@ -14069,11 +14080,18 @@ impl<'de> serde::Deserialize<'de> for ListMountsResponse {
                                 Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
                             ;
                         }
+                        GeneratedField::CanCreateMounts => {
+                            if can_create_mounts__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("canCreateMounts"));
+                            }
+                            can_create_mounts__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(ListMountsResponse {
                     mounts: mounts__.unwrap_or_default(),
                     pruned_mounts: pruned_mounts__.unwrap_or_default(),
+                    can_create_mounts: can_create_mounts__.unwrap_or_default(),
                 })
             }
         }

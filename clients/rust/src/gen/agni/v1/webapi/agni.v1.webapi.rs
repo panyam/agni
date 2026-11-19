@@ -4021,6 +4021,10 @@ pub struct ListMountsResponse {
     /// went. Zero when pruning is off.
     #[prost(int32, tag="2")]
     pub pruned_mounts: i32,
+    /// can_create_mounts says whether CreateMount can succeed on this server, which needs --store and
+    /// --uploads (agni issue 1749). A client offers to add a mount only when it is set.
+    #[prost(bool, tag="3")]
+    pub can_create_mounts: bool,
 }
 /// DirEntry is one item in a directory listing: a subdirectory or a supported design file.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
