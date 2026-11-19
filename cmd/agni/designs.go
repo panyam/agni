@@ -252,7 +252,8 @@ board, and keeps the ones named as designs (agni issue 1736). The server reads e
 once, keeps its own copy, and records where they came from. It writes nothing into the mount.
 
 With neither --yes nor --only, add lists the proposals and keeps nothing. --yes keeps them all, and
---only keeps the ones whose folder or id it names (repeatable).`,
+--only keeps the ones whose folder, id or entry it names (repeatable), and
+--only <folder|id|entry>=<id> gives that one an id of its own.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := client(cmd)
@@ -268,12 +269,30 @@ With neither --yes nor --only, add lists the proposals and keeps nothing. --yes 
 			if err != nil {
 				return err
 			}
+			// Each --only names a proposal by its folder, its default id or its entry, and may give
+			// it an id of its own after '=' (agni issue 1756).
+			only := map[string]string{}
+			for _, o := range addOnly {
+				pick, id, _ := strings.Cut(o, "=")
+				only[pick] = id
+			}
 			var picks []*webapi.DesignToAdd
 			for _, p := range proposed.GetDesigns() {
 				id := service.DefaultDesignID(p, proposed.GetDesigns())
-				if !addAll && !slices.Contains(addOnly, p.GetFolder()) && !slices.Contains(addOnly, id) {
+				named, picked := "", addAll
+				entry := p.GetDesign().GetEntryUri()
+				for _, k := range []string{p.GetFolder(), id, entry, strings.TrimPrefix(entry, uri+"/")} {
+					if v, ok := only[k]; ok {
+						named, picked = v, true
+						break
+					}
+				}
+				if !picked {
 					fmt.Fprintf(cmd.OutOrStdout(), "proposed\t%s\t%s\t%d files\t%s\n", displayFolder(p.GetFolder()), id, len(p.GetFiles()), p.GetNote())
 					continue
+				}
+				if named != "" {
+					id = named
 				}
 				picks = append(picks, &webapi.DesignToAdd{Folder: p.GetFolder(), Entry: p.GetDesign().GetEntryUri(), DesignId: id, Series: addSeries})
 			}
@@ -295,7 +314,7 @@ With neither --yes nor --only, add lists the proposals and keeps nothing. --yes 
 		},
 	}
 	add.Flags().BoolVar(&addAll, "yes", false, "keep every proposal as a design")
-	add.Flags().StringArrayVar(&addOnly, "only", nil, "keep the proposal at this folder, or with this id (repeatable)")
+	add.Flags().StringArrayVar(&addOnly, "only", nil, "keep the proposal at this folder, with this id, or with this entry, as <folder|id|entry>[=<new id>] to name its id (repeatable)")
 	add.Flags().StringVar(&addSeries, "series", "", "the series every kept design joins")
 
 	link := &cobra.Command{

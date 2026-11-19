@@ -211,3 +211,36 @@ func TestTwoBoardsInOneFolderAreAddedByEntry(t *testing.T) {
 		t.Fatalf("designs/spare's files = %v; want spare.edn alone", files)
 	}
 }
+
+// Boards of one name in two folders add with ids that differ, and --only can give one an id of its
+// own by its entry (agni issue 1756).
+func TestBoardsOfOneNameInTwoFoldersAddWithoutAClash(t *testing.T) {
+	lab := t.TempDir()
+	for _, dir := range []string{"rev-a", "rev-b"} {
+		for from, to := range map[string]string{gatewayRevA: "gateway.edn", gatewayRevB: "spare.edn"} {
+			b, err := os.ReadFile(from)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(filepath.Join(lab, dir), 0o750); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(lab, dir, to), b, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Folder("lab", lab))
+	out, err := runDesigns(t, srv.URL, "add", "lab", "--only", "rev-a-gateway", "--only", "rev-b/gateway.edn=gw-b")
+	if err != nil {
+		t.Fatalf("designs add --only = %q, %v", out, err)
+	}
+	for _, id := range []string{"designs/rev-a-gateway\t", "designs/gw-b\t"} {
+		if !strings.Contains(out, id) {
+			t.Errorf("designs add printed %q; want %s", out, id)
+		}
+	}
+	if !strings.Contains(out, "proposed\trev-b\trev-b-spare\t") {
+		t.Errorf("designs add printed %q; want rev-b's spare left as a proposal with its own id", out)
+	}
+}

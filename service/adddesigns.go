@@ -228,9 +228,21 @@ var idRun = regexp.MustCompile(`[^a-z0-9._-]+`)
 
 // DefaultDesignID is the id AddDesigns gives a proposal the request names no id for. It is the
 // proposal's folder name, since two releases of one board sit in two folders under one entry name.
-// A proposal at the top of the folder asked about, or one sharing its folder with another, takes its
-// entry's name instead.
+// A folder holding several proposals gives each its design's name. When that still leaves two
+// proposals with one id, as two folders that each hold boards of the same names do, each id takes
+// its folder's path in front (agni issue 1756).
 func DefaultDesignID(p *webapi.ProposedDesign, all []*webapi.ProposedDesign) string {
+	id := baseDesignID(p, all)
+	clash := slices.ContainsFunc(all, func(o *webapi.ProposedDesign) bool { return o != p && baseDesignID(o, all) == id })
+	if folder := strings.Trim(p.GetFolder(), "/"); clash && folder != "" {
+		return designIDFrom(strings.ReplaceAll(folder, "/", "-") + "-" + id)
+	}
+	return id
+}
+
+// baseDesignID is the id a proposal takes before any clash: its folder's name, or its design's name
+// when its folder holds others too or is the mount's root.
+func baseDesignID(p *webapi.ProposedDesign, all []*webapi.ProposedDesign) string {
 	folder := strings.Trim(p.GetFolder(), "/")
 	shared := slices.ContainsFunc(all, func(o *webapi.ProposedDesign) bool { return o != p && strings.Trim(o.GetFolder(), "/") == folder })
 	if folder == "" || shared {
@@ -244,4 +256,29 @@ func DefaultDesignID(p *webapi.ProposedDesign, all []*webapi.ProposedDesign) str
 func designIDFrom(name string) string {
 	id := idRun.ReplaceAllString(strings.ToLower(path.Base(name)), "-")
 	return strings.TrimLeft(id, "-._")
+}
+
+// SourcedFrom names the stored designs any of whose artifacts were read from mount at dir or below
+// it, sorted, each "designs/{design}" (agni issue 1756). A served mounted project lists these as its
+// designs. An empty dir is the mount's root.
+func (s *DesignService) SourcedFrom(ctx context.Context, mount, dir string) ([]string, error) {
+	designs, _, err := s.catalog.Designs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := []string{}
+	for _, d := range designs {
+		arts, err := s.catalog.Artifacts(ctx, d.GetName())
+		if err != nil {
+			continue
+		}
+		if slices.ContainsFunc(arts, func(a *webapi.Artifact) bool {
+			src := a.GetSource()
+			return src.GetMount() == mount && (dir == "" || src.GetPath() == dir || strings.HasPrefix(src.GetPath(), dir+"/"))
+		}) {
+			out = append(out, d.GetName())
+		}
+	}
+	slices.Sort(out)
+	return out, nil
 }

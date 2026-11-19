@@ -97,6 +97,8 @@ func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir
 		resolver.Packs = packSvc
 	}
 	designSvc := service.NewDesignService(catalog, resolver.Blob).WithProjects(projectSvc)
+	// A mounted project lists the stored designs read from its folder (agni issue 1756).
+	projectSvc.WithSourcedDesigns(designSvc.SourcedFrom)
 	if reportStore != nil && checks != nil {
 		// A report runs a check under packs and keeps it under its design (agni issue 1704).
 		designSvc.WithReports(reportStore, checks, packSvc)
