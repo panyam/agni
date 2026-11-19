@@ -1736,6 +1736,74 @@ pub mod design_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn link_artifact(
+            &mut self,
+            request: impl tonic::IntoRequest<super::LinkArtifactRequest>,
+        ) -> std::result::Result<tonic::Response<super::Artifact>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/LinkArtifact",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "LinkArtifact"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn unlink_artifact(
+            &mut self,
+            request: impl tonic::IntoRequest<super::UnlinkArtifactRequest>,
+        ) -> std::result::Result<tonic::Response<super::Artifact>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/UnlinkArtifact",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("agni.v1.webapi.DesignService", "UnlinkArtifact"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn sync_design(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SyncDesignRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::SyncDesignResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/SyncDesign",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "SyncDesign"));
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn create_report(
             &mut self,
             request: impl tonic::IntoRequest<super::CreateReportRequest>,

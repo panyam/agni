@@ -69,7 +69,7 @@ func serveCmd() *cobra.Command {
 	var datasheetsURL string
 	var theme string
 	var paramsDir, paramsURL, profilePath, conventions string
-	var githubAPI string
+	var githubAPI, githubRaw string
 	var storeURL, uploadsURL string
 	var webDir string
 	var queryBudget, queryBudgetWarn int64
@@ -112,6 +112,7 @@ func serveCmd() *cobra.Command {
 				storeDir:       storeDir,
 				uploadsDir:     uploadsDir,
 				githubAPI:      githubAPI,
+				githubRaw:      githubRaw,
 				budget:         server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
 				slowRequest:    slowRequest,
 				engine:         engine,
@@ -153,6 +154,8 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "where this server keeps the files of designs its users upload, as a URL: file:///srv/agni/files, created if absent (agni issue 1739). It keeps each file once, by hash, and never changes one, and serves each design's files as the mount \""+uploadsMount+"\". Needs --store. Without it, a design's files cannot be written")
 	c.Flags().StringVar(&githubAPI, "github-api", defaultGitHubAPI, "the GitHub REST API a github:// mount is read through; a test or a GitHub Enterprise server names its own")
 	_ = c.Flags().MarkHidden("github-api")
+	c.Flags().StringVar(&githubRaw, "github-raw", defaultGitHubRaw, "the host a linked github:// artifact's files are downloaded from; a test names its own")
+	_ = c.Flags().MarkHidden("github-raw")
 	return c
 }
 
@@ -179,6 +182,9 @@ type viewerOpts struct {
 	uploadsDir string
 	// githubAPI is the GitHub REST API's base URL, which a github:// mount reads through.
 	githubAPI string
+	// githubRaw is the host a linked github:// artifact's files are downloaded from, defaultGitHubRaw
+	// when empty.
+	githubRaw string
 	// budget is the work budget every query the server evaluates runs under, and the threshold above
 	// which a query's cost is logged (agni issue 792).
 	budget server.Budget
@@ -432,6 +438,16 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	projectSvc, designSvc, packSvc, err := storeServices(table, o.storeDir, o.uploadsDir, projectStore, projectResolver, checkSvc, cmd.ErrOrStderr())
 	if err != nil {
 		return err
+	}
+	if maker != nil {
+		// An artifact links to a mount, and a mount with artifacts linked to it isn't deleted under
+		// them (agni issue 1723).
+		raw := o.githubRaw
+		if raw == "" {
+			raw = defaultGitHubRaw
+		}
+		designSvc.WithLinks(newLinkReaders(table, maker, raw).reader, uploadsMount)
+		workspace.WithLinkedArtifacts(designSvc.LinkedTo)
 	}
 	api := server.API{
 		Workspace:  workspace,

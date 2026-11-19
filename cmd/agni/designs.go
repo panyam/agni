@@ -298,7 +298,79 @@ With neither --yes nor --only, add lists the proposals and keeps nothing. --yes 
 	add.Flags().StringArrayVar(&addOnly, "only", nil, "keep the proposal at this folder, or with this id (repeatable)")
 	add.Flags().StringVar(&addSeries, "series", "", "the series every kept design joins")
 
-	cmd.AddCommand(create, list, get, artifacts, put, rm, push, add)
+	link := &cobra.Command{
+		Use:   "link <id> <artifact> <mount>[/<path>][@<ref>]",
+		Short: "Point an artifact at a file or folder in a mount, and read its files",
+		Long: `link points an artifact at a path in a mount, such as a github mount made with agni mounts add,
+and the server reads its files and keeps them (agni issue 1723). A path naming a design's entry, such
+as a KiCad root sheet, takes the files a reader opens from it. A path naming a board takes the board.
+A path naming a folder takes every file under it. A ref naming a branch, or no ref, is followed, and
+agni designs sync moves it. A tag or commit is pinned. Linking again replaces the source.
+
+  agni designs link bb schematic jetson/jetson-agx-thor-baseboard.kicad_sch@3411086e --remote http://localhost:8080`,
+		Args: cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			src, err := parseLinkSource(args[2])
+			if err != nil {
+				return err
+			}
+			a, err := unary(cmd.Context(), c.designs.LinkArtifact, &webapi.LinkArtifactRequest{Name: service.ArtifactName(designID(args[0]), args[1]), Source: src, AllowMissing: true})
+			if err != nil {
+				return err
+			}
+			printArtifact(cmd.OutOrStdout(), a)
+			return nil
+		},
+	}
+
+	unlink := &cobra.Command{
+		Use:   "unlink <id> <artifact>",
+		Short: "Keep a linked artifact's files as uploaded ones, so put can replace them",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			a, err := unary(cmd.Context(), c.designs.UnlinkArtifact, &webapi.UnlinkArtifactRequest{Name: service.ArtifactName(designID(args[0]), args[1])})
+			if err != nil {
+				return err
+			}
+			printArtifact(cmd.OutOrStdout(), a)
+			return nil
+		},
+	}
+
+	var dryRun bool
+	sync := &cobra.Command{
+		Use:   "sync <id> [<artifact>...]",
+		Short: "Move a design's followed artifacts to their sources' current versions",
+		Long: `sync asks each followed artifact's source for its current version and reads only the files the
+server lacks. Artifacts linked to one mount at one ref move together, in one write. A pinned artifact
+is listed and never moved. --dry-run says what a sync would change and writes nothing.`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			resp, err := unary(cmd.Context(), c.designs.SyncDesign, &webapi.SyncDesignRequest{Name: designName(args[0]), Artifacts: args[1:], ValidateOnly: dryRun})
+			if err != nil {
+				return err
+			}
+			for _, a := range resp.GetArtifacts() {
+				printSync(cmd.OutOrStdout(), a)
+			}
+			return nil
+		},
+	}
+	sync.Flags().BoolVar(&dryRun, "dry-run", false, "report what a sync would change, and write nothing")
+
+	cmd.AddCommand(create, list, get, artifacts, put, rm, push, add, link, unlink, sync)
 	return cmd
 }
 
@@ -385,7 +457,62 @@ func printArtifact(w io.Writer, a *webapi.Artifact) {
 	if entry == "" {
 		entry = "-"
 	}
-	fmt.Fprintf(w, "%s\t%s\tentry %s\t%d files\tcontent %s\n", a.GetName(), typ, entry, len(a.GetFiles()), artifactDigest(a))
+	fmt.Fprintf(w, "%s\t%s\tentry %s\t%d files\tcontent %s", a.GetName(), typ, entry, len(a.GetFiles()), artifactDigest(a))
+	if src := a.GetSource(); src.GetMount() != "" && src.GetMount() != uploadsMount {
+		fmt.Fprintf(w, "\tfrom %s", service.SourceString(src))
+		if v := src.GetVersion(); v != "" && v != src.GetRef() {
+			fmt.Fprintf(w, " at %s", v)
+		}
+		// Only a link records a read hash. A design added from a mounted folder was read once, and
+		// neither follows nor pins anything (agni issue 1736).
+		switch {
+		case src.GetReadHash() == "":
+		case src.GetFollow():
+			fmt.Fprint(w, ", followed")
+		default:
+			fmt.Fprint(w, ", pinned")
+		}
+	}
+	fmt.Fprintln(w)
+}
+
+// parseLinkSource reads `<mount>[/<path>][@<ref>]`. The ref follows the last '@'.
+func parseLinkSource(s string) (*webapi.ArtifactSource, error) {
+	src := &webapi.ArtifactSource{}
+	if i := strings.LastIndex(s, "@"); i >= 0 {
+		s, src.Ref = s[:i], s[i+1:]
+		if src.Ref == "" {
+			return nil, fmt.Errorf("%q names an empty ref after '@'", s+"@")
+		}
+	}
+	src.Mount, src.Path, _ = strings.Cut(s, "/")
+	if src.Mount == "" {
+		return nil, fmt.Errorf("%q names no mount; write <mount>[/<path>][@<ref>]", s)
+	}
+	return src, nil
+}
+
+// printSync writes one artifact's line of a sync.
+func printSync(w io.Writer, a *webapi.ArtifactSync) {
+	from, to := a.GetFromVersion(), a.GetToVersion()
+	what := "unchanged"
+	if a.GetChanged() {
+		what = "changed"
+	}
+	if from != "" || to != "" {
+		what += "\t" + shortVersion(from) + " -> " + shortVersion(to)
+	}
+	fmt.Fprintf(w, "%s\t%s\tfetched %d files, %d bytes\n", a.GetArtifact(), what, a.GetFilesFetched(), a.GetBytesFetched())
+}
+
+func shortVersion(v string) string {
+	if len(v) > 12 {
+		return v[:12]
+	}
+	if v == "" {
+		return "-"
+	}
+	return v
 }
 
 // artifactDigest is a short hash over an artifact's paths and their contents' hashes, so two listings

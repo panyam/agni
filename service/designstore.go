@@ -80,12 +80,14 @@ type DesignRecord struct {
 }
 
 // ArtifactWrite is one artifact's new files. AllowMissing creates the artifact when the design has
-// none of that id (AIP-134).
+// none of that id (AIP-134). A nil Source writes an uploaded artifact, whose source is the uploads
+// mount.
 type ArtifactWrite struct {
 	ID           string
 	Files        []*webapi.SnapshotFile
 	AllowMissing bool
-	// Source is where in a mount the files were read from, nil for an upload (agni issue 1736).
+	// Source is where in a mount the files were read from, nil for an upload (agni issues 1723, 1736).
+	// The store keeps it as given.
 	Source *webapi.ArtifactSource
 }
 

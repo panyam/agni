@@ -291,10 +291,13 @@ schematic, else its board.
 | `create <id> [--title] [--series]` | make a design with no artifacts |
 | `list [--series <s>] [--project <p>]` | list the designs the server holds, stored and mounted, with each series' latest marked |
 | `get <id>` | print a design and its artifacts |
-| `artifacts <id>` | list a design's artifacts, each with its type, entry, file count and a short content digest |
+| `artifacts <id>` | list a design's artifacts, each with its type, entry, file count and a short content digest, and a linked one's source and version |
 | `put <id> <artifact> <file-or-folder>` | create an artifact, or replace all its files; a folder sends every file under it by its relative path |
 | `rm <id> [<artifact>]` | delete a design, or one artifact |
 | `push <folder> [--id] [--title] [--series]` | send the folder's files, and the server finds its design as `propose` does and puts each source as an artifact named for its type, all in one write (`ImportDesignFiles`, the call the viewer's library page sends); a `design.yaml` there gives the default id, title and series, and its intent is not sent |
+| `link <id> <artifact> <mount>[/<path>][@<ref>]` | point an artifact at a file or folder in a mount and read its files (`LinkArtifact`, agni issue 1723); a design's entry takes the files a reader opens from it, a folder takes every file under it, a branch or no ref is followed, and a tag or commit is pinned |
+| `unlink <id> <artifact>` | keep a linked artifact's files as uploaded ones, so `put` and `push` can replace them |
+| `sync <id> [<artifact>...] [--dry-run]` | move the followed artifacts to their sources' newest versions in one write, downloading only the files the server lacks; `--dry-run` writes nothing |
 
 ### `projects`
 

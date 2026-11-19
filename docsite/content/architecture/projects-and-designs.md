@@ -416,6 +416,13 @@ the artifact, since a KiCad root sheet finds its child sheets by filename. `Upda
 all of an artifact's files in one write, and `BatchUpdateArtifacts` replaces several artifacts in
 one write.
 
+An artifact also has a source, `Artifact.source`: a mount, a path in it and a ref (agni issue 1723).
+An uploaded artifact's mount is the uploads mount. A linked artifact's mount is another, such as a
+GitHub repo, and the server reads its files from there and keeps them by hash like an upload's. The
+two differ only in the mount, so a check, a diff and a report read both the same way. `SyncDesign`
+moves a followed link to its source's newest version. "Linking an artifact to a mount" in
+[running the server](../../guide/running-the-server/#linking-an-artifact-to-a-mount) walks through it.
+
 The server reads each artifact to find its type and its entry, with the grouping `ProposeDesigns`
 uses on a dropped folder. Files that make two designs are refused, since the artifact would hold two
 sources. From the types it picks the file analysis reads: the netlist, else the schematic, else the

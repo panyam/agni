@@ -107,6 +107,8 @@ type WorkspaceService struct {
 	files    FileReader
 	// maker makes and deletes runtime mounts, and is set by WithMountMaker.
 	maker MountMaker
+	// linked names the artifacts linked to a mount, and is set by WithLinkedArtifacts.
+	linked func(ctx context.Context, mount string) ([]string, error)
 }
 
 // MountMaker is the port that makes and deletes runtime mounts (agni issue 1735). The server's
@@ -124,6 +126,28 @@ type MountMaker interface {
 func (s *WorkspaceService) WithMountMaker(m MountMaker) *WorkspaceService {
 	s.maker = m
 	return s
+}
+
+// WithLinkedArtifacts lets DeleteMount refuse a mount that artifacts are linked to (agni issue
+// 1723). linked names the artifacts whose source is the mount.
+func (s *WorkspaceService) WithLinkedArtifacts(linked func(ctx context.Context, mount string) ([]string, error)) *WorkspaceService {
+	s.linked = linked
+	return s
+}
+
+// listSome joins up to n names, and says how many more there are.
+func listSome(names []string, n int) string {
+	if len(names) <= n {
+		return strings.Join(names, ", ")
+	}
+	return fmt.Sprintf("%s and %d more", strings.Join(names[:n], ", "), len(names)-n)
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
 }
 
 // noMaker is why a server without a MountMaker refuses CreateMount and DeleteMount.
@@ -159,6 +183,15 @@ func (s *WorkspaceService) DeleteMount(ctx context.Context, req *webapi.DeleteMo
 		}
 		if m.Fixed {
 			return nil, fmt.Errorf("%w: the mount %q comes from the server's flags", ErrFailedPrecondition, m.Name)
+		}
+		if s.linked != nil {
+			names, err := s.linked(ctx, m.Name)
+			if err != nil {
+				return nil, err
+			}
+			if len(names) > 0 {
+				return nil, fmt.Errorf("%w: %s %s linked to the mount %q; unlink or delete %s first", ErrFailedPrecondition, listSome(names, 3), plural(len(names), "is", "are"), m.Name, plural(len(names), "it", "them"))
+			}
 		}
 		if err := s.maker.DeleteMount(ctx, m.Name); err != nil {
 			return nil, err

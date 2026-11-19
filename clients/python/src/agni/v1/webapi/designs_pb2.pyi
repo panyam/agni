@@ -174,14 +174,22 @@ class Artifact(_message.Message):
     def __init__(self, name: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ..., type: _Optional[_Union[ArtifactType, str]] = ..., entry: _Optional[str] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., source: _Optional[_Union[ArtifactSource, _Mapping]] = ...) -> None: ...
 
 class ArtifactSource(_message.Message):
-    __slots__ = ("mount", "path", "ref")
+    __slots__ = ("mount", "path", "ref", "follow", "version", "read_time", "read_hash")
     MOUNT_FIELD_NUMBER: _ClassVar[int]
     PATH_FIELD_NUMBER: _ClassVar[int]
     REF_FIELD_NUMBER: _ClassVar[int]
+    FOLLOW_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
+    READ_TIME_FIELD_NUMBER: _ClassVar[int]
+    READ_HASH_FIELD_NUMBER: _ClassVar[int]
     mount: str
     path: str
     ref: str
-    def __init__(self, mount: _Optional[str] = ..., path: _Optional[str] = ..., ref: _Optional[str] = ...) -> None: ...
+    follow: bool
+    version: str
+    read_time: _timestamp_pb2.Timestamp
+    read_hash: str
+    def __init__(self, mount: _Optional[str] = ..., path: _Optional[str] = ..., ref: _Optional[str] = ..., follow: _Optional[bool] = ..., version: _Optional[str] = ..., read_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., read_hash: _Optional[str] = ...) -> None: ...
 
 class AddDesignsRequest(_message.Message):
     __slots__ = ("uri", "designs", "validate_only")
@@ -262,6 +270,54 @@ class DeleteArtifactRequest(_message.Message):
     NAME_FIELD_NUMBER: _ClassVar[int]
     name: str
     def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class LinkArtifactRequest(_message.Message):
+    __slots__ = ("name", "source", "allow_missing")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    ALLOW_MISSING_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    source: ArtifactSource
+    allow_missing: bool
+    def __init__(self, name: _Optional[str] = ..., source: _Optional[_Union[ArtifactSource, _Mapping]] = ..., allow_missing: _Optional[bool] = ...) -> None: ...
+
+class UnlinkArtifactRequest(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class SyncDesignRequest(_message.Message):
+    __slots__ = ("name", "artifacts", "validate_only")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    ARTIFACTS_FIELD_NUMBER: _ClassVar[int]
+    VALIDATE_ONLY_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    artifacts: _containers.RepeatedScalarFieldContainer[str]
+    validate_only: bool
+    def __init__(self, name: _Optional[str] = ..., artifacts: _Optional[_Iterable[str]] = ..., validate_only: _Optional[bool] = ...) -> None: ...
+
+class SyncDesignResponse(_message.Message):
+    __slots__ = ("artifacts",)
+    ARTIFACTS_FIELD_NUMBER: _ClassVar[int]
+    artifacts: _containers.RepeatedCompositeFieldContainer[ArtifactSync]
+    def __init__(self, artifacts: _Optional[_Iterable[_Union[ArtifactSync, _Mapping]]] = ...) -> None: ...
+
+class ArtifactSync(_message.Message):
+    __slots__ = ("artifact", "from_version", "to_version", "changed", "files_fetched", "bytes_fetched")
+    ARTIFACT_FIELD_NUMBER: _ClassVar[int]
+    FROM_VERSION_FIELD_NUMBER: _ClassVar[int]
+    TO_VERSION_FIELD_NUMBER: _ClassVar[int]
+    CHANGED_FIELD_NUMBER: _ClassVar[int]
+    FILES_FETCHED_FIELD_NUMBER: _ClassVar[int]
+    BYTES_FETCHED_FIELD_NUMBER: _ClassVar[int]
+    artifact: str
+    from_version: str
+    to_version: str
+    changed: bool
+    files_fetched: int
+    bytes_fetched: int
+    def __init__(self, artifact: _Optional[str] = ..., from_version: _Optional[str] = ..., to_version: _Optional[str] = ..., changed: _Optional[bool] = ..., files_fetched: _Optional[int] = ..., bytes_fetched: _Optional[int] = ...) -> None: ...
 
 class ImportDesignFilesRequest(_message.Message):
     __slots__ = ("parent", "files")

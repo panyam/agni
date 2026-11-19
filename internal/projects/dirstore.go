@@ -129,14 +129,40 @@ type artifactRecord struct {
 	Companions []string     `yaml:"companions,omitempty"`
 	UpdateTime time.Time    `yaml:"update_time"`
 	Files      []fileRecord `yaml:"files"`
-	// Source is where in a mount the files were read from, absent for an upload (agni issue 1736).
+	// Source is where in a mount the files were read from, by a link (agni issue 1723) or when a
+	// mounted folder's design was added (agni issue 1736). An uploaded artifact has none.
 	Source *sourceRecord `yaml:"source,omitempty"`
 }
 
+// sourceRecord is an artifact's webapi.ArtifactSource as the record keeps it. An added design's
+// artifact has a mount and path alone, and a link fills the rest.
 type sourceRecord struct {
-	Mount string `yaml:"mount"`
-	Path  string `yaml:"path"`
-	Ref   string `yaml:"ref,omitempty"`
+	Mount    string    `yaml:"mount"`
+	Path     string    `yaml:"path,omitempty"`
+	Ref      string    `yaml:"ref,omitempty"`
+	Follow   bool      `yaml:"follow,omitempty"`
+	Version  string    `yaml:"version,omitempty"`
+	ReadTime time.Time `yaml:"read_time,omitempty"`
+	ReadHash string    `yaml:"read_hash,omitempty"`
+}
+
+func sourceRecordOf(src *webapi.ArtifactSource) *sourceRecord {
+	if src == nil {
+		return nil
+	}
+	out := &sourceRecord{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: src.GetFollow(), Version: src.GetVersion(), ReadHash: src.GetReadHash()}
+	if src.GetReadTime() != nil {
+		out.ReadTime = src.GetReadTime().AsTime().UTC()
+	}
+	return out
+}
+
+func (r *sourceRecord) proto() *webapi.ArtifactSource {
+	out := &webapi.ArtifactSource{Mount: r.Mount, Path: r.Path, Ref: r.Ref, Follow: r.Follow, Version: r.Version, ReadHash: r.ReadHash}
+	if !r.ReadTime.IsZero() {
+		out.ReadTime = timestamppb.New(r.ReadTime)
+	}
+	return out
 }
 
 type fileRecord struct {
@@ -333,21 +359,24 @@ func (s *DirStore) Artifacts(_ context.Context, id string) ([]*webapi.Artifact, 
 	}
 	out := make([]*webapi.Artifact, 0, len(rec.Artifacts))
 	for _, a := range rec.Artifacts {
-		out = append(out, artifactOf(id, a))
+		out = append(out, s.artifactOf(id, a))
 	}
 	return out, nil
 }
 
-func artifactOf(id string, a artifactRecord) *webapi.Artifact {
+// artifactOf is a's resource. An uploaded artifact's source is the uploads mount.
+func (s *DirStore) artifactOf(id string, a artifactRecord) *webapi.Artifact {
 	out := &webapi.Artifact{Name: service.ArtifactName(id, a.ID), Type: webapi.ArtifactType(webapi.ArtifactType_value[a.Type]), Entry: a.Entry}
+	if a.Source != nil {
+		out.Source = a.Source.proto()
+	} else if s.mount != "" {
+		out.Source = &webapi.ArtifactSource{Mount: s.mount}
+	}
 	if !a.UpdateTime.IsZero() {
 		out.UpdateTime = timestamppb.New(a.UpdateTime)
 	}
 	for _, f := range a.Files {
 		out.Files = append(out.Files, &webapi.SnapshotFile{Path: f.Path, Sha256: f.Sha256, Size: f.Size})
-	}
-	if a.Source != nil {
-		out.Source = &webapi.ArtifactSource{Mount: a.Source.Mount, Path: a.Source.Path, Ref: a.Source.Ref}
 	}
 	return out
 }
@@ -385,9 +414,7 @@ func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []servi
 		if err != nil {
 			return nil, err
 		}
-		if src := w.Source; src != nil {
-			a.Source = &sourceRecord{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef()}
-		}
+		a.Source = sourceRecordOf(w.Source)
 		written[w.ID] = a
 	}
 	if len(missing) > 0 {
@@ -410,7 +437,7 @@ func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []servi
 	}
 	out := make([]*webapi.Artifact, 0, len(writes))
 	for _, w := range writes {
-		out = append(out, artifactOf(id, written[w.ID]))
+		out = append(out, s.artifactOf(id, written[w.ID]))
 	}
 	return out, nil
 }

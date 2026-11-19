@@ -394,6 +394,99 @@ public final class DesignServiceGrpc {
     return getDeleteArtifactMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LinkArtifactRequest,
+      io.github.panyam.agni.v1.webapi.Artifact> getLinkArtifactMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "LinkArtifact",
+      requestType = io.github.panyam.agni.v1.webapi.LinkArtifactRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Artifact.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LinkArtifactRequest,
+      io.github.panyam.agni.v1.webapi.Artifact> getLinkArtifactMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LinkArtifactRequest, io.github.panyam.agni.v1.webapi.Artifact> getLinkArtifactMethod;
+    if ((getLinkArtifactMethod = DesignServiceGrpc.getLinkArtifactMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getLinkArtifactMethod = DesignServiceGrpc.getLinkArtifactMethod) == null) {
+          DesignServiceGrpc.getLinkArtifactMethod = getLinkArtifactMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.LinkArtifactRequest, io.github.panyam.agni.v1.webapi.Artifact>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "LinkArtifact"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.LinkArtifactRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Artifact.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("LinkArtifact"))
+              .build();
+        }
+      }
+    }
+    return getLinkArtifactMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest,
+      io.github.panyam.agni.v1.webapi.Artifact> getUnlinkArtifactMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "UnlinkArtifact",
+      requestType = io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Artifact.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest,
+      io.github.panyam.agni.v1.webapi.Artifact> getUnlinkArtifactMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest, io.github.panyam.agni.v1.webapi.Artifact> getUnlinkArtifactMethod;
+    if ((getUnlinkArtifactMethod = DesignServiceGrpc.getUnlinkArtifactMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getUnlinkArtifactMethod = DesignServiceGrpc.getUnlinkArtifactMethod) == null) {
+          DesignServiceGrpc.getUnlinkArtifactMethod = getUnlinkArtifactMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest, io.github.panyam.agni.v1.webapi.Artifact>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "UnlinkArtifact"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Artifact.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("UnlinkArtifact"))
+              .build();
+        }
+      }
+    }
+    return getUnlinkArtifactMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.SyncDesignRequest,
+      io.github.panyam.agni.v1.webapi.SyncDesignResponse> getSyncDesignMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SyncDesign",
+      requestType = io.github.panyam.agni.v1.webapi.SyncDesignRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.SyncDesignResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.SyncDesignRequest,
+      io.github.panyam.agni.v1.webapi.SyncDesignResponse> getSyncDesignMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.SyncDesignRequest, io.github.panyam.agni.v1.webapi.SyncDesignResponse> getSyncDesignMethod;
+    if ((getSyncDesignMethod = DesignServiceGrpc.getSyncDesignMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getSyncDesignMethod = DesignServiceGrpc.getSyncDesignMethod) == null) {
+          DesignServiceGrpc.getSyncDesignMethod = getSyncDesignMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.SyncDesignRequest, io.github.panyam.agni.v1.webapi.SyncDesignResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SyncDesign"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.SyncDesignRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.SyncDesignResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("SyncDesign"))
+              .build();
+        }
+      }
+    }
+    return getSyncDesignMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateReportRequest,
       io.github.panyam.agni.v1.webapi.Report> getCreateReportMethod;
 
@@ -744,6 +837,47 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * LinkArtifact points an artifact at a path in a mount, reads its files and keeps them by hash
+     * (agni issue 1723). With allow_missing it creates the artifact, and it replaces an uploaded one.
+     * A path naming a design's entry or companion takes the files a reader opens from it, grouped as
+     * ImportDesignFiles groups a folder, so a KiCad root sheet brings its child sheets. A path naming a
+     * folder takes every file under it. A ref that names a branch, or none, is followed and a sync
+     * moves it. A tag or a commit is pinned. An unknown mount or path is NOT_FOUND, the uploads mount is
+     * INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    default void linkArtifact(io.github.panyam.agni.v1.webapi.LinkArtifactRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getLinkArtifactMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * UnlinkArtifact makes a linked artifact an uploaded one. Its files stay as they are, and its
+     * source becomes the uploads mount, so UpdateArtifact can replace them. An uploaded artifact is
+     * returned unchanged.
+     * </pre>
+     */
+    default void unlinkArtifact(io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getUnlinkArtifactMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * SyncDesign brings a design's followed artifacts to their sources' current versions in one write
+     * (agni issue 1723). Artifacts linked to one mount at one ref move to one version together. An
+     * artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
+     * validate_only it reports what a sync would change and writes nothing.
+     * </pre>
+     */
+    default void syncDesign(io.github.panyam.agni.v1.webapi.SyncDesignRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.SyncDesignResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSyncDesignMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * CreateReport checks a stored design against packs and keeps the run as
      * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
      * own intent: the default packs of the project the request names, then the packs the report names.
@@ -1000,6 +1134,50 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * LinkArtifact points an artifact at a path in a mount, reads its files and keeps them by hash
+     * (agni issue 1723). With allow_missing it creates the artifact, and it replaces an uploaded one.
+     * A path naming a design's entry or companion takes the files a reader opens from it, grouped as
+     * ImportDesignFiles groups a folder, so a KiCad root sheet brings its child sheets. A path naming a
+     * folder takes every file under it. A ref that names a branch, or none, is followed and a sync
+     * moves it. A tag or a commit is pinned. An unknown mount or path is NOT_FOUND, the uploads mount is
+     * INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    public void linkArtifact(io.github.panyam.agni.v1.webapi.LinkArtifactRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getLinkArtifactMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * UnlinkArtifact makes a linked artifact an uploaded one. Its files stay as they are, and its
+     * source becomes the uploads mount, so UpdateArtifact can replace them. An uploaded artifact is
+     * returned unchanged.
+     * </pre>
+     */
+    public void unlinkArtifact(io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getUnlinkArtifactMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * SyncDesign brings a design's followed artifacts to their sources' current versions in one write
+     * (agni issue 1723). Artifacts linked to one mount at one ref move to one version together. An
+     * artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
+     * validate_only it reports what a sync would change and writes nothing.
+     * </pre>
+     */
+    public void syncDesign(io.github.panyam.agni.v1.webapi.SyncDesignRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.SyncDesignResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSyncDesignMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * CreateReport checks a stored design against packs and keeps the run as
      * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
      * own intent: the default packs of the project the request names, then the packs the report names.
@@ -1227,6 +1405,47 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * LinkArtifact points an artifact at a path in a mount, reads its files and keeps them by hash
+     * (agni issue 1723). With allow_missing it creates the artifact, and it replaces an uploaded one.
+     * A path naming a design's entry or companion takes the files a reader opens from it, grouped as
+     * ImportDesignFiles groups a folder, so a KiCad root sheet brings its child sheets. A path naming a
+     * folder takes every file under it. A ref that names a branch, or none, is followed and a sync
+     * moves it. A tag or a commit is pinned. An unknown mount or path is NOT_FOUND, the uploads mount is
+     * INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Artifact linkArtifact(io.github.panyam.agni.v1.webapi.LinkArtifactRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getLinkArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * UnlinkArtifact makes a linked artifact an uploaded one. Its files stay as they are, and its
+     * source becomes the uploads mount, so UpdateArtifact can replace them. An uploaded artifact is
+     * returned unchanged.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Artifact unlinkArtifact(io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getUnlinkArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * SyncDesign brings a design's followed artifacts to their sources' current versions in one write
+     * (agni issue 1723). Artifacts linked to one mount at one ref move to one version together. An
+     * artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
+     * validate_only it reports what a sync would change and writes nothing.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.SyncDesignResponse syncDesign(io.github.panyam.agni.v1.webapi.SyncDesignRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSyncDesignMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * CreateReport checks a stored design against packs and keeps the run as
      * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
      * own intent: the default packs of the project the request names, then the packs the report names.
@@ -1446,6 +1665,47 @@ public final class DesignServiceGrpc {
     public com.google.protobuf.Empty deleteArtifact(io.github.panyam.agni.v1.webapi.DeleteArtifactRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getDeleteArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * LinkArtifact points an artifact at a path in a mount, reads its files and keeps them by hash
+     * (agni issue 1723). With allow_missing it creates the artifact, and it replaces an uploaded one.
+     * A path naming a design's entry or companion takes the files a reader opens from it, grouped as
+     * ImportDesignFiles groups a folder, so a KiCad root sheet brings its child sheets. A path naming a
+     * folder takes every file under it. A ref that names a branch, or none, is followed and a sync
+     * moves it. A tag or a commit is pinned. An unknown mount or path is NOT_FOUND, the uploads mount is
+     * INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Artifact linkArtifact(io.github.panyam.agni.v1.webapi.LinkArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getLinkArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * UnlinkArtifact makes a linked artifact an uploaded one. Its files stay as they are, and its
+     * source becomes the uploads mount, so UpdateArtifact can replace them. An uploaded artifact is
+     * returned unchanged.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Artifact unlinkArtifact(io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getUnlinkArtifactMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * SyncDesign brings a design's followed artifacts to their sources' current versions in one write
+     * (agni issue 1723). Artifacts linked to one mount at one ref move to one version together. An
+     * artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
+     * validate_only it reports what a sync would change and writes nothing.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.SyncDesignResponse syncDesign(io.github.panyam.agni.v1.webapi.SyncDesignRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSyncDesignMethod(), getCallOptions(), request);
     }
 
     /**
@@ -1685,6 +1945,50 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * LinkArtifact points an artifact at a path in a mount, reads its files and keeps them by hash
+     * (agni issue 1723). With allow_missing it creates the artifact, and it replaces an uploaded one.
+     * A path naming a design's entry or companion takes the files a reader opens from it, grouped as
+     * ImportDesignFiles groups a folder, so a KiCad root sheet brings its child sheets. A path naming a
+     * folder takes every file under it. A ref that names a branch, or none, is followed and a sync
+     * moves it. A tag or a commit is pinned. An unknown mount or path is NOT_FOUND, the uploads mount is
+     * INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Artifact> linkArtifact(
+        io.github.panyam.agni.v1.webapi.LinkArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getLinkArtifactMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * UnlinkArtifact makes a linked artifact an uploaded one. Its files stay as they are, and its
+     * source becomes the uploads mount, so UpdateArtifact can replace them. An uploaded artifact is
+     * returned unchanged.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Artifact> unlinkArtifact(
+        io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getUnlinkArtifactMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * SyncDesign brings a design's followed artifacts to their sources' current versions in one write
+     * (agni issue 1723). Artifacts linked to one mount at one ref move to one version together. An
+     * artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
+     * validate_only it reports what a sync would change and writes nothing.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.SyncDesignResponse> syncDesign(
+        io.github.panyam.agni.v1.webapi.SyncDesignRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSyncDesignMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * CreateReport checks a stored design against packs and keeps the run as
      * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
      * own intent: the default packs of the project the request names, then the packs the report names.
@@ -1745,10 +2049,13 @@ public final class DesignServiceGrpc {
   private static final int METHODID_IMPORT_DESIGN_FILES = 9;
   private static final int METHODID_ADD_DESIGNS = 10;
   private static final int METHODID_DELETE_ARTIFACT = 11;
-  private static final int METHODID_CREATE_REPORT = 12;
-  private static final int METHODID_GET_REPORT = 13;
-  private static final int METHODID_LIST_REPORTS = 14;
-  private static final int METHODID_DELETE_REPORT = 15;
+  private static final int METHODID_LINK_ARTIFACT = 12;
+  private static final int METHODID_UNLINK_ARTIFACT = 13;
+  private static final int METHODID_SYNC_DESIGN = 14;
+  private static final int METHODID_CREATE_REPORT = 15;
+  private static final int METHODID_GET_REPORT = 16;
+  private static final int METHODID_LIST_REPORTS = 17;
+  private static final int METHODID_DELETE_REPORT = 18;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1814,6 +2121,18 @@ public final class DesignServiceGrpc {
         case METHODID_DELETE_ARTIFACT:
           serviceImpl.deleteArtifact((io.github.panyam.agni.v1.webapi.DeleteArtifactRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_LINK_ARTIFACT:
+          serviceImpl.linkArtifact((io.github.panyam.agni.v1.webapi.LinkArtifactRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact>) responseObserver);
+          break;
+        case METHODID_UNLINK_ARTIFACT:
+          serviceImpl.unlinkArtifact((io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Artifact>) responseObserver);
+          break;
+        case METHODID_SYNC_DESIGN:
+          serviceImpl.syncDesign((io.github.panyam.agni.v1.webapi.SyncDesignRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.SyncDesignResponse>) responseObserver);
           break;
         case METHODID_CREATE_REPORT:
           serviceImpl.createReport((io.github.panyam.agni.v1.webapi.CreateReportRequest) request,
@@ -1934,6 +2253,27 @@ public final class DesignServiceGrpc {
               com.google.protobuf.Empty>(
                 service, METHODID_DELETE_ARTIFACT)))
         .addMethod(
+          getLinkArtifactMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.LinkArtifactRequest,
+              io.github.panyam.agni.v1.webapi.Artifact>(
+                service, METHODID_LINK_ARTIFACT)))
+        .addMethod(
+          getUnlinkArtifactMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.UnlinkArtifactRequest,
+              io.github.panyam.agni.v1.webapi.Artifact>(
+                service, METHODID_UNLINK_ARTIFACT)))
+        .addMethod(
+          getSyncDesignMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.SyncDesignRequest,
+              io.github.panyam.agni.v1.webapi.SyncDesignResponse>(
+                service, METHODID_SYNC_DESIGN)))
+        .addMethod(
           getCreateReportMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -2021,6 +2361,9 @@ public final class DesignServiceGrpc {
               .addMethod(getImportDesignFilesMethod())
               .addMethod(getAddDesignsMethod())
               .addMethod(getDeleteArtifactMethod())
+              .addMethod(getLinkArtifactMethod())
+              .addMethod(getUnlinkArtifactMethod())
+              .addMethod(getSyncDesignMethod())
               .addMethod(getCreateReportMethod())
               .addMethod(getGetReportMethod())
               .addMethod(getListReportsMethod())

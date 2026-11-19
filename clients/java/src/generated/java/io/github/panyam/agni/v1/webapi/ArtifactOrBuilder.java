@@ -149,9 +149,10 @@ public interface ArtifactOrBuilder extends
 
   /**
    * <pre>
-   * source is where the artifact's files came from, for an artifact added from a mounted folder
-   * (agni issue 1736). It is empty for an uploaded artifact. The server reads the files once, when
-   * the design is added, and keeps its own copy by hash. Output only.
+   * source is where the files were read from. An uploaded artifact's mount is the server's uploads
+   * mount. A linked artifact's is another, such as a github one (agni issue 1723), and so is an
+   * artifact added from a mounted folder (agni issue 1736). The server keeps its own copy of the files
+   * by hash either way. It is output only.
    * </pre>
    *
    * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
@@ -160,9 +161,10 @@ public interface ArtifactOrBuilder extends
   boolean hasSource();
   /**
    * <pre>
-   * source is where the artifact's files came from, for an artifact added from a mounted folder
-   * (agni issue 1736). It is empty for an uploaded artifact. The server reads the files once, when
-   * the design is added, and keeps its own copy by hash. Output only.
+   * source is where the files were read from. An uploaded artifact's mount is the server's uploads
+   * mount. A linked artifact's is another, such as a github one (agni issue 1723), and so is an
+   * artifact added from a mounted folder (agni issue 1736). The server keeps its own copy of the files
+   * by hash either way. It is output only.
    * </pre>
    *
    * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
@@ -171,9 +173,10 @@ public interface ArtifactOrBuilder extends
   io.github.panyam.agni.v1.webapi.ArtifactSource getSource();
   /**
    * <pre>
-   * source is where the artifact's files came from, for an artifact added from a mounted folder
-   * (agni issue 1736). It is empty for an uploaded artifact. The server reads the files once, when
-   * the design is added, and keeps its own copy by hash. Output only.
+   * source is where the files were read from. An uploaded artifact's mount is the server's uploads
+   * mount. A linked artifact's is another, such as a github one (agni issue 1723), and so is an
+   * artifact added from a mounted folder (agni issue 1736). The server keeps its own copy of the files
+   * by hash either way. It is output only.
    * </pre>
    *
    * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>

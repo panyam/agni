@@ -12,7 +12,7 @@ public interface ArtifactSourceOrBuilder extends
 
   /**
    * <pre>
-   * mount is the mount's name.
+   * mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
    * </pre>
    *
    * <code>string mount = 1 [json_name = "mount"];</code>
@@ -21,7 +21,7 @@ public interface ArtifactSourceOrBuilder extends
   java.lang.String getMount();
   /**
    * <pre>
-   * mount is the mount's name.
+   * mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
    * </pre>
    *
    * <code>string mount = 1 [json_name = "mount"];</code>
@@ -32,7 +32,9 @@ public interface ArtifactSourceOrBuilder extends
 
   /**
    * <pre>
-   * path is the folder in the mount the artifact's file paths are relative to.
+   * path is where in the mount the files were read from. A link names the file or folder it was
+   * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+   * mounted folder names the folder its file paths are relative to.
    * </pre>
    *
    * <code>string path = 2 [json_name = "path"];</code>
@@ -41,7 +43,9 @@ public interface ArtifactSourceOrBuilder extends
   java.lang.String getPath();
   /**
    * <pre>
-   * path is the folder in the mount the artifact's file paths are relative to.
+   * path is where in the mount the files were read from. A link names the file or folder it was
+   * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+   * mounted folder names the folder its file paths are relative to.
    * </pre>
    *
    * <code>string path = 2 [json_name = "path"];</code>
@@ -52,7 +56,8 @@ public interface ArtifactSourceOrBuilder extends
 
   /**
    * <pre>
-   * ref is the version of the mount the files were read at, empty for a folder with no history.
+   * ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+   * on a github mount is its default branch.
    * </pre>
    *
    * <code>string ref = 3 [json_name = "ref"];</code>
@@ -61,7 +66,8 @@ public interface ArtifactSourceOrBuilder extends
   java.lang.String getRef();
   /**
    * <pre>
-   * ref is the version of the mount the files were read at, empty for a folder with no history.
+   * ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+   * on a github mount is its default branch.
    * </pre>
    *
    * <code>string ref = 3 [json_name = "ref"];</code>
@@ -69,4 +75,88 @@ public interface ArtifactSourceOrBuilder extends
    */
   com.google.protobuf.ByteString
       getRefBytes();
+
+  /**
+   * <pre>
+   * follow is true when a sync moves the artifact: a branch, an empty ref, or a mount with no
+   * history. A tag or commit is pinned. It is output only.
+   * </pre>
+   *
+   * <code>bool follow = 4 [json_name = "follow"];</code>
+   * @return The follow.
+   */
+  boolean getFollow();
+
+  /**
+   * <pre>
+   * version is the source's own name for what the server last read, a commit SHA on a github mount.
+   * It is empty for a mount with no history. It is output only.
+   * </pre>
+   *
+   * <code>string version = 5 [json_name = "version"];</code>
+   * @return The version.
+   */
+  java.lang.String getVersion();
+  /**
+   * <pre>
+   * version is the source's own name for what the server last read, a commit SHA on a github mount.
+   * It is empty for a mount with no history. It is output only.
+   * </pre>
+   *
+   * <code>string version = 5 [json_name = "version"];</code>
+   * @return The bytes for version.
+   */
+  com.google.protobuf.ByteString
+      getVersionBytes();
+
+  /**
+   * <pre>
+   * read_time is when the server last read the files from the source. It is output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+   * @return Whether the readTime field is set.
+   */
+  boolean hasReadTime();
+  /**
+   * <pre>
+   * read_time is when the server last read the files from the source. It is output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+   * @return The readTime.
+   */
+  com.google.protobuf.Timestamp getReadTime();
+  /**
+   * <pre>
+   * read_time is when the server last read the files from the source. It is output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getReadTimeOrBuilder();
+
+  /**
+   * <pre>
+   * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+   * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+   * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
+   * </pre>
+   *
+   * <code>string read_hash = 7 [json_name = "readHash"];</code>
+   * @return The readHash.
+   */
+  java.lang.String getReadHash();
+  /**
+   * <pre>
+   * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+   * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+   * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
+   * </pre>
+   *
+   * <code>string read_hash = 7 [json_name = "readHash"];</code>
+   * @return The bytes for readHash.
+   */
+  com.google.protobuf.ByteString
+      getReadHashBytes();
 }

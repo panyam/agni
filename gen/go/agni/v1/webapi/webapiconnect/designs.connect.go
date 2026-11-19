@@ -69,6 +69,15 @@ const (
 	// DesignServiceDeleteArtifactProcedure is the fully-qualified name of the DesignService's
 	// DeleteArtifact RPC.
 	DesignServiceDeleteArtifactProcedure = "/agni.v1.webapi.DesignService/DeleteArtifact"
+	// DesignServiceLinkArtifactProcedure is the fully-qualified name of the DesignService's
+	// LinkArtifact RPC.
+	DesignServiceLinkArtifactProcedure = "/agni.v1.webapi.DesignService/LinkArtifact"
+	// DesignServiceUnlinkArtifactProcedure is the fully-qualified name of the DesignService's
+	// UnlinkArtifact RPC.
+	DesignServiceUnlinkArtifactProcedure = "/agni.v1.webapi.DesignService/UnlinkArtifact"
+	// DesignServiceSyncDesignProcedure is the fully-qualified name of the DesignService's SyncDesign
+	// RPC.
+	DesignServiceSyncDesignProcedure = "/agni.v1.webapi.DesignService/SyncDesign"
 	// DesignServiceCreateReportProcedure is the fully-qualified name of the DesignService's
 	// CreateReport RPC.
 	DesignServiceCreateReportProcedure = "/agni.v1.webapi.DesignService/CreateReport"
@@ -140,6 +149,23 @@ type DesignServiceClient interface {
 	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
 	// design unable to be read until another is put.
 	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
+	// LinkArtifact points an artifact at a path in a mount, reads its files and keeps them by hash
+	// (agni issue 1723). With allow_missing it creates the artifact, and it replaces an uploaded one.
+	// A path naming a design's entry or companion takes the files a reader opens from it, grouped as
+	// ImportDesignFiles groups a folder, so a KiCad root sheet brings its child sheets. A path naming a
+	// folder takes every file under it. A ref that names a branch, or none, is followed and a sync
+	// moves it. A tag or a commit is pinned. An unknown mount or path is NOT_FOUND, the uploads mount is
+	// INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+	LinkArtifact(context.Context, *connect.Request[webapi.LinkArtifactRequest]) (*connect.Response[webapi.Artifact], error)
+	// UnlinkArtifact makes a linked artifact an uploaded one. Its files stay as they are, and its
+	// source becomes the uploads mount, so UpdateArtifact can replace them. An uploaded artifact is
+	// returned unchanged.
+	UnlinkArtifact(context.Context, *connect.Request[webapi.UnlinkArtifactRequest]) (*connect.Response[webapi.Artifact], error)
+	// SyncDesign brings a design's followed artifacts to their sources' current versions in one write
+	// (agni issue 1723). Artifacts linked to one mount at one ref move to one version together. An
+	// artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
+	// validate_only it reports what a sync would change and writes nothing.
+	SyncDesign(context.Context, *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error)
 	// CreateReport checks a stored design against packs and keeps the run as
 	// "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
 	// own intent: the default packs of the project the request names, then the packs the report names.
@@ -238,6 +264,24 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("DeleteArtifact")),
 			connect.WithClientOptions(opts...),
 		),
+		linkArtifact: connect.NewClient[webapi.LinkArtifactRequest, webapi.Artifact](
+			httpClient,
+			baseURL+DesignServiceLinkArtifactProcedure,
+			connect.WithSchema(designServiceMethods.ByName("LinkArtifact")),
+			connect.WithClientOptions(opts...),
+		),
+		unlinkArtifact: connect.NewClient[webapi.UnlinkArtifactRequest, webapi.Artifact](
+			httpClient,
+			baseURL+DesignServiceUnlinkArtifactProcedure,
+			connect.WithSchema(designServiceMethods.ByName("UnlinkArtifact")),
+			connect.WithClientOptions(opts...),
+		),
+		syncDesign: connect.NewClient[webapi.SyncDesignRequest, webapi.SyncDesignResponse](
+			httpClient,
+			baseURL+DesignServiceSyncDesignProcedure,
+			connect.WithSchema(designServiceMethods.ByName("SyncDesign")),
+			connect.WithClientOptions(opts...),
+		),
 		createReport: connect.NewClient[webapi.CreateReportRequest, webapi.Report](
 			httpClient,
 			baseURL+DesignServiceCreateReportProcedure,
@@ -279,6 +323,9 @@ type designServiceClient struct {
 	importDesignFiles    *connect.Client[webapi.ImportDesignFilesRequest, webapi.ImportDesignFilesResponse]
 	addDesigns           *connect.Client[webapi.AddDesignsRequest, webapi.AddDesignsResponse]
 	deleteArtifact       *connect.Client[webapi.DeleteArtifactRequest, emptypb.Empty]
+	linkArtifact         *connect.Client[webapi.LinkArtifactRequest, webapi.Artifact]
+	unlinkArtifact       *connect.Client[webapi.UnlinkArtifactRequest, webapi.Artifact]
+	syncDesign           *connect.Client[webapi.SyncDesignRequest, webapi.SyncDesignResponse]
 	createReport         *connect.Client[webapi.CreateReportRequest, webapi.Report]
 	getReport            *connect.Client[webapi.GetReportRequest, webapi.Report]
 	listReports          *connect.Client[webapi.ListReportsRequest, webapi.ListReportsResponse]
@@ -343,6 +390,21 @@ func (c *designServiceClient) AddDesigns(ctx context.Context, req *connect.Reque
 // DeleteArtifact calls agni.v1.webapi.DesignService.DeleteArtifact.
 func (c *designServiceClient) DeleteArtifact(ctx context.Context, req *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteArtifact.CallUnary(ctx, req)
+}
+
+// LinkArtifact calls agni.v1.webapi.DesignService.LinkArtifact.
+func (c *designServiceClient) LinkArtifact(ctx context.Context, req *connect.Request[webapi.LinkArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	return c.linkArtifact.CallUnary(ctx, req)
+}
+
+// UnlinkArtifact calls agni.v1.webapi.DesignService.UnlinkArtifact.
+func (c *designServiceClient) UnlinkArtifact(ctx context.Context, req *connect.Request[webapi.UnlinkArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	return c.unlinkArtifact.CallUnary(ctx, req)
+}
+
+// SyncDesign calls agni.v1.webapi.DesignService.SyncDesign.
+func (c *designServiceClient) SyncDesign(ctx context.Context, req *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error) {
+	return c.syncDesign.CallUnary(ctx, req)
 }
 
 // CreateReport calls agni.v1.webapi.DesignService.CreateReport.
@@ -423,6 +485,23 @@ type DesignServiceHandler interface {
 	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
 	// design unable to be read until another is put.
 	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
+	// LinkArtifact points an artifact at a path in a mount, reads its files and keeps them by hash
+	// (agni issue 1723). With allow_missing it creates the artifact, and it replaces an uploaded one.
+	// A path naming a design's entry or companion takes the files a reader opens from it, grouped as
+	// ImportDesignFiles groups a folder, so a KiCad root sheet brings its child sheets. A path naming a
+	// folder takes every file under it. A ref that names a branch, or none, is followed and a sync
+	// moves it. A tag or a commit is pinned. An unknown mount or path is NOT_FOUND, the uploads mount is
+	// INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+	LinkArtifact(context.Context, *connect.Request[webapi.LinkArtifactRequest]) (*connect.Response[webapi.Artifact], error)
+	// UnlinkArtifact makes a linked artifact an uploaded one. Its files stay as they are, and its
+	// source becomes the uploads mount, so UpdateArtifact can replace them. An uploaded artifact is
+	// returned unchanged.
+	UnlinkArtifact(context.Context, *connect.Request[webapi.UnlinkArtifactRequest]) (*connect.Response[webapi.Artifact], error)
+	// SyncDesign brings a design's followed artifacts to their sources' current versions in one write
+	// (agni issue 1723). Artifacts linked to one mount at one ref move to one version together. An
+	// artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
+	// validate_only it reports what a sync would change and writes nothing.
+	SyncDesign(context.Context, *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error)
 	// CreateReport checks a stored design against packs and keeps the run as
 	// "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
 	// own intent: the default packs of the project the request names, then the packs the report names.
@@ -517,6 +596,24 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("DeleteArtifact")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceLinkArtifactHandler := connect.NewUnaryHandler(
+		DesignServiceLinkArtifactProcedure,
+		svc.LinkArtifact,
+		connect.WithSchema(designServiceMethods.ByName("LinkArtifact")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceUnlinkArtifactHandler := connect.NewUnaryHandler(
+		DesignServiceUnlinkArtifactProcedure,
+		svc.UnlinkArtifact,
+		connect.WithSchema(designServiceMethods.ByName("UnlinkArtifact")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceSyncDesignHandler := connect.NewUnaryHandler(
+		DesignServiceSyncDesignProcedure,
+		svc.SyncDesign,
+		connect.WithSchema(designServiceMethods.ByName("SyncDesign")),
+		connect.WithHandlerOptions(opts...),
+	)
 	designServiceCreateReportHandler := connect.NewUnaryHandler(
 		DesignServiceCreateReportProcedure,
 		svc.CreateReport,
@@ -567,6 +664,12 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceAddDesignsHandler.ServeHTTP(w, r)
 		case DesignServiceDeleteArtifactProcedure:
 			designServiceDeleteArtifactHandler.ServeHTTP(w, r)
+		case DesignServiceLinkArtifactProcedure:
+			designServiceLinkArtifactHandler.ServeHTTP(w, r)
+		case DesignServiceUnlinkArtifactProcedure:
+			designServiceUnlinkArtifactHandler.ServeHTTP(w, r)
+		case DesignServiceSyncDesignProcedure:
+			designServiceSyncDesignHandler.ServeHTTP(w, r)
 		case DesignServiceCreateReportProcedure:
 			designServiceCreateReportHandler.ServeHTTP(w, r)
 		case DesignServiceGetReportProcedure:
@@ -630,6 +733,18 @@ func (UnimplementedDesignServiceHandler) AddDesigns(context.Context, *connect.Re
 
 func (UnimplementedDesignServiceHandler) DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.DeleteArtifact is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) LinkArtifact(context.Context, *connect.Request[webapi.LinkArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.LinkArtifact is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) UnlinkArtifact(context.Context, *connect.Request[webapi.UnlinkArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.UnlinkArtifact is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) SyncDesign(context.Context, *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.SyncDesign is not implemented"))
 }
 
 func (UnimplementedDesignServiceHandler) CreateReport(context.Context, *connect.Request[webapi.CreateReportRequest]) (*connect.Response[webapi.Report], error) {

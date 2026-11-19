@@ -7,7 +7,7 @@ package io.github.panyam.agni.v1.webapi;
 
 /**
  * <pre>
- * ArtifactSource names the place in a mount an artifact's files were read from.
+ * ArtifactSource is where an artifact's files come from: a mount, a path inside it and a ref.
  * </pre>
  *
  * Protobuf type {@code agni.v1.webapi.ArtifactSource}
@@ -35,6 +35,8 @@ private static final long serialVersionUID = 0L;
     mount_ = "";
     path_ = "";
     ref_ = "";
+    version_ = "";
+    readHash_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -55,12 +57,13 @@ private static final long serialVersionUID = 0L;
             io.github.panyam.agni.v1.webapi.ArtifactSource.class, io.github.panyam.agni.v1.webapi.ArtifactSource.Builder.class);
   }
 
+  private int bitField0_;
   public static final int MOUNT_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object mount_ = "";
   /**
    * <pre>
-   * mount is the mount's name.
+   * mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
    * </pre>
    *
    * <code>string mount = 1 [json_name = "mount"];</code>
@@ -81,7 +84,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * mount is the mount's name.
+   * mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
    * </pre>
    *
    * <code>string mount = 1 [json_name = "mount"];</code>
@@ -107,7 +110,9 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object path_ = "";
   /**
    * <pre>
-   * path is the folder in the mount the artifact's file paths are relative to.
+   * path is where in the mount the files were read from. A link names the file or folder it was
+   * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+   * mounted folder names the folder its file paths are relative to.
    * </pre>
    *
    * <code>string path = 2 [json_name = "path"];</code>
@@ -128,7 +133,9 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * path is the folder in the mount the artifact's file paths are relative to.
+   * path is where in the mount the files were read from. A link names the file or folder it was
+   * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+   * mounted folder names the folder its file paths are relative to.
    * </pre>
    *
    * <code>string path = 2 [json_name = "path"];</code>
@@ -154,7 +161,8 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object ref_ = "";
   /**
    * <pre>
-   * ref is the version of the mount the files were read at, empty for a folder with no history.
+   * ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+   * on a github mount is its default branch.
    * </pre>
    *
    * <code>string ref = 3 [json_name = "ref"];</code>
@@ -175,7 +183,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * ref is the version of the mount the files were read at, empty for a folder with no history.
+   * ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+   * on a github mount is its default branch.
    * </pre>
    *
    * <code>string ref = 3 [json_name = "ref"];</code>
@@ -190,6 +199,160 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       ref_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FOLLOW_FIELD_NUMBER = 4;
+  private boolean follow_ = false;
+  /**
+   * <pre>
+   * follow is true when a sync moves the artifact: a branch, an empty ref, or a mount with no
+   * history. A tag or commit is pinned. It is output only.
+   * </pre>
+   *
+   * <code>bool follow = 4 [json_name = "follow"];</code>
+   * @return The follow.
+   */
+  @java.lang.Override
+  public boolean getFollow() {
+    return follow_;
+  }
+
+  public static final int VERSION_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object version_ = "";
+  /**
+   * <pre>
+   * version is the source's own name for what the server last read, a commit SHA on a github mount.
+   * It is empty for a mount with no history. It is output only.
+   * </pre>
+   *
+   * <code>string version = 5 [json_name = "version"];</code>
+   * @return The version.
+   */
+  @java.lang.Override
+  public java.lang.String getVersion() {
+    java.lang.Object ref = version_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      version_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * version is the source's own name for what the server last read, a commit SHA on a github mount.
+   * It is empty for a mount with no history. It is output only.
+   * </pre>
+   *
+   * <code>string version = 5 [json_name = "version"];</code>
+   * @return The bytes for version.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getVersionBytes() {
+    java.lang.Object ref = version_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      version_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int READ_TIME_FIELD_NUMBER = 6;
+  private com.google.protobuf.Timestamp readTime_;
+  /**
+   * <pre>
+   * read_time is when the server last read the files from the source. It is output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+   * @return Whether the readTime field is set.
+   */
+  @java.lang.Override
+  public boolean hasReadTime() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * read_time is when the server last read the files from the source. It is output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+   * @return The readTime.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getReadTime() {
+    return readTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : readTime_;
+  }
+  /**
+   * <pre>
+   * read_time is when the server last read the files from the source. It is output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getReadTimeOrBuilder() {
+    return readTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : readTime_;
+  }
+
+  public static final int READ_HASH_FIELD_NUMBER = 7;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object readHash_ = "";
+  /**
+   * <pre>
+   * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+   * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+   * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
+   * </pre>
+   *
+   * <code>string read_hash = 7 [json_name = "readHash"];</code>
+   * @return The readHash.
+   */
+  @java.lang.Override
+  public java.lang.String getReadHash() {
+    java.lang.Object ref = readHash_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      readHash_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+   * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+   * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
+   * </pre>
+   *
+   * <code>string read_hash = 7 [json_name = "readHash"];</code>
+   * @return The bytes for readHash.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getReadHashBytes() {
+    java.lang.Object ref = readHash_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      readHash_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -219,6 +382,18 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ref_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 3, ref_);
     }
+    if (follow_ != false) {
+      output.writeBool(4, follow_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(version_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, version_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(6, getReadTime());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(readHash_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 7, readHash_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -231,6 +406,20 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ref_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(3, ref_);
+    }
+    if (follow_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(4, follow_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(version_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, version_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(6, getReadTime());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(readHash_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, readHash_);
     }
     return size;
   }
@@ -262,6 +451,17 @@ private static final long serialVersionUID = 0L;
         .equals(other.getPath())) return false;
     if (!getRef()
         .equals(other.getRef())) return false;
+    if (getFollow()
+        != other.getFollow()) return false;
+    if (!getVersion()
+        .equals(other.getVersion())) return false;
+    if (hasReadTime() != other.hasReadTime()) return false;
+    if (hasReadTime()) {
+      if (!getReadTime()
+          .equals(other.getReadTime())) return false;
+    }
+    if (!getReadHash()
+        .equals(other.getReadHash())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -279,6 +479,17 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getPath().hashCode();
     hash = (37 * hash) + REF_FIELD_NUMBER;
     hash = (53 * hash) + getRef().hashCode();
+    hash = (37 * hash) + FOLLOW_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getFollow());
+    hash = (37 * hash) + VERSION_FIELD_NUMBER;
+    hash = (53 * hash) + getVersion().hashCode();
+    if (hasReadTime()) {
+      hash = (37 * hash) + READ_TIME_FIELD_NUMBER;
+      hash = (53 * hash) + getReadTime().hashCode();
+    }
+    hash = (37 * hash) + READ_HASH_FIELD_NUMBER;
+    hash = (53 * hash) + getReadHash().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -378,7 +589,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * ArtifactSource names the place in a mount an artifact's files were read from.
+   * ArtifactSource is where an artifact's files come from: a mount, a path inside it and a ref.
    * </pre>
    *
    * Protobuf type {@code agni.v1.webapi.ArtifactSource}
@@ -402,13 +613,19 @@ private static final long serialVersionUID = 0L;
 
     // Construct using io.github.panyam.agni.v1.webapi.ArtifactSource.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetReadTimeFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -417,6 +634,14 @@ private static final long serialVersionUID = 0L;
       mount_ = "";
       path_ = "";
       ref_ = "";
+      follow_ = false;
+      version_ = "";
+      readTime_ = null;
+      if (readTimeBuilder_ != null) {
+        readTimeBuilder_.dispose();
+        readTimeBuilder_ = null;
+      }
+      readHash_ = "";
       return this;
     }
 
@@ -459,6 +684,23 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.ref_ = ref_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.follow_ = follow_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.version_ = version_;
+      }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.readTime_ = readTimeBuilder_ == null
+            ? readTime_
+            : readTimeBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.readHash_ = readHash_;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -486,6 +728,22 @@ private static final long serialVersionUID = 0L;
       if (!other.getRef().isEmpty()) {
         ref_ = other.ref_;
         bitField0_ |= 0x00000004;
+        onChanged();
+      }
+      if (other.getFollow() != false) {
+        setFollow(other.getFollow());
+      }
+      if (!other.getVersion().isEmpty()) {
+        version_ = other.version_;
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (other.hasReadTime()) {
+        mergeReadTime(other.getReadTime());
+      }
+      if (!other.getReadHash().isEmpty()) {
+        readHash_ = other.readHash_;
+        bitField0_ |= 0x00000040;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -527,6 +785,28 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 32: {
+              follow_ = input.readBool();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
+            case 42: {
+              version_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
+            case 50: {
+              input.readMessage(
+                  internalGetReadTimeFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 58: {
+              readHash_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 58
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -547,7 +827,7 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object mount_ = "";
     /**
      * <pre>
-     * mount is the mount's name.
+     * mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
      * </pre>
      *
      * <code>string mount = 1 [json_name = "mount"];</code>
@@ -567,7 +847,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * mount is the mount's name.
+     * mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
      * </pre>
      *
      * <code>string mount = 1 [json_name = "mount"];</code>
@@ -588,7 +868,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * mount is the mount's name.
+     * mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
      * </pre>
      *
      * <code>string mount = 1 [json_name = "mount"];</code>
@@ -605,7 +885,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * mount is the mount's name.
+     * mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
      * </pre>
      *
      * <code>string mount = 1 [json_name = "mount"];</code>
@@ -619,7 +899,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * mount is the mount's name.
+     * mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
      * </pre>
      *
      * <code>string mount = 1 [json_name = "mount"];</code>
@@ -639,7 +919,9 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object path_ = "";
     /**
      * <pre>
-     * path is the folder in the mount the artifact's file paths are relative to.
+     * path is where in the mount the files were read from. A link names the file or folder it was
+     * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+     * mounted folder names the folder its file paths are relative to.
      * </pre>
      *
      * <code>string path = 2 [json_name = "path"];</code>
@@ -659,7 +941,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * path is the folder in the mount the artifact's file paths are relative to.
+     * path is where in the mount the files were read from. A link names the file or folder it was
+     * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+     * mounted folder names the folder its file paths are relative to.
      * </pre>
      *
      * <code>string path = 2 [json_name = "path"];</code>
@@ -680,7 +964,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * path is the folder in the mount the artifact's file paths are relative to.
+     * path is where in the mount the files were read from. A link names the file or folder it was
+     * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+     * mounted folder names the folder its file paths are relative to.
      * </pre>
      *
      * <code>string path = 2 [json_name = "path"];</code>
@@ -697,7 +983,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * path is the folder in the mount the artifact's file paths are relative to.
+     * path is where in the mount the files were read from. A link names the file or folder it was
+     * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+     * mounted folder names the folder its file paths are relative to.
      * </pre>
      *
      * <code>string path = 2 [json_name = "path"];</code>
@@ -711,7 +999,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * path is the folder in the mount the artifact's file paths are relative to.
+     * path is where in the mount the files were read from. A link names the file or folder it was
+     * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+     * mounted folder names the folder its file paths are relative to.
      * </pre>
      *
      * <code>string path = 2 [json_name = "path"];</code>
@@ -731,7 +1021,8 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object ref_ = "";
     /**
      * <pre>
-     * ref is the version of the mount the files were read at, empty for a folder with no history.
+     * ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+     * on a github mount is its default branch.
      * </pre>
      *
      * <code>string ref = 3 [json_name = "ref"];</code>
@@ -751,7 +1042,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * ref is the version of the mount the files were read at, empty for a folder with no history.
+     * ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+     * on a github mount is its default branch.
      * </pre>
      *
      * <code>string ref = 3 [json_name = "ref"];</code>
@@ -772,7 +1064,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * ref is the version of the mount the files were read at, empty for a folder with no history.
+     * ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+     * on a github mount is its default branch.
      * </pre>
      *
      * <code>string ref = 3 [json_name = "ref"];</code>
@@ -789,7 +1082,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * ref is the version of the mount the files were read at, empty for a folder with no history.
+     * ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+     * on a github mount is its default branch.
      * </pre>
      *
      * <code>string ref = 3 [json_name = "ref"];</code>
@@ -803,7 +1097,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * ref is the version of the mount the files were read at, empty for a folder with no history.
+     * ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+     * on a github mount is its default branch.
      * </pre>
      *
      * <code>string ref = 3 [json_name = "ref"];</code>
@@ -816,6 +1111,407 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       ref_ = value;
       bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private boolean follow_ ;
+    /**
+     * <pre>
+     * follow is true when a sync moves the artifact: a branch, an empty ref, or a mount with no
+     * history. A tag or commit is pinned. It is output only.
+     * </pre>
+     *
+     * <code>bool follow = 4 [json_name = "follow"];</code>
+     * @return The follow.
+     */
+    @java.lang.Override
+    public boolean getFollow() {
+      return follow_;
+    }
+    /**
+     * <pre>
+     * follow is true when a sync moves the artifact: a branch, an empty ref, or a mount with no
+     * history. A tag or commit is pinned. It is output only.
+     * </pre>
+     *
+     * <code>bool follow = 4 [json_name = "follow"];</code>
+     * @param value The follow to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFollow(boolean value) {
+
+      follow_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * follow is true when a sync moves the artifact: a branch, an empty ref, or a mount with no
+     * history. A tag or commit is pinned. It is output only.
+     * </pre>
+     *
+     * <code>bool follow = 4 [json_name = "follow"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFollow() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      follow_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object version_ = "";
+    /**
+     * <pre>
+     * version is the source's own name for what the server last read, a commit SHA on a github mount.
+     * It is empty for a mount with no history. It is output only.
+     * </pre>
+     *
+     * <code>string version = 5 [json_name = "version"];</code>
+     * @return The version.
+     */
+    public java.lang.String getVersion() {
+      java.lang.Object ref = version_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        version_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * version is the source's own name for what the server last read, a commit SHA on a github mount.
+     * It is empty for a mount with no history. It is output only.
+     * </pre>
+     *
+     * <code>string version = 5 [json_name = "version"];</code>
+     * @return The bytes for version.
+     */
+    public com.google.protobuf.ByteString
+        getVersionBytes() {
+      java.lang.Object ref = version_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        version_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * version is the source's own name for what the server last read, a commit SHA on a github mount.
+     * It is empty for a mount with no history. It is output only.
+     * </pre>
+     *
+     * <code>string version = 5 [json_name = "version"];</code>
+     * @param value The version to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVersion(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      version_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * version is the source's own name for what the server last read, a commit SHA on a github mount.
+     * It is empty for a mount with no history. It is output only.
+     * </pre>
+     *
+     * <code>string version = 5 [json_name = "version"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearVersion() {
+      version_ = getDefaultInstance().getVersion();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * version is the source's own name for what the server last read, a commit SHA on a github mount.
+     * It is empty for a mount with no history. It is output only.
+     * </pre>
+     *
+     * <code>string version = 5 [json_name = "version"];</code>
+     * @param value The bytes for version to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVersionBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      version_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp readTime_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> readTimeBuilder_;
+    /**
+     * <pre>
+     * read_time is when the server last read the files from the source. It is output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+     * @return Whether the readTime field is set.
+     */
+    public boolean hasReadTime() {
+      return ((bitField0_ & 0x00000020) != 0);
+    }
+    /**
+     * <pre>
+     * read_time is when the server last read the files from the source. It is output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+     * @return The readTime.
+     */
+    public com.google.protobuf.Timestamp getReadTime() {
+      if (readTimeBuilder_ == null) {
+        return readTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : readTime_;
+      } else {
+        return readTimeBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * read_time is when the server last read the files from the source. It is output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+     */
+    public Builder setReadTime(com.google.protobuf.Timestamp value) {
+      if (readTimeBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        readTime_ = value;
+      } else {
+        readTimeBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * read_time is when the server last read the files from the source. It is output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+     */
+    public Builder setReadTime(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (readTimeBuilder_ == null) {
+        readTime_ = builderForValue.build();
+      } else {
+        readTimeBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * read_time is when the server last read the files from the source. It is output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+     */
+    public Builder mergeReadTime(com.google.protobuf.Timestamp value) {
+      if (readTimeBuilder_ == null) {
+        if (((bitField0_ & 0x00000020) != 0) &&
+          readTime_ != null &&
+          readTime_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getReadTimeBuilder().mergeFrom(value);
+        } else {
+          readTime_ = value;
+        }
+      } else {
+        readTimeBuilder_.mergeFrom(value);
+      }
+      if (readTime_ != null) {
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_time is when the server last read the files from the source. It is output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+     */
+    public Builder clearReadTime() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      readTime_ = null;
+      if (readTimeBuilder_ != null) {
+        readTimeBuilder_.dispose();
+        readTimeBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * read_time is when the server last read the files from the source. It is output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getReadTimeBuilder() {
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return internalGetReadTimeFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * read_time is when the server last read the files from the source. It is output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getReadTimeOrBuilder() {
+      if (readTimeBuilder_ != null) {
+        return readTimeBuilder_.getMessageOrBuilder();
+      } else {
+        return readTime_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : readTime_;
+      }
+    }
+    /**
+     * <pre>
+     * read_time is when the server last read the files from the source. It is output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp read_time = 6 [json_name = "readTime"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        internalGetReadTimeFieldBuilder() {
+      if (readTimeBuilder_ == null) {
+        readTimeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getReadTime(),
+                getParentForChildren(),
+                isClean());
+        readTime_ = null;
+      }
+      return readTimeBuilder_;
+    }
+
+    private java.lang.Object readHash_ = "";
+    /**
+     * <pre>
+     * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+     * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+     * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
+     * </pre>
+     *
+     * <code>string read_hash = 7 [json_name = "readHash"];</code>
+     * @return The readHash.
+     */
+    public java.lang.String getReadHash() {
+      java.lang.Object ref = readHash_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        readHash_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+     * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+     * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
+     * </pre>
+     *
+     * <code>string read_hash = 7 [json_name = "readHash"];</code>
+     * @return The bytes for readHash.
+     */
+    public com.google.protobuf.ByteString
+        getReadHashBytes() {
+      java.lang.Object ref = readHash_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        readHash_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+     * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+     * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
+     * </pre>
+     *
+     * <code>string read_hash = 7 [json_name = "readHash"];</code>
+     * @param value The readHash to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReadHash(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      readHash_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+     * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+     * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
+     * </pre>
+     *
+     * <code>string read_hash = 7 [json_name = "readHash"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReadHash() {
+      readHash_ = getDefaultInstance().getReadHash();
+      bitField0_ = (bitField0_ & ~0x00000040);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+     * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+     * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
+     * </pre>
+     *
+     * <code>string read_hash = 7 [json_name = "readHash"];</code>
+     * @param value The bytes for readHash to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReadHashBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      readHash_ = value;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
