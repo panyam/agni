@@ -645,6 +645,30 @@ func (a *Design) ImportDesignFiles(ctx context.Context, req *connect.Request[web
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Design) LinkArtifact(ctx context.Context, req *connect.Request[webapi.LinkArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	resp, err := a.svc.LinkArtifact(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) UnlinkArtifact(ctx context.Context, req *connect.Request[webapi.UnlinkArtifactRequest]) (*connect.Response[webapi.Artifact], error) {
+	resp, err := a.svc.UnlinkArtifact(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) SyncDesign(ctx context.Context, req *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error) {
+	resp, err := a.svc.SyncDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Design) DeleteArtifact(ctx context.Context, req *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {
 	if err := a.svc.DeleteArtifact(ctx, req.Msg); err != nil {
 		return nil, toConnectErr(err)

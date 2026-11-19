@@ -328,7 +328,8 @@ every file's path and hash. A restart reads the records back, and rebuilds a vie
 from its files. A snapshot over 256 MB is refused.
 
 `DeleteMount` forgets a mount `CreateMount` made. A mount from `--mount` or `--mount-root` comes from
-the server's flags, and deleting one is refused. A runtime mount can only come from GitHub, since a
+the server's flags, and deleting one is refused. So is deleting a mount that an artifact is linked
+to, as the next section describes. A runtime mount can only come from GitHub, since a
 client must not choose which folder on the server's disk is served. `--mount` names a folder. A
 private repo waits on agni issue 1724, and S3 and SharePoint on agni issues 1729 and 1730.
 
@@ -336,6 +337,45 @@ private repo waits on agni issue 1724, and S3 and SharePoint on agni issues 1729
 `ref` and `commit`, and whether it is `fixed`. `ListMounts` also says in `can_create_mounts` whether
 the server can make one. `make exercise-mounts` makes a GitHub mount over
 Antmicro's Jetson baseboard at its 1.1.2 revision, restarts the server, and lists it again.
+
+## Linking an artifact to a mount
+
+A stored design's artifact can come from a mount instead of an upload (agni issue 1723). Say the
+team's board lives in that GitHub repo, and they want a design on the server that reads the repo at
+a release. They link the design's schematic and board to the repo at a commit:
+
+```bash
+agni designs create bb --remote http://localhost:8080
+agni designs link bb schematic jetson/jetson-agx-thor-baseboard.kicad_sch@3411086e --remote http://localhost:8080
+agni designs link bb board jetson/jetson-agx-thor-baseboard.kicad_pcb@3411086e --remote http://localhost:8080
+```
+
+The source is `<mount>/<path>@<ref>`. A path naming a design's entry, such as the root sheet, takes
+the files a reader opens from it, the way `push` groups a folder. So the schematic above holds all
+its sheets, and the board holds the board file alone. A path naming a folder takes every file under
+it, which suits an ODB++ job. The server keeps its own copy of each file, by hash, so a check never
+waits on GitHub. `agni designs artifacts bb` names each artifact's source and the commit it read.
+
+A tag or a commit pins the artifact. A branch, or no ref at all, makes the artifact follow the branch,
+and `agni designs sync` moves it to the branch's newest commit:
+
+```bash
+agni designs sync bb --dry-run --remote http://localhost:8080
+agni designs sync bb --remote http://localhost:8080
+```
+
+A sync asks GitHub once for each mount and ref, so artifacts from one repo move to one commit
+together, in one write. It downloads only the files whose git blob id it hasn't seen, so a sync of an
+unchanged branch fetches nothing. Linking again at another ref moves a pinned artifact. A link to a
+folder from `--mount` follows the folder, since a folder has no history, and a sync compares the
+files' hashes with what it last read.
+
+A linked artifact can't be replaced by `put` or `push` until `agni designs unlink` makes it an
+uploaded one again, keeping its files. A mount with artifacts linked to it can't be deleted until
+they are unlinked or deleted. The calls are `DesignService.LinkArtifact`, `UnlinkArtifact` and
+`SyncDesign`, and `Artifact.source` carries the mount, path, ref, version and read time.
+`make exercise-linked-sources` links Jetson 1.1.2, checks it against the same files on disk, moves
+it to 1.1.3, syncs, and reads it all back after a restart. Private repos wait on agni issue 1724.
 
 ## Keeping review runs
 

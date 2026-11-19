@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
-
 	"strings"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/yaml.v3"
@@ -31,6 +32,12 @@ type DesignService struct {
 	// mountedList and mountedRead hash a mounted design's files for a report (agni issue 1746).
 	mountedList DesignFileLister
 	mountedRead FileReader
+	// readers read the mounts a linked artifact names, and uploadsMount names the mount uploaded
+	// artifacts come from (agni issue 1723). WithLinks sets them.
+	readers      MountReaders
+	uploadsMount string
+	// now stamps a link's read time; time.Now when nil.
+	now func() time.Time
 }
 
 // NewDesignService returns a DesignService over catalog, reading uploaded file contents from blobs.
@@ -210,6 +217,9 @@ func (s *DesignService) UpdateArtifact(ctx context.Context, req *webapi.UpdateAr
 	if err != nil {
 		return nil, err
 	}
+	if err := s.refuseLinked(ctx, StandaloneDesignName(d), []string{w.ID}); err != nil {
+		return nil, err
+	}
 	out, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(d), []ArtifactWrite{w}, s.blobs)
 	if err != nil {
 		return nil, err
@@ -241,6 +251,9 @@ func (s *DesignService) BatchUpdateArtifacts(ctx context.Context, req *webapi.Ba
 		}
 		seen[w.ID] = true
 		writes = append(writes, w)
+	}
+	if err := s.refuseLinked(ctx, req.GetParent(), slices.Collect(maps.Keys(seen))); err != nil {
+		return nil, err
 	}
 	out, err := s.catalog.WriteArtifacts(ctx, req.GetParent(), writes, s.blobs)
 	if err != nil {
@@ -293,6 +306,9 @@ func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.Impor
 		return nil, err
 	}
 	id, _ := StandaloneDesignID(req.GetParent())
+	if err := s.refuseLinked(ctx, req.GetParent(), plan.IDs); err != nil {
+		return nil, err
+	}
 	var writes []ArtifactWrite
 	for _, a := range plan.IDs {
 		w := ArtifactWrite{ID: a, AllowMissing: true}
