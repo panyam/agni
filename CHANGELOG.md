@@ -10,6 +10,20 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-19
+
+A server keeps designs. A person uploads a board, or adds one from a mounted folder, and each design
+holds artifacts and keeps reports checked against packs of rules (PRs 1702 to 1757). The viewer has
+pages for designs, projects, packs and reports (PRs 1721, 1751 and 1752). A runtime mount snapshots
+a GitHub repo, private ones through a connection, and an artifact links to a mount at a ref and
+follows a branch (PRs 1750, 1754, 1758 and 1764). `agni serve` and `agnids` ask every caller for a
+token and serve TLS, and every client trusts a team's own CA (PR 1766). Each part draws as its own 3D
+model (PRs 1690 and 1700). It is a minor release. **Breaking:** `DesignService` is now
+`DesignViewService` and `GetDesign` is `GetSummary` (PR 1707). A revision is a design of its own in
+a series (PR 1703). `--store` and `--uploads` replace `--state-dir` and `--review-store` (PR 1741).
+A folder in a mount makes no design (PR 1755). The `mounts` package is `mountset` and `artifact.URI`
+is goapplib's `mounts.URI` (PR 1762). The full write-up is [RELEASES/v0.9.0.md](RELEASES/v0.9.0.md).
+
 ## [0.8.0] - 2026-11-17
 
 A board opens in 3D the way its maker's tool shows it. Each part stands at its real height and
