@@ -171,7 +171,7 @@ func (g *githubReader) Fetch(ctx context.Context, commit string, f service.Mount
 	}
 	if h, err := os.ReadFile(filepath.Join(g.l.index, f.ID)); err == nil { // #nosec G304 -- a 40-hex name inside --uploads
 		if p, ok := g.l.gh.blobs.Path(string(h)); ok {
-			if _, err := os.Stat(p); err == nil {
+			if _, err := os.Stat(p); err == nil { // #nosec G703 -- Path accepts only a well-formed sha256 and joins it under the blobs
 				return string(h), false, nil
 			}
 		}
@@ -335,7 +335,7 @@ func (r *folderReader) Fetch(_ context.Context, _ string, f service.MountFile) (
 	h := "sha256:" + hex.EncodeToString(sum[:])
 	held := false
 	if p, ok := r.blobs.Path(h); ok {
-		_, err := os.Stat(p)
+		_, err := os.Stat(p) // #nosec G703 -- Path accepts only a well-formed sha256 and joins it under the blobs
 		held = err == nil
 	}
 	if !held {

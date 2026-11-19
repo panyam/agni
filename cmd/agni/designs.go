@@ -402,7 +402,7 @@ func printArtifact(w io.Writer, a *webapi.Artifact) {
 	}
 	fmt.Fprintf(w, "%s\t%s\tentry %s\t%d files\tcontent %s", a.GetName(), typ, entry, len(a.GetFiles()), artifactDigest(a))
 	if src := a.GetSource(); src.GetMount() != "" && src.GetMount() != uploadsMount {
-		fmt.Fprintf(w, "\tfrom %s", linkSourceString(src))
+		fmt.Fprintf(w, "\tfrom %s", service.SourceString(src))
 		if v := src.GetVersion(); v != "" && v != src.GetRef() {
 			fmt.Fprintf(w, " at %s", v)
 		}
@@ -429,18 +429,6 @@ func parseLinkSource(s string) (*webapi.ArtifactSource, error) {
 		return nil, fmt.Errorf("%q names no mount; write <mount>[/<path>][@<ref>]", s)
 	}
 	return src, nil
-}
-
-// linkSourceString writes src the way parseLinkSource reads it.
-func linkSourceString(src *webapi.ArtifactSource) string {
-	out := src.GetMount()
-	if src.GetPath() != "" {
-		out += "/" + src.GetPath()
-	}
-	if src.GetRef() != "" {
-		out += "@" + src.GetRef()
-	}
-	return out
 }
 
 // printSync writes one artifact's line of a sync.

@@ -410,7 +410,7 @@ An uploaded artifact's mount is the uploads mount. A linked artifact's mount is 
 GitHub repo, and the server reads its files from there and keeps them by hash like an upload's. The
 two differ only in the mount, so a check, a diff and a report read both the same way. `SyncDesign`
 moves a followed link to its source's newest version. "Linking an artifact to a mount" in
-[running the server](../guide/running-the-server.md) walks through it.
+[running the server](../../guide/running-the-server/#linking-an-artifact-to-a-mount) walks through it.
 
 The server reads each artifact to find its type and its entry, with the grouping `ProposeDesigns`
 uses on a dropped folder. Files that make two designs are refused, since the artifact would hold two

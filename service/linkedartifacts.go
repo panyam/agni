@@ -55,10 +55,10 @@ func (s *DesignService) WithLinks(readers MountReaders, uploads string) *DesignS
 // noLinks is why a server without readers refuses a link or a sync.
 const noLinks = "this server links no artifacts; start it with --store and --uploads"
 
-// linked reports whether a is linked to a mount other than the uploads mount.
+// linked reports whether a was read from a mount by a link. Only a link records a read hash, so an
+// uploaded artifact is never linked, whichever mount its store names for it.
 func (s *DesignService) linked(a *webapi.Artifact) bool {
-	m := a.GetSource().GetMount()
-	return m != "" && m != s.uploadsMount
+	return a.GetSource().GetReadHash() != ""
 }
 
 // LinkArtifact points an artifact at a path in a mount and reads its files.
@@ -255,7 +255,7 @@ func (s *DesignService) LinkedTo(ctx context.Context, mount string) ([]string, e
 			continue
 		}
 		for _, a := range arts {
-			if a.GetSource().GetMount() == mount {
+			if s.linked(a) && a.GetSource().GetMount() == mount {
 				out = append(out, a.GetName())
 			}
 		}
@@ -276,14 +276,14 @@ func (s *DesignService) refuseLinked(ctx context.Context, design string, ids []s
 		_, id, _ := ArtifactID(a.GetName())
 		if slices.Contains(ids, id) && s.linked(a) {
 			src := a.GetSource()
-			return fmt.Errorf("%w: %s is linked to %s; UnlinkArtifact it before putting files", ErrFailedPrecondition, a.GetName(), describeSource(src))
+			return fmt.Errorf("%w: %s is linked to %s; UnlinkArtifact it before putting files", ErrFailedPrecondition, a.GetName(), SourceString(src))
 		}
 	}
 	return nil
 }
 
-// describeSource writes a source the way `agni designs link` takes it, "jetson/hw/board@1.1.2".
-func describeSource(src *webapi.ArtifactSource) string {
+// SourceString writes a source the way `agni designs link` takes it, "jetson/hw/board@1.1.2".
+func SourceString(src *webapi.ArtifactSource) string {
 	out := src.GetMount()
 	if src.GetPath() != "" {
 		out += "/" + src.GetPath()
