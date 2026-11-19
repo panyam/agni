@@ -87,10 +87,12 @@ while read -r sum board url action extra; do
 done < "$pin"
 
 # The files the cache lacks download at once, $FETCH_JOBS at a time (8 by default), each once
-# however many lines name it. One that fails fails the run, after the others finish.
+# however many lines name it. One that fails fails the run, after the others finish. GNU xargs runs
+# its command once on empty input, so a run with everything cached would call fetch_one with no
+# arguments, and the guard skips that call.
 awk '{print $1, $2, $3}' "$tmp/lines" | sort -u -k1,1 | while read -r sum board url; do
   [ -f "$cache/$sum" ] || printf '%s\0%s\0%s\0' "$sum" "$board" "$url"
-done | xargs -0 -n 3 -P "${FETCH_JOBS:-8}" bash -c 'fetch_one "$@"' fetch_one || {
+done | xargs -0 -n 3 -P "${FETCH_JOBS:-8}" bash -c '[ $# -eq 3 ] || exit 0; fetch_one "$@"' fetch_one || {
   echo "fetch_remote: some downloads failed; see above" >&2; exit 1; }
 
 i=0
