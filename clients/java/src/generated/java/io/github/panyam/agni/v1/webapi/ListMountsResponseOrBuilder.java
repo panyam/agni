@@ -45,4 +45,15 @@ public interface ListMountsResponseOrBuilder extends
    * @return The prunedMounts.
    */
   int getPrunedMounts();
+
+  /**
+   * <pre>
+   * can_create_mounts says whether CreateMount can succeed on this server, which needs --store and
+   * --uploads (agni issue 1749). A client offers to add a mount only when it is set.
+   * </pre>
+   *
+   * <code>bool can_create_mounts = 3 [json_name = "canCreateMounts"];</code>
+   * @return The canCreateMounts.
+   */
+  boolean getCanCreateMounts();
 }

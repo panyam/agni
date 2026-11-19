@@ -512,9 +512,12 @@ type ListMountsResponse struct {
 	// pruned_mounts counts the mounts that opens left out. A client can then tell the user that its
 	// sidebar is shorter than the server's configuration, so the user need not wonder where a mount
 	// went. Zero when pruning is off.
-	PrunedMounts  int32 `protobuf:"varint,2,opt,name=pruned_mounts,json=prunedMounts,proto3" json:"pruned_mounts,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	PrunedMounts int32 `protobuf:"varint,2,opt,name=pruned_mounts,json=prunedMounts,proto3" json:"pruned_mounts,omitempty"`
+	// can_create_mounts says whether CreateMount can succeed on this server, which needs --store and
+	// --uploads (agni issue 1749). A client offers to add a mount only when it is set.
+	CanCreateMounts bool `protobuf:"varint,3,opt,name=can_create_mounts,json=canCreateMounts,proto3" json:"can_create_mounts,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ListMountsResponse) Reset() {
@@ -559,6 +562,13 @@ func (x *ListMountsResponse) GetPrunedMounts() int32 {
 		return x.PrunedMounts
 	}
 	return 0
+}
+
+func (x *ListMountsResponse) GetCanCreateMounts() bool {
+	if x != nil {
+		return x.CanCreateMounts
+	}
+	return false
 }
 
 // DirEntry is one item in a directory listing: a subdirectory or a supported design file.
@@ -1382,10 +1392,11 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x0fGetMountRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"I\n" +
 	"\x11ListMountsRequest\x12.\n" +
-	"\x05opens\x18\x02 \x03(\x0e2\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\b\x01\x10\x02\"h\n" +
+	"\x05opens\x18\x02 \x03(\x0e2\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\b\x01\x10\x02\"\x94\x01\n" +
 	"\x12ListMountsResponse\x12-\n" +
 	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\x12#\n" +
-	"\rpruned_mounts\x18\x02 \x01(\x05R\fprunedMounts\"\xaa\x01\n" +
+	"\rpruned_mounts\x18\x02 \x01(\x05R\fprunedMounts\x12*\n" +
+	"\x11can_create_mounts\x18\x03 \x01(\bR\x0fcanCreateMounts\"\xaa\x01\n" +
 	"\bDirEntry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n" +
 	"\x06is_dir\x18\x02 \x01(\bR\x05isDir\x12\x16\n" +
