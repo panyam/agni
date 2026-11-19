@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -153,6 +154,31 @@ func TestAReadOnlyTableNeitherRewritesNorNeedsTheRecordsFolder(t *testing.T) {
 	after, _ := os.ReadFile(filepath.Join(records, "jetson.yaml"))
 	if !bytes.Equal(before, after) {
 		t.Errorf("a read-only Open rewrote a record")
+	}
+}
+
+// A read-only reader opens over --uploads and --store folders it can't create, as agnids does in its
+// image when nothing is mounted at /var/lib/agni, and serves no runtime mounts rather than failing to
+// start. It makes neither folder.
+func TestAReadOnlyTableNeedsNoUploadsFolderItCannotMake(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Getuid() == 0 {
+		t.Skip("needs a folder this user can't write into")
+	}
+	parent := filepath.Join(t.TempDir(), "agni")
+	if err := os.Mkdir(parent, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+	records, uploads := filepath.Join(parent, "meta", "mounts"), filepath.Join(parent, "files")
+	table, err := mountset.Open(mountset.Config{Uploads: uploads, Records: records, ReadOnly: true})
+	if err != nil {
+		t.Fatalf("a read-only Open over uploads it can't create = %v, want no mounts and no error", err)
+	}
+	if got := table.List(); len(got) != 0 {
+		t.Errorf("List = %v, want no mounts", got)
+	}
+	if _, err := os.Stat(uploads); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a read-only Open made the uploads folder: %v", err)
 	}
 }
 

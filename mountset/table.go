@@ -90,11 +90,18 @@ func Open(cfg Config) (*Table, error) {
 	drivers := []mounts.Driver{}
 	var store mounts.RecordStore
 	if cfg.Uploads != "" {
-		b, err := blobs.NewDir(filepath.Join(cfg.Uploads, BlobsDir))
-		if err != nil {
-			return nil, fmt.Errorf("--uploads %q: %w", cfg.Uploads, err)
+		var b blobs.Linker
+		if cfg.ReadOnly {
+			// A read-only reader can't make the folder either, so it waits for agni serve to
+			// (laterBlobs, agni issue 1767).
+			b = &laterBlobs{root: filepath.Join(cfg.Uploads, BlobsDir)}
+		} else {
+			d, err := blobs.NewDir(filepath.Join(cfg.Uploads, BlobsDir))
+			if err != nil {
+				return nil, fmt.Errorf("--uploads %q: %w", cfg.Uploads, err)
+			}
+			t.blobs, b = d, d
 		}
-		t.blobs = b
 		folderOpts = append(folderOpts, folder.WithBlobs(b))
 		ghOpts := []github.Option{github.WithViews(filepath.Join(cfg.Uploads, SnapshotsDir)), github.WithHTTPClient(&http.Client{Timeout: 5 * time.Minute}), github.WithLimits(cfg.Limits)}
 		if cfg.GitHubAPI != "" {
@@ -108,7 +115,7 @@ func Open(cfg Config) (*Table, error) {
 			// A read-only reader can't make the folder, so it waits for agni serve to (laterStore).
 			store = &laterStore{dir: cfg.Records}
 		} else if cfg.Records != "" {
-			if err := migrate(context.Background(), cfg.Records, b, cfg.Log); err != nil {
+			if err := migrate(context.Background(), cfg.Records, t.blobs, cfg.Log); err != nil {
 				return nil, fmt.Errorf("--store: %w", err)
 			}
 			// #1758 kept git blob ids in <uploads>/links/git. goapplib keeps them as blob aliases,
@@ -116,6 +123,7 @@ func Open(cfg Config) (*Table, error) {
 			if err := os.RemoveAll(filepath.Join(cfg.Uploads, "links")); err != nil {
 				return nil, fmt.Errorf("--uploads: %w", err)
 			}
+			var err error
 			if store, err = fsstore.New(cfg.Records); err != nil {
 				return nil, fmt.Errorf("--store: %w", err)
 			}
