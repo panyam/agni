@@ -113,13 +113,16 @@ func TestAPrivateRepoReadsThroughAnAppInstallation(t *testing.T) {
 	gh, head := privateRepo(t)
 	app := appfake.New(t)
 	gh.AcceptToken(app.ValidInstallationToken)
-	// The key goes through an env ref. oneauth reads a file ref only as a path starting with /, and a
-	// Windows temp folder starts with a drive letter.
-	t.Setenv("AGNI_TEST_GITHUB_APP_KEY", string(app.AppKeyPEM()))
+	// The key goes through a file ref. On Windows its path starts with a drive letter, which oneauth
+	// reads since v0.3.8.
+	key := filepath.Join(t.TempDir(), "app.pem")
+	if err := os.WriteFile(key, app.AppKeyPEM(), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	dir := t.TempDir()
 	url := serveViewer(t, viewerOpts{storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
 	cmd := connectionsCmd()
-	if out, err := runCobra(t, cmd, "add", "acme-app", "--github-app", "12345", "--installation", "1", "--key", "env:AGNI_TEST_GITHUB_APP_KEY", "--base-url", app.URL, "--remote", url); err != nil {
+	if out, err := runCobra(t, cmd, "add", "acme-app", "--github-app", "12345", "--installation", "1", "--key", "file:"+key, "--base-url", app.URL, "--remote", url); err != nil {
 		t.Fatalf("connections add --github-app = %q, %v", out, err)
 	}
 	out, err := runMounts(t, "add", "board", "github://acme/board", "--connection", "acme-app", "--remote", url)

@@ -1,6 +1,7 @@
 // Command clientexercise is mission #1625's exercise, `make exercise-clients` (agni issue 1628). It
-// starts one `agni serve` with a state directory, as a shared server would run, then runs each
-// language's client example against it. Each example prints one line of JSON summing up its answers,
+// starts one `agni serve` with a store and --auth tokens, as a shared server would run, makes a
+// token with `agni token create`, and runs each language's client example against it with the token
+// in AGNI_TOKEN (agni issue 1627). Each example prints one line of JSON summing up its answers,
 // and each line must match the CLI's answers on the same design. It prints a step table, one row per
 // language, and writes it to -out. A language whose example does not exist yet waits on its ticket.
 //
@@ -110,19 +111,20 @@ func exercise(agni, mount, design string) ([]row, error) {
 	if err != nil {
 		return nil, err
 	}
-	server, stop, err := serve(agni, mount)
+	server, token, stop, err := serve(agni, mount)
 	if err != nil {
 		return nil, err
 	}
 	defer stop()
-	rows := []row{{"serve", "ok", fmt.Sprintf("%s with --store; the CLI reads %d components, %d nets, %d sheets, %d findings, %d query rows, and a board of %d layers, %d parts and %d tracks", server, want.Components, want.Nets, want.Sheets, want.Findings, want.QueryRows, want.BoardLayers, want.BoardParts, want.BoardTracks)}}
+	rows := []row{{"serve", "ok", fmt.Sprintf("%s with --store and --auth tokens; the CLI reads %d components, %d nets, %d sheets, %d findings, %d query rows, and a board of %d layers, %d parts and %d tracks", server, want.Components, want.Nets, want.Sheets, want.Findings, want.QueryRows, want.BoardLayers, want.BoardParts, want.BoardTracks)}}
+	rows = append(rows, refusedWithoutToken(server))
 	for _, l := range languages {
 		run := filepath.Join("clients", "examples", l.name, "run")
 		if _, err := os.Stat(run); err != nil {
 			rows = append(rows, row{l.name, "not available", "waits on " + l.ticket + ": no " + run})
 			continue
 		}
-		got, err := runExample(run, server, design)
+		got, err := runExample(run, server, design, token)
 		if err != nil {
 			rows = append(rows, row{l.name, "fail", err.Error()})
 			continue
@@ -145,7 +147,7 @@ func compare(got, want *summary) string {
 	if got.Version != want.Version {
 		d = append(d, fmt.Sprintf("version %q, want the server's %q", got.Version, want.Version))
 	}
-	for _, f := range []string{"grpc", "snapshot_recovery", "snapshot_store"} {
+	for _, f := range []string{"grpc", "snapshot_recovery", "snapshot_store", "auth"} {
 		if !slices.Contains(got.Features, f) {
 			d = append(d, "no feature "+f)
 		}
@@ -215,25 +217,34 @@ func cliAnswers(agni, mount, design string) (*summary, error) {
 		BoardLayers: count(board, "layers"), BoardParts: count(board, "placements"), BoardTracks: tracks}, nil
 }
 
-// serve starts agni serve on a free port with a fresh state directory, from an empty working
-// directory so it serves the API alone, and returns its URL and a function that stops it.
-func serve(agni, mount string) (string, func(), error) {
+// serve starts agni serve on a free port with a fresh store and --auth tokens, from an empty working
+// directory so it serves the API alone. It returns the server's URL, a token `agni token create`
+// made for it, and a function that stops it. The server listens on 127.0.0.1, so it may take tokens
+// in the clear; the gRPC clients can't trust a test certificate yet.
+func serve(agni, mount string) (string, string, func(), error) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 	addr := l.Addr().String()
 	l.Close()
 	work, err := os.MkdirTemp("", "agni-clients-")
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
-	cmd := exec.Command(agni, "serve", "--addr", addr, "--mount", mount, "--store", "file:///"+strings.TrimPrefix(filepath.ToSlash(filepath.Join(work, "store")), "/")) // #nosec G204 -- as above
+	store := "file:///" + strings.TrimPrefix(filepath.ToSlash(filepath.Join(work, "store")), "/")
+	made, err := exec.Command(agni, "token", "create", "clients-exercise", "--store", store).Output() // #nosec G204 -- as above
+	if err != nil {
+		_ = os.RemoveAll(work)
+		return "", "", nil, fmt.Errorf("agni token create: %w", err)
+	}
+	token := strings.TrimSpace(string(made))
+	cmd := exec.Command(agni, "serve", "--addr", addr, "--mount", mount, "--store", store, "--auth", "tokens") // #nosec G204 -- as above
 	cmd.Dir = work
 	var log bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &log, &log
 	if err := cmd.Start(); err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 	stop := func() {
 		_ = cmd.Process.Kill()
@@ -246,20 +257,38 @@ func serve(agni, mount string) (string, func(), error) {
 	for {
 		if r, err := http.Get(url + "/healthz"); err == nil { // #nosec G107 -- the server this exercise just started
 			r.Body.Close()
-			return url, stop, nil
+			return url, token, stop, nil
 		}
 		select {
 		case <-ctx.Done():
 			stop()
-			return "", nil, fmt.Errorf("agni serve did not answer at %s: %s", url, log.String())
+			return "", "", nil, fmt.Errorf("agni serve did not answer at %s: %s", url, log.String())
 		case <-time.After(200 * time.Millisecond):
 		}
 	}
 }
 
-// runExample runs one language's example and reads the last line it printed.
-func runExample(run, server, design string) (*summary, error) {
+// refusedWithoutToken is the step that asks the server for its info with no token, as Connect's JSON,
+// and passes when the server refuses it as unauthenticated.
+func refusedWithoutToken(server string) row {
+	r, err := http.Post(server+"/agni.v1.webapi.ServerService/GetServerInfo", "application/json", strings.NewReader("{}")) // #nosec G107 -- the server this exercise started
+	if err != nil {
+		return row{"no token", "fail", err.Error()}
+	}
+	defer r.Body.Close()
+	var body struct{ Code, Message string }
+	_ = json.NewDecoder(r.Body).Decode(&body)
+	if r.StatusCode != http.StatusUnauthorized || body.Code != "unauthenticated" {
+		return row{"no token", "fail", fmt.Sprintf("a call with no token answered %d %q, want 401 unauthenticated", r.StatusCode, body.Code)}
+	}
+	return row{"no token", "ok", "refused as unauthenticated: " + body.Message}
+}
+
+// runExample runs one language's example with token in AGNI_TOKEN, and reads the last line it
+// printed.
+func runExample(run, server, design, token string) (*summary, error) {
 	cmd := exec.Command("./"+run, "-server", server, "-design", design) // #nosec G204 -- an example committed in this repo
+	cmd.Env = append(os.Environ(), "AGNI_TOKEN="+token)
 	var out, errOut bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errOut
 	if err := cmd.Run(); err != nil {

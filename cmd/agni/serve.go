@@ -84,6 +84,7 @@ func serveCmd() *cobra.Command {
 	var uploadMaxBytes int64
 	var mcp bool
 	var viewerRooms bool
+	var auth, tlsCert, tlsKey string
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -108,7 +109,11 @@ func serveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := checkAuthFlags(auth, storeDir, tlsCert, tlsKey, addr); err != nil {
+				return err
+			}
 			return runViewer(cmd, viewerOpts{
+				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
@@ -159,6 +164,9 @@ func serveCmd() *cobra.Command {
 	_ = c.Flags().MarkHidden("github-api")
 	c.Flags().StringVar(&githubRaw, "github-raw", "", "the host a linked github:// artifact's files are downloaded from; a test names its own")
 	_ = c.Flags().MarkHidden("github-raw")
+	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authTokens+"\" accepts the tokens `agni token create` makes in --store, and refuses a call without one (agni issue 1627). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost. Empty asks nobody")
+	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with, HTTP/2 included, so gRPC clients reach the server over TLS; with --tls-key")
+	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
 	return c
 }
 
@@ -237,6 +245,12 @@ type viewerOpts struct {
 	// the viewer tabs open on this server (--viewer-rooms, agni issue 1154). It needs mcpHTTP and the
 	// viewer.
 	viewerRooms bool
+
+	// auth is --auth: authTokens checks every call's token, and "" checks none (agni issue 1627).
+	auth string
+	// tlsCert and tlsKey are --tls-cert and --tls-key, the files the server speaks HTTPS with. Both
+	// empty serves cleartext.
+	tlsCert, tlsKey string
 }
 
 const (
@@ -441,6 +455,12 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if runtime {
 		workspace.WithMountMaker(table)
 	}
+	features := []string{"grpc"}
+	if o.auth != "" {
+		// A caller on another machine has no business with the server's folder layout.
+		workspace.WithHiddenRoots()
+		features = append(features, "auth")
+	}
 	seedCache := newSeeds(workspace, table, wasmengine.StoreVersion)
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
@@ -471,7 +491,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Timing:     server.Timing{Slow: o.slowRequest, Log: budget.Log},
 		Hooks:      []connect.Interceptor{warmSeeds(seedCache)},
 		// The listener speaks gRPC beside Connect (newHTTPServer, agni issue 1626).
-		Info: &service.ServerInfoService{Version: version.Version(), Features: []string{"grpc"}, Projects: projectResolver},
+		Info: &service.ServerInfoService{Version: version.Version(), Features: features, Projects: projectResolver},
 	}
 	apiPaths := api.Register(mux, budgeted)
 	if o.listener == nil && o.mcp != mcpStdio {
@@ -484,6 +504,11 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 	}
 	urls := serveURLs(addr, lanIPs)
+	if o.tlsCert != "" {
+		for i, u := range urls {
+			urls[i] = "https://" + strings.TrimPrefix(u, "http://")
+		}
+	}
 	if o.mcp != "" {
 		// The tools name designs by path, so they list the designs the mounted folders declare too.
 		mcpOpts := mcpserver.Options{Version: version.Version(), Budget: budget.Enforce, Folders: projects.NewMountedDesignsFunc(liveTrees(table))}
@@ -545,7 +570,11 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		registerPages(newPageApp(dir, &serveApp{mounts: table, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins, viewerRooms: o.viewerRooms, designs: projectResolver.Designs}), mux)
 	}
 
-	srv := newHTTPServer(addr, requestQoS(mux))
+	var handler http.Handler = mux
+	if o.auth != "" {
+		handler = newAuthGate(tokenStore(o.storeDir), o.tlsCert != "").wrap(mux)
+	}
+	srv := newHTTPServer(addr, requestQoS(handler))
 	if o.banner != nil {
 		o.banner(urls, len(table.List()))
 	} else {
@@ -555,7 +584,11 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 		fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", what, urls[0], len(table.List()))
 		for _, u := range urls[1:] {
-			fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, no auth)\n", u)
+			if o.auth == "" {
+				fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, no auth)\n", u)
+			} else {
+				fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, tokens from agni token create)\n", u)
+			}
 		}
 		if o.mcp == mcpHTTP {
 			fmt.Fprintf(os.Stderr, "  MCP: %smcp (streamable HTTP; localhost origins only)\n", urls[0])
@@ -564,11 +597,19 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 			fmt.Fprintf(os.Stderr, "  viewer rooms: %srelay/ (an agent drives a tab once its reader turns on \"Let agents drive this tab\")\n", urls[0])
 		}
 	}
-	// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.
-	if o.listener != nil {
-		return skhttp.ListenAndServeGraceful(srv, skhttp.WithListener(o.listener))
+	if o.auth != "" && o.tlsCert == "" {
+		fmt.Fprintf(os.Stderr, "warning: --auth without --tls-cert sends tokens in the clear; this is safe on localhost only\n")
 	}
-	return skhttp.ListenAndServeGraceful(srv)
+	// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.
+	var listen []skhttp.GracefulOption
+	if o.listener != nil {
+		listen = append(listen, skhttp.WithListener(o.listener))
+	}
+	if o.tlsCert != "" {
+		// HTTP/2 comes over ALPN, so a gRPC client reaches the server over TLS too.
+		listen = append(listen, skhttp.WithTLS(o.tlsCert, o.tlsKey))
+	}
+	return skhttp.ListenAndServeGraceful(srv, listen...)
 }
 
 // newHTTPServer is the server `agni serve` and `agni open` run. It speaks HTTP/1.1 and HTTP/2,

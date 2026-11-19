@@ -32,14 +32,15 @@ namespace agni {
 inline constexpr std::string_view kApi = "agni.v1";
 
 // GrpcTarget turns a server URL, such as http://127.0.0.1:8080, into the host:port gRPC dials. A bare
-// host:port passes through. It throws std::invalid_argument for https://, since agni serve has no TLS
-// yet (agni issue 1627), and for any other scheme.
+// host:port passes through. It throws std::invalid_argument for https://, since this client can't
+// trust a CA yet (agni issue 1765), and for any other scheme.
 std::string GrpcTarget(std::string_view server);
 
 class Client {
  public:
   // server is a URL or host:port. A non-empty token goes on every call as the metadata
-  // `authorization: Bearer <token>`. The server does not check it yet (agni issue 1627).
+  // `authorization: Bearer <token>`. A server started with --auth tokens refuses a call without a
+  // good one (agni issue 1627).
   explicit Client(std::string_view server, std::string token = "");
 
   // Connect calls ServerService.GetServerInfo and keeps the answer. A server whose api is not

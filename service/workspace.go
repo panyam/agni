@@ -110,6 +110,8 @@ type WorkspaceService struct {
 	files    FileReader
 	// maker makes and deletes runtime mounts, and is set by WithMountMaker.
 	maker MountMaker
+	// hideRoots leaves every mount's root empty, and is set by WithHiddenRoots.
+	hideRoots bool
 	// linked names the artifacts linked to a mount, and is set by WithLinkedArtifacts.
 	linked func(ctx context.Context, mount string) ([]string, error)
 }
@@ -171,7 +173,7 @@ func (s *WorkspaceService) CreateMount(ctx context.Context, req *webapi.CreateMo
 	if err != nil {
 		return nil, err
 	}
-	return mountProto(info)
+	return s.mountProto(info)
 }
 
 // DeleteMount deletes a runtime mount through the MountMaker. A mount from the flags is
@@ -205,6 +207,14 @@ func (s *WorkspaceService) DeleteMount(ctx context.Context, req *webapi.DeleteMo
 }
 
 // mountProto is m as the wire carries it.
+// mountProto is m as this service answers it, without its root when roots are hidden.
+func (s *WorkspaceService) mountProto(m MountInfo) (*webapi.Mount, error) {
+	if s.hideRoots {
+		m.Root = ""
+	}
+	return mountProto(m)
+}
+
 func mountProto(m MountInfo) (*webapi.Mount, error) {
 	uri, err := mounts.NewURI(m.Name, "")
 	if err != nil {
@@ -219,6 +229,14 @@ func connectionRef(id string) string {
 		return ""
 	}
 	return ConnectionName(id)
+}
+
+// WithHiddenRoots leaves each mount's root empty in every answer, for a server whose callers sign in
+// from other machines (agni issue 1627). A root is a folder on the server's disk, and a remote
+// caller reaches a mount's files through its URI anyway.
+func (s *WorkspaceService) WithHiddenRoots() *WorkspaceService {
+	s.hideRoots = true
+	return s
 }
 
 // NewWorkspaceService returns a WorkspaceService backed by ws.
@@ -239,7 +257,7 @@ func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMount
 	opens := opensSet(req.GetOpens())
 	pruneBudget := pruneMaxDirs
 	for _, m := range s.ws.Mounts() {
-		mp, err := mountProto(m)
+		mp, err := s.mountProto(m)
 		if err != nil {
 			return nil, err
 		}
@@ -260,7 +278,7 @@ func (s *WorkspaceService) GetMount(_ context.Context, req *webapi.GetMountReque
 		if m.Name != req.GetName() {
 			continue
 		}
-		return mountProto(m)
+		return s.mountProto(m)
 	}
 	return nil, fmt.Errorf("%w: no mount named %q", ErrNotFound, req.GetName())
 }

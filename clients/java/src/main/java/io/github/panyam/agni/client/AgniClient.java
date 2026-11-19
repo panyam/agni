@@ -61,8 +61,8 @@ public final class AgniClient implements AutoCloseable {
   /**
    * A client of the server at {@code address}. The address is {@code http://host:port} or {@code
    * host:port} for cleartext HTTP/2, or {@code https://host:port} for TLS. A non-empty {@code token}
-   * goes out as {@code authorization: Bearer <token>} on every call. The server does not check it
-   * yet (agni issue 1627).
+   * goes out as {@code authorization: Bearer <token>} on every call. A server started with {@code
+   * --auth tokens} refuses a call without a good one (agni issue 1627).
    */
   public static AgniClient create(String address, String token) {
     Target t = Target.parse(address);

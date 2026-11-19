@@ -314,6 +314,19 @@ its secret is, `env:NAME` or `file:/abs/path`, never the secret.
 
 `agni mounts add <name> <source> --connection <id>` mounts a private repo through one.
 
+### `token`
+
+The tokens an `agni serve --auth tokens` accepts (agni issue 1627). Each command works on the
+server's `--store` folder directly, on the server's machine.
+
+| Subcommand | What it does |
+|---|---|
+| `create <name>` | make a token for a person or a tool, and print it once |
+| `ls` | list the tokens, newest first, with who each is for and whether it was revoked |
+| `revoke <id>` | revoke a token; the server stops accepting it within a minute |
+
+A command with `--remote` sends the token in `AGNI_TOKEN`.
+
 ### `projects`
 
 Create projects on an `agni serve --store` and list designs in them. Both subcommands need

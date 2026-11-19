@@ -42,8 +42,9 @@ try (AgniClient client = AgniClient.create("http://127.0.0.1:8080", token)) {
 
 - `AgniClient.create(address, token)` opens one channel. An `http://host:port` or bare
   `host:port` address uses cleartext HTTP/2, and `https://host:port` uses TLS. A non-empty token
-  goes out as `authorization: Bearer <token>` metadata on every call. The server does not check it
-  yet (agni issue 1627).
+  goes out as `authorization: Bearer <token>` metadata on every call. A server started with `--auth
+  tokens` refuses a call without a good one (agni issue 1627). Trusting a CA other than the
+  system's waits on agni issue 1765.
 - `connect()` calls `ServerService.GetServerInfo`. It throws `IncompatibleServerException` when the
   server's `api` is not `agni.v1`. Test `ServerInfo.getFeaturesList()` for a feature by name, such
   as `snapshot_recovery`, rather than comparing versions.

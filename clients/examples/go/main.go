@@ -60,6 +60,11 @@ func main() {
 
 func run(ctx context.Context, server, design string) (*Summary, error) {
 	hc := http.DefaultClient
+	// A shared server asks every call for a token (agni issue 1627). The exercise passes one in
+	// AGNI_TOKEN.
+	if token := os.Getenv("AGNI_TOKEN"); token != "" {
+		hc = &http.Client{Transport: bearerTransport{token: token, next: http.DefaultTransport}}
+	}
 	info, err := webapiconnect.NewServerServiceClient(hc, server).GetServerInfo(ctx, connect.NewRequest(&webapi.GetServerInfoRequest{}))
 	if err != nil {
 		return nil, fmt.Errorf("calling GetServerInfo: %w", err)
@@ -125,4 +130,16 @@ func boardGeometry(ctx context.Context, designs webapiconnect.DesignViewServiceC
 			return board, nil
 		}
 	}
+}
+
+// bearerTransport sends a bearer token on every request.
+type bearerTransport struct {
+	token string
+	next  http.RoundTripper
+}
+
+func (b bearerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.Header.Set("Authorization", "Bearer "+b.token)
+	return b.next.RoundTrip(r)
 }

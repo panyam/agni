@@ -73,7 +73,9 @@ int main(int argc, char** argv) {
     std::cerr << e.what() << "\n";
     return 2;
   }
-  agni::Client client(server);
+  // A shared server asks every call for a token (agni issue 1627), passed in AGNI_TOKEN.
+  const char* token = std::getenv("AGNI_TOKEN");
+  agni::Client client(server, token ? token : "");
   webapi::ServerInfo info;
   // The contract's first rule: Connect refuses a server that speaks another package.
   if (auto st = client.Connect(&info); !st.ok()) Fail("GetServerInfo", st);

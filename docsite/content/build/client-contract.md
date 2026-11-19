@@ -15,8 +15,10 @@ library, such as Rust with tonic, Java with grpc-java or C++ with gRPC's own, ge
 uses gRPC. TypeScript uses Connect, as the viewer does. A language with neither can post protojson to
 `/<service>/<method>` with `Content-Type: application/json`, which needs no library at all.
 
-A shared server will ask who is calling. The client sends a bearer token in the `Authorization`
-header, or the gRPC metadata of that name, and the server refuses a call without one (agni issue 1627).
+A shared server asks who is calling (agni issue 1627). The client sends a bearer token in the
+`Authorization` header, or the gRPC metadata of that name. A server started with `--auth tokens`
+refuses a call without a good token as `unauthenticated`, in the call's own protocol, and lists
+`auth` among its features. Its operator makes each token with `agni token create`.
 
 ## Checking the server first
 

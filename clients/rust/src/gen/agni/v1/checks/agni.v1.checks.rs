@@ -695,6 +695,11 @@ pub struct ResultsMeta {
     /// that it is weaker instead of being quietly promoted.
     #[prost(bool, tag="5")]
     pub coverage_axis: bool,
+    /// created_by is the subject of the caller a server ran this for, such as the name of the token
+    /// the call carried (agni issue 1627). It is empty for a run made on a server with no
+    /// authentication, and for a run the CLI made by itself.
+    #[prost(string, tag="6")]
+    pub created_by: ::prost::alloc::string::String,
 }
 /// DesignRef identifies the design a run was about, WITHOUT containing it. content_hash is the
 /// revision identity. Two documents describe the same revision when their hashes match. That makes a

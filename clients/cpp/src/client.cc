@@ -49,7 +49,7 @@ std::string GrpcTarget(std::string_view server) {
   if (auto at = s.find("://"); at != std::string_view::npos) {
     std::string_view scheme = s.substr(0, at);
     if (scheme == "https") {
-      throw std::invalid_argument("agni serve has no TLS yet (agni issue 1627), so " + std::string(server) +
+      throw std::invalid_argument("this client can't trust a CA yet (agni issue 1765), so " + std::string(server) +
                                   " cannot be reached; use http://");
     }
     if (scheme != "http") {

@@ -153,6 +153,37 @@ func TestCreateReviewRecordsProvenance(t *testing.T) {
 	}
 }
 
+// A run a signed-in caller asks for records who asked, and keeps it when read back. A run with no
+// caller records nobody (agni issue 1627).
+func TestCreateReviewRecordsItsCaller(t *testing.T) {
+	svc, dir := dirReviewSvc(t, NewMemReviewStore())
+	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
+	man, err := svc.GetReviewManifest(context.Background(), &webapi.GetReviewManifestRequest{Uri: "mount://m/m.yaml"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, who := range []string{"alice", ""} {
+		ctx := context.Background()
+		if who != "" {
+			ctx = WithCaller(ctx, Caller{Subject: who})
+		}
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/board.edn")})
+		if err != nil {
+			t.Fatalf("CreateReview as %q: %v", who, err)
+		}
+		if got := rv.GetResults().GetMeta().GetCreatedBy(); got != who {
+			t.Errorf("a run made as %q records created_by %q", who, got)
+		}
+		back, err := svc.GetReview(context.Background(), &webapi.GetReviewRequest{Name: rv.GetName()})
+		if err != nil {
+			t.Fatalf("GetReview(%s): %v", rv.GetName(), err)
+		}
+		if got := back.GetResults().GetMeta().GetCreatedBy(); got != who {
+			t.Errorf("a run made as %q reads back created_by %q", who, got)
+		}
+	}
+}
+
 // TestReviewResourceLifecycle walks create, get, list and delete over one service, in the order a
 // client actually performs them.
 func TestReviewResourceLifecycle(t *testing.T) {

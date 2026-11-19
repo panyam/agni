@@ -265,8 +265,8 @@ int main(int argc, char** argv) {
 
   // The server goes up before any gRPC channel exists, so the fork copies no gRPC threads.
   Server server(agni, mount);
-  // The token goes on every replayed call. The server does not check it yet (agni issue 1627), so
-  // this proves only that a call carrying one still answers as recorded.
+  // The token goes on every replayed call. This server runs without --auth, so it ignores the token,
+  // and this proves only that a call carrying one still answers as recorded.
   agni::Client client(server.addr(), "wire-fixtures");
   auto deadline = std::chrono::system_clock::now() + std::chrono::seconds(60);
   while (!client.channel()->WaitForConnected(std::chrono::system_clock::now() + std::chrono::milliseconds(500))) {

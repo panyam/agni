@@ -80,8 +80,8 @@ pub struct Client {
 impl Client {
     /// Connects to the server at `address`, such as `http://127.0.0.1:8080`, and checks it.
     ///
-    /// With a token, every call carries `authorization: Bearer <token>`. The server does not check
-    /// it yet (agni issue 1627).
+    /// With a token, every call carries `authorization: Bearer <token>`. A server started with
+    /// `--auth tokens` refuses a call without a good one (agni issue 1627).
     pub async fn connect(address: impl Into<String>, token: Option<&str>) -> Result<Client, Error> {
         let address = address.into();
         let endpoint = Endpoint::from_shared(address.clone())

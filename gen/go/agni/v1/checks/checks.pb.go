@@ -2141,7 +2141,11 @@ type ResultsMeta struct {
 	// document and a clean native run both look like "few findings". A consumer that treated them
 	// alike would report a fab-capability pass that was never checked. So the weaker artifact declares
 	// that it is weaker instead of being quietly promoted.
-	CoverageAxis  bool `protobuf:"varint,5,opt,name=coverage_axis,json=coverageAxis,proto3" json:"coverage_axis,omitempty"`
+	CoverageAxis bool `protobuf:"varint,5,opt,name=coverage_axis,json=coverageAxis,proto3" json:"coverage_axis,omitempty"`
+	// created_by is the subject of the caller a server ran this for, such as the name of the token
+	// the call carried (agni issue 1627). It is empty for a run made on a server with no
+	// authentication, and for a run the CLI made by itself.
+	CreatedBy     string `protobuf:"bytes,6,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2209,6 +2213,13 @@ func (x *ResultsMeta) GetCoverageAxis() bool {
 		return x.CoverageAxis
 	}
 	return false
+}
+
+func (x *ResultsMeta) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
 }
 
 // DesignRef identifies the design a run was about, WITHOUT containing it. content_hash is the
@@ -2777,14 +2788,16 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x0eUnjoinedReason\x12\x16\n" +
 	"\x06reason\x18\x01 \x01(\tR\x06reason\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x1a\n" +
-	"\bexamples\x18\x03 \x03(\tR\bexamples\"\xb0\x01\n" +
+	"\bexamples\x18\x03 \x03(\tR\bexamples\"\xcf\x01\n" +
 	"\vResultsMeta\x12\x16\n" +
 	"\x06schema\x18\x01 \x01(\tR\x06schema\x12\x1a\n" +
 	"\bproducer\x18\x02 \x01(\tR\bproducer\x12)\n" +
 	"\x10producer_version\x18\x03 \x01(\tR\x0fproducerVersion\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12#\n" +
-	"\rcoverage_axis\x18\x05 \x01(\bR\fcoverageAxis\"\x9a\x01\n" +
+	"\rcoverage_axis\x18\x05 \x01(\bR\fcoverageAxis\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\x06 \x01(\tR\tcreatedBy\"\x9a\x01\n" +
 	"\tDesignRef\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12!\n" +
 	"\fcontent_hash\x18\x02 \x01(\tR\vcontentHash\x12R\n" +

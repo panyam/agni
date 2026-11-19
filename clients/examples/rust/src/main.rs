@@ -101,7 +101,9 @@ fn fail(msg: impl std::fmt::Display) -> ! {
 
 async fn run(server: &str, design: &str) -> Result<Summary, String> {
     // Connecting calls GetServerInfo and refuses a server that speaks another package.
-    let client = Client::connect(server, None)
+    // A shared server asks every call for a token (agni issue 1627), passed in AGNI_TOKEN.
+    let token = std::env::var("AGNI_TOKEN").ok().filter(|t| !t.is_empty());
+    let client = Client::connect(server, token.as_deref())
         .await
         .map_err(|e| e.to_string())?;
     let ingest = IngestRequest {

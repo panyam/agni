@@ -44,7 +44,8 @@ function flags(args: string[]): { server: string; design: string } {
 async function main(): Promise<void> {
   const { server, design } = flags(process.argv.slice(2));
   // checkServer calls GetServerInfo and refuses a server that does not speak agni.v1.
-  const client = createAgniClient(server);
+  // A shared server asks every call for a token (agni issue 1627), passed in AGNI_TOKEN.
+  const client = createAgniClient(server, { token: process.env.AGNI_TOKEN || undefined });
   const info = await client.checkServer();
   const snap = await client.snapshot.ingest({ snapshot: { uri: design } });
   try {
