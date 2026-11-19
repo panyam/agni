@@ -138,6 +138,22 @@ else
 fi
 check 1.1.3
 
+# A private repo, read through a token connection (agni issue 1724). It runs when GITHUB_TOKEN and
+# PRIVATE_REPO=owner/repo are set, and is skipped otherwise, since the public repo above needs none.
+if [ -n "${GITHUB_TOKEN:-}" ] && [ -n "${PRIVATE_REPO:-}" ]; then
+  step "mount the private repo $PRIVATE_REPO through a token connection"
+  "$agni" connections add private --github-token env:GITHUB_TOKEN --remote "$url"
+  if "$agni" mounts add private "github://$PRIVATE_REPO" --connection private --remote "$url" | tee "$out/private.txt" &&
+    grep -q "via private" "$out/private.txt" && ! grep -rqF "$GITHUB_TOKEN" "$store"; then
+    echo "PASS: $PRIVATE_REPO mounted through the connection, and the store holds no token"
+  else
+    echo "FAIL: $PRIVATE_REPO did not mount through the connection, or the store holds the token" >&2
+    fail=1
+  fi
+else
+  echo "skip: a private repo (set GITHUB_TOKEN and PRIVATE_REPO=owner/repo)"
+fi
+
 step "result"
 [ "$fail" = 0 ] && echo "exercise-linked-sources: ok"
 exit "$fail"

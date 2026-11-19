@@ -331,6 +331,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	runtime := o.storeDir != "" && o.uploadsDir != ""
 	if runtime {
 		cfg.Uploads, cfg.Records = o.uploadsDir, filepath.Join(o.storeDir, storeMountsDir)
+		cfg.Connections = filepath.Join(o.storeDir, storeConnectionsDir)
 	}
 	table, err := mountset.Open(cfg)
 	if err != nil {
@@ -455,10 +456,12 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		workspace.WithLinkedArtifacts(designSvc.LinkedTo)
 	}
 	api := server.API{
-		Workspace:  workspace,
-		Project:    projectSvc,
-		Design:     designSvc,
-		Pack:       packSvc,
+		Workspace: workspace,
+		Project:   projectSvc,
+		Design:    designSvc,
+		Pack:      packSvc,
+		// A private source is read through a connection the server keeps (agni issue 1724).
+		Connection: service.NewConnectionService(table.Connections(), table.MountsUsing),
 		Snapshot:   checkSvc.Snapshots(),
 		DesignView: service.NewDesignViewService(loader, nativeR, style, projectResolver),
 		Check:      checkSvc,
@@ -594,6 +597,8 @@ const (
 	storeReportsDir   = "reports"
 	storeReviewsDir   = "reviews"
 	storeMountsDir    = mountset.RecordsDir
+	// storeConnectionsDir holds the connections private sources are read through (agni issue 1724).
+	storeConnectionsDir = "connections"
 )
 
 // withUploadsMount adds --uploads' design views as the mount "uploads", creating the folder (agni

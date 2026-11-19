@@ -33,7 +33,7 @@ public interface CreateMountRequestOrBuilder extends
   /**
    * <pre>
    * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-   * makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+   * makes. A public repo needs no sign-in, and a private one reads through a connection.
    * </pre>
    *
    * <code>string source = 2 [json_name = "source"];</code>
@@ -43,7 +43,7 @@ public interface CreateMountRequestOrBuilder extends
   /**
    * <pre>
    * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-   * makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+   * makes. A public repo needs no sign-in, and a private one reads through a connection.
    * </pre>
    *
    * <code>string source = 2 [json_name = "source"];</code>
@@ -71,4 +71,26 @@ public interface CreateMountRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getRefBytes();
+
+  /**
+   * <pre>
+   * connection is the connection the server reads the source through, "connections/{connection}"
+   * (agni issue 1724). Empty reads a public source with no sign-in.
+   * </pre>
+   *
+   * <code>string connection = 4 [json_name = "connection"];</code>
+   * @return The connection.
+   */
+  java.lang.String getConnection();
+  /**
+   * <pre>
+   * connection is the connection the server reads the source through, "connections/{connection}"
+   * (agni issue 1724). Empty reads a public source with no sign-in.
+   * </pre>
+   *
+   * <code>string connection = 4 [json_name = "connection"];</code>
+   * @return The bytes for connection.
+   */
+  com.google.protobuf.ByteString
+      getConnectionBytes();
 }

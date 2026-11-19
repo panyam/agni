@@ -903,3 +903,44 @@ func (a *Pack) DeletePack(ctx context.Context, req *connect.Request[webapi.Delet
 	}
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
+
+// Connection adapts service.ConnectionService to the generated Connect handler interface (agni issue
+// 1724).
+type Connection struct {
+	webapiconnect.UnimplementedConnectionServiceHandler
+	svc *service.ConnectionService
+}
+
+// NewConnection wraps svc for Connect.
+func NewConnection(svc *service.ConnectionService) *Connection { return &Connection{svc: svc} }
+
+func (a *Connection) CreateConnection(ctx context.Context, req *connect.Request[webapi.CreateConnectionRequest]) (*connect.Response[webapi.Connection], error) {
+	resp, err := a.svc.CreateConnection(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Connection) GetConnection(ctx context.Context, req *connect.Request[webapi.GetConnectionRequest]) (*connect.Response[webapi.Connection], error) {
+	resp, err := a.svc.GetConnection(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Connection) ListConnections(ctx context.Context, req *connect.Request[webapi.ListConnectionsRequest]) (*connect.Response[webapi.ListConnectionsResponse], error) {
+	resp, err := a.svc.ListConnections(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Connection) DeleteConnection(ctx context.Context, req *connect.Request[webapi.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
+	if err := a.svc.DeleteConnection(ctx, req.Msg); err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}

@@ -29,7 +29,7 @@ FILE_KIND_DESIGN: FileKind
 FILE_KIND_DATASHEET: FileKind
 
 class Mount(_message.Message):
-    __slots__ = ("name", "root", "uri", "kind", "source", "ref", "commit", "fixed", "writable")
+    __slots__ = ("name", "root", "uri", "kind", "source", "ref", "commit", "fixed", "writable", "connection")
     NAME_FIELD_NUMBER: _ClassVar[int]
     ROOT_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
@@ -39,6 +39,7 @@ class Mount(_message.Message):
     COMMIT_FIELD_NUMBER: _ClassVar[int]
     FIXED_FIELD_NUMBER: _ClassVar[int]
     WRITABLE_FIELD_NUMBER: _ClassVar[int]
+    CONNECTION_FIELD_NUMBER: _ClassVar[int]
     name: str
     root: str
     uri: str
@@ -48,17 +49,20 @@ class Mount(_message.Message):
     commit: str
     fixed: bool
     writable: bool
-    def __init__(self, name: _Optional[str] = ..., root: _Optional[str] = ..., uri: _Optional[str] = ..., kind: _Optional[_Union[MountKind, str]] = ..., source: _Optional[str] = ..., ref: _Optional[str] = ..., commit: _Optional[str] = ..., fixed: _Optional[bool] = ..., writable: _Optional[bool] = ...) -> None: ...
+    connection: str
+    def __init__(self, name: _Optional[str] = ..., root: _Optional[str] = ..., uri: _Optional[str] = ..., kind: _Optional[_Union[MountKind, str]] = ..., source: _Optional[str] = ..., ref: _Optional[str] = ..., commit: _Optional[str] = ..., fixed: _Optional[bool] = ..., writable: _Optional[bool] = ..., connection: _Optional[str] = ...) -> None: ...
 
 class CreateMountRequest(_message.Message):
-    __slots__ = ("name", "source", "ref")
+    __slots__ = ("name", "source", "ref", "connection")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
     REF_FIELD_NUMBER: _ClassVar[int]
+    CONNECTION_FIELD_NUMBER: _ClassVar[int]
     name: str
     source: str
     ref: str
-    def __init__(self, name: _Optional[str] = ..., source: _Optional[str] = ..., ref: _Optional[str] = ...) -> None: ...
+    connection: str
+    def __init__(self, name: _Optional[str] = ..., source: _Optional[str] = ..., ref: _Optional[str] = ..., connection: _Optional[str] = ...) -> None: ...
 
 class DeleteMountRequest(_message.Message):
     __slots__ = ("name",)

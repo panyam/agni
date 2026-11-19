@@ -48,7 +48,7 @@ func (t *Table) Info(m mounts.Mount) service.MountInfo {
 	}
 	fixed := t.Fixed(m.Name)
 	return service.MountInfo{Name: m.Name, Root: t.Root(m), Kind: kind, Source: source, Ref: m.Ref, Commit: m.Version, Fixed: fixed,
-		Writable: kind == webapi.MountKind_MOUNT_KIND_FILE}
+		Writable: kind == webapi.MountKind_MOUNT_KIND_FILE, Connection: m.Connection}
 }
 
 // ListDir resolves the URI and reads one directory level. The service maps an error wrapping

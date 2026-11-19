@@ -16,17 +16,21 @@ const fake = vi.hoisted(() => ({
   mountOpens: [] as (FileKind[] | undefined)[],
   dirs: {} as Record<string, unknown[]>,
   canCreateMounts: false,
-  created: [] as { name: string; source: string; ref: string }[],
+  created: [] as { name: string; source: string; ref: string; connection?: string }[],
+  connections: [] as { name: string; displayName: string }[],
   deleted: [] as string[],
   createError: null as Error | null,
 }));
 vi.mock("./api.js", () => ({
+  connectionClient: () => ({
+    listConnections: async () => ({ connections: fake.connections }),
+  }),
   workspaceClient: () => ({
     listMounts: async ({ opens }: { opens?: FileKind[] } = {}) => {
       fake.mountOpens.push(opens);
       return { mounts: fake.mounts, prunedMounts: fake.prunedMounts, canCreateMounts: fake.canCreateMounts };
     },
-    createMount: async (req: { name: string; source: string; ref: string }) => {
+    createMount: async (req: { name: string; source: string; ref: string; connection?: string }) => {
       if (fake.createError) throw fake.createError;
       fake.created.push(req);
       fake.mounts = [...fake.mounts, { name: req.name, root: "/v", fixed: false }];
@@ -102,6 +106,7 @@ beforeEach(() => {
   fake.created = [];
   fake.deleted = [];
   fake.createError = null;
+  fake.connections = [];
   fake.dirs = {
     "": [dir("a", "a"), dir("z", "z"), file("top.edn", "top.edn"), file("notes.txt", "notes.txt", "")],
     a: [dir("b", "a/b"), file("mid.edn", "a/mid.edn")],
@@ -245,6 +250,25 @@ describe("managing mounts", () => {
     await vi.waitFor(() => expect(buttonFor(el, "jetson")).toBeTruthy());
     expect(fake.created).toEqual([{ name: "jetson", source: "github://antmicro/jetson-agx-thor-baseboard", ref: "main" }]);
     expect(el.querySelector(".mount-add-msg")).toBeNull();
+  });
+
+  it("offers the server's connections, and mounts a private repo through the one picked", async () => {
+    fake.canCreateMounts = true;
+    fake.connections = [{ name: "connections/acme", displayName: "acme org (App)" }];
+    const { el } = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(el.querySelector(".mount-add select[name=connection]")).not.toBeNull());
+    const options = [...el.querySelectorAll(".mount-add select[name=connection] option")].map((o) => o.textContent);
+    expect(options).toEqual(["public repo, no connection", "acme org (App)"]);
+    submitForm(el, { name: "board", repo: "acme/board", ref: "", connection: "connections/acme" });
+    await vi.waitFor(() => expect(fake.created).toHaveLength(1));
+    expect(fake.created[0]).toEqual({ name: "board", source: "github://acme/board", ref: "", connection: "connections/acme" });
+  });
+
+  it("hides the connection picker on a server with no connections", async () => {
+    fake.canCreateMounts = true;
+    const { el } = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(el.querySelector(".mount-add form")).not.toBeNull());
+    expect(el.querySelector(".mount-add select[name=connection]")).toBeNull();
   });
 
   it("shows the server's own message when it refuses a mount", async () => {

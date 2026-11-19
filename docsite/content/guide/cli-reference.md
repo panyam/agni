@@ -300,6 +300,20 @@ schematic, else its board.
 | `unlink <id> <artifact>` | keep a linked artifact's files as uploaded ones, so `put` and `push` can replace them |
 | `sync <id> [<artifact>...] [--dry-run]` | move the followed artifacts to their sources' newest versions in one write, downloading only the files the server lacks; `--dry-run` writes nothing |
 
+### `connections`
+
+The sign-ins an `agni serve --store` reads private repos through (agni issue 1724). Each names where
+its secret is, `env:NAME` or `file:/abs/path`, never the secret.
+
+| Subcommand | What it does |
+|---|---|
+| `ls` | list the connections, each with its kind, where its secret is, and its status |
+| `add <id> --github-token <ref>` | keep a token connection |
+| `add <id> --github-app <app-id> --installation <id> --key <ref>` | keep a GitHub App installation |
+| `rm <id>` | remove a connection no mount reads through |
+
+`agni mounts add <name> <source> --connection <id>` mounts a private repo through one.
+
 ### `projects`
 
 Create projects on an `agni serve --store` and list designs in them. Both subcommands need

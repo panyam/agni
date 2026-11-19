@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/panyam/goapplib/storage/blobs"
+	"github.com/panyam/goapplib/storage/connections"
+	connstore "github.com/panyam/goapplib/storage/connections/fsstore"
 	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/goapplib/storage/mounts/folder"
 	"github.com/panyam/goapplib/storage/mounts/fsstore"
@@ -44,6 +46,9 @@ type Config struct {
 	UploadsMount string
 	// Records is the folder of runtime mount records under --store, "" for none.
 	Records string
+	// Connections is the folder of connection records under --store, "" for none. A runtime mount
+	// naming a connection reads its source with that connection's token (agni issue 1724).
+	Connections string
 	// GitHubAPI and GitHubRaw are GitHub's API root and raw host, set by a test or for GitHub
 	// Enterprise. Empty takes the library's defaults.
 	GitHubAPI, GitHubRaw string
@@ -63,6 +68,7 @@ type Config struct {
 // reachable at once.
 type Table struct {
 	reg     *mounts.Registry
+	conns   connections.Store
 	fixed   []mounts.Mount
 	blobs   *blobs.Dir
 	uploads string
@@ -116,7 +122,17 @@ func Open(cfg Config) (*Table, error) {
 		}
 	}
 	drivers = append(drivers, folder.New(folderOpts...))
-	t.reg = mounts.NewRegistry(store, drivers, mounts.WithFixed(cfg.Fixed...), mounts.WithLimits(cfg.Limits))
+	opts := []mounts.Option{mounts.WithFixed(cfg.Fixed...), mounts.WithLimits(cfg.Limits)}
+	if cfg.Connections != "" && !cfg.ReadOnly {
+		cs, err := connstore.New(cfg.Connections)
+		if err != nil {
+			return nil, fmt.Errorf("--store: %w", err)
+		}
+		t.conns = cs
+		svc := connections.NewService(cs)
+		opts = append(opts, mounts.WithCredentials(svc.TokenSource))
+	}
+	t.reg = mounts.NewRegistry(store, drivers, opts...)
 	if store != nil {
 		all, err := t.reg.List(context.Background())
 		if err != nil {
@@ -208,7 +224,7 @@ const noMaker = "this server makes no mounts at runtime; start it with --store a
 
 // CreateMount snapshots a github://<owner>/<repo> source at ref and serves it as name. A file://
 // source is refused, because a client must not choose which folder on the server's disk is served.
-func (t *Table) CreateMount(ctx context.Context, name, source, ref string) (service.MountInfo, error) {
+func (t *Table) CreateMount(ctx context.Context, name, source, ref, connection string) (service.MountInfo, error) {
 	if t.blobs == nil {
 		return service.MountInfo{}, fmt.Errorf("%w: %s", service.ErrFailedPrecondition, noMaker)
 	}
@@ -221,9 +237,17 @@ func (t *Table) CreateMount(ctx context.Context, name, source, ref string) (serv
 	if t.Fixed(name) {
 		return service.MountInfo{}, fmt.Errorf("%w: a mount named %q is already served", service.ErrAlreadyExists, name)
 	}
-	m, err := t.reg.Create(ctx, mounts.Mount{Name: name, Kind: mounts.KindGitHub, Source: strings.TrimSuffix(source, "/"), Ref: ref, Mode: mounts.ModeSnapshot})
+	if connection != "" {
+		if t.conns == nil {
+			return service.MountInfo{}, fmt.Errorf("%w: this server keeps no connections", service.ErrFailedPrecondition)
+		}
+		if _, err := t.conns.GetConnection(ctx, connection); err != nil {
+			return service.MountInfo{}, service.ConnectionErr(err)
+		}
+	}
+	m, err := t.reg.Create(ctx, mounts.Mount{Name: name, Kind: mounts.KindGitHub, Source: strings.TrimSuffix(source, "/"), Ref: ref, Mode: mounts.ModeSnapshot, Connection: connection})
 	if err != nil {
-		return service.MountInfo{}, Err(err)
+		return service.MountInfo{}, service.ConnectionErr(Err(err))
 	}
 	// The view is built now, so a reader sharing the uploads read-only, such as agnids, finds it.
 	if _, err := t.reg.HostPath(ctx, mounts.URI{Mount: name}); err != nil {
@@ -248,3 +272,18 @@ func (t *Table) DeleteMount(ctx context.Context, name string) error {
 }
 
 var _ service.MountMaker = (*Table)(nil)
+
+// Connections is the store of connection records, nil for a table with none.
+func (t *Table) Connections() connections.Store { return t.conns }
+
+// MountsUsing names the runtime mounts that read through the connection id, sorted, so a connection
+// in use isn't deleted under them.
+func (t *Table) MountsUsing(_ context.Context, id string) ([]string, error) {
+	var out []string
+	for _, m := range t.List() {
+		if m.Connection == id {
+			out = append(out, m.Name)
+		}
+	}
+	return out, nil
+}

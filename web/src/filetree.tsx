@@ -6,7 +6,8 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { FileKind, WorkspaceService, type DirEntry, type Mount } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
 import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { type SheetNode as SheetTreeNode, sheetForest } from "./sheettree.js";
-import { workspaceClient } from "./api.js";
+import { connectionClient, workspaceClient } from "./api.js";
+import type { Connection } from "@panyam/agni-client/gen/agni/v1/webapi/connections_pb";
 import { hiddenNote } from "@agni/web-shared/treeprune.js";
 import type { SheetsState, SheetsView } from "./sheets.js";
 
@@ -35,6 +36,8 @@ export type RevealTarget = { mount: string; path: string } | null;
 // ctx is threaded to every node so leaves can reach the client, the current sheets, the reveal
 // target, and the handlers without prop drilling each field.
 interface Ctx extends TreeHandlers {
+  // connections lists the server's connections, for the add-mount form's picker.
+  connections: () => Promise<Connection[]>;
   client: WsClient;
   sheets: Accessor<SheetsState>;
   revealTarget: Accessor<RevealTarget>;
@@ -201,9 +204,16 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
 // AddMountForm makes a runtime mount over a GitHub repo. The server downloads the repo at the ref
 // before it answers, so the form says it is working and stays disabled until then. A refusal shows
 // the server's own message, such as a ref GitHub does not know.
-function AddMountForm(props: { client: WsClient; onAdded: (name: string) => void }) {
+function AddMountForm(props: { client: WsClient; connections: () => Promise<Connection[]>; onAdded: (name: string) => void }) {
   const [busy, setBusy] = createSignal(false);
   const [msg, setMsg] = createSignal("");
+  // The server's connections, for a private repo (agni issue 1724). With none, the picker stays
+  // hidden and every mount is a public one.
+  const [conns, setConns] = createSignal<Connection[]>([]);
+  void props
+    .connections()
+    .then(setConns)
+    .catch(() => setConns([]));
   const submit = async (e: SubmitEvent): Promise<void> => {
     e.preventDefault();
     const form = e.currentTarget as HTMLFormElement;
@@ -216,7 +226,8 @@ function AddMountForm(props: { client: WsClient; onAdded: (name: string) => void
     setBusy(true);
     setMsg(`Downloading ${repo}…`);
     try {
-      await props.client.createMount({ name, source: `github://${repo}`, ref: field("ref") });
+      const connection = field("connection");
+      await props.client.createMount({ name, source: `github://${repo}`, ref: field("ref"), ...(connection ? { connection } : {}) });
       setMsg("");
       form.reset();
       props.onAdded(name);
@@ -234,6 +245,12 @@ function AddMountForm(props: { client: WsClient; onAdded: (name: string) => void
           <input name="name" placeholder="name" required aria-label="Mount name" />
           <input name="repo" placeholder="owner/repo" required aria-label="GitHub repo" />
           <input name="ref" placeholder="ref (default branch)" aria-label="Tag, branch or commit" />
+          <Show when={conns().length > 0}>
+            <select name="connection" aria-label="Connection for a private repo">
+              <option value="">public repo, no connection</option>
+              <For each={conns()}>{(c) => <option value={c.name}>{c.displayName || c.name.replace(/^connections\//, "")}</option>}</For>
+            </select>
+          </Show>
           <button type="submit" disabled={busy()}>
             Add
           </button>
@@ -298,6 +315,7 @@ function FileTree(props: { ctx: Ctx }) {
       <Show when={props.ctx.manage && canCreate()}>
         <AddMountForm
           client={props.ctx.client}
+          connections={props.ctx.connections}
           onAdded={(name) => {
             void load().then(() => props.ctx.reveal(name, ""));
           }}
@@ -322,7 +340,16 @@ export function fileTreeIsland(
   const reveal = (mount: string, path: string): void => {
     setRevealTarget({ mount, path });
   };
-  const ctx: Ctx = { client: workspaceClient(), sheets, revealTarget, manage: options.manageMounts ?? false, reveal, ...handlers };
+  const conns = connectionClient();
+  const ctx: Ctx = {
+    client: workspaceClient(),
+    connections: () => conns.listConnections({}).then((r) => r.connections),
+    sheets,
+    revealTarget,
+    manage: options.manageMounts ?? false,
+    reveal,
+    ...handlers,
+  };
   const island = new SolidIsland("file-tree", el, () => <FileTree ctx={ctx} />, eventBus);
   return { island, view: { setState: setSheets }, revealDir: reveal };
 }

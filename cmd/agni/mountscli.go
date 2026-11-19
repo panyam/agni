@@ -25,7 +25,10 @@ to make one, and serves it again after a restart.
 
   agni mounts ls --remote http://localhost:8080
   agni mounts add jetson github://antmicro/jetson-agx-thor-baseboard --ref main --remote http://localhost:8080
-  agni mounts rm jetson --remote http://localhost:8080`,
+  agni mounts rm jetson --remote http://localhost:8080
+
+A private repo reads through a connection the server keeps, named with --connection (see agni
+connections).`,
 	}
 	cmd.PersistentFlags().StringVar(&remoteURL, "remote", "", "the agni serve whose mounts these are, such as http://localhost:8080 (required)")
 	client := func(cmd *cobra.Command) (webapiconnect.WorkspaceServiceClient, error) {
@@ -59,7 +62,7 @@ to make one, and serves it again after a restart.
 		},
 	}
 
-	var ref string
+	var ref, connection string
 	add := &cobra.Command{
 		Use:   "add <name> <source>",
 		Short: "Mount a GitHub repo, github://<owner>/<repo>, at a ref, snapshotted on the server",
@@ -69,7 +72,7 @@ to make one, and serves it again after a restart.
 			if err != nil {
 				return err
 			}
-			m, err := unary(cmd.Context(), c.CreateMount, &webapi.CreateMountRequest{Name: args[0], Source: args[1], Ref: ref})
+			m, err := unary(cmd.Context(), c.CreateMount, &webapi.CreateMountRequest{Name: args[0], Source: args[1], Ref: ref, Connection: connection})
 			if err != nil {
 				return err
 			}
@@ -78,6 +81,7 @@ to make one, and serves it again after a restart.
 		},
 	}
 	add.Flags().StringVar(&ref, "ref", "", "the tag, branch or commit to snapshot; the repo's default branch when empty")
+	add.Flags().StringVar(&connection, "connection", "", "the connection to read a private repo through, as <id> or connections/<id>; see agni connections")
 
 	rm := &cobra.Command{
 		Use:   "rm <name>",
@@ -112,5 +116,9 @@ func printMount(w io.Writer, m *webapi.Mount) {
 	if m.GetFixed() {
 		life = "fixed"
 	}
-	fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", m.GetName(), kind, from, life)
+	fmt.Fprintf(w, "%s\t%s\t%s\t%s", m.GetName(), kind, from, life)
+	if c := m.GetConnection(); c != "" {
+		fmt.Fprintf(w, "\tvia %s", strings.TrimPrefix(c, "connections/"))
+	}
+	fmt.Fprintln(w)
 }
