@@ -1132,13 +1132,13 @@ pub struct Connection {
     pub app_id: ::prost::alloc::string::String,
     #[prost(int64, tag="6")]
     pub installation_id: i64,
-    /// key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+    /// key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
     /// CONNECTION_KIND_GITHUB_APP.
     #[prost(string, tag="7")]
-    pub key_ref: ::prost::alloc::string::String,
-    /// token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+    pub key_source: ::prost::alloc::string::String,
+    /// token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
     #[prost(string, tag="8")]
-    pub token_ref: ::prost::alloc::string::String,
+    pub token_source: ::prost::alloc::string::String,
     /// status is CONNECTION_STATUS_OK until a token request fails, and last_error says why, with no
     /// secret in it. Output only.
     #[prost(enumeration="ConnectionStatus", tag="9")]

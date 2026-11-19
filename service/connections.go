@@ -51,7 +51,7 @@ func (s *ConnectionService) CreateConnection(ctx context.Context, req *webapi.Cr
 	in := req.GetConnection()
 	c := connections.Connection{
 		ID: req.GetConnectionId(), Scope: connections.ScopeServer, Name: in.GetDisplayName(), BaseURL: in.GetBaseUrl(),
-		AppID: in.GetAppId(), InstallationID: in.GetInstallationId(), KeyRef: in.GetKeyRef(), TokenRef: in.GetTokenRef(),
+		AppID: in.GetAppId(), InstallationID: in.GetInstallationId(), KeyRef: in.GetKeySource(), TokenRef: in.GetTokenSource(),
 		Status: connections.StatusOK, Created: time.Now().UTC(),
 	}
 	switch in.GetKind() {
@@ -146,7 +146,7 @@ func ConnectionErr(err error) error {
 func connectionProto(c connections.Connection) *webapi.Connection {
 	out := &webapi.Connection{
 		Name: ConnectionName(c.ID), DisplayName: c.Name, BaseUrl: c.BaseURL, AppId: c.AppID, InstallationId: c.InstallationID,
-		KeyRef: c.KeyRef, TokenRef: c.TokenRef, LastError: c.LastError, Status: webapi.ConnectionStatus_CONNECTION_STATUS_OK,
+		KeySource: c.KeyRef, TokenSource: c.TokenRef, LastError: c.LastError, Status: webapi.ConnectionStatus_CONNECTION_STATUS_OK,
 	}
 	switch c.Kind {
 	case connections.KindGitHubApp:

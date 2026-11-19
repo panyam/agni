@@ -67,48 +67,48 @@ public final class ConnectionsProto extends com.google.protobuf.GeneratedFile {
     java.lang.String[] descriptorData = {
       "\n agni/v1/webapi/connections.proto\022\016agni" +
       ".v1.webapi\032\033google/protobuf/empty.proto\032" +
-      "\037google/protobuf/timestamp.proto\"\336\003\n\nCon" +
+      "\037google/protobuf/timestamp.proto\"\352\003\n\nCon" +
       "nection\022\022\n\004name\030\001 \001(\tR\004name\0222\n\004kind\030\002 \001(" +
       "\0162\036.agni.v1.webapi.ConnectionKindR\004kind\022" +
       "!\n\014display_name\030\003 \001(\tR\013displayName\022\031\n\010ba" +
       "se_url\030\004 \001(\tR\007baseUrl\022\025\n\006app_id\030\005 \001(\tR\005a" +
       "ppId\022\'\n\017installation_id\030\006 \001(\003R\016installat" +
-      "ionId\022\027\n\007key_ref\030\007 \001(\tR\006keyRef\022\033\n\ttoken_" +
-      "ref\030\010 \001(\tR\010tokenRef\0228\n\006status\030\t \001(\0162 .ag" +
-      "ni.v1.webapi.ConnectionStatusR\006status\022\035\n" +
-      "\nlast_error\030\n \001(\tR\tlastError\022;\n\013create_t" +
-      "ime\030\013 \001(\0132\032.google.protobuf.TimestampR\nc" +
-      "reateTime\022>\n\rlast_use_time\030\014 \001(\0132\032.googl" +
-      "e.protobuf.TimestampR\013lastUseTime\"z\n\027Cre" +
-      "ateConnectionRequest\022#\n\rconnection_id\030\001 " +
-      "\001(\tR\014connectionId\022:\n\nconnection\030\002 \001(\0132\032." +
-      "agni.v1.webapi.ConnectionR\nconnection\"*\n" +
-      "\024GetConnectionRequest\022\022\n\004name\030\001 \001(\tR\004nam" +
-      "e\"\030\n\026ListConnectionsRequest\"W\n\027ListConne" +
-      "ctionsResponse\022<\n\013connections\030\001 \003(\0132\032.ag" +
-      "ni.v1.webapi.ConnectionR\013connections\"-\n\027" +
-      "DeleteConnectionRequest\022\022\n\004name\030\001 \001(\tR\004n" +
-      "ame*s\n\016ConnectionKind\022\037\n\033CONNECTION_KIND" +
-      "_UNSPECIFIED\020\000\022\036\n\032CONNECTION_KIND_GITHUB" +
-      "_APP\020\001\022 \n\034CONNECTION_KIND_GITHUB_TOKEN\020\002" +
-      "*m\n\020ConnectionStatus\022!\n\035CONNECTION_STATU" +
-      "S_UNSPECIFIED\020\000\022\030\n\024CONNECTION_STATUS_OK\020" +
-      "\001\022\034\n\030CONNECTION_STATUS_FAILED\020\0022\370\002\n\021Conn" +
-      "ectionService\022W\n\020CreateConnection\022\'.agni" +
-      ".v1.webapi.CreateConnectionRequest\032\032.agn" +
-      "i.v1.webapi.Connection\022Q\n\rGetConnection\022" +
-      "$.agni.v1.webapi.GetConnectionRequest\032\032." +
-      "agni.v1.webapi.Connection\022b\n\017ListConnect" +
-      "ions\022&.agni.v1.webapi.ListConnectionsReq" +
-      "uest\032\'.agni.v1.webapi.ListConnectionsRes" +
-      "ponse\022S\n\020DeleteConnection\022\'.agni.v1.weba" +
-      "pi.DeleteConnectionRequest\032\026.google.prot" +
-      "obuf.EmptyB\273\001\n\037io.github.panyam.agni.v1." +
-      "webapiB\020ConnectionsProtoP\001Z,github.com/p" +
-      "anyam/agni/gen/go/agni/v1/webapi\242\002\003AVW\252\002" +
-      "\016Agni.V1.Webapi\312\002\016Agni\\V1\\Webapi\342\002\032Agni\\" +
-      "V1\\Webapi\\GPBMetadata\352\002\020Agni::V1::Webapi" +
-      "b\006proto3"
+      "ionId\022\035\n\nkey_source\030\007 \001(\tR\tkeySource\022!\n\014" +
+      "token_source\030\010 \001(\tR\013tokenSource\0228\n\006statu" +
+      "s\030\t \001(\0162 .agni.v1.webapi.ConnectionStatu" +
+      "sR\006status\022\035\n\nlast_error\030\n \001(\tR\tlastError" +
+      "\022;\n\013create_time\030\013 \001(\0132\032.google.protobuf." +
+      "TimestampR\ncreateTime\022>\n\rlast_use_time\030\014" +
+      " \001(\0132\032.google.protobuf.TimestampR\013lastUs" +
+      "eTime\"z\n\027CreateConnectionRequest\022#\n\rconn" +
+      "ection_id\030\001 \001(\tR\014connectionId\022:\n\nconnect" +
+      "ion\030\002 \001(\0132\032.agni.v1.webapi.ConnectionR\nc" +
+      "onnection\"*\n\024GetConnectionRequest\022\022\n\004nam" +
+      "e\030\001 \001(\tR\004name\"\030\n\026ListConnectionsRequest\"" +
+      "W\n\027ListConnectionsResponse\022<\n\013connection" +
+      "s\030\001 \003(\0132\032.agni.v1.webapi.ConnectionR\013con" +
+      "nections\"-\n\027DeleteConnectionRequest\022\022\n\004n" +
+      "ame\030\001 \001(\tR\004name*s\n\016ConnectionKind\022\037\n\033CON" +
+      "NECTION_KIND_UNSPECIFIED\020\000\022\036\n\032CONNECTION" +
+      "_KIND_GITHUB_APP\020\001\022 \n\034CONNECTION_KIND_GI" +
+      "THUB_TOKEN\020\002*m\n\020ConnectionStatus\022!\n\035CONN" +
+      "ECTION_STATUS_UNSPECIFIED\020\000\022\030\n\024CONNECTIO" +
+      "N_STATUS_OK\020\001\022\034\n\030CONNECTION_STATUS_FAILE" +
+      "D\020\0022\370\002\n\021ConnectionService\022W\n\020CreateConne" +
+      "ction\022\'.agni.v1.webapi.CreateConnectionR" +
+      "equest\032\032.agni.v1.webapi.Connection\022Q\n\rGe" +
+      "tConnection\022$.agni.v1.webapi.GetConnecti" +
+      "onRequest\032\032.agni.v1.webapi.Connection\022b\n" +
+      "\017ListConnections\022&.agni.v1.webapi.ListCo" +
+      "nnectionsRequest\032\'.agni.v1.webapi.ListCo" +
+      "nnectionsResponse\022S\n\020DeleteConnection\022\'." +
+      "agni.v1.webapi.DeleteConnectionRequest\032\026" +
+      ".google.protobuf.EmptyB\273\001\n\037io.github.pan" +
+      "yam.agni.v1.webapiB\020ConnectionsProtoP\001Z," +
+      "github.com/panyam/agni/gen/go/agni/v1/we" +
+      "bapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\V1\\We" +
+      "bapi\342\002\032Agni\\V1\\Webapi\\GPBMetadata\352\002\020Agni" +
+      "::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -121,7 +121,7 @@ public final class ConnectionsProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_webapi_Connection_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_Connection_descriptor,
-        new java.lang.String[] { "Name", "Kind", "DisplayName", "BaseUrl", "AppId", "InstallationId", "KeyRef", "TokenRef", "Status", "LastError", "CreateTime", "LastUseTime", });
+        new java.lang.String[] { "Name", "Kind", "DisplayName", "BaseUrl", "AppId", "InstallationId", "KeySource", "TokenSource", "Status", "LastError", "CreateTime", "LastUseTime", });
     internal_static_agni_v1_webapi_CreateConnectionRequest_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_agni_v1_webapi_CreateConnectionRequest_fieldAccessorTable = new

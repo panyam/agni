@@ -2838,10 +2838,10 @@ impl serde::Serialize for Connection {
         if self.installation_id != 0 {
             len += 1;
         }
-        if !self.key_ref.is_empty() {
+        if !self.key_source.is_empty() {
             len += 1;
         }
-        if !self.token_ref.is_empty() {
+        if !self.token_source.is_empty() {
             len += 1;
         }
         if self.status != 0 {
@@ -2879,11 +2879,11 @@ impl serde::Serialize for Connection {
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("installationId", ToString::to_string(&self.installation_id).as_str())?;
         }
-        if !self.key_ref.is_empty() {
-            struct_ser.serialize_field("keyRef", &self.key_ref)?;
+        if !self.key_source.is_empty() {
+            struct_ser.serialize_field("keySource", &self.key_source)?;
         }
-        if !self.token_ref.is_empty() {
-            struct_ser.serialize_field("tokenRef", &self.token_ref)?;
+        if !self.token_source.is_empty() {
+            struct_ser.serialize_field("tokenSource", &self.token_source)?;
         }
         if self.status != 0 {
             let v = ConnectionStatus::try_from(self.status)
@@ -2919,10 +2919,10 @@ impl<'de> serde::Deserialize<'de> for Connection {
             "appId",
             "installation_id",
             "installationId",
-            "key_ref",
-            "keyRef",
-            "token_ref",
-            "tokenRef",
+            "key_source",
+            "keySource",
+            "token_source",
+            "tokenSource",
             "status",
             "last_error",
             "lastError",
@@ -2940,8 +2940,8 @@ impl<'de> serde::Deserialize<'de> for Connection {
             BaseUrl,
             AppId,
             InstallationId,
-            KeyRef,
-            TokenRef,
+            KeySource,
+            TokenSource,
             Status,
             LastError,
             CreateTime,
@@ -2973,8 +2973,8 @@ impl<'de> serde::Deserialize<'de> for Connection {
                             "baseUrl" | "base_url" => Ok(GeneratedField::BaseUrl),
                             "appId" | "app_id" => Ok(GeneratedField::AppId),
                             "installationId" | "installation_id" => Ok(GeneratedField::InstallationId),
-                            "keyRef" | "key_ref" => Ok(GeneratedField::KeyRef),
-                            "tokenRef" | "token_ref" => Ok(GeneratedField::TokenRef),
+                            "keySource" | "key_source" => Ok(GeneratedField::KeySource),
+                            "tokenSource" | "token_source" => Ok(GeneratedField::TokenSource),
                             "status" => Ok(GeneratedField::Status),
                             "lastError" | "last_error" => Ok(GeneratedField::LastError),
                             "createTime" | "create_time" => Ok(GeneratedField::CreateTime),
@@ -3004,8 +3004,8 @@ impl<'de> serde::Deserialize<'de> for Connection {
                 let mut base_url__ = None;
                 let mut app_id__ = None;
                 let mut installation_id__ = None;
-                let mut key_ref__ = None;
-                let mut token_ref__ = None;
+                let mut key_source__ = None;
+                let mut token_source__ = None;
                 let mut status__ = None;
                 let mut last_error__ = None;
                 let mut create_time__ = None;
@@ -3050,17 +3050,17 @@ impl<'de> serde::Deserialize<'de> for Connection {
                                 Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
                             ;
                         }
-                        GeneratedField::KeyRef => {
-                            if key_ref__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("keyRef"));
+                        GeneratedField::KeySource => {
+                            if key_source__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("keySource"));
                             }
-                            key_ref__ = Some(map_.next_value()?);
+                            key_source__ = Some(map_.next_value()?);
                         }
-                        GeneratedField::TokenRef => {
-                            if token_ref__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("tokenRef"));
+                        GeneratedField::TokenSource => {
+                            if token_source__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("tokenSource"));
                             }
-                            token_ref__ = Some(map_.next_value()?);
+                            token_source__ = Some(map_.next_value()?);
                         }
                         GeneratedField::Status => {
                             if status__.is_some() {
@@ -3095,8 +3095,8 @@ impl<'de> serde::Deserialize<'de> for Connection {
                     base_url: base_url__.unwrap_or_default(),
                     app_id: app_id__.unwrap_or_default(),
                     installation_id: installation_id__.unwrap_or_default(),
-                    key_ref: key_ref__.unwrap_or_default(),
-                    token_ref: token_ref__.unwrap_or_default(),
+                    key_source: key_source__.unwrap_or_default(),
+                    token_source: token_source__.unwrap_or_default(),
                     status: status__.unwrap_or_default(),
                     last_error: last_error__.unwrap_or_default(),
                     create_time: create_time__,

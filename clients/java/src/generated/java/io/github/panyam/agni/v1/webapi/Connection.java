@@ -37,8 +37,8 @@ private static final long serialVersionUID = 0L;
     displayName_ = "";
     baseUrl_ = "";
     appId_ = "";
-    keyRef_ = "";
-    tokenRef_ = "";
+    keySource_ = "";
+    tokenSource_ = "";
     status_ = 0;
     lastError_ = "";
   }
@@ -281,96 +281,96 @@ private static final long serialVersionUID = 0L;
     return installationId_;
   }
 
-  public static final int KEY_REF_FIELD_NUMBER = 7;
+  public static final int KEY_SOURCE_FIELD_NUMBER = 7;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object keyRef_ = "";
+  private volatile java.lang.Object keySource_ = "";
   /**
    * <pre>
-   * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
    * CONNECTION_KIND_GITHUB_APP.
    * </pre>
    *
-   * <code>string key_ref = 7 [json_name = "keyRef"];</code>
-   * @return The keyRef.
+   * <code>string key_source = 7 [json_name = "keySource"];</code>
+   * @return The keySource.
    */
   @java.lang.Override
-  public java.lang.String getKeyRef() {
-    java.lang.Object ref = keyRef_;
+  public java.lang.String getKeySource() {
+    java.lang.Object ref = keySource_;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
-      keyRef_ = s;
+      keySource_ = s;
       return s;
     }
   }
   /**
    * <pre>
-   * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
    * CONNECTION_KIND_GITHUB_APP.
    * </pre>
    *
-   * <code>string key_ref = 7 [json_name = "keyRef"];</code>
-   * @return The bytes for keyRef.
+   * <code>string key_source = 7 [json_name = "keySource"];</code>
+   * @return The bytes for keySource.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getKeyRefBytes() {
-    java.lang.Object ref = keyRef_;
+      getKeySourceBytes() {
+    java.lang.Object ref = keySource_;
     if (ref instanceof java.lang.String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
-      keyRef_ = b;
+      keySource_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
     }
   }
 
-  public static final int TOKEN_REF_FIELD_NUMBER = 8;
+  public static final int TOKEN_SOURCE_FIELD_NUMBER = 8;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object tokenRef_ = "";
+  private volatile java.lang.Object tokenSource_ = "";
   /**
    * <pre>
-   * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
    * </pre>
    *
-   * <code>string token_ref = 8 [json_name = "tokenRef"];</code>
-   * @return The tokenRef.
+   * <code>string token_source = 8 [json_name = "tokenSource"];</code>
+   * @return The tokenSource.
    */
   @java.lang.Override
-  public java.lang.String getTokenRef() {
-    java.lang.Object ref = tokenRef_;
+  public java.lang.String getTokenSource() {
+    java.lang.Object ref = tokenSource_;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
-      tokenRef_ = s;
+      tokenSource_ = s;
       return s;
     }
   }
   /**
    * <pre>
-   * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
    * </pre>
    *
-   * <code>string token_ref = 8 [json_name = "tokenRef"];</code>
-   * @return The bytes for tokenRef.
+   * <code>string token_source = 8 [json_name = "tokenSource"];</code>
+   * @return The bytes for tokenSource.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getTokenRefBytes() {
-    java.lang.Object ref = tokenRef_;
+      getTokenSourceBytes() {
+    java.lang.Object ref = tokenSource_;
     if (ref instanceof java.lang.String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
-      tokenRef_ = b;
+      tokenSource_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -540,11 +540,11 @@ private static final long serialVersionUID = 0L;
     if (installationId_ != 0L) {
       output.writeInt64(6, installationId_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(keyRef_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 7, keyRef_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(keySource_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 7, keySource_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tokenRef_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 8, tokenRef_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tokenSource_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 8, tokenSource_);
     }
     if (status_ != io.github.panyam.agni.v1.webapi.ConnectionStatus.CONNECTION_STATUS_UNSPECIFIED.getNumber()) {
       output.writeEnum(9, status_);
@@ -582,11 +582,11 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(6, installationId_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(keyRef_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, keyRef_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(keySource_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, keySource_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tokenRef_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(8, tokenRef_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tokenSource_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(8, tokenSource_);
     }
     if (status_ != io.github.panyam.agni.v1.webapi.ConnectionStatus.CONNECTION_STATUS_UNSPECIFIED.getNumber()) {
       size += com.google.protobuf.CodedOutputStream
@@ -638,10 +638,10 @@ private static final long serialVersionUID = 0L;
         .equals(other.getAppId())) return false;
     if (getInstallationId()
         != other.getInstallationId()) return false;
-    if (!getKeyRef()
-        .equals(other.getKeyRef())) return false;
-    if (!getTokenRef()
-        .equals(other.getTokenRef())) return false;
+    if (!getKeySource()
+        .equals(other.getKeySource())) return false;
+    if (!getTokenSource()
+        .equals(other.getTokenSource())) return false;
     if (status_ != other.status_) return false;
     if (!getLastError()
         .equals(other.getLastError())) return false;
@@ -679,10 +679,10 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + INSTALLATION_ID_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getInstallationId());
-    hash = (37 * hash) + KEY_REF_FIELD_NUMBER;
-    hash = (53 * hash) + getKeyRef().hashCode();
-    hash = (37 * hash) + TOKEN_REF_FIELD_NUMBER;
-    hash = (53 * hash) + getTokenRef().hashCode();
+    hash = (37 * hash) + KEY_SOURCE_FIELD_NUMBER;
+    hash = (53 * hash) + getKeySource().hashCode();
+    hash = (37 * hash) + TOKEN_SOURCE_FIELD_NUMBER;
+    hash = (53 * hash) + getTokenSource().hashCode();
     hash = (37 * hash) + STATUS_FIELD_NUMBER;
     hash = (53 * hash) + status_;
     hash = (37 * hash) + LAST_ERROR_FIELD_NUMBER;
@@ -843,8 +843,8 @@ private static final long serialVersionUID = 0L;
       baseUrl_ = "";
       appId_ = "";
       installationId_ = 0L;
-      keyRef_ = "";
-      tokenRef_ = "";
+      keySource_ = "";
+      tokenSource_ = "";
       status_ = 0;
       lastError_ = "";
       createTime_ = null;
@@ -909,10 +909,10 @@ private static final long serialVersionUID = 0L;
         result.installationId_ = installationId_;
       }
       if (((from_bitField0_ & 0x00000040) != 0)) {
-        result.keyRef_ = keyRef_;
+        result.keySource_ = keySource_;
       }
       if (((from_bitField0_ & 0x00000080) != 0)) {
-        result.tokenRef_ = tokenRef_;
+        result.tokenSource_ = tokenSource_;
       }
       if (((from_bitField0_ & 0x00000100) != 0)) {
         result.status_ = status_;
@@ -974,13 +974,13 @@ private static final long serialVersionUID = 0L;
       if (other.getInstallationId() != 0L) {
         setInstallationId(other.getInstallationId());
       }
-      if (!other.getKeyRef().isEmpty()) {
-        keyRef_ = other.keyRef_;
+      if (!other.getKeySource().isEmpty()) {
+        keySource_ = other.keySource_;
         bitField0_ |= 0x00000040;
         onChanged();
       }
-      if (!other.getTokenRef().isEmpty()) {
-        tokenRef_ = other.tokenRef_;
+      if (!other.getTokenSource().isEmpty()) {
+        tokenSource_ = other.tokenSource_;
         bitField0_ |= 0x00000080;
         onChanged();
       }
@@ -1053,12 +1053,12 @@ private static final long serialVersionUID = 0L;
               break;
             } // case 48
             case 58: {
-              keyRef_ = input.readStringRequireUtf8();
+              keySource_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000040;
               break;
             } // case 58
             case 66: {
-              tokenRef_ = input.readStringRequireUtf8();
+              tokenSource_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000080;
               break;
             } // case 66
@@ -1560,23 +1560,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object keyRef_ = "";
+    private java.lang.Object keySource_ = "";
     /**
      * <pre>
-     * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
      * CONNECTION_KIND_GITHUB_APP.
      * </pre>
      *
-     * <code>string key_ref = 7 [json_name = "keyRef"];</code>
-     * @return The keyRef.
+     * <code>string key_source = 7 [json_name = "keySource"];</code>
+     * @return The keySource.
      */
-    public java.lang.String getKeyRef() {
-      java.lang.Object ref = keyRef_;
+    public java.lang.String getKeySource() {
+      java.lang.Object ref = keySource_;
       if (!(ref instanceof java.lang.String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        keyRef_ = s;
+        keySource_ = s;
         return s;
       } else {
         return (java.lang.String) ref;
@@ -1584,21 +1584,21 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
      * CONNECTION_KIND_GITHUB_APP.
      * </pre>
      *
-     * <code>string key_ref = 7 [json_name = "keyRef"];</code>
-     * @return The bytes for keyRef.
+     * <code>string key_source = 7 [json_name = "keySource"];</code>
+     * @return The bytes for keySource.
      */
     public com.google.protobuf.ByteString
-        getKeyRefBytes() {
-      java.lang.Object ref = keyRef_;
+        getKeySourceBytes() {
+      java.lang.Object ref = keySource_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        keyRef_ = b;
+        keySource_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
@@ -1606,73 +1606,73 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
      * CONNECTION_KIND_GITHUB_APP.
      * </pre>
      *
-     * <code>string key_ref = 7 [json_name = "keyRef"];</code>
-     * @param value The keyRef to set.
+     * <code>string key_source = 7 [json_name = "keySource"];</code>
+     * @param value The keySource to set.
      * @return This builder for chaining.
      */
-    public Builder setKeyRef(
+    public Builder setKeySource(
         java.lang.String value) {
       java.util.Objects.requireNonNull(value);
-      keyRef_ = value;
+      keySource_ = value;
       bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
     /**
      * <pre>
-     * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
      * CONNECTION_KIND_GITHUB_APP.
      * </pre>
      *
-     * <code>string key_ref = 7 [json_name = "keyRef"];</code>
+     * <code>string key_source = 7 [json_name = "keySource"];</code>
      * @return This builder for chaining.
      */
-    public Builder clearKeyRef() {
-      keyRef_ = getDefaultInstance().getKeyRef();
+    public Builder clearKeySource() {
+      keySource_ = getDefaultInstance().getKeySource();
       bitField0_ = (bitField0_ & ~0x00000040);
       onChanged();
       return this;
     }
     /**
      * <pre>
-     * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
      * CONNECTION_KIND_GITHUB_APP.
      * </pre>
      *
-     * <code>string key_ref = 7 [json_name = "keyRef"];</code>
-     * @param value The bytes for keyRef to set.
+     * <code>string key_source = 7 [json_name = "keySource"];</code>
+     * @param value The bytes for keySource to set.
      * @return This builder for chaining.
      */
-    public Builder setKeyRefBytes(
+    public Builder setKeySourceBytes(
         com.google.protobuf.ByteString value) {
       java.util.Objects.requireNonNull(value);
       checkByteStringIsUtf8(value);
-      keyRef_ = value;
+      keySource_ = value;
       bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
 
-    private java.lang.Object tokenRef_ = "";
+    private java.lang.Object tokenSource_ = "";
     /**
      * <pre>
-     * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
-     * <code>string token_ref = 8 [json_name = "tokenRef"];</code>
-     * @return The tokenRef.
+     * <code>string token_source = 8 [json_name = "tokenSource"];</code>
+     * @return The tokenSource.
      */
-    public java.lang.String getTokenRef() {
-      java.lang.Object ref = tokenRef_;
+    public java.lang.String getTokenSource() {
+      java.lang.Object ref = tokenSource_;
       if (!(ref instanceof java.lang.String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        tokenRef_ = s;
+        tokenSource_ = s;
         return s;
       } else {
         return (java.lang.String) ref;
@@ -1680,20 +1680,20 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
-     * <code>string token_ref = 8 [json_name = "tokenRef"];</code>
-     * @return The bytes for tokenRef.
+     * <code>string token_source = 8 [json_name = "tokenSource"];</code>
+     * @return The bytes for tokenSource.
      */
     public com.google.protobuf.ByteString
-        getTokenRefBytes() {
-      java.lang.Object ref = tokenRef_;
+        getTokenSourceBytes() {
+      java.lang.Object ref = tokenSource_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        tokenRef_ = b;
+        tokenSource_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
@@ -1701,49 +1701,49 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
-     * <code>string token_ref = 8 [json_name = "tokenRef"];</code>
-     * @param value The tokenRef to set.
+     * <code>string token_source = 8 [json_name = "tokenSource"];</code>
+     * @param value The tokenSource to set.
      * @return This builder for chaining.
      */
-    public Builder setTokenRef(
+    public Builder setTokenSource(
         java.lang.String value) {
       java.util.Objects.requireNonNull(value);
-      tokenRef_ = value;
+      tokenSource_ = value;
       bitField0_ |= 0x00000080;
       onChanged();
       return this;
     }
     /**
      * <pre>
-     * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
-     * <code>string token_ref = 8 [json_name = "tokenRef"];</code>
+     * <code>string token_source = 8 [json_name = "tokenSource"];</code>
      * @return This builder for chaining.
      */
-    public Builder clearTokenRef() {
-      tokenRef_ = getDefaultInstance().getTokenRef();
+    public Builder clearTokenSource() {
+      tokenSource_ = getDefaultInstance().getTokenSource();
       bitField0_ = (bitField0_ & ~0x00000080);
       onChanged();
       return this;
     }
     /**
      * <pre>
-     * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
-     * <code>string token_ref = 8 [json_name = "tokenRef"];</code>
-     * @param value The bytes for tokenRef to set.
+     * <code>string token_source = 8 [json_name = "tokenSource"];</code>
+     * @param value The bytes for tokenSource to set.
      * @return This builder for chaining.
      */
-    public Builder setTokenRefBytes(
+    public Builder setTokenSourceBytes(
         com.google.protobuf.ByteString value) {
       java.util.Objects.requireNonNull(value);
       checkByteStringIsUtf8(value);
-      tokenRef_ = value;
+      tokenSource_ = value;
       bitField0_ |= 0x00000080;
       onChanged();
       return this;

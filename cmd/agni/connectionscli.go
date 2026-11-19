@@ -73,9 +73,9 @@ when it needs a token, so no secret is stored or sent back.
 			case token != "" && app != "":
 				return fmt.Errorf("--github-token and --github-app make different kinds of connection; pass one")
 			case token != "":
-				conn.Kind, conn.TokenRef = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN, token
+				conn.Kind, conn.TokenSource = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN, token
 			case app != "":
-				conn.Kind, conn.AppId, conn.InstallationId, conn.KeyRef = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP, app, installation, key
+				conn.Kind, conn.AppId, conn.InstallationId, conn.KeySource = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP, app, installation, key
 			default:
 				return fmt.Errorf("name the sign-in: --github-token env:NAME, or --github-app <app-id> --installation <id> --key file:/path")
 			}
@@ -123,9 +123,9 @@ when it needs a token, so no secret is stored or sent back.
 // is, and its status.
 func printConnection(w io.Writer, c *webapi.Connection) {
 	kind := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(c.GetKind().String(), "CONNECTION_KIND_"), "_", "-"))
-	secret := c.GetTokenRef()
+	secret := c.GetTokenSource()
 	if c.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP {
-		secret = fmt.Sprintf("app %s installation %d key %s", c.GetAppId(), c.GetInstallationId(), c.GetKeyRef())
+		secret = fmt.Sprintf("app %s installation %d key %s", c.GetAppId(), c.GetInstallationId(), c.GetKeySource())
 	}
 	status := strings.ToLower(strings.TrimPrefix(c.GetStatus().String(), "CONNECTION_STATUS_"))
 	fmt.Fprintf(w, "%s\t%s\t%s\t%s", service.ConnectionID(c.GetName()), kind, secret, status)

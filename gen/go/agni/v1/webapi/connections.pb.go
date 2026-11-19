@@ -138,11 +138,11 @@ type Connection struct {
 	// app_id and installation_id identify a GitHub App installation, for CONNECTION_KIND_GITHUB_APP.
 	AppId          string `protobuf:"bytes,5,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
 	InstallationId int64  `protobuf:"varint,6,opt,name=installation_id,json=installationId,proto3" json:"installation_id,omitempty"`
-	// key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+	// key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
 	// CONNECTION_KIND_GITHUB_APP.
-	KeyRef string `protobuf:"bytes,7,opt,name=key_ref,json=keyRef,proto3" json:"key_ref,omitempty"`
-	// token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
-	TokenRef string `protobuf:"bytes,8,opt,name=token_ref,json=tokenRef,proto3" json:"token_ref,omitempty"`
+	KeySource string `protobuf:"bytes,7,opt,name=key_source,json=keySource,proto3" json:"key_source,omitempty"`
+	// token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+	TokenSource string `protobuf:"bytes,8,opt,name=token_source,json=tokenSource,proto3" json:"token_source,omitempty"`
 	// status is CONNECTION_STATUS_OK until a token request fails, and last_error says why, with no
 	// secret in it. Output only.
 	Status    ConnectionStatus `protobuf:"varint,9,opt,name=status,proto3,enum=agni.v1.webapi.ConnectionStatus" json:"status,omitempty"`
@@ -226,16 +226,16 @@ func (x *Connection) GetInstallationId() int64 {
 	return 0
 }
 
-func (x *Connection) GetKeyRef() string {
+func (x *Connection) GetKeySource() string {
 	if x != nil {
-		return x.KeyRef
+		return x.KeySource
 	}
 	return ""
 }
 
-func (x *Connection) GetTokenRef() string {
+func (x *Connection) GetTokenSource() string {
 	if x != nil {
-		return x.TokenRef
+		return x.TokenSource
 	}
 	return ""
 }
@@ -494,7 +494,7 @@ var File_agni_v1_webapi_connections_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	"\n" +
-	" agni/v1/webapi/connections.proto\x12\x0eagni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xde\x03\n" +
+	" agni/v1/webapi/connections.proto\x12\x0eagni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xea\x03\n" +
 	"\n" +
 	"Connection\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x122\n" +
@@ -502,9 +502,10 @@ const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x19\n" +
 	"\bbase_url\x18\x04 \x01(\tR\abaseUrl\x12\x15\n" +
 	"\x06app_id\x18\x05 \x01(\tR\x05appId\x12'\n" +
-	"\x0finstallation_id\x18\x06 \x01(\x03R\x0einstallationId\x12\x17\n" +
-	"\akey_ref\x18\a \x01(\tR\x06keyRef\x12\x1b\n" +
-	"\ttoken_ref\x18\b \x01(\tR\btokenRef\x128\n" +
+	"\x0finstallation_id\x18\x06 \x01(\x03R\x0einstallationId\x12\x1d\n" +
+	"\n" +
+	"key_source\x18\a \x01(\tR\tkeySource\x12!\n" +
+	"\ftoken_source\x18\b \x01(\tR\vtokenSource\x128\n" +
 	"\x06status\x18\t \x01(\x0e2 .agni.v1.webapi.ConnectionStatusR\x06status\x12\x1d\n" +
 	"\n" +
 	"last_error\x18\n" +

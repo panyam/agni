@@ -8,9 +8,9 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
  * with that connection's token. Several mounts can share one, such as one GitHub App installation
  * over many repos. The records come from goapplib storage's connections package.
- * A connection never holds a secret. Its key_ref and token_ref name where the secret is, "env:NAME"
- * or "file:/abs/path", and the server reads it from there when it needs a token. So no secret is
- * written to --store or sent back over this API.
+ * A connection never holds a secret. Its key_source and token_source name where the secret is,
+ * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
+ * secret is written to --store or sent back over this API.
  * </pre>
  */
 @io.grpc.stub.annotations.GrpcGenerated
@@ -210,9 +210,9 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_ref and token_ref name where the secret is, "env:NAME"
-   * or "file:/abs/path", and the server reads it from there when it needs a token. So no secret is
-   * written to --store or sent back over this API.
+   * A connection never holds a secret. Its key_source and token_source name where the secret is,
+   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
+   * secret is written to --store or sent back over this API.
    * </pre>
    */
   public interface AsyncService {
@@ -268,9 +268,9 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_ref and token_ref name where the secret is, "env:NAME"
-   * or "file:/abs/path", and the server reads it from there when it needs a token. So no secret is
-   * written to --store or sent back over this API.
+   * A connection never holds a secret. Its key_source and token_source name where the secret is,
+   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
+   * secret is written to --store or sent back over this API.
    * </pre>
    */
   public static abstract class ConnectionServiceImplBase
@@ -288,9 +288,9 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_ref and token_ref name where the secret is, "env:NAME"
-   * or "file:/abs/path", and the server reads it from there when it needs a token. So no secret is
-   * written to --store or sent back over this API.
+   * A connection never holds a secret. Its key_source and token_source name where the secret is,
+   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
+   * secret is written to --store or sent back over this API.
    * </pre>
    */
   public static final class ConnectionServiceStub
@@ -361,9 +361,9 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_ref and token_ref name where the secret is, "env:NAME"
-   * or "file:/abs/path", and the server reads it from there when it needs a token. So no secret is
-   * written to --store or sent back over this API.
+   * A connection never holds a secret. Its key_source and token_source name where the secret is,
+   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
+   * secret is written to --store or sent back over this API.
    * </pre>
    */
   public static final class ConnectionServiceBlockingV2Stub
@@ -430,9 +430,9 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_ref and token_ref name where the secret is, "env:NAME"
-   * or "file:/abs/path", and the server reads it from there when it needs a token. So no secret is
-   * written to --store or sent back over this API.
+   * A connection never holds a secret. Its key_source and token_source name where the secret is,
+   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
+   * secret is written to --store or sent back over this API.
    * </pre>
    */
   public static final class ConnectionServiceBlockingStub
@@ -499,9 +499,9 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_ref and token_ref name where the secret is, "env:NAME"
-   * or "file:/abs/path", and the server reads it from there when it needs a token. So no secret is
-   * written to --store or sent back over this API.
+   * A connection never holds a secret. Its key_source and token_source name where the secret is,
+   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
+   * secret is written to --store or sent back over this API.
    * </pre>
    */
   public static final class ConnectionServiceFutureStub

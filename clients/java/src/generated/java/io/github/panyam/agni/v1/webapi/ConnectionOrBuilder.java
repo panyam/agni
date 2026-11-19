@@ -111,45 +111,45 @@ public interface ConnectionOrBuilder extends
 
   /**
    * <pre>
-   * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
    * CONNECTION_KIND_GITHUB_APP.
    * </pre>
    *
-   * <code>string key_ref = 7 [json_name = "keyRef"];</code>
-   * @return The keyRef.
+   * <code>string key_source = 7 [json_name = "keySource"];</code>
+   * @return The keySource.
    */
-  java.lang.String getKeyRef();
+  java.lang.String getKeySource();
   /**
    * <pre>
-   * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
    * CONNECTION_KIND_GITHUB_APP.
    * </pre>
    *
-   * <code>string key_ref = 7 [json_name = "keyRef"];</code>
-   * @return The bytes for keyRef.
+   * <code>string key_source = 7 [json_name = "keySource"];</code>
+   * @return The bytes for keySource.
    */
   com.google.protobuf.ByteString
-      getKeyRefBytes();
+      getKeySourceBytes();
 
   /**
    * <pre>
-   * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
    * </pre>
    *
-   * <code>string token_ref = 8 [json_name = "tokenRef"];</code>
-   * @return The tokenRef.
+   * <code>string token_source = 8 [json_name = "tokenSource"];</code>
+   * @return The tokenSource.
    */
-  java.lang.String getTokenRef();
+  java.lang.String getTokenSource();
   /**
    * <pre>
-   * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
    * </pre>
    *
-   * <code>string token_ref = 8 [json_name = "tokenRef"];</code>
-   * @return The bytes for tokenRef.
+   * <code>string token_source = 8 [json_name = "tokenSource"];</code>
+   * @return The bytes for tokenSource.
    */
   com.google.protobuf.ByteString
-      getTokenRefBytes();
+      getTokenSourceBytes();
 
   /**
    * <pre>

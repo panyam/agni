@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/connections.proto.
  */
 export const file_agni_v1_webapi_connections: GenFile = /*@__PURE__*/
-  fileDesc("CiBhZ25pL3YxL3dlYmFwaS9jb25uZWN0aW9ucy5wcm90bxIOYWduaS52MS53ZWJhcGki5wIKCkNvbm5lY3Rpb24SDAoEbmFtZRgBIAEoCRIsCgRraW5kGAIgASgOMh4uYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbktpbmQSFAoMZGlzcGxheV9uYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEg4KBmFwcF9pZBgFIAEoCRIXCg9pbnN0YWxsYXRpb25faWQYBiABKAMSDwoHa2V5X3JlZhgHIAEoCRIRCgl0b2tlbl9yZWYYCCABKAkSMAoGc3RhdHVzGAkgASgOMiAuYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvblN0YXR1cxISCgpsYXN0X2Vycm9yGAogASgJEi8KC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCg1sYXN0X3VzZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJgChdDcmVhdGVDb25uZWN0aW9uUmVxdWVzdBIVCg1jb25uZWN0aW9uX2lkGAEgASgJEi4KCmNvbm5lY3Rpb24YAiABKAsyGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uIiQKFEdldENvbm5lY3Rpb25SZXF1ZXN0EgwKBG5hbWUYASABKAkiGAoWTGlzdENvbm5lY3Rpb25zUmVxdWVzdCJKChdMaXN0Q29ubmVjdGlvbnNSZXNwb25zZRIvCgtjb25uZWN0aW9ucxgBIAMoCzIaLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb24iJwoXRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QSDAoEbmFtZRgBIAEoCSpzCg5Db25uZWN0aW9uS2luZBIfChtDT05ORUNUSU9OX0tJTkRfVU5TUEVDSUZJRUQQABIeChpDT05ORUNUSU9OX0tJTkRfR0lUSFVCX0FQUBABEiAKHENPTk5FQ1RJT05fS0lORF9HSVRIVUJfVE9LRU4QAiptChBDb25uZWN0aW9uU3RhdHVzEiEKHUNPTk5FQ1RJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASGAoUQ09OTkVDVElPTl9TVEFUVVNfT0sQARIcChhDT05ORUNUSU9OX1NUQVRVU19GQUlMRUQQAjL4AgoRQ29ubmVjdGlvblNlcnZpY2USVwoQQ3JlYXRlQ29ubmVjdGlvbhInLmFnbmkudjEud2ViYXBpLkNyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0GhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbhJRCg1HZXRDb25uZWN0aW9uEiQuYWduaS52MS53ZWJhcGkuR2V0Q29ubmVjdGlvblJlcXVlc3QaGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uEmIKD0xpc3RDb25uZWN0aW9ucxImLmFnbmkudjEud2ViYXBpLkxpc3RDb25uZWN0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0Q29ubmVjdGlvbnNSZXNwb25zZRJTChBEZWxldGVDb25uZWN0aW9uEicuYWduaS52MS53ZWJhcGkuRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_google_protobuf_empty, file_google_protobuf_timestamp]);
+  fileDesc("CiBhZ25pL3YxL3dlYmFwaS9jb25uZWN0aW9ucy5wcm90bxIOYWduaS52MS53ZWJhcGki7QIKCkNvbm5lY3Rpb24SDAoEbmFtZRgBIAEoCRIsCgRraW5kGAIgASgOMh4uYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbktpbmQSFAoMZGlzcGxheV9uYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEg4KBmFwcF9pZBgFIAEoCRIXCg9pbnN0YWxsYXRpb25faWQYBiABKAMSEgoKa2V5X3NvdXJjZRgHIAEoCRIUCgx0b2tlbl9zb3VyY2UYCCABKAkSMAoGc3RhdHVzGAkgASgOMiAuYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvblN0YXR1cxISCgpsYXN0X2Vycm9yGAogASgJEi8KC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCg1sYXN0X3VzZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJgChdDcmVhdGVDb25uZWN0aW9uUmVxdWVzdBIVCg1jb25uZWN0aW9uX2lkGAEgASgJEi4KCmNvbm5lY3Rpb24YAiABKAsyGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uIiQKFEdldENvbm5lY3Rpb25SZXF1ZXN0EgwKBG5hbWUYASABKAkiGAoWTGlzdENvbm5lY3Rpb25zUmVxdWVzdCJKChdMaXN0Q29ubmVjdGlvbnNSZXNwb25zZRIvCgtjb25uZWN0aW9ucxgBIAMoCzIaLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb24iJwoXRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QSDAoEbmFtZRgBIAEoCSpzCg5Db25uZWN0aW9uS2luZBIfChtDT05ORUNUSU9OX0tJTkRfVU5TUEVDSUZJRUQQABIeChpDT05ORUNUSU9OX0tJTkRfR0lUSFVCX0FQUBABEiAKHENPTk5FQ1RJT05fS0lORF9HSVRIVUJfVE9LRU4QAiptChBDb25uZWN0aW9uU3RhdHVzEiEKHUNPTk5FQ1RJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASGAoUQ09OTkVDVElPTl9TVEFUVVNfT0sQARIcChhDT05ORUNUSU9OX1NUQVRVU19GQUlMRUQQAjL4AgoRQ29ubmVjdGlvblNlcnZpY2USVwoQQ3JlYXRlQ29ubmVjdGlvbhInLmFnbmkudjEud2ViYXBpLkNyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0GhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbhJRCg1HZXRDb25uZWN0aW9uEiQuYWduaS52MS53ZWJhcGkuR2V0Q29ubmVjdGlvblJlcXVlc3QaGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uEmIKD0xpc3RDb25uZWN0aW9ucxImLmFnbmkudjEud2ViYXBpLkxpc3RDb25uZWN0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0Q29ubmVjdGlvbnNSZXNwb25zZRJTChBEZWxldGVDb25uZWN0aW9uEicuYWduaS52MS53ZWJhcGkuRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_google_protobuf_empty, file_google_protobuf_timestamp]);
 
 /**
  * Connection is one sign-in the server reads a source through, named "connections/{connection}".
@@ -60,19 +60,19 @@ export type Connection = Message<"agni.v1.webapi.Connection"> & {
   installationId: bigint;
 
   /**
-   * key_ref is where the App's private key is, "env:NAME" or "file:/abs/path", for
+   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
    * CONNECTION_KIND_GITHUB_APP.
    *
-   * @generated from field: string key_ref = 7;
+   * @generated from field: string key_source = 7;
    */
-  keyRef: string;
+  keySource: string;
 
   /**
-   * token_ref is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
    *
-   * @generated from field: string token_ref = 8;
+   * @generated from field: string token_source = 8;
    */
-  tokenRef: string;
+  tokenSource: string;
 
   /**
    * status is CONNECTION_STATUS_OK until a token request fails, and last_error says why, with no
@@ -266,9 +266,9 @@ export const ConnectionStatusSchema: GenEnum<ConnectionStatus> = /*@__PURE__*/
  * with that connection's token. Several mounts can share one, such as one GitHub App installation
  * over many repos. The records come from goapplib storage's connections package.
  *
- * A connection never holds a secret. Its key_ref and token_ref name where the secret is, "env:NAME"
- * or "file:/abs/path", and the server reads it from there when it needs a token. So no secret is
- * written to --store or sent back over this API.
+ * A connection never holds a secret. Its key_source and token_source name where the secret is,
+ * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
+ * secret is written to --store or sent back over this API.
  *
  * @generated from service agni.v1.webapi.ConnectionService
  */

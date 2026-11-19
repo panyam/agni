@@ -30,15 +30,15 @@ CONNECTION_STATUS_OK: ConnectionStatus
 CONNECTION_STATUS_FAILED: ConnectionStatus
 
 class Connection(_message.Message):
-    __slots__ = ("name", "kind", "display_name", "base_url", "app_id", "installation_id", "key_ref", "token_ref", "status", "last_error", "create_time", "last_use_time")
+    __slots__ = ("name", "kind", "display_name", "base_url", "app_id", "installation_id", "key_source", "token_source", "status", "last_error", "create_time", "last_use_time")
     NAME_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
     BASE_URL_FIELD_NUMBER: _ClassVar[int]
     APP_ID_FIELD_NUMBER: _ClassVar[int]
     INSTALLATION_ID_FIELD_NUMBER: _ClassVar[int]
-    KEY_REF_FIELD_NUMBER: _ClassVar[int]
-    TOKEN_REF_FIELD_NUMBER: _ClassVar[int]
+    KEY_SOURCE_FIELD_NUMBER: _ClassVar[int]
+    TOKEN_SOURCE_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     LAST_ERROR_FIELD_NUMBER: _ClassVar[int]
     CREATE_TIME_FIELD_NUMBER: _ClassVar[int]
@@ -49,13 +49,13 @@ class Connection(_message.Message):
     base_url: str
     app_id: str
     installation_id: int
-    key_ref: str
-    token_ref: str
+    key_source: str
+    token_source: str
     status: ConnectionStatus
     last_error: str
     create_time: _timestamp_pb2.Timestamp
     last_use_time: _timestamp_pb2.Timestamp
-    def __init__(self, name: _Optional[str] = ..., kind: _Optional[_Union[ConnectionKind, str]] = ..., display_name: _Optional[str] = ..., base_url: _Optional[str] = ..., app_id: _Optional[str] = ..., installation_id: _Optional[int] = ..., key_ref: _Optional[str] = ..., token_ref: _Optional[str] = ..., status: _Optional[_Union[ConnectionStatus, str]] = ..., last_error: _Optional[str] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_use_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[_Union[ConnectionKind, str]] = ..., display_name: _Optional[str] = ..., base_url: _Optional[str] = ..., app_id: _Optional[str] = ..., installation_id: _Optional[int] = ..., key_source: _Optional[str] = ..., token_source: _Optional[str] = ..., status: _Optional[_Union[ConnectionStatus, str]] = ..., last_error: _Optional[str] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_use_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class CreateConnectionRequest(_message.Message):
     __slots__ = ("connection_id", "connection")
