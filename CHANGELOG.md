@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-19
+
+The agnids image starts again, so both images publish (PR 1768, issue 1767). v0.9.0's agnids image
+exited at start, and v0.9.0 got no GitHub Release. oneauth moves to v0.3.9 (PR 1769). Coming from
+v0.8.x, read v0.9.0's Breaking section first. Full notes in `RELEASES/v0.9.1.md`.
+
 ## [0.9.0] - 2026-11-19
 
 A server keeps designs. A person uploads a board, or adds one from a mounted folder, and each design
