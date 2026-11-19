@@ -81,8 +81,10 @@ func TestAServerKeepsADesignAndAProjectAcrossARestart(t *testing.T) {
 	if _, err := projectsClient.CreateProject(ctx, connect.NewRequest(&webapi.CreateProjectRequest{ProjectId: "b200", Project: &webapi.Project{Title: "B200", Designs: []string{"designs/memory_unit"}}})); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := designs.UpdateArtifact(ctx, connect.NewRequest(&webapi.UpdateArtifactRequest{Artifact: &webapi.Artifact{Name: "designs/gateway/artifacts/netlist", Files: files[:1]}, AllowMissing: true})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
-		t.Errorf("UpdateArtifact of the mounted gateway = %v, want FAILED_PRECONDITION", err)
+	// The mounted folder's design.yaml makes no design (agni issue 1736), so there is no gateway to
+	// write to.
+	if _, err := designs.UpdateArtifact(ctx, connect.NewRequest(&webapi.UpdateArtifactRequest{Artifact: &webapi.Artifact{Name: "designs/gateway/artifacts/netlist", Files: files[:1]}, AllowMissing: true})); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Errorf("UpdateArtifact of the mounted folder's gateway = %v, want NOT_FOUND", err)
 	}
 
 	again := storeServer(t, dir)
@@ -93,8 +95,8 @@ func TestAServerKeepsADesignAndAProjectAcrossARestart(t *testing.T) {
 		t.Fatalf("b200's designs after a restart = %v, %v; want memory_unit, latest in its series", list.Msg.GetDesigns(), err)
 	}
 	all, err := designs.ListDesigns(ctx, connect.NewRequest(&webapi.ListDesignsRequest{}))
-	if err != nil || len(all.Msg.GetDesigns()) != 3 {
-		t.Errorf("every design after a restart = %v, %v; want the mounted gateway and gateway-rev-b, and memory_unit", all.Msg.GetDesigns(), err)
+	if err != nil || len(all.Msg.GetDesigns()) != 1 || all.Msg.GetDesigns()[0].GetName() != "designs/memory_unit" {
+		t.Errorf("every design after a restart = %v, %v; want memory_unit alone, since a mounted folder makes no design", all.Msg.GetDesigns(), err)
 	}
 	d, err := designs.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Name: "designs/memory_unit"}))
 	if err != nil || !regexp.MustCompile(`^mount://uploads/memory_unit/[0-9a-f]{12}/netlist/mem.edn$`).MatchString(d.Msg.GetEntryUri()) || len(d.Msg.GetCompanionUris()) != 1 || len(d.Msg.GetArtifacts()) != 2 {

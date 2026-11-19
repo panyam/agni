@@ -74,9 +74,11 @@ var wireCalls = []wireFixture{
 	// (agni issue 1635).
 	{Name: "locate-on-board", Service: "agni.v1.webapi.DesignViewService", Method: "LocateSubjects", Request: json.RawMessage(`{"snapshot":"snapshots/wire","subjects":[{"kind":"component","ref":"C133"}],"board":true}`)},
 	{Name: "query-that-does-not-parse", Service: "agni.v1.webapi.QueryService", Method: "RunQuery", Request: json.RawMessage(`{"snapshot":"snapshots/wire","query":"component.class(?c"}`)},
-	// A design the server holds, by name (agni issue 1694). Its update time is the descriptor's on
-	// this checkout, so it is not compared.
-	{Name: "get-design", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"name":"designs/jetson-cut"}`), Ignore: []string{"update_time"}},
+	// A mounted folder holds no design until a person adds one (agni issue 1736). The plan for adding
+	// the cut answers without writing, so the replay needs no store, and a design by name is still
+	// not found.
+	{Name: "add-designs-validate-only", Service: "agni.v1.webapi.DesignService", Method: "AddDesigns", Request: json.RawMessage(`{"uri":"mount://probe/designs/jetson-cut","designs":[{"folder":"designs/jetson-cut","designId":"jetson-cut","series":"probe"}],"validateOnly":true}`)},
+	{Name: "get-design-not-added", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"name":"designs/jetson-cut"}`)},
 	{Name: "snapshot-not-found", Service: "agni.v1.webapi.DesignViewService", Method: "GetSummary", Request: json.RawMessage(`{"snapshot":"snapshots/nonesuch"}`)},
 }
 

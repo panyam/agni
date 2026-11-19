@@ -85,6 +85,8 @@ type ArtifactWrite struct {
 	ID           string
 	Files        []*webapi.SnapshotFile
 	AllowMissing bool
+	// Source is where in a mount the files were read from, nil for an upload (agni issue 1736).
+	Source *webapi.ArtifactSource
 }
 
 // BlobSource returns a file's contents by its hash, "sha256:<hex>" as SnapshotFile.sha256 writes it.

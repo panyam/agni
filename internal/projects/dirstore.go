@@ -129,6 +129,14 @@ type artifactRecord struct {
 	Companions []string     `yaml:"companions,omitempty"`
 	UpdateTime time.Time    `yaml:"update_time"`
 	Files      []fileRecord `yaml:"files"`
+	// Source is where in a mount the files were read from, absent for an upload (agni issue 1736).
+	Source *sourceRecord `yaml:"source,omitempty"`
+}
+
+type sourceRecord struct {
+	Mount string `yaml:"mount"`
+	Path  string `yaml:"path"`
+	Ref   string `yaml:"ref,omitempty"`
 }
 
 type fileRecord struct {
@@ -338,6 +346,9 @@ func artifactOf(id string, a artifactRecord) *webapi.Artifact {
 	for _, f := range a.Files {
 		out.Files = append(out.Files, &webapi.SnapshotFile{Path: f.Path, Sha256: f.Sha256, Size: f.Size})
 	}
+	if a.Source != nil {
+		out.Source = &webapi.ArtifactSource{Mount: a.Source.Mount, Path: a.Source.Path, Ref: a.Source.Ref}
+	}
 	return out
 }
 
@@ -373,6 +384,9 @@ func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []servi
 		a, err := s.keep(w.ID, files, now)
 		if err != nil {
 			return nil, err
+		}
+		if src := w.Source; src != nil {
+			a.Source = &sourceRecord{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef()}
 		}
 		written[w.ID] = a
 	}

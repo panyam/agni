@@ -48,7 +48,7 @@ func designServer(t *testing.T, store, uploads string, mounted ...mounts.Mount) 
 	}
 	mux := http.NewServeMux()
 	server.API{
-		Workspace: service.NewWorkspaceService(osWorkspace(tableOf(ms))),
+		Workspace: service.NewWorkspaceService(osWorkspace(tableOf(ms))).WithDesignFiles(resolver, osFiles(tableOf(ms))),
 		Project:   projectSvc,
 		Design:    designSvc,
 		Pack:      packSvc,

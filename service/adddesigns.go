@@ -1,0 +1,222 @@
+package service
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"path"
+	"regexp"
+	"slices"
+	"strings"
+
+	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+)
+
+// DesignProposer proposes the designs a mounted folder's files make, as
+// WorkspaceService.ProposeDesigns does.
+type DesignProposer interface {
+	ProposeDesigns(ctx context.Context, req *webapi.ProposeDesignsRequest) (*webapi.ProposeDesignsResponse, error)
+}
+
+// WithMountFiles lets AddDesigns make designs from mounted folders, and returns s (agni issue 1736).
+// propose groups a folder's files into designs, and read reads one file of a mount. Without it,
+// AddDesigns answers FAILED_PRECONDITION.
+func (s *DesignService) WithMountFiles(propose DesignProposer, read FileReader) *DesignService {
+	s.proposer, s.mountRead = propose, read
+	return s
+}
+
+// addedDesign is one design AddDesigns makes: its id and record, and the artifacts it writes with
+// the contents read for them, by hash.
+type addedDesign struct {
+	id       string
+	record   DesignRecord
+	writes   []ArtifactWrite
+	contents map[string][]byte
+}
+
+// AddDesigns makes stored designs from the proposals a mounted folder makes that the request names.
+func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRequest) (*webapi.AddDesignsResponse, error) {
+	if s.proposer == nil || s.mountRead == nil {
+		return nil, fmt.Errorf("%w: this server reads no mounted folders into designs", ErrFailedPrecondition)
+	}
+	u, err := ParseArtifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	if len(req.GetDesigns()) == 0 {
+		return nil, fmt.Errorf("%w: name the proposals to add, each by its folder", ErrInvalidArgument)
+	}
+	proposed, err := s.proposer.ProposeDesigns(ctx, &webapi.ProposeDesignsRequest{Uri: req.GetUri()})
+	if err != nil {
+		return nil, err
+	}
+	byFolder := map[string]*webapi.ProposedDesign{}
+	var folders []string
+	for _, p := range proposed.GetDesigns() {
+		byFolder[p.GetFolder()] = p
+		folders = append(folders, fmt.Sprintf("%q", p.GetFolder()))
+	}
+	var adds []addedDesign
+	ids := map[string]bool{}
+	for _, want := range req.GetDesigns() {
+		p, ok := byFolder[want.GetFolder()]
+		if !ok {
+			return nil, fmt.Errorf("%w: %s proposes no design at %q; it proposes %s", ErrInvalidArgument, req.GetUri(), want.GetFolder(), strings.Join(folders, ", "))
+		}
+		if want.GetDesignId() == "" {
+			want = &webapi.DesignToAdd{Folder: want.GetFolder(), DesignId: DefaultDesignID(p, proposed.GetDesigns()), Title: want.GetTitle(), Series: want.GetSeries()}
+		}
+		add, err := s.planAdd(ctx, u.Mount, p, want)
+		if err != nil {
+			return nil, err
+		}
+		if ids[add.id] {
+			return nil, fmt.Errorf("%w: two proposals would both be %s", ErrInvalidArgument, StandaloneDesignName(add.id))
+		}
+		ids[add.id] = true
+		if _, err := s.catalog.Design(ctx, StandaloneDesignName(add.id)); err == nil {
+			return nil, fmt.Errorf("%w: %s", ErrAlreadyExists, StandaloneDesignName(add.id))
+		} else if !errors.Is(err, ErrNotFound) {
+			return nil, err
+		}
+		adds = append(adds, add)
+	}
+	resp := &webapi.AddDesignsResponse{}
+	if req.GetValidateOnly() {
+		for _, a := range adds {
+			d := &webapi.Design{Name: StandaloneDesignName(a.id), Title: a.record.Title, Series: a.record.Series}
+			for _, w := range a.writes {
+				d.Artifacts = append(d.Artifacts, ArtifactName(a.id, w.ID))
+			}
+			resp.Designs = append(resp.Designs, d)
+		}
+		return resp, nil
+	}
+	for _, a := range adds {
+		if err := s.writeAdded(ctx, a); err != nil {
+			return nil, err
+		}
+	}
+	// Read back once every design is written, so a series' latest is marked among all of them.
+	for _, a := range adds {
+		d, err := s.catalog.Design(ctx, StandaloneDesignName(a.id))
+		if err != nil {
+			return nil, err
+		}
+		if d, err = s.withLatest(ctx, d); err != nil {
+			return nil, err
+		}
+		resp.Designs = append(resp.Designs, d)
+	}
+	return resp, nil
+}
+
+// planAdd reads one proposal's files from the mount and groups them into artifacts, each with its
+// source. Files outside the proposal's folder, such as a project's symbol library, are left out,
+// as a dropped folder holds only its own files.
+func (s *DesignService) planAdd(ctx context.Context, mount string, p *webapi.ProposedDesign, want *webapi.DesignToAdd) (addedDesign, error) {
+	id := want.GetDesignId()
+	if !newIDPattern.MatchString(id) {
+		return addedDesign{}, fmt.Errorf("%w: design id %q must be lowercase letters, digits, '.', '_' or '-', starting with a letter or digit", ErrInvalidArgument, id)
+	}
+	title := want.GetTitle()
+	if title == "" {
+		title = p.GetDesign().GetTitle()
+	}
+	folder := strings.Trim(p.GetFolder(), "/")
+	prefix := ""
+	if folder != "" {
+		prefix = folder + "/"
+	}
+	contents := map[string][]byte{}
+	var rels []string
+	for _, f := range p.GetFiles() {
+		rel, ok := strings.CutPrefix(f, prefix)
+		if !ok || path.Base(f) == DesignDescriptorName {
+			continue
+		}
+		fu, err := artifact.New(mount, f)
+		if err != nil {
+			return addedDesign{}, err
+		}
+		b, err := s.mountRead.ReadFile(ctx, fu)
+		if err != nil {
+			return addedDesign{}, ClassifyLoadErr(err)
+		}
+		contents[rel] = b
+		rels = append(rels, rel)
+	}
+	slices.Sort(rels)
+	plan, err := PlanArtifacts(rels, func(r string) ([]byte, error) {
+		b, ok := contents[r]
+		if !ok {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, r)
+		}
+		return b, nil
+	})
+	if err != nil {
+		return addedDesign{}, err
+	}
+	add := addedDesign{id: id, record: DesignRecord{Title: title, Series: want.GetSeries()}, contents: map[string][]byte{}}
+	for _, a := range plan.IDs {
+		w := ArtifactWrite{ID: a, AllowMissing: true}
+		root := ""
+		for i, pf := range plan.Files[a] {
+			b := contents[pf.Folder]
+			sum := sha256.Sum256(b)
+			h := "sha256:" + hex.EncodeToString(sum[:])
+			add.contents[h] = b
+			w.Files = append(w.Files, &webapi.SnapshotFile{Path: pf.Rel, Sha256: h, Size: int64(len(b))})
+			if i == 0 {
+				root = strings.TrimSuffix(strings.TrimSuffix(pf.Folder, pf.Rel), "/")
+			}
+		}
+		w.Source = &webapi.ArtifactSource{Mount: mount, Path: strings.Trim(path.Join(folder, root), "/")}
+		add.writes = append(add.writes, w)
+	}
+	return add, nil
+}
+
+// writeAdded makes one design and writes its artifacts. A design it made and could not fill is
+// deleted, so a failed add leaves nothing behind.
+func (s *DesignService) writeAdded(ctx context.Context, a addedDesign) error {
+	name := StandaloneDesignName(a.id)
+	if _, err := s.catalog.CreateDesign(ctx, a.id, a.record); err != nil {
+		return err
+	}
+	read := func(_ context.Context, h string) ([]byte, bool) {
+		b, ok := a.contents[h]
+		return b, ok
+	}
+	if _, err := s.catalog.WriteArtifacts(ctx, name, a.writes, read); err != nil {
+		_ = s.catalog.DeleteDesign(context.WithoutCancel(ctx), name)
+		return err
+	}
+	return nil
+}
+
+var idRun = regexp.MustCompile(`[^a-z0-9._-]+`)
+
+// DefaultDesignID is the id AddDesigns gives a proposal the request names no id for. It is the
+// proposal's folder name, since two releases of one board sit in two folders under one entry name.
+// A proposal at the top of the folder asked about, or one sharing its folder with another, takes its
+// entry's name instead.
+func DefaultDesignID(p *webapi.ProposedDesign, all []*webapi.ProposedDesign) string {
+	folder := strings.Trim(p.GetFolder(), "/")
+	shared := slices.ContainsFunc(all, func(o *webapi.ProposedDesign) bool { return o != p && strings.Trim(o.GetFolder(), "/") == folder })
+	if folder == "" || shared {
+		return designIDFrom(p.GetDesign().GetName())
+	}
+	return designIDFrom(folder)
+}
+
+// designIDFrom turns a name into a design id: its last path segment lowercased, each run of other
+// characters as one '-', and trimmed of leading punctuation.
+func designIDFrom(name string) string {
+	id := idRun.ReplaceAllString(strings.ToLower(path.Base(name)), "-")
+	return strings.TrimLeft(id, "-._")
+}

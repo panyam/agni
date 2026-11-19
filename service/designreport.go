@@ -12,7 +12,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -113,22 +112,8 @@ func (s *DesignService) CreateReport(ctx context.Context, req *webapi.CreateRepo
 	return inView(kept, webapi.ReportView_REPORT_VIEW_FULL, webapi.ReportView_REPORT_VIEW_FULL), nil
 }
 
-// DesignFileLister lists the files a design's analysis reads, as WorkspaceService.ListDesignFiles
-// does. A report on a mounted design hashes its files through it.
-type DesignFileLister interface {
-	ListDesignFiles(ctx context.Context, req *webapi.ListDesignFilesRequest) (*webapi.ListDesignFilesResponse, error)
-}
-
-// WithMountedFiles lets a report run on a design a mounted folder declares, and returns s (agni issue
-// 1746). The report hashes that design's files, listed by list and read by read. Without it, a
-// report on a mounted design is FAILED_PRECONDITION.
-func (s *DesignService) WithMountedFiles(list DesignFileLister, read FileReader) *DesignService {
-	s.mountedList, s.mountedRead = list, read
-	return s
-}
-
-// reportable returns the id of a design a report can run on. That is a design the store holds, or
-// one a mounted folder declares when the service can hash its files.
+// reportable returns the id of a design the store holds. A design only a mounted reader holds has
+// no artifacts to hash, so it takes no report.
 func (s *DesignService) reportable(ctx context.Context, name string) (string, error) {
 	id, ok := StandaloneDesignID(name)
 	if !ok {
@@ -138,8 +123,8 @@ func (s *DesignService) reportable(ctx context.Context, name string) (string, er
 	if err != nil {
 		return "", err
 	}
-	if !stored && s.mountedList == nil {
-		return "", fmt.Errorf("%w: %s is declared in a mounted folder, and this server cannot hash a mounted design's files", ErrFailedPrecondition, name)
+	if !stored {
+		return "", fmt.Errorf("%w: %s is declared in a mounted folder, and a report needs a design the server stores; add it with AddDesigns", ErrFailedPrecondition, name)
 	}
 	return id, nil
 }
@@ -184,21 +169,14 @@ func (s *DesignService) runReport(ctx context.Context, design string, packs []st
 	return s.checks.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: snap.GetName()})
 }
 
-// designHash names a design's content: its intent and each artifact's files, by path and hash. A
-// change to any file, to the set of artifacts, or to the intent moves it. A mounted design has no
-// artifacts kept, so its folder's files are grouped into artifacts the way an import would group
-// them.
+// designHash names a stored design's content: its intent and each artifact's files, by path and
+// hash. A change to any file, to the set of artifacts, or to the intent moves it.
 func (s *DesignService) designHash(ctx context.Context, name string) (string, error) {
-	d, stored, err := s.catalog.holder(ctx, name)
+	d, err := s.catalog.Design(ctx, name)
 	if err != nil {
 		return "", err
 	}
-	var arts []*webapi.Artifact
-	if stored {
-		arts, err = s.catalog.Artifacts(ctx, name)
-	} else {
-		arts, err = s.mountedArtifacts(ctx, d)
-	}
+	arts, err := s.catalog.Artifacts(ctx, name)
 	if err != nil {
 		return "", err
 	}
@@ -212,59 +190,6 @@ func (s *DesignService) designHash(ctx context.Context, name string) (string, er
 		}
 	}
 	return "sha256:" + hex.EncodeToString(h.Sum(nil)), nil
-}
-
-// mountedArtifacts groups the files in a mounted design's folder into artifacts, as PlanArtifacts
-// groups a dropped folder, each file with its hash. Files the project config names outside the folder
-// are left out, since a pack, not the folder's project, is what a report records.
-func (s *DesignService) mountedArtifacts(ctx context.Context, d *webapi.Design) ([]*webapi.Artifact, error) {
-	if s.mountedList == nil {
-		return nil, fmt.Errorf("%w: this server cannot hash a mounted design's files", ErrFailedPrecondition)
-	}
-	if d.GetEntryUri() == "" {
-		return nil, fmt.Errorf("%w: %s has no file a reader opens", ErrFailedPrecondition, d.GetName())
-	}
-	folder, err := artifact.Parse(d.GetUri())
-	if err != nil {
-		return nil, err
-	}
-	listed, err := s.mountedList.ListDesignFiles(ctx, &webapi.ListDesignFilesRequest{Uri: d.GetEntryUri()})
-	if err != nil {
-		return nil, err
-	}
-	prefix := strings.TrimSuffix(folder.Path, "/") + "/"
-	if folder.Path == "" {
-		prefix = ""
-	}
-	hashes := map[string]string{}
-	var rel []string
-	for _, f := range listed.GetFiles() {
-		r, ok := strings.CutPrefix(f.GetPath(), prefix)
-		if !ok {
-			continue
-		}
-		hashes[r] = f.GetSha256()
-		rel = append(rel, r)
-	}
-	plan, err := PlanArtifacts(rel, func(r string) ([]byte, error) {
-		u, err := artifact.New(folder.Mount, prefix+r)
-		if err != nil {
-			return nil, err
-		}
-		return s.mountedRead.ReadFile(ctx, u)
-	})
-	if err != nil {
-		return nil, err
-	}
-	var out []*webapi.Artifact
-	for _, id := range plan.IDs {
-		a := &webapi.Artifact{Name: id}
-		for _, f := range plan.Files[id] {
-			a.Files = append(a.Files, &webapi.SnapshotFile{Path: f.Rel, Sha256: hashes[f.Folder]})
-		}
-		out = append(out, a)
-	}
-	return out, nil
 }
 
 // GetReport returns one report, saying what changed since it ran.

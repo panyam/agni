@@ -709,7 +709,9 @@ writable store such as `agni serve --store`, is a full resource. A user creates,
 updates and deletes it, and still picks its id (AIP-122). Imagine an engineer with no folder on the
 server who uploads a board's files. Without a stored home, the upload has nothing to be a design of,
 and it is gone at the next restart. A write that names a mounted resource is refused rather than
-written. Scaffolding design intent stays out of scope either way. Writing `intent:` from a design is a
+written. As amended by agni issue 1736, a design has only the stored home on `agni serve`. A folder in
+a mount becomes a design only when a person adds it, and the server copies its files then. A project
+keeps both homes. Scaffolding design intent stays out of scope either way. Writing `intent:` from a design is a
 judgment step with a confidentiality boundary, so the server never generates one. A stored design
 keeps the intent its user gives it (agni issue 1704). A later
 version of a board is a design of its own, and designs that name one `series` group as its versions.
@@ -722,8 +724,7 @@ step.
 **As amended by agni issue 1704, a pack is a full resource, and a run on a design no project owns
 nests under the design.** A pack, `packs/{pack}`, is config with a lifetime of its own, so it has all
 five standard methods. A report is a check of one design against packs, and it nests under that
-design, `designs/{d}/reports/{r}`. A design a mounted folder declares takes one too, since a report
-adds nothing to the folder (agni issue 1746). A review run nests under a project because it predates designs
+design, `designs/{d}/reports/{r}`. A review run nests under a project because it predates designs
 that stand alone. A stored design belongs to no project, and a run is about one design, so the design
 is the report's parent. The project whose default packs applied is a field on the report, not a
 parent. A report has `Create`, `Get`, `List` and `Delete` and no `Update`, since a run is what it

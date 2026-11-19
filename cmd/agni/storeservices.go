@@ -23,23 +23,13 @@ import (
 const sweepGrace = time.Hour
 
 // storeServices builds the project, design and pack services `agni serve` answers with (agni issues
-// 1694, 1704, 1732, 1739). Every mounted folder's designs are read-only. With --store, the server also keeps the
-// designs and projects its callers create, as records under storeDir. With --uploads it keeps their
+// 1694, 1704, 1732, 1736, 1739). Its designs are the records it keeps: with --store, the designs and
+// projects its callers create or add from a mounted folder, as records under storeDir. With --uploads it keeps their
 // files too, by hash under uploadsDir, and serves each design's view as the mount "uploads". Uploaded
 // blobs go to the same folder, so they outlive a restart, and a sweep at startup removes what nothing
 // names. With --store it keeps packs too, and a pack's files go to --uploads beside the designs'.
 // With --store and checks, it keeps each design's reports, each run by checks.
 func storeServices(ms *mounts.Table, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
-	trees := liveTrees(ms)
-	mountedTrees := func() []projects.Tree {
-		var out []projects.Tree
-		for _, t := range trees() {
-			if uploadsDir == "" || t.Mount != uploadsMount {
-				out = append(out, t)
-			}
-		}
-		return out
-	}
 	projectSvc := service.NewProjectService(projectStore)
 	var store service.DesignStore
 	var packStore service.PackStore
@@ -97,7 +87,9 @@ func storeServices(ms *mounts.Table, storeDir, uploadsDir string, projectStore s
 			}
 		}
 	}
-	catalog := service.NewDesignCatalog(store, projects.NewMountedDesignsFunc(mountedTrees))
+	// The designs are the store's records alone. A folder in a mount becomes a design only when a
+	// person adds it (AddDesigns), so its design.yaml makes none (agni issue 1736).
+	catalog := service.NewDesignCatalog(store)
 	if resolver != nil {
 		// A snapshot may name its design, designs/{d}, and Ingest looks it up here (agni issue 1695).
 		resolver.Designs = catalog
@@ -111,9 +103,9 @@ func storeServices(ms *mounts.Table, storeDir, uploadsDir string, projectStore s
 	if reportStore != nil && checks != nil {
 		// A report runs a check under packs and keeps it under its design (agni issue 1704).
 		designSvc.WithReports(reportStore, checks, packSvc)
-		// A report on a mounted design hashes the files in its folder (agni issue 1746).
-		designSvc.WithMountedFiles(service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)), osFiles(ms))
 	}
+	// AddDesigns proposes a mounted folder's designs and reads their files (agni issue 1736).
+	designSvc.WithMountFiles(service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)), osFiles(ms))
 	return projectSvc, designSvc, packSvc, nil
 }
 

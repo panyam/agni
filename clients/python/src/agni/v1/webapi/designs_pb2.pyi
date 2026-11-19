@@ -158,18 +158,58 @@ class DeleteDesignRequest(_message.Message):
     def __init__(self, name: _Optional[str] = ...) -> None: ...
 
 class Artifact(_message.Message):
-    __slots__ = ("name", "files", "type", "entry", "update_time")
+    __slots__ = ("name", "files", "type", "entry", "update_time", "source")
     NAME_FIELD_NUMBER: _ClassVar[int]
     FILES_FIELD_NUMBER: _ClassVar[int]
     TYPE_FIELD_NUMBER: _ClassVar[int]
     ENTRY_FIELD_NUMBER: _ClassVar[int]
     UPDATE_TIME_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
     name: str
     files: _containers.RepeatedCompositeFieldContainer[_snapshot_pb2.SnapshotFile]
     type: ArtifactType
     entry: str
     update_time: _timestamp_pb2.Timestamp
-    def __init__(self, name: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ..., type: _Optional[_Union[ArtifactType, str]] = ..., entry: _Optional[str] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    source: ArtifactSource
+    def __init__(self, name: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ..., type: _Optional[_Union[ArtifactType, str]] = ..., entry: _Optional[str] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., source: _Optional[_Union[ArtifactSource, _Mapping]] = ...) -> None: ...
+
+class ArtifactSource(_message.Message):
+    __slots__ = ("mount", "path", "ref")
+    MOUNT_FIELD_NUMBER: _ClassVar[int]
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    REF_FIELD_NUMBER: _ClassVar[int]
+    mount: str
+    path: str
+    ref: str
+    def __init__(self, mount: _Optional[str] = ..., path: _Optional[str] = ..., ref: _Optional[str] = ...) -> None: ...
+
+class AddDesignsRequest(_message.Message):
+    __slots__ = ("uri", "designs", "validate_only")
+    URI_FIELD_NUMBER: _ClassVar[int]
+    DESIGNS_FIELD_NUMBER: _ClassVar[int]
+    VALIDATE_ONLY_FIELD_NUMBER: _ClassVar[int]
+    uri: str
+    designs: _containers.RepeatedCompositeFieldContainer[DesignToAdd]
+    validate_only: bool
+    def __init__(self, uri: _Optional[str] = ..., designs: _Optional[_Iterable[_Union[DesignToAdd, _Mapping]]] = ..., validate_only: _Optional[bool] = ...) -> None: ...
+
+class DesignToAdd(_message.Message):
+    __slots__ = ("folder", "design_id", "title", "series")
+    FOLDER_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_ID_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    SERIES_FIELD_NUMBER: _ClassVar[int]
+    folder: str
+    design_id: str
+    title: str
+    series: str
+    def __init__(self, folder: _Optional[str] = ..., design_id: _Optional[str] = ..., title: _Optional[str] = ..., series: _Optional[str] = ...) -> None: ...
+
+class AddDesignsResponse(_message.Message):
+    __slots__ = ("designs",)
+    DESIGNS_FIELD_NUMBER: _ClassVar[int]
+    designs: _containers.RepeatedCompositeFieldContainer[_project_pb2.Design]
+    def __init__(self, designs: _Optional[_Iterable[_Union[_project_pb2.Design, _Mapping]]] = ...) -> None: ...
 
 class GetArtifactRequest(_message.Message):
     __slots__ = ("name",)
