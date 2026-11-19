@@ -306,15 +306,19 @@ in it (agni issue 1698).
 
 A server with `--store` and `--uploads` can mount a GitHub repo while it runs (agni issue 1735). Say
 the team keeps a board in a public repo and wants it in the browser without a clone on the server.
-`WorkspaceService.CreateMount` takes a name, a `github://<owner>/<repo>` source and a ref. The server
-asks GitHub which commit the ref names, downloads that commit's tarball, and serves it as a
-read-only mount:
+`agni mounts add` takes a name, a `github://<owner>/<repo>` source and a ref. The server asks GitHub
+which commit the ref names, downloads that commit's tarball, and serves it as a read-only mount:
 
 ```
-curl -X POST -H 'Content-Type: application/json' \
-  -d '{"name":"jetson","source":"github://antmicro/jetson-agx-thor-baseboard","ref":"main"}' \
-  http://localhost:8080/agni.v1.webapi.WorkspaceService/CreateMount
+agni mounts add jetson github://antmicro/jetson-agx-thor-baseboard --ref main --remote http://localhost:8080
+agni mounts ls --remote http://localhost:8080
+agni mounts rm jetson --remote http://localhost:8080
 ```
+
+The `/mounts/` page does the same (agni issue 1749). On a server that can make mounts, "Add a GitHub
+mount" under the folders takes a name, a repo as `owner/repo` or its GitHub URL, and a ref. Each
+mount made this way has a × that removes it after a confirm. A mount from the flags has none. Both
+are calls to `WorkspaceService.CreateMount` and `DeleteMount`, which any client can make.
 
 The mount is a snapshot. It serves the commit it resolved to until it is deleted and made again, so
 a push to the branch does not change what a stored design or a report pointed at. The snapshot's
@@ -329,7 +333,8 @@ client must not choose which folder on the server's disk is served. `--mount` na
 private repo waits on agni issue 1724, and S3 and SharePoint on agni issues 1729 and 1730.
 
 `ListMounts` and `GetMount` say how each mount is reached in `kind`, where it came from in `source`,
-`ref` and `commit`, and whether it is `fixed`. `make exercise-mounts` makes a GitHub mount over
+`ref` and `commit`, and whether it is `fixed`. `ListMounts` also says in `can_create_mounts` whether
+the server can make one. `make exercise-mounts` makes a GitHub mount over
 Antmicro's Jetson baseboard at its 1.1.2 revision, restarts the server, and lists it again.
 
 ## Keeping review runs

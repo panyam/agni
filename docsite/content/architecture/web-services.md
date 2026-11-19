@@ -64,7 +64,7 @@ dropped files already reach it through its `local` mount.
 
 | Service | RPC | What it does |
 |---|---|---|
-| Workspace | ListMounts | the mount names to root a tree on; `opens` drops each mount holding nothing that client can open and returns how many it dropped. So when an operator configured a mount and cannot find it, the sidebar can account for it |
+| Workspace | ListMounts | the mount names to root a tree on; `opens` drops each mount holding nothing that client can open and returns how many it dropped. So when an operator configured a mount and cannot find it, the sidebar can account for it; `can_create_mounts` says whether CreateMount can succeed, so a page offers to add a mount only on a server with `--store` and `--uploads` |
 | Workspace | GetMount | one mount by its name, the handle ListMounts gives; a name the server does not serve is NOT_FOUND |
 | Workspace | CreateMount | a mount made at runtime over a `github://<owner>/<repo>` source, snapshotted at the commit its ref names into `--uploads` and recorded in `--store`, so it outlives a restart; FAILED_PRECONDITION without both flags, ALREADY_EXISTS for a name in use, INVALID_ARGUMENT for a `file://` source |
 | Workspace | DeleteMount | forgets a mount CreateMount made and removes its view; a mount from the server's flags is FAILED_PRECONDITION |

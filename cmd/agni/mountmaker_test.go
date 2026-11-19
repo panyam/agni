@@ -21,8 +21,12 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// fakeCommit is the commit the fake GitHub resolves every known ref to.
-const fakeCommit = "0123456789abcdef0123456789abcdef01234567"
+// fakeCommit is the commit the fake GitHub resolves 1.1.2 to, and fakeMainCommit the one its default
+// branch is at, so a test can tell which ref a request named.
+const (
+	fakeCommit     = "0123456789abcdef0123456789abcdef01234567"
+	fakeMainCommit = "89abcdef0123456789abcdef0123456789abcdef"
+)
 
 // tarEntry is one entry of a fake tarball. A non-empty link makes it a symlink.
 type tarEntry struct {
@@ -68,19 +72,23 @@ func fakeGitHub(t *testing.T, owner, repo string, entries []tarEntry) *httptest.
 	})
 	mux.HandleFunc("GET "+base+"/commits/{ref}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.PathValue("ref") {
-		case "main", "1.1.2", fakeCommit:
+		case "1.1.2", fakeCommit:
 			_, _ = io.WriteString(w, `{"sha":"`+fakeCommit+`"}`)
+		case "main", fakeMainCommit:
+			_, _ = io.WriteString(w, `{"sha":"`+fakeMainCommit+`"}`)
 		default:
 			http.Error(w, `{"message":"No commit found"}`, http.StatusUnprocessableEntity)
 		}
 	})
 	// GitHub answers the tarball with a redirect to codeload, so the fake does too.
-	mux.HandleFunc("GET "+base+"/tarball/"+fakeCommit, func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/codeload/"+fakeCommit, http.StatusFound)
-	})
-	mux.HandleFunc("GET /codeload/"+fakeCommit, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(tarball)
-	})
+	for _, c := range []string{fakeCommit, fakeMainCommit} {
+		mux.HandleFunc("GET "+base+"/tarball/"+c, func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "/codeload/"+c, http.StatusFound)
+		})
+		mux.HandleFunc("GET /codeload/"+c, func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write(tarball)
+		})
+	}
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return srv
@@ -220,8 +228,17 @@ func TestCreateMountRefusesWhatItCannotServe(t *testing.T) {
 		t.Errorf("after the refusals the table serves %v; want the one fixed mount", names)
 	}
 
-	// A server with no --store and --uploads makes no mounts.
+	// A server with no --store and --uploads makes no mounts, and says so in ListMounts so a client
+	// offers no form (agni issue 1749).
 	plain := service.NewWorkspaceService(osWorkspace(mounts.NewTable(fixed)))
+	for _, tc := range []struct {
+		ws   *service.WorkspaceService
+		want bool
+	}{{s.ws, true}, {plain, false}} {
+		if resp, err := tc.ws.ListMounts(ctx, &webapi.ListMountsRequest{}); err != nil || resp.GetCanCreateMounts() != tc.want {
+			t.Errorf("ListMounts.can_create_mounts = %v, %v; want %v", resp.GetCanCreateMounts(), err, tc.want)
+		}
+	}
 	if _, err := plain.CreateMount(ctx, &webapi.CreateMountRequest{Name: "x", Source: "github://antmicro/jetson-orin-baseboard"}); !errors.Is(err, service.ErrFailedPrecondition) {
 		t.Errorf("CreateMount with no store = %v; want ErrFailedPrecondition", err)
 	}
@@ -293,35 +310,7 @@ func TestServeMakesAGitHubMountOverConnect(t *testing.T) {
 	dir := t.TempDir()
 	store, uploads := filepath.Join(dir, "store"), filepath.Join(dir, "uploads")
 	serve := func() string {
-		ln, err := net.Listen("tcp", "127.0.0.1:0")
-		if err != nil {
-			t.Fatal(err)
-		}
-		cmd := rootCmd()
-		cmd.SetOut(io.Discard)
-		cmd.SetErr(io.Discard)
-		done := make(chan error, 1)
-		go func() {
-			done <- runViewer(cmd, viewerOpts{listener: ln, storeDir: store, uploadsDir: uploads, githubAPI: gh.URL})
-		}()
-		t.Cleanup(func() { ln.Close(); <-done })
-		base := "http://" + ln.Addr().String()
-		client := http.Client{Timeout: time.Second}
-		for range 200 {
-			select {
-			case err := <-done:
-				done <- err
-				t.Fatalf("runViewer stopped before answering: %v", err)
-			default:
-			}
-			if resp, err := client.Get(base + "/healthz"); err == nil {
-				resp.Body.Close()
-				return base
-			}
-			time.Sleep(25 * time.Millisecond)
-		}
-		t.Fatalf("%s never answered", base)
-		return ""
+		return serveViewer(t, viewerOpts{storeDir: store, uploadsDir: uploads, githubAPI: gh.URL})
 	}
 	call := func(base, rpc, body string) (int, string) {
 		resp, err := http.Post(base+"/agni.v1.webapi.WorkspaceService/"+rpc, "application/json", strings.NewReader(body))
@@ -348,4 +337,40 @@ func TestServeMakesAGitHubMountOverConnect(t *testing.T) {
 	if code, body := call(second, "DeleteMount", `{"name":"uploads"}`); code != 400 || !strings.Contains(body, "failed_precondition") {
 		t.Fatalf("DeleteMount of the uploads mount = %d %s; want failed_precondition", code, body)
 	}
+}
+
+// serveViewer runs runViewer with o on a free port until the test ends, and returns its base URL
+// once /healthz answers. A runViewer that stops before answering fails the test with its error.
+func serveViewer(t *testing.T, o viewerOpts) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	o.listener = ln
+	cmd := rootCmd()
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	done := make(chan error, 1)
+	go func() {
+		done <- runViewer(cmd, o)
+	}()
+	t.Cleanup(func() { ln.Close(); <-done })
+	base := "http://" + ln.Addr().String()
+	client := http.Client{Timeout: time.Second}
+	for range 200 {
+		select {
+		case err := <-done:
+			done <- err
+			t.Fatalf("runViewer stopped before answering: %v", err)
+		default:
+		}
+		if resp, err := client.Get(base + "/healthz"); err == nil {
+			resp.Body.Close()
+			return base
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	t.Fatalf("%s never answered", base)
+	return ""
 }

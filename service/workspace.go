@@ -191,7 +191,7 @@ func NewWorkspaceService(ws Workspace) *WorkspaceService {
 // into many full walks. A later mount can inherit an exhausted budget and be kept without being
 // examined, which errs toward showing too much.
 func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMountsRequest) (*webapi.ListMountsResponse, error) {
-	resp := &webapi.ListMountsResponse{}
+	resp := &webapi.ListMountsResponse{CanCreateMounts: s.maker != nil}
 	opens := opensSet(req.GetOpens())
 	pruneBudget := pruneMaxDirs
 	for _, m := range s.ws.Mounts() {
