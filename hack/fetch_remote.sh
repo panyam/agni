@@ -11,7 +11,7 @@
 #   <sha256>  <board>  <url>  [unzip]
 #
 # A download lands in a cache keyed on its sha256, so a board is downloaded once per machine and a
-# cached copy is never stale. The cache is $AGNI_SAMPLES_CACHE, else $XDG_CACHE_HOME/agni/samples,
+# cached copy is never stale. The files the cache lacks download in parallel, $FETCH_JOBS at a time. The cache is $AGNI_SAMPLES_CACHE, else $XDG_CACHE_HOME/agni/samples,
 # else ~/.cache/agni/samples. Each file is then copied into <dest>/<board>/ under its own name. With
 # `unzip`, the archive is extracted there instead, and so is every zip inside it, each into a folder
 # named after it.
@@ -49,7 +49,33 @@ unzip_nested() {
   done
 }
 
+# fetch_one downloads one file into the cache and checks it against its sha256. It writes beside
+# the cache entry and renames, so a reader never sees half a file, and two runs at once are safe.
+fetch_one() {
+  local sum=$1 board=$2 url=$3 part
+  part="$cache/.part-$sum-$$-$RANDOM"
+  echo "fetch_remote: $board: $url"
+  curl -sSfL --retry 5 --retry-delay 3 --retry-all-errors -o "$part" "$url" || {
+    rm -f "$part"; echo "fetch_remote: download failed: $url" >&2; return 1; }
+  local got
+  got=$(shasum -a 256 "$part" | cut -d' ' -f1)
+  if [ "$got" != "$sum" ]; then
+    rm -f "$part"
+    echo "fetch_remote: CHECKSUM MISMATCH for $url" >&2
+    echo "  pinned:   $sum" >&2
+    echo "  received: $got" >&2
+    echo "  The upstream file changed, or the download was corrupted. Do NOT update the pin to" >&2
+    echo "  match without finding out why: the URL names a fixed commit." >&2
+    return 1
+  fi
+  mv "$part" "$cache/$sum"
+}
+export -f fetch_one shasum 2>/dev/null || export -f fetch_one
+export cache
+
+# Every line is read and checked first, so a bad line fails before anything downloads.
 n=0
+: >"$tmp/lines"
 while read -r sum board url action extra; do
   case $sum in '' | '#'*) continue ;; esac
   n=$((n + 1))
@@ -57,23 +83,21 @@ while read -r sum board url action extra; do
     echo "fetch_remote: $pin: cannot read the line for $board" >&2; exit 1
   fi
   case $board in */* | .* ) echo "fetch_remote: $pin: board name $board must be a plain folder name" >&2; exit 1 ;; esac
+  printf '%s %s %s %s\n' "$sum" "$board" "$url" "${action:-}" >>"$tmp/lines"
+done < "$pin"
 
+# The files the cache lacks download at once, $FETCH_JOBS at a time (8 by default), each once
+# however many lines name it. One that fails fails the run, after the others finish.
+awk '{print $1, $2, $3}' "$tmp/lines" | sort -u -k1,1 | while read -r sum board url; do
+  [ -f "$cache/$sum" ] || printf '%s\0%s\0%s\0' "$sum" "$board" "$url"
+done | xargs -0 -n 3 -P "${FETCH_JOBS:-8}" bash -c 'fetch_one "$@"' fetch_one || {
+  echo "fetch_remote: some downloads failed; see above" >&2; exit 1; }
+
+i=0
+while read -r sum board url action; do
+  i=$((i + 1))
   cached="$cache/$sum"
-  if [ ! -f "$cached" ]; then
-    echo "fetch_remote: $board: $url"
-    curl -sSfL --retry 5 --retry-delay 3 --retry-all-errors -o "$tmp/download" "$url" || {
-      echo "fetch_remote: download failed: $url" >&2; exit 1; }
-    got=$(shasum -a 256 "$tmp/download" | cut -d' ' -f1)
-    if [ "$got" != "$sum" ]; then
-      echo "fetch_remote: CHECKSUM MISMATCH for $url" >&2
-      echo "  pinned:   $sum" >&2
-      echo "  received: $got" >&2
-      echo "  The upstream file changed, or the download was corrupted. Do NOT update the pin to" >&2
-      echo "  match without finding out why: the URL names a fixed commit." >&2
-      exit 1
-    fi
-    mv "$tmp/download" "$cached"
-  fi
+  [ -f "$cached" ] || { echo "fetch_remote: $cached is missing after the downloads" >&2; exit 1; }
   # The cache file's time records its last use, which clean_remote.sh reads.
   touch "$cached"
 
@@ -85,7 +109,7 @@ while read -r sum board url action extra; do
   [ -f "$stamp" ] && continue
   mkdir -p "$dest/$board"
   if [ "${action:-}" = unzip ]; then
-    staged="$tmp/staged-$n"
+    staged="$tmp/staged-$i"
     mkdir -p "$staged"
     unzip -q -o "$cached" -d "$staged" || { echo "fetch_remote: cannot extract $url" >&2; exit 1; }
     unzip_nested "$staged"
@@ -94,6 +118,6 @@ while read -r sum board url action extra; do
     clone "$cached" "$dest/$board/$name"
   fi
   touch "$stamp"
-done < "$pin"
+done < "$tmp/lines"
 
 [ "$n" -gt 0 ] || { echo "fetch_remote: $pin names no files" >&2; exit 1; }
