@@ -1123,8 +1123,8 @@ pub struct Connection {
     /// display_name is what a page shows, such as "acme org (App)". Empty shows the id.
     #[prost(string, tag="3")]
     pub display_name: ::prost::alloc::string::String,
-    /// base_url is the service's API root. Empty is <https://api.github.com.> GitHub Enterprise names its
-    /// own.
+    /// base_url is the service's API root. Empty is <https://api.github.com.> GitHub Enterprise
+    /// names its own.
     #[prost(string, tag="4")]
     pub base_url: ::prost::alloc::string::String,
     /// app_id and installation_id identify a GitHub App installation, for CONNECTION_KIND_GITHUB_APP.
@@ -1136,7 +1136,8 @@ pub struct Connection {
     /// CONNECTION_KIND_GITHUB_APP.
     #[prost(string, tag="7")]
     pub key_source: ::prost::alloc::string::String,
-    /// token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+    /// token_source is where the token is, "env:NAME" or "file:/abs/path", for
+    /// CONNECTION_KIND_GITHUB_TOKEN.
     #[prost(string, tag="8")]
     pub token_source: ::prost::alloc::string::String,
     /// status is CONNECTION_STATUS_OK until a token request fails, and last_error says why, with no

@@ -38,8 +38,8 @@ message Connection {
   ConnectionKind kind = 2;
   // display_name is what a page shows, such as "acme org (App)". Empty shows the id.
   string display_name = 3;
-  // base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-  // own.
+  // base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+  // names its own.
   string base_url = 4;
   // app_id and installation_id identify a GitHub App installation, for CONNECTION_KIND_GITHUB_APP.
   string app_id = 5;
@@ -47,7 +47,8 @@ message Connection {
   // key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
   // CONNECTION_KIND_GITHUB_APP.
   string key_source = 7;
-  // token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+  // token_source is where the token is, "env:NAME" or "file:/abs/path", for
+  // CONNECTION_KIND_GITHUB_TOKEN.
   string token_source = 8;
   // status is CONNECTION_STATUS_OK until a token request fails, and last_error says why, with no
   // secret in it. Output only.

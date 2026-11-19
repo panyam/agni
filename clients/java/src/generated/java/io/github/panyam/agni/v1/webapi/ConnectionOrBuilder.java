@@ -63,8 +63,8 @@ public interface ConnectionOrBuilder extends
 
   /**
    * <pre>
-   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-   * own.
+   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+   * names its own.
    * </pre>
    *
    * <code>string base_url = 4 [json_name = "baseUrl"];</code>
@@ -73,8 +73,8 @@ public interface ConnectionOrBuilder extends
   java.lang.String getBaseUrl();
   /**
    * <pre>
-   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-   * own.
+   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+   * names its own.
    * </pre>
    *
    * <code>string base_url = 4 [json_name = "baseUrl"];</code>
@@ -133,7 +133,8 @@ public interface ConnectionOrBuilder extends
 
   /**
    * <pre>
-   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+   * CONNECTION_KIND_GITHUB_TOKEN.
    * </pre>
    *
    * <code>string token_source = 8 [json_name = "tokenSource"];</code>
@@ -142,7 +143,8 @@ public interface ConnectionOrBuilder extends
   java.lang.String getTokenSource();
   /**
    * <pre>
-   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+   * CONNECTION_KIND_GITHUB_TOKEN.
    * </pre>
    *
    * <code>string token_source = 8 [json_name = "tokenSource"];</code>

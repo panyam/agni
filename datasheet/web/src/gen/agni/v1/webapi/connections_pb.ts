@@ -40,8 +40,8 @@ export type Connection = Message<"agni.v1.webapi.Connection"> & {
   displayName: string;
 
   /**
-   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-   * own.
+   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+   * names its own.
    *
    * @generated from field: string base_url = 4;
    */
@@ -68,7 +68,8 @@ export type Connection = Message<"agni.v1.webapi.Connection"> & {
   keySource: string;
 
   /**
-   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+   * CONNECTION_KIND_GITHUB_TOKEN.
    *
    * @generated from field: string token_source = 8;
    */

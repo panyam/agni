@@ -132,8 +132,8 @@ type Connection struct {
 	Kind  ConnectionKind         `protobuf:"varint,2,opt,name=kind,proto3,enum=agni.v1.webapi.ConnectionKind" json:"kind,omitempty"`
 	// display_name is what a page shows, such as "acme org (App)". Empty shows the id.
 	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	// base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-	// own.
+	// base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+	// names its own.
 	BaseUrl string `protobuf:"bytes,4,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
 	// app_id and installation_id identify a GitHub App installation, for CONNECTION_KIND_GITHUB_APP.
 	AppId          string `protobuf:"bytes,5,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
@@ -141,7 +141,8 @@ type Connection struct {
 	// key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
 	// CONNECTION_KIND_GITHUB_APP.
 	KeySource string `protobuf:"bytes,7,opt,name=key_source,json=keySource,proto3" json:"key_source,omitempty"`
-	// token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+	// token_source is where the token is, "env:NAME" or "file:/abs/path", for
+	// CONNECTION_KIND_GITHUB_TOKEN.
 	TokenSource string `protobuf:"bytes,8,opt,name=token_source,json=tokenSource,proto3" json:"token_source,omitempty"`
 	// status is CONNECTION_STATUS_OK until a token request fails, and last_error says why, with no
 	// secret in it. Output only.

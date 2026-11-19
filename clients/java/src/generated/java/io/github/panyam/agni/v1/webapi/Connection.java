@@ -179,8 +179,8 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object baseUrl_ = "";
   /**
    * <pre>
-   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-   * own.
+   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+   * names its own.
    * </pre>
    *
    * <code>string base_url = 4 [json_name = "baseUrl"];</code>
@@ -201,8 +201,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-   * own.
+   * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+   * names its own.
    * </pre>
    *
    * <code>string base_url = 4 [json_name = "baseUrl"];</code>
@@ -335,7 +335,8 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object tokenSource_ = "";
   /**
    * <pre>
-   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+   * CONNECTION_KIND_GITHUB_TOKEN.
    * </pre>
    *
    * <code>string token_source = 8 [json_name = "tokenSource"];</code>
@@ -356,7 +357,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+   * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+   * CONNECTION_KIND_GITHUB_TOKEN.
    * </pre>
    *
    * <code>string token_source = 8 [json_name = "tokenSource"];</code>
@@ -1342,8 +1344,8 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object baseUrl_ = "";
     /**
      * <pre>
-     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-     * own.
+     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+     * names its own.
      * </pre>
      *
      * <code>string base_url = 4 [json_name = "baseUrl"];</code>
@@ -1363,8 +1365,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-     * own.
+     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+     * names its own.
      * </pre>
      *
      * <code>string base_url = 4 [json_name = "baseUrl"];</code>
@@ -1385,8 +1387,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-     * own.
+     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+     * names its own.
      * </pre>
      *
      * <code>string base_url = 4 [json_name = "baseUrl"];</code>
@@ -1403,8 +1405,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-     * own.
+     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+     * names its own.
      * </pre>
      *
      * <code>string base_url = 4 [json_name = "baseUrl"];</code>
@@ -1418,8 +1420,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise names its
-     * own.
+     * base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+     * names its own.
      * </pre>
      *
      * <code>string base_url = 4 [json_name = "baseUrl"];</code>
@@ -1660,7 +1662,8 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object tokenSource_ = "";
     /**
      * <pre>
-     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+     * CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
      * <code>string token_source = 8 [json_name = "tokenSource"];</code>
@@ -1680,7 +1683,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+     * CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
      * <code>string token_source = 8 [json_name = "tokenSource"];</code>
@@ -1701,7 +1705,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+     * CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
      * <code>string token_source = 8 [json_name = "tokenSource"];</code>
@@ -1718,7 +1723,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+     * CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
      * <code>string token_source = 8 [json_name = "tokenSource"];</code>
@@ -1732,7 +1738,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * token_source is where the token is, "env:NAME" or "file:/abs/path", for CONNECTION_KIND_GITHUB_TOKEN.
+     * token_source is where the token is, "env:NAME" or "file:/abs/path", for
+     * CONNECTION_KIND_GITHUB_TOKEN.
      * </pre>
      *
      * <code>string token_source = 8 [json_name = "tokenSource"];</code>
