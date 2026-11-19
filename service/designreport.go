@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 
@@ -292,7 +293,7 @@ func inView(r *webapi.Report, view, fallback webapi.ReportView) *webapi.Report {
 	if view == webapi.ReportView_REPORT_VIEW_UNSPECIFIED {
 		view = fallback
 	}
-	r.FindingCount = int32(len(r.GetResults().GetFindings()))
+	r.FindingCount = int32(min(len(r.GetResults().GetFindings()), math.MaxInt32)) // #nosec G115 -- clamped
 	if view == webapi.ReportView_REPORT_VIEW_BASIC {
 		r.Results = nil
 	}
