@@ -33,7 +33,7 @@ import (
 // design, so the visit finds it built or under way. A request and a warm for one seed share one build.
 type seeds struct {
 	ws      *service.WorkspaceService
-	ms      []mounts.Mount
+	ms      *mounts.Table
 	version func() string
 
 	mu       sync.Mutex
@@ -57,7 +57,7 @@ var errNoDesign = errors.New("no such design")
 // keptSeeds is how many seeds a server keeps. The oldest goes first when it is full.
 const keptSeeds = 4
 
-func newSeeds(ws *service.WorkspaceService, ms []mounts.Mount, version func() string) *seeds {
+func newSeeds(ws *service.WorkspaceService, ms *mounts.Table, version func() string) *seeds {
 	return &seeds{ws: ws, ms: ms, version: version, kept: map[string][]byte{}, building: map[string]*seedBuild{}}
 }
 
@@ -155,7 +155,7 @@ func (s *seeds) buildSeed(u artifact.URI, listed []*webapi.DesignFile, v string)
 		if err != nil {
 			return nil, errNoDesign
 		}
-		abs, err := mounts.Resolve(s.ms, fu)
+		abs, err := s.ms.Resolve(fu)
 		if err != nil {
 			return nil, errNoDesign
 		}

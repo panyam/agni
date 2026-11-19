@@ -76,18 +76,18 @@ func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
 		cliMountSpecs, cliWSVal, cliWSErr = prevSpecs, prevVal, prevErr
 		cliWSOnce = sync.Once{}
 	})
-	loader := &osLoader{mounts: ms, loader: newLoader()}
-	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projectTrees(ms)...), Config: &osProjectConfig{mounts: ms}, Uploads: uploadedHost}
+	loader := &osLoader{mounts: tableOf(ms), loader: newLoader()}
+	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projectTrees(ms)...), Config: &osProjectConfig{mounts: tableOf(ms)}, Uploads: uploadedHost}
 	check, review, err := serveRuleServices(loader, nil, nil, "", nil, resolver, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, _, err := storeServices(ms, "", "", resolver.Store, resolver, nil, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(tableOf(ms), "", "", resolver.Store, resolver, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return server.API{
-		Workspace:  service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)),
+		Workspace:  service.NewWorkspaceService(osWorkspace(tableOf(ms))).WithDesignFiles(resolver, osFiles(tableOf(ms))),
 		Project:    projectSvc,
 		Design:     designSvc,
 		DesignView: service.NewDesignViewService(loader, nil, render.DefaultStyle, resolver),

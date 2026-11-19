@@ -28,7 +28,7 @@ func TestOsDocLoaderDocument(t *testing.T) {
 		[]byte(`content_hash: "sha256:abc" producer: "hand" page_count: 1`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	l := &osDocLoader{derived: derived{mounts: []mounts.Mount{{Name: "m", Root: dir}}}}
+	l := &osDocLoader{derived: derived{mounts: tableOf([]mounts.Mount{{Name: "m", Root: dir}})}}
 
 	// With no corpus, a doc-IR beside the PDF, from `make pdf2doc`, is still read.
 	doc, err := l.Document(context.Background(), mustURI("m", "d.pdf"))
@@ -58,13 +58,13 @@ func TestOsDocLoaderReadsTheStoreFirst(t *testing.T) {
 	writePDF(t, filepath.Join(dir, "d.pdf"), "pdf-d")
 	writePDF(t, filepath.Join(dir, "e.pdf"), "pdf-e")
 	for path, hash := range map[string]string{
-		filepath.Join(dir, "d.doc.textproto"):                                 "sha256:beside",
-		filepath.Join(dir, "e.doc.textproto"):                                 "sha256:beside-e",
+		filepath.Join(dir, "d.doc.textproto"):                             "sha256:beside",
+		filepath.Join(dir, "e.doc.textproto"):                             "sha256:beside-e",
 		filepath.Join(corpus, "derived", sha256Hex("pdf-d"), "doc.txtpb"): "sha256:store",
 	} {
 		writePDF(t, path, `content_hash: "`+hash+`" producer: "hand" page_count: 1`)
 	}
-	l := &osDocLoader{derived: derived{mounts: []mounts.Mount{{Name: "m", Root: dir}}, corpus: corpus}}
+	l := &osDocLoader{derived: derived{mounts: tableOf([]mounts.Mount{{Name: "m", Root: dir}}), corpus: corpus}}
 	for pdf, want := range map[string]string{"d.pdf": "sha256:store", "e.pdf": "sha256:beside-e"} {
 		doc, err := l.Document(context.Background(), mustURI("m", pdf))
 		if err != nil || doc.GetContentHash() != want {

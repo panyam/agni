@@ -32,12 +32,12 @@ func storeServer(t *testing.T, dir string) *httptest.Server {
 	}
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
 	resolver := &service.ProjectResolver{Store: projectStore, Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
-	projectSvc, designSvc, _, err := storeServices(ms, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), projectStore, resolver, nil, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(tableOf(ms), filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), projectStore, resolver, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
 	mux := http.NewServeMux()
-	server.API{Workspace: service.NewWorkspaceService(osWorkspace(ms)), Project: projectSvc, Design: designSvc, Snapshot: service.NewSnapshotService(nil, resolver, nil, "")}.Register(mux)
+	server.API{Workspace: service.NewWorkspaceService(osWorkspace(tableOf(ms))), Project: projectSvc, Design: designSvc, Snapshot: service.NewSnapshotService(nil, resolver, nil, "")}.Register(mux)
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return srv

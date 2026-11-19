@@ -11,7 +11,6 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/datasheet/doc"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
-	"github.com/panyam/agni/mounts"
 )
 
 // osDocExtractor is the OS-backed dsservice.DocExtractor. It shells out to the doc-IR producer named
@@ -33,7 +32,7 @@ func (e *osDocExtractor) Available() bool { return len(e.cmd) > 0 }
 // mounts.Resolve. A server with no corpus returns dsservice.ErrNoCorpus. A non-zero exit, an
 // unreadable output, or an invalid doc-IR is an error, and the service maps it to Internal.
 func (e *osDocExtractor) Extract(ctx context.Context, uri artifact.URI) (*docpb.Document, error) {
-	pdfAbs, err := mounts.Resolve(e.derived.mounts, uri)
+	pdfAbs, err := e.derived.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
 	}

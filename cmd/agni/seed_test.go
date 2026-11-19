@@ -36,7 +36,7 @@ func TestTheSeedRouteServesADesignsStoreUnderItsVersion(t *testing.T) {
 		return resp
 	}
 
-	versioned := newSeeds(ws, ms, func() string { return "v1" })
+	versioned := newSeeds(ws, tableOf(ms), func() string { return "v1" })
 	resp := get(versioned, "/seed/tut/designs/gateway")
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
@@ -49,7 +49,7 @@ func TestTheSeedRouteServesADesignsStoreUnderItsVersion(t *testing.T) {
 	if resp := get(versioned, "/seed/tut/designs/nothing-here"); resp.StatusCode != http.StatusNotFound {
 		t.Errorf("an unknown design answered %d, want 404", resp.StatusCode)
 	}
-	if resp := get(newSeeds(ws, ms, func() string { return "" }), "/seed/tut/designs/gateway"); resp.StatusCode != http.StatusNoContent {
+	if resp := get(newSeeds(ws, tableOf(ms), func() string { return "" }), "/seed/tut/designs/gateway"); resp.StatusCode != http.StatusNoContent {
 		t.Errorf("an unversioned binary answered %d, want 204 with no seed", resp.StatusCode)
 	}
 }
@@ -63,7 +63,7 @@ func TestARequestNamingADesignWarmsItsSeedOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	ms := []mounts.Mount{{Name: "tut", Root: root}}
-	s := newSeeds(servedAPIFor(t, nil, ms).Workspace, ms, func() string { return "v1" })
+	s := newSeeds(servedAPIFor(t, nil, ms).Workspace, tableOf(ms), func() string { return "v1" })
 
 	hook := warmSeeds(s)(func(context.Context, connect.AnyRequest) (connect.AnyResponse, error) {
 		return connect.NewResponse(&webapi.ListDesignFilesResponse{}), nil

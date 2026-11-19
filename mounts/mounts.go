@@ -23,7 +23,28 @@ import (
 type Mount struct {
 	Name string
 	Root string
+	// Kind says how the files are reached. The zero value is KindFile.
+	Kind Kind
+	// Source, Ref and Commit say where a runtime mount's files came from (agni issue 1735). They are
+	// empty for a folder from the flags.
+	Source string
+	Ref    string
+	Commit string
+	// Runtime marks a mount CreateMount made. Every other mount comes from the server's flags and is
+	// fixed for the life of the process.
+	Runtime bool
 }
+
+// Kind is how a mount's files are reached.
+type Kind string
+
+// The kinds this build serves. A runtime kind keeps its files in --uploads, so every kind is read
+// from a local folder, and the OS-backed adapters need no kind of their own.
+const (
+	KindFile    Kind = ""
+	KindUploads Kind = "uploads"
+	KindGitHub  Kind = "github"
+)
 
 // Parse turns repeated `name=path` flag values into validated mounts, each path resolved to an
 // absolute directory. It rejects an empty name or path, a duplicate name, or a path that is not an

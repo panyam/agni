@@ -24,6 +24,12 @@ func NewMountedDesigns(trees ...Tree) *MountedDesigns {
 	return &MountedDesigns{fs: NewFSStore(trees...)}
 }
 
+// NewMountedDesignsFunc reads the trees trees returns, asked again on every read, so a mount made at
+// runtime is read at once (agni issue 1735).
+func NewMountedDesignsFunc(trees func() []Tree) *MountedDesigns {
+	return &MountedDesigns{fs: NewFSStoreFunc(trees)}
+}
+
 var _ service.DesignReader = (*MountedDesigns)(nil)
 
 // Design returns one mounted design by id. Two folders declaring it is ErrFailedPrecondition naming
@@ -52,7 +58,7 @@ func (m *MountedDesigns) Design(ctx context.Context, id string) (*webapi.Design,
 // Designs returns every mounted design, ordered by name. Two folders declaring one id both appear.
 func (m *MountedDesigns) Designs(context.Context) ([]*webapi.Design, error) {
 	var out []*webapi.Design
-	for _, t := range m.fs.trees {
+	for _, t := range m.fs.list() {
 		dirs, err := m.fs.walks.find(t, ".", DesignDescriptor)
 		if err != nil {
 			return nil, err

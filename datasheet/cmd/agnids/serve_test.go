@@ -54,7 +54,7 @@ func TestWorkbenchServesItsWholePage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := newWorkbenchMux(ms, filepath.Join("..", "..", "web"), nil, "", "", nil)
+	mux := newWorkbenchMux(tableOf(ms), filepath.Join("..", "..", "web"), nil, "", "", nil)
 	do := func(method, path, body string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
 		if body != "" {
@@ -166,5 +166,40 @@ func TestAgnidsCarriesTheImageCommands(t *testing.T) {
 	}
 	if root.Version == "" {
 		t.Error("root Version is empty, so --version is not registered")
+	}
+}
+
+func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
+	root, store, uploads := t.TempDir(), t.TempDir(), t.TempDir()
+	table, err := serveTable([]string{"ds=" + root}, "", "file://"+filepath.ToSlash(store), "file://"+filepath.ToSlash(uploads))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := newWorkbenchMux(table, "", nil, "", "", nil)
+	call := func(rpc, body string) string {
+		req := httptest.NewRequest("POST", "/agni.v1.webapi.WorkspaceService/"+rpc, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec.Body.String()
+	}
+	// agni serve snapshots a repo into the shared uploads and writes its record to the shared store
+	// after agnids started.
+	const commit = "0123456789abcdef0123456789abcdef01234567"
+	writeEmpty(t, filepath.Join(mounts.SnapshotView(uploads, "vendor", commit), "ti", "TPS62.pdf"))
+	if err := mounts.WriteRecord(filepath.Join(store, mounts.RecordsDir), mounts.Record{Name: "vendor", Kind: mounts.KindGitHub, Source: "github://ti/datasheets", Commit: commit}); err != nil {
+		t.Fatal(err)
+	}
+	if err := table.Reload(); err != nil {
+		t.Fatal(err)
+	}
+	if got := call("ListMounts", `{}`); !strings.Contains(got, `"vendor"`) || !strings.Contains(got, "MOUNT_KIND_GITHUB") {
+		t.Fatalf("ListMounts = %s; want the runtime GitHub mount beside ds", got)
+	}
+	if got := call("ListDir", `{"uri":"mount://vendor/ti"}`); !strings.Contains(got, "TPS62.pdf") {
+		t.Fatalf("ListDir mount://vendor/ti = %s; want the snapshot's PDF", got)
+	}
+	if got := call("CreateMount", `{"name":"x","source":"github://a/b"}`); !strings.Contains(got, "failed_precondition") {
+		t.Fatalf("CreateMount on agnids = %s; want failed_precondition, since agnids only reads mounts", got)
 	}
 }

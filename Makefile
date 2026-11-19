@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: exercise-design-store binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: exercise-design-store exercise-mounts binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -409,6 +409,12 @@ exercise-revision-audit: agni python-venv
 exercise-design-store: agni samples-revisions
 	$(MAKE) -C examples/jetson-project revision
 	AGNI=$(CURDIR)/bin/agni EXERCISE_OUT=$(EXERCISE_OUT) ./hack/exercise_design_store.sh
+
+# The runtime-mounts exercise (agni issue 1735): a GitHub mount over Antmicro's Jetson baseboard at
+# 1.1.2 made on a running server, browsed, and listed again after a restart. It reads GitHub, so it
+# is run by hand. TestServeMakesAGitHubMountOverConnect runs the same steps against a fake GitHub.
+exercise-mounts: agni
+	AGNI=$(CURDIR)/bin/agni EXERCISE_OUT=$(EXERCISE_OUT) ./hack/exercise_mounts.sh
 
 # Checking a layout handed off as ODB++ against its schematic (agni issue 1250): the odb-verification
 # example over the gateway's rev B layout, non-interactively. AGNI_EXAMPLE_DESIGN is cleared, since it

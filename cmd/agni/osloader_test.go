@@ -16,7 +16,7 @@ import (
 // schematic (WS1-047), so GetSummary/GetSheet/HighlightSheet (all funneling through Geometry) show
 // the design's own drawing; a netlist without a sibling falls back to the auto-layout graph.
 func TestOsLoaderCompanionGeometry(t *testing.T) {
-	l := &osLoader{mounts: []mounts.Mount{{Name: "m", Root: filepath.Join("testdata", "review")}}, loader: &formats.Loader{}}
+	l := &osLoader{mounts: tableOf([]mounts.Mount{{Name: "m", Root: filepath.Join("testdata", "review")}}), loader: &formats.Loader{}}
 
 	// With a sibling .eds -> the companion schematic (its page sheet "P1", its named wire SIGA).
 	g, err := l.Geometry(context.Background(), mustURI("m", "companion-demo.edn"), graph.DefaultStrategy, false)
@@ -68,3 +68,6 @@ func mustURI(mount, p string) artifact.URI {
 	}
 	return u
 }
+
+// tableOf is a fixed mount table over ms, as a server started with those flags serves.
+func tableOf(ms []mounts.Mount) *mounts.Table { return mounts.NewTable(ms...) }

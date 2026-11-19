@@ -14,7 +14,7 @@ import (
 // also holds where the datasheets workbench is served, when the workbench is hosted at all
 // (--datasheets-url).
 type serveApp struct {
-	mounts        []mounts.Mount
+	mounts        *mounts.Table
 	datasheetsURL string
 	// engine is which engine the viewer runs a design on, "server" or "wasm" (--engine, agni issue
 	// 853). The page carries it, and a `?engine=` on the URL overrides it.

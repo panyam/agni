@@ -29,12 +29,16 @@ const sweepGrace = time.Hour
 // blobs go to the same folder, so they outlive a restart, and a sweep at startup removes what nothing
 // names. With --store it keeps packs too, and a pack's files go to --uploads beside the designs'.
 // With --store and checks, it keeps each design's reports, each run by checks.
-func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
-	var mountedTrees []projects.Tree
-	for _, t := range projectTrees(ms) {
-		if uploadsDir == "" || t.Mount != uploadsMount {
-			mountedTrees = append(mountedTrees, t)
+func storeServices(ms *mounts.Table, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
+	trees := liveTrees(ms)
+	mountedTrees := func() []projects.Tree {
+		var out []projects.Tree
+		for _, t := range trees() {
+			if uploadsDir == "" || t.Mount != uploadsMount {
+				out = append(out, t)
+			}
 		}
+		return out
 	}
 	projectSvc := service.NewProjectService(projectStore)
 	var store service.DesignStore
@@ -70,6 +74,16 @@ func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore 
 				return nil, nil, nil, err
 			}
 			maps.Copy(keep, packHashes)
+			// A runtime mount's snapshot is files in the blobs too (agni issue 1735).
+			recs, err := mounts.ReadRecords(filepath.Join(storeDir, storeMountsDir))
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			for _, r := range recs {
+				for _, f := range r.Files {
+					keep[f.Sha256] = true
+				}
+			}
 			packViews, err := packs.Sweep(context.Background(), sweepGrace)
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("sweeping --uploads: %w", err)
@@ -83,7 +97,7 @@ func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore 
 			}
 		}
 	}
-	catalog := service.NewDesignCatalog(store, projects.NewMountedDesigns(mountedTrees...))
+	catalog := service.NewDesignCatalog(store, projects.NewMountedDesignsFunc(mountedTrees))
 	if resolver != nil {
 		// A snapshot may name its design, designs/{d}, and Ingest looks it up here (agni issue 1695).
 		resolver.Designs = catalog

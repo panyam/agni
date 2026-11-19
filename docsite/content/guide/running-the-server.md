@@ -302,6 +302,36 @@ In a container, give the store and the uploads a volume. The image makes `/var/l
 compose bundle (`deploy/compose.yaml`) mounts one volume, `data`, on `/var/lib/agni` and keeps both
 in it (agni issue 1698).
 
+## Mounts made at runtime
+
+A server with `--store` and `--uploads` can mount a GitHub repo while it runs (agni issue 1735). Say
+the team keeps a board in a public repo and wants it in the browser without a clone on the server.
+`WorkspaceService.CreateMount` takes a name, a `github://<owner>/<repo>` source and a ref. The server
+asks GitHub which commit the ref names, downloads that commit's tarball, and serves it as a
+read-only mount:
+
+```
+curl -X POST -H 'Content-Type: application/json' \
+  -d '{"name":"jetson","source":"github://antmicro/jetson-agx-thor-baseboard","ref":"main"}' \
+  http://localhost:8080/agni.v1.webapi.WorkspaceService/CreateMount
+```
+
+The mount is a snapshot. It serves the commit it resolved to until it is deleted and made again, so
+a push to the branch does not change what a stored design or a report pointed at. The snapshot's
+files go to the uploads once each, by hash, beside the designs' files. Its view is
+`mounts/<name>/<commit>/` in the uploads, and the store keeps one record, `mounts/<name>.yaml`, with
+every file's path and hash. A restart reads the records back, and rebuilds a view the uploads lost
+from its files. A snapshot over 256 MB is refused.
+
+`DeleteMount` forgets a mount `CreateMount` made. A mount from `--mount` or `--mount-root` comes from
+the server's flags, and deleting one is refused. A runtime mount can only come from GitHub, since a
+client must not choose which folder on the server's disk is served. `--mount` names a folder. A
+private repo waits on agni issue 1724, and S3 and SharePoint on agni issues 1729 and 1730.
+
+`ListMounts` and `GetMount` say how each mount is reached in `kind`, where it came from in `source`,
+`ref` and `commit`, and whether it is `fixed`. `make exercise-mounts` makes a GitHub mount over
+Antmicro's Jetson baseboard at its 1.1.2 revision, restarts the server, and lists it again.
+
 ## Keeping review runs
 
 With `--store`, the server keeps review runs in the store's `reviews/` folder. Without it the server
@@ -357,7 +387,10 @@ docker run -p 8090:8090 --user $(id -u):$(id -g) -v ~/datasheets/ti:/datasheets/
 Every subdirectory of `/datasheets` becomes a mount named after itself, as `/workspace` does in the
 `agni` image. They can be read-only. `/corpus` is the corpus store. It holds the workbench's drafts,
 the published specs that `agni serve --params-url` reads, and under `derived/` each PDF's extracted
-doc-IR and annotations, so mount a directory there to keep them. A doc-IR or annotations folder an
+doc-IR and annotations, so mount a directory there to keep them. The image also reads `agni`'s
+records and files from `/var/lib/agni`, so mounting the `agni` service's volume there read-only
+shows the mounts `agni serve` made at runtime in the workbench too. It sees a new one within a
+second, and it never writes there. A doc-IR or annotations folder an
 older agnids wrote beside a PDF is still read when the store has none. To link the workbench's
 heading back to a viewer, pass the whole command, because arguments after the image replace its
 default rather than adding to it:

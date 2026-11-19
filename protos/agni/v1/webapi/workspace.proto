@@ -14,8 +14,9 @@ import "agni/v1/webapi/project.proto";
 // This file defines WorkspaceService, for the mounted folders and their contents (the "Files"
 // resource).
 
-// WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
-// The server is started with the mounts. Mounts are the security boundary. A client names an
+// WorkspaceService exposes the server's folders ("mounts") and their directory contents. The server
+// is started with its folders, and with --store and --uploads it can mount a GitHub repo at runtime
+// (agni issue 1735). Mounts are the security boundary. A client names an
 // artifact by a `mount://<mount>/<path>` URI. The URI's authority is a mount, never an absolute
 // host path.
 service WorkspaceService {
@@ -28,6 +29,18 @@ service WorkspaceService {
   // that opens on a mount's address reads that mount alone. A name the server does not serve is
   // NOT_FOUND.
   rpc GetMount(GetMountRequest) returns (Mount);
+
+  // CreateMount makes a mount at runtime over a source the request names, and the server keeps it
+  // in --store so it is served again after a restart (agni issue 1735). A github:// source is
+  // snapshotted at the commit its ref names, into --uploads, and served read-only. A server with no
+  // --store or no --uploads is FAILED_PRECONDITION. A name already served is ALREADY_EXISTS. A
+  // folder on the server's disk cannot be named here, since a client must not choose which host
+  // path the server exposes, so a file:// source is INVALID_ARGUMENT. Use --mount for a folder.
+  rpc CreateMount(CreateMountRequest) returns (Mount);
+
+  // DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
+  // server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
+  rpc DeleteMount(DeleteMountRequest) returns (DeleteMountResponse);
 
   // ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
   // file is labeled with the reader that would open it. The client addresses a location by an
@@ -72,7 +85,51 @@ message Mount {
   // build it. A client that concatenates a scheme by hand can get the scheme wrong. Every other
   // artifact reference the client makes is a child of this one.
   string uri = 3;
+  // kind says how the server reaches the mount's files.
+  MountKind kind = 4;
+  // source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+  // GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+  string source = 5;
+  // ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+  string ref = 6;
+  // commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+  // that commit until it is made again.
+  string commit = 7;
+  // fixed marks a mount from the server's flags. DeleteMount refuses it.
+  bool fixed = 8;
+  // writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
+  // are written only by the server's own stores, so neither is writable.
+  bool writable = 9;
 }
+
+// MountKind is how a mount's files are reached. S3, GCS and SharePoint come with agni issues 1729
+// and 1730.
+enum MountKind {
+  MOUNT_KIND_UNSPECIFIED = 0;
+  // MOUNT_KIND_FILE is a folder on the server's disk, from --mount or --mount-root.
+  MOUNT_KIND_FILE = 1;
+  // MOUNT_KIND_UPLOADS is the views of designs users uploaded, kept in --uploads.
+  MOUNT_KIND_UPLOADS = 2;
+  // MOUNT_KIND_GITHUB is a snapshot of a GitHub repo at one commit, kept in --uploads.
+  MOUNT_KIND_GITHUB = 3;
+}
+
+message CreateMountRequest {
+  // name is the new mount's handle. It follows the rules of a mount:// authority.
+  string name = 1;
+  // source names what to mount, as a URL. github://<owner>/<repo> is the one source this build
+  // makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+  string source = 2;
+  // ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
+  string ref = 3;
+}
+
+message DeleteMountRequest {
+  // name is the mount's handle.
+  string name = 1;
+}
+
+message DeleteMountResponse {}
 
 message GetMountRequest {
   // name is the mount's handle, as Mount.name gives it.

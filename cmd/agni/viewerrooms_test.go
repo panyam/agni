@@ -39,7 +39,7 @@ func viewerRoomsServer(t *testing.T) *httptest.Server {
 	}
 	ms := []mounts.Mount{{Name: parityMounts[0].name, Root: root}}
 	api := servedAPIFor(t, ms, ms)
-	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projectTrees(ms)...), Config: &osProjectConfig{mounts: ms}}
+	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projectTrees(ms)...), Config: &osProjectConfig{mounts: tableOf(ms)}}
 	mux := http.NewServeMux()
 	api.Register(mux)
 	// A tab is a page, so its relay connection carries the page's Origin. A Go dialer sends no

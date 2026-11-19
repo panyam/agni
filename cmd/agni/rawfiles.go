@@ -13,7 +13,7 @@ import (
 // design in the browser and fetches the files ListDesignFiles named (agni issue 853). It answers
 // files only. A directory, an unknown mount and a path escaping its mount are all not found, since
 // the listing is the only index a client gets.
-func rawFileHandler(ms []mounts.Mount) http.Handler {
+func rawFileHandler(ms *mounts.Table) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rest := strings.TrimPrefix(r.URL.Path, "/raw/")
 		mount, p, _ := strings.Cut(rest, "/")
@@ -22,7 +22,7 @@ func rawFileHandler(ms []mounts.Mount) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		abs, err := mounts.Resolve(ms, u)
+		abs, err := ms.Resolve(u)
 		if err != nil {
 			http.NotFound(w, r)
 			return

@@ -39,6 +39,12 @@ const (
 	// WorkspaceServiceGetMountProcedure is the fully-qualified name of the WorkspaceService's GetMount
 	// RPC.
 	WorkspaceServiceGetMountProcedure = "/agni.v1.webapi.WorkspaceService/GetMount"
+	// WorkspaceServiceCreateMountProcedure is the fully-qualified name of the WorkspaceService's
+	// CreateMount RPC.
+	WorkspaceServiceCreateMountProcedure = "/agni.v1.webapi.WorkspaceService/CreateMount"
+	// WorkspaceServiceDeleteMountProcedure is the fully-qualified name of the WorkspaceService's
+	// DeleteMount RPC.
+	WorkspaceServiceDeleteMountProcedure = "/agni.v1.webapi.WorkspaceService/DeleteMount"
 	// WorkspaceServiceListDirProcedure is the fully-qualified name of the WorkspaceService's ListDir
 	// RPC.
 	WorkspaceServiceListDirProcedure = "/agni.v1.webapi.WorkspaceService/ListDir"
@@ -63,6 +69,16 @@ type WorkspaceServiceClient interface {
 	// that opens on a mount's address reads that mount alone. A name the server does not serve is
 	// NOT_FOUND.
 	GetMount(context.Context, *connect.Request[webapi.GetMountRequest]) (*connect.Response[webapi.Mount], error)
+	// CreateMount makes a mount at runtime over a source the request names, and the server keeps it
+	// in --store so it is served again after a restart (agni issue 1735). A github:// source is
+	// snapshotted at the commit its ref names, into --uploads, and served read-only. A server with no
+	// --store or no --uploads is FAILED_PRECONDITION. A name already served is ALREADY_EXISTS. A
+	// folder on the server's disk cannot be named here, since a client must not choose which host
+	// path the server exposes, so a file:// source is INVALID_ARGUMENT. Use --mount for a folder.
+	CreateMount(context.Context, *connect.Request[webapi.CreateMountRequest]) (*connect.Response[webapi.Mount], error)
+	// DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
+	// server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
+	DeleteMount(context.Context, *connect.Request[webapi.DeleteMountRequest]) (*connect.Response[webapi.DeleteMountResponse], error)
 	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
 	// file is labeled with the reader that would open it. The client addresses a location by an
 	// artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -115,6 +131,18 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(workspaceServiceMethods.ByName("GetMount")),
 			connect.WithClientOptions(opts...),
 		),
+		createMount: connect.NewClient[webapi.CreateMountRequest, webapi.Mount](
+			httpClient,
+			baseURL+WorkspaceServiceCreateMountProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("CreateMount")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteMount: connect.NewClient[webapi.DeleteMountRequest, webapi.DeleteMountResponse](
+			httpClient,
+			baseURL+WorkspaceServiceDeleteMountProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("DeleteMount")),
+			connect.WithClientOptions(opts...),
+		),
 		listDir: connect.NewClient[webapi.ListDirRequest, webapi.ListDirResponse](
 			httpClient,
 			baseURL+WorkspaceServiceListDirProcedure,
@@ -146,6 +174,8 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 type workspaceServiceClient struct {
 	listMounts       *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
 	getMount         *connect.Client[webapi.GetMountRequest, webapi.Mount]
+	createMount      *connect.Client[webapi.CreateMountRequest, webapi.Mount]
+	deleteMount      *connect.Client[webapi.DeleteMountRequest, webapi.DeleteMountResponse]
 	listDir          *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
 	listDesignFiles  *connect.Client[webapi.ListDesignFilesRequest, webapi.ListDesignFilesResponse]
 	proposeDesigns   *connect.Client[webapi.ProposeDesignsRequest, webapi.ProposeDesignsResponse]
@@ -160,6 +190,16 @@ func (c *workspaceServiceClient) ListMounts(ctx context.Context, req *connect.Re
 // GetMount calls agni.v1.webapi.WorkspaceService.GetMount.
 func (c *workspaceServiceClient) GetMount(ctx context.Context, req *connect.Request[webapi.GetMountRequest]) (*connect.Response[webapi.Mount], error) {
 	return c.getMount.CallUnary(ctx, req)
+}
+
+// CreateMount calls agni.v1.webapi.WorkspaceService.CreateMount.
+func (c *workspaceServiceClient) CreateMount(ctx context.Context, req *connect.Request[webapi.CreateMountRequest]) (*connect.Response[webapi.Mount], error) {
+	return c.createMount.CallUnary(ctx, req)
+}
+
+// DeleteMount calls agni.v1.webapi.WorkspaceService.DeleteMount.
+func (c *workspaceServiceClient) DeleteMount(ctx context.Context, req *connect.Request[webapi.DeleteMountRequest]) (*connect.Response[webapi.DeleteMountResponse], error) {
+	return c.deleteMount.CallUnary(ctx, req)
 }
 
 // ListDir calls agni.v1.webapi.WorkspaceService.ListDir.
@@ -192,6 +232,16 @@ type WorkspaceServiceHandler interface {
 	// that opens on a mount's address reads that mount alone. A name the server does not serve is
 	// NOT_FOUND.
 	GetMount(context.Context, *connect.Request[webapi.GetMountRequest]) (*connect.Response[webapi.Mount], error)
+	// CreateMount makes a mount at runtime over a source the request names, and the server keeps it
+	// in --store so it is served again after a restart (agni issue 1735). A github:// source is
+	// snapshotted at the commit its ref names, into --uploads, and served read-only. A server with no
+	// --store or no --uploads is FAILED_PRECONDITION. A name already served is ALREADY_EXISTS. A
+	// folder on the server's disk cannot be named here, since a client must not choose which host
+	// path the server exposes, so a file:// source is INVALID_ARGUMENT. Use --mount for a folder.
+	CreateMount(context.Context, *connect.Request[webapi.CreateMountRequest]) (*connect.Response[webapi.Mount], error)
+	// DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
+	// server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
+	DeleteMount(context.Context, *connect.Request[webapi.DeleteMountRequest]) (*connect.Response[webapi.DeleteMountResponse], error)
 	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
 	// file is labeled with the reader that would open it. The client addresses a location by an
 	// artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -240,6 +290,18 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 		connect.WithSchema(workspaceServiceMethods.ByName("GetMount")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workspaceServiceCreateMountHandler := connect.NewUnaryHandler(
+		WorkspaceServiceCreateMountProcedure,
+		svc.CreateMount,
+		connect.WithSchema(workspaceServiceMethods.ByName("CreateMount")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workspaceServiceDeleteMountHandler := connect.NewUnaryHandler(
+		WorkspaceServiceDeleteMountProcedure,
+		svc.DeleteMount,
+		connect.WithSchema(workspaceServiceMethods.ByName("DeleteMount")),
+		connect.WithHandlerOptions(opts...),
+	)
 	workspaceServiceListDirHandler := connect.NewUnaryHandler(
 		WorkspaceServiceListDirProcedure,
 		svc.ListDir,
@@ -270,6 +332,10 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 			workspaceServiceListMountsHandler.ServeHTTP(w, r)
 		case WorkspaceServiceGetMountProcedure:
 			workspaceServiceGetMountHandler.ServeHTTP(w, r)
+		case WorkspaceServiceCreateMountProcedure:
+			workspaceServiceCreateMountHandler.ServeHTTP(w, r)
+		case WorkspaceServiceDeleteMountProcedure:
+			workspaceServiceDeleteMountHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListDirProcedure:
 			workspaceServiceListDirHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListDesignFilesProcedure:
@@ -293,6 +359,14 @@ func (UnimplementedWorkspaceServiceHandler) ListMounts(context.Context, *connect
 
 func (UnimplementedWorkspaceServiceHandler) GetMount(context.Context, *connect.Request[webapi.GetMountRequest]) (*connect.Response[webapi.Mount], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.GetMount is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) CreateMount(context.Context, *connect.Request[webapi.CreateMountRequest]) (*connect.Response[webapi.Mount], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.CreateMount is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) DeleteMount(context.Context, *connect.Request[webapi.DeleteMountRequest]) (*connect.Response[webapi.DeleteMountResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.DeleteMount is not implemented"))
 }
 
 func (UnimplementedWorkspaceServiceHandler) ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {

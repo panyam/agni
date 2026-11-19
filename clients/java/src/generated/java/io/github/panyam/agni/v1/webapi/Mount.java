@@ -36,6 +36,10 @@ private static final long serialVersionUID = 0L;
     name_ = "";
     root_ = "";
     uri_ = "";
+    kind_ = 0;
+    source_ = "";
+    ref_ = "";
+    commit_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -201,6 +205,208 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int KIND_FIELD_NUMBER = 4;
+  private int kind_ = 0;
+  /**
+   * <pre>
+   * kind says how the server reaches the mount's files.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.MountKind kind = 4 [json_name = "kind"];</code>
+   * @return The enum numeric value on the wire for kind.
+   */
+  @java.lang.Override public int getKindValue() {
+    return kind_;
+  }
+  /**
+   * <pre>
+   * kind says how the server reaches the mount's files.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.MountKind kind = 4 [json_name = "kind"];</code>
+   * @return The kind.
+   */
+  @java.lang.Override public io.github.panyam.agni.v1.webapi.MountKind getKind() {
+    io.github.panyam.agni.v1.webapi.MountKind result = io.github.panyam.agni.v1.webapi.MountKind.forNumber(kind_);
+    return result == null ? io.github.panyam.agni.v1.webapi.MountKind.UNRECOGNIZED : result;
+  }
+
+  public static final int SOURCE_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object source_ = "";
+  /**
+   * <pre>
+   * source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+   * GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+   * </pre>
+   *
+   * <code>string source = 5 [json_name = "source"];</code>
+   * @return The source.
+   */
+  @java.lang.Override
+  public java.lang.String getSource() {
+    java.lang.Object ref = source_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      source_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+   * GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+   * </pre>
+   *
+   * <code>string source = 5 [json_name = "source"];</code>
+   * @return The bytes for source.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSourceBytes() {
+    java.lang.Object ref = source_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      source_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REF_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object ref_ = "";
+  /**
+   * <pre>
+   * ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+   * </pre>
+   *
+   * <code>string ref = 6 [json_name = "ref"];</code>
+   * @return The ref.
+   */
+  @java.lang.Override
+  public java.lang.String getRef() {
+    java.lang.Object ref = ref_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      ref_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+   * </pre>
+   *
+   * <code>string ref = 6 [json_name = "ref"];</code>
+   * @return The bytes for ref.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRefBytes() {
+    java.lang.Object ref = ref_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      ref_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int COMMIT_FIELD_NUMBER = 7;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object commit_ = "";
+  /**
+   * <pre>
+   * commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+   * that commit until it is made again.
+   * </pre>
+   *
+   * <code>string commit = 7 [json_name = "commit"];</code>
+   * @return The commit.
+   */
+  @java.lang.Override
+  public java.lang.String getCommit() {
+    java.lang.Object ref = commit_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      commit_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+   * that commit until it is made again.
+   * </pre>
+   *
+   * <code>string commit = 7 [json_name = "commit"];</code>
+   * @return The bytes for commit.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCommitBytes() {
+    java.lang.Object ref = commit_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      commit_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FIXED_FIELD_NUMBER = 8;
+  private boolean fixed_ = false;
+  /**
+   * <pre>
+   * fixed marks a mount from the server's flags. DeleteMount refuses it.
+   * </pre>
+   *
+   * <code>bool fixed = 8 [json_name = "fixed"];</code>
+   * @return The fixed.
+   */
+  @java.lang.Override
+  public boolean getFixed() {
+    return fixed_;
+  }
+
+  public static final int WRITABLE_FIELD_NUMBER = 9;
+  private boolean writable_ = false;
+  /**
+   * <pre>
+   * writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
+   * are written only by the server's own stores, so neither is writable.
+   * </pre>
+   *
+   * <code>bool writable = 9 [json_name = "writable"];</code>
+   * @return The writable.
+   */
+  @java.lang.Override
+  public boolean getWritable() {
+    return writable_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -224,6 +430,24 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(uri_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 3, uri_);
     }
+    if (kind_ != io.github.panyam.agni.v1.webapi.MountKind.MOUNT_KIND_UNSPECIFIED.getNumber()) {
+      output.writeEnum(4, kind_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(source_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, source_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ref_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, ref_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(commit_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 7, commit_);
+    }
+    if (fixed_ != false) {
+      output.writeBool(8, fixed_);
+    }
+    if (writable_ != false) {
+      output.writeBool(9, writable_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -236,6 +460,27 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(uri_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(3, uri_);
+    }
+    if (kind_ != io.github.panyam.agni.v1.webapi.MountKind.MOUNT_KIND_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(4, kind_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(source_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, source_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ref_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, ref_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(commit_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, commit_);
+    }
+    if (fixed_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(8, fixed_);
+    }
+    if (writable_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(9, writable_);
     }
     return size;
   }
@@ -267,6 +512,17 @@ private static final long serialVersionUID = 0L;
         .equals(other.getRoot())) return false;
     if (!getUri()
         .equals(other.getUri())) return false;
+    if (kind_ != other.kind_) return false;
+    if (!getSource()
+        .equals(other.getSource())) return false;
+    if (!getRef()
+        .equals(other.getRef())) return false;
+    if (!getCommit()
+        .equals(other.getCommit())) return false;
+    if (getFixed()
+        != other.getFixed()) return false;
+    if (getWritable()
+        != other.getWritable()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -284,6 +540,20 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getRoot().hashCode();
     hash = (37 * hash) + URI_FIELD_NUMBER;
     hash = (53 * hash) + getUri().hashCode();
+    hash = (37 * hash) + KIND_FIELD_NUMBER;
+    hash = (53 * hash) + kind_;
+    hash = (37 * hash) + SOURCE_FIELD_NUMBER;
+    hash = (53 * hash) + getSource().hashCode();
+    hash = (37 * hash) + REF_FIELD_NUMBER;
+    hash = (53 * hash) + getRef().hashCode();
+    hash = (37 * hash) + COMMIT_FIELD_NUMBER;
+    hash = (53 * hash) + getCommit().hashCode();
+    hash = (37 * hash) + FIXED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getFixed());
+    hash = (37 * hash) + WRITABLE_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getWritable());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -423,6 +693,12 @@ private static final long serialVersionUID = 0L;
       name_ = "";
       root_ = "";
       uri_ = "";
+      kind_ = 0;
+      source_ = "";
+      ref_ = "";
+      commit_ = "";
+      fixed_ = false;
+      writable_ = false;
       return this;
     }
 
@@ -465,6 +741,24 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.uri_ = uri_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.kind_ = kind_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.source_ = source_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.ref_ = ref_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.commit_ = commit_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.fixed_ = fixed_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.writable_ = writable_;
+      }
     }
 
     @java.lang.Override
@@ -493,6 +787,30 @@ private static final long serialVersionUID = 0L;
         uri_ = other.uri_;
         bitField0_ |= 0x00000004;
         onChanged();
+      }
+      if (other.kind_ != 0) {
+        setKindValue(other.getKindValue());
+      }
+      if (!other.getSource().isEmpty()) {
+        source_ = other.source_;
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.getRef().isEmpty()) {
+        ref_ = other.ref_;
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      if (!other.getCommit().isEmpty()) {
+        commit_ = other.commit_;
+        bitField0_ |= 0x00000040;
+        onChanged();
+      }
+      if (other.getFixed() != false) {
+        setFixed(other.getFixed());
+      }
+      if (other.getWritable() != false) {
+        setWritable(other.getWritable());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -533,6 +851,36 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 32: {
+              kind_ = input.readEnum();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
+            case 42: {
+              source_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
+            case 50: {
+              ref_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 58: {
+              commit_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 58
+            case 64: {
+              fixed_ = input.readBool();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 64
+            case 72: {
+              writable_ = input.readBool();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 72
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -832,6 +1180,455 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       uri_ = value;
       bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private int kind_ = 0;
+    /**
+     * <pre>
+     * kind says how the server reaches the mount's files.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.MountKind kind = 4 [json_name = "kind"];</code>
+     * @return The enum numeric value on the wire for kind.
+     */
+    @java.lang.Override public int getKindValue() {
+      return kind_;
+    }
+    /**
+     * <pre>
+     * kind says how the server reaches the mount's files.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.MountKind kind = 4 [json_name = "kind"];</code>
+     * @param value The enum numeric value on the wire for kind to set.
+     * @return This builder for chaining.
+     */
+    public Builder setKindValue(int value) {
+      kind_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * kind says how the server reaches the mount's files.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.MountKind kind = 4 [json_name = "kind"];</code>
+     * @return The kind.
+     */
+    @java.lang.Override
+    public io.github.panyam.agni.v1.webapi.MountKind getKind() {
+      io.github.panyam.agni.v1.webapi.MountKind result = io.github.panyam.agni.v1.webapi.MountKind.forNumber(kind_);
+      return result == null ? io.github.panyam.agni.v1.webapi.MountKind.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * kind says how the server reaches the mount's files.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.MountKind kind = 4 [json_name = "kind"];</code>
+     * @param value The kind to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setKind(io.github.panyam.agni.v1.webapi.MountKind value) {
+      java.util.Objects.requireNonNull(value);
+      bitField0_ |= 0x00000008;
+      kind_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * kind says how the server reaches the mount's files.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.MountKind kind = 4 [json_name = "kind"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearKind() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      kind_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object source_ = "";
+    /**
+     * <pre>
+     * source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+     * GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+     * </pre>
+     *
+     * <code>string source = 5 [json_name = "source"];</code>
+     * @return The source.
+     */
+    public java.lang.String getSource() {
+      java.lang.Object ref = source_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        source_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+     * GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+     * </pre>
+     *
+     * <code>string source = 5 [json_name = "source"];</code>
+     * @return The bytes for source.
+     */
+    public com.google.protobuf.ByteString
+        getSourceBytes() {
+      java.lang.Object ref = source_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        source_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+     * GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+     * </pre>
+     *
+     * <code>string source = 5 [json_name = "source"];</code>
+     * @param value The source to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSource(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      source_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+     * GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+     * </pre>
+     *
+     * <code>string source = 5 [json_name = "source"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSource() {
+      source_ = getDefaultInstance().getSource();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+     * GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+     * </pre>
+     *
+     * <code>string source = 5 [json_name = "source"];</code>
+     * @param value The bytes for source to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSourceBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      source_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object ref_ = "";
+    /**
+     * <pre>
+     * ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+     * </pre>
+     *
+     * <code>string ref = 6 [json_name = "ref"];</code>
+     * @return The ref.
+     */
+    public java.lang.String getRef() {
+      java.lang.Object ref = ref_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        ref_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+     * </pre>
+     *
+     * <code>string ref = 6 [json_name = "ref"];</code>
+     * @return The bytes for ref.
+     */
+    public com.google.protobuf.ByteString
+        getRefBytes() {
+      java.lang.Object ref = ref_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        ref_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+     * </pre>
+     *
+     * <code>string ref = 6 [json_name = "ref"];</code>
+     * @param value The ref to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRef(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ref_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+     * </pre>
+     *
+     * <code>string ref = 6 [json_name = "ref"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRef() {
+      ref_ = getDefaultInstance().getRef();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+     * </pre>
+     *
+     * <code>string ref = 6 [json_name = "ref"];</code>
+     * @param value The bytes for ref to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRefBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      ref_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object commit_ = "";
+    /**
+     * <pre>
+     * commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+     * that commit until it is made again.
+     * </pre>
+     *
+     * <code>string commit = 7 [json_name = "commit"];</code>
+     * @return The commit.
+     */
+    public java.lang.String getCommit() {
+      java.lang.Object ref = commit_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        commit_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+     * that commit until it is made again.
+     * </pre>
+     *
+     * <code>string commit = 7 [json_name = "commit"];</code>
+     * @return The bytes for commit.
+     */
+    public com.google.protobuf.ByteString
+        getCommitBytes() {
+      java.lang.Object ref = commit_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        commit_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+     * that commit until it is made again.
+     * </pre>
+     *
+     * <code>string commit = 7 [json_name = "commit"];</code>
+     * @param value The commit to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCommit(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      commit_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+     * that commit until it is made again.
+     * </pre>
+     *
+     * <code>string commit = 7 [json_name = "commit"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCommit() {
+      commit_ = getDefaultInstance().getCommit();
+      bitField0_ = (bitField0_ & ~0x00000040);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+     * that commit until it is made again.
+     * </pre>
+     *
+     * <code>string commit = 7 [json_name = "commit"];</code>
+     * @param value The bytes for commit to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCommitBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      commit_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+
+    private boolean fixed_ ;
+    /**
+     * <pre>
+     * fixed marks a mount from the server's flags. DeleteMount refuses it.
+     * </pre>
+     *
+     * <code>bool fixed = 8 [json_name = "fixed"];</code>
+     * @return The fixed.
+     */
+    @java.lang.Override
+    public boolean getFixed() {
+      return fixed_;
+    }
+    /**
+     * <pre>
+     * fixed marks a mount from the server's flags. DeleteMount refuses it.
+     * </pre>
+     *
+     * <code>bool fixed = 8 [json_name = "fixed"];</code>
+     * @param value The fixed to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFixed(boolean value) {
+
+      fixed_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * fixed marks a mount from the server's flags. DeleteMount refuses it.
+     * </pre>
+     *
+     * <code>bool fixed = 8 [json_name = "fixed"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFixed() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      fixed_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean writable_ ;
+    /**
+     * <pre>
+     * writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
+     * are written only by the server's own stores, so neither is writable.
+     * </pre>
+     *
+     * <code>bool writable = 9 [json_name = "writable"];</code>
+     * @return The writable.
+     */
+    @java.lang.Override
+    public boolean getWritable() {
+      return writable_;
+    }
+    /**
+     * <pre>
+     * writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
+     * are written only by the server's own stores, so neither is writable.
+     * </pre>
+     *
+     * <code>bool writable = 9 [json_name = "writable"];</code>
+     * @param value The writable to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWritable(boolean value) {
+
+      writable_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
+     * are written only by the server's own stores, so neither is writable.
+     * </pre>
+     *
+     * <code>bool writable = 9 [json_name = "writable"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWritable() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      writable_ = false;
       onChanged();
       return this;
     }

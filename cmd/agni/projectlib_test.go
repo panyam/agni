@@ -171,7 +171,7 @@ func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
 	}
 
 	ms := []mounts.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}
-	loader := &osLoader{mounts: ms, loader: newLoader()}
+	loader := &osLoader{mounts: tableOf(ms), loader: newLoader()}
 	svc := service.NewReviewService(loader, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{}, "", testProjectResolver(ms))
 	// The served side takes the checklist off the project's config, as a viewer does, with no read.
 	u, err := artifact.Parse("mount://tut/designs/gateway")

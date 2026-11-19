@@ -102,7 +102,7 @@ func TestADerivedDocIRLeavesTheCorpusLoadable(t *testing.T) {
 	if err := os.WriteFile(stub, []byte(stubProducer), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	d := derived{mounts: []mounts.Mount{{Name: "m", Root: mount}}, corpus: dir}
+	d := derived{mounts: tableOf([]mounts.Mount{{Name: "m", Root: mount}}), corpus: dir}
 	if _, err := (&osDocExtractor{derived: d, cmd: []string{stub}}).Extract(context.Background(), mustURI("m", "LM1117.pdf")); err != nil {
 		t.Fatal(err)
 	}

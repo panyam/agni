@@ -73,4 +73,108 @@ public interface MountOrBuilder extends
    */
   com.google.protobuf.ByteString
       getUriBytes();
+
+  /**
+   * <pre>
+   * kind says how the server reaches the mount's files.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.MountKind kind = 4 [json_name = "kind"];</code>
+   * @return The enum numeric value on the wire for kind.
+   */
+  int getKindValue();
+  /**
+   * <pre>
+   * kind says how the server reaches the mount's files.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.MountKind kind = 4 [json_name = "kind"];</code>
+   * @return The kind.
+   */
+  io.github.panyam.agni.v1.webapi.MountKind getKind();
+
+  /**
+   * <pre>
+   * source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+   * GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+   * </pre>
+   *
+   * <code>string source = 5 [json_name = "source"];</code>
+   * @return The source.
+   */
+  java.lang.String getSource();
+  /**
+   * <pre>
+   * source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+   * GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+   * </pre>
+   *
+   * <code>string source = 5 [json_name = "source"];</code>
+   * @return The bytes for source.
+   */
+  com.google.protobuf.ByteString
+      getSourceBytes();
+
+  /**
+   * <pre>
+   * ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+   * </pre>
+   *
+   * <code>string ref = 6 [json_name = "ref"];</code>
+   * @return The ref.
+   */
+  java.lang.String getRef();
+  /**
+   * <pre>
+   * ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+   * </pre>
+   *
+   * <code>string ref = 6 [json_name = "ref"];</code>
+   * @return The bytes for ref.
+   */
+  com.google.protobuf.ByteString
+      getRefBytes();
+
+  /**
+   * <pre>
+   * commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+   * that commit until it is made again.
+   * </pre>
+   *
+   * <code>string commit = 7 [json_name = "commit"];</code>
+   * @return The commit.
+   */
+  java.lang.String getCommit();
+  /**
+   * <pre>
+   * commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+   * that commit until it is made again.
+   * </pre>
+   *
+   * <code>string commit = 7 [json_name = "commit"];</code>
+   * @return The bytes for commit.
+   */
+  com.google.protobuf.ByteString
+      getCommitBytes();
+
+  /**
+   * <pre>
+   * fixed marks a mount from the server's flags. DeleteMount refuses it.
+   * </pre>
+   *
+   * <code>bool fixed = 8 [json_name = "fixed"];</code>
+   * @return The fixed.
+   */
+  boolean getFixed();
+
+  /**
+   * <pre>
+   * writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
+   * are written only by the server's own stores, so neither is writable.
+   * </pre>
+   *
+   * <code>bool writable = 9 [json_name = "writable"];</code>
+   * @return The writable.
+   */
+  boolean getWritable();
 }
