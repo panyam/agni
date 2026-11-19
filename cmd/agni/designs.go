@@ -241,6 +241,63 @@ left alone. Check the design with --pack and that name. --no-pack skips it.`,
 	push.Flags().StringVar(&pushTitle, "title", "", "the design's title, when the server makes the design")
 	push.Flags().StringVar(&pushSeries, "series", "", "the design's series, when the server makes the design")
 
+	var addAll bool
+	var addOnly []string
+	var addSeries string
+	add := &cobra.Command{
+		Use:   "add <mount>/<path>",
+		Short: "Keep the boards in a folder of a server's mount as designs",
+		Long: `add proposes the designs the server finds in a folder of one of its mounts, one design per
+board, and keeps the ones named as designs (agni issue 1736). The server reads each board's files
+once, keeps its own copy, and records where they came from. It writes nothing into the mount.
+
+With neither --yes nor --only, add lists the proposals and keeps nothing. --yes keeps them all, and
+--only keeps the ones whose folder or id it names (repeatable).`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			r, err := dialRemote(cmd.Context(), remoteURL)
+			if err != nil {
+				return err
+			}
+			uri := "mount://" + strings.Trim(strings.TrimPrefix(args[0], "mount://"), "/")
+			proposed, err := unary(cmd.Context(), webapiconnect.NewWorkspaceServiceClient(r.http, r.url).ProposeDesigns, &webapi.ProposeDesignsRequest{Uri: uri})
+			if err != nil {
+				return err
+			}
+			var picks []*webapi.DesignToAdd
+			for _, p := range proposed.GetDesigns() {
+				id := service.DefaultDesignID(p, proposed.GetDesigns())
+				if !addAll && !slices.Contains(addOnly, p.GetFolder()) && !slices.Contains(addOnly, id) {
+					fmt.Fprintf(cmd.OutOrStdout(), "proposed\t%s\t%s\t%d files\t%s\n", displayFolder(p.GetFolder()), id, len(p.GetFiles()), p.GetNote())
+					continue
+				}
+				picks = append(picks, &webapi.DesignToAdd{Folder: p.GetFolder(), DesignId: id, Series: addSeries})
+			}
+			if len(picks) == 0 {
+				if len(proposed.GetDesigns()) == 0 {
+					return fmt.Errorf("%s holds no design", uri)
+				}
+				fmt.Fprintln(cmd.ErrOrStderr(), "note: nothing kept; pass --yes to keep every proposal, or --only <folder or id>")
+				return nil
+			}
+			resp, err := unary(cmd.Context(), c.designs.AddDesigns, &webapi.AddDesignsRequest{Uri: uri, Designs: picks})
+			if err != nil {
+				return err
+			}
+			for _, d := range resp.GetDesigns() {
+				printDesign(cmd.OutOrStdout(), d)
+			}
+			return nil
+		},
+	}
+	add.Flags().BoolVar(&addAll, "yes", false, "keep every proposal as a design")
+	add.Flags().StringArrayVar(&addOnly, "only", nil, "keep the proposal at this folder, or with this id (repeatable)")
+	add.Flags().StringVar(&addSeries, "series", "", "the series every kept design joins")
+
 	link := &cobra.Command{
 		Use:   "link <id> <artifact> <mount>[/<path>][@<ref>]",
 		Short: "Point an artifact at a file or folder in a mount, and read its files",
@@ -313,7 +370,7 @@ is listed and never moved. --dry-run says what a sync would change and writes no
 	}
 	sync.Flags().BoolVar(&dryRun, "dry-run", false, "report what a sync would change, and write nothing")
 
-	cmd.AddCommand(create, list, get, artifacts, put, rm, push, link, unlink, sync)
+	cmd.AddCommand(create, list, get, artifacts, put, rm, push, add, link, unlink, sync)
 	return cmd
 }
 
@@ -406,9 +463,13 @@ func printArtifact(w io.Writer, a *webapi.Artifact) {
 		if v := src.GetVersion(); v != "" && v != src.GetRef() {
 			fmt.Fprintf(w, " at %s", v)
 		}
-		if src.GetFollow() {
+		// Only a link records a read hash. A design added from a mounted folder was read once, and
+		// neither follows nor pins anything (agni issue 1736).
+		switch {
+		case src.GetReadHash() == "":
+		case src.GetFollow():
 			fmt.Fprint(w, ", followed")
-		} else {
+		default:
 			fmt.Fprint(w, ", pinned")
 		}
 	}
@@ -725,4 +786,12 @@ func readLocalDescriptor(p string) localDescriptor {
 		_ = yaml.Unmarshal(raw, &d)
 	}
 	return d
+}
+
+// displayFolder names a proposal's folder, "." for the folder that was asked about.
+func displayFolder(f string) string {
+	if f == "" {
+		return "."
+	}
+	return f
 }

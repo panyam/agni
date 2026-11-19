@@ -257,7 +257,7 @@ as the pack itself, under its `name:`, and says the `--pack` to use. A pack the 
 same hash is left alone, and `--no-pack` skips it.
 
 A report keeps such a check under the design, and says later whether the design's files or the pack
-changed since it ran. A design in a mounted folder takes one too, hashed from the files in its folder:
+changed since it ran:
 
 ```bash
 agni reports create designs/memory_unit --pack b200 --remote http://localhost:8080
@@ -286,16 +286,26 @@ design can sit in several projects. `agni projects create` and `agni projects ad
 designs in it.
 
 The viewer's designs page, `/designs/`, does the same from a browser (agni issue 1719). It lists
-every design the server holds, stored and mounted, by series with each series' latest marked, and a
-form there makes a design from a dropped folder. A design's page, `/designs/<id>`, lists its
-artifacts and replaces or deletes one, and a mounted design shows as read-only. The folder browser
+every design the server holds, by series with each series' latest marked, and a form there makes a
+design from a dropped folder. A design's page, `/designs/<id>`, lists its artifacts and replaces or
+deletes one. The folder browser
 is at `/mounts/`, and an older `/designs/<mount>/<path>/view` link redirects there.
 
 `DesignService` and `ProjectService` create, change and delete them over the wire. A client sends an
 artifact as a manifest of paths and hashes, and sends any contents the server asks for with
-`SnapshotService.UploadBlobs`, as `--remote` already does. A design or project in a mounted folder
-stays read-only, and a write to it is refused. A design id is unique on one server, across the store
-and every mount.
+`SnapshotService.UploadBlobs`, as `--remote` already does. A project in a mounted folder stays
+read-only, and a write to it is refused.
+
+A folder in a mount is not a design until you add it (agni issue 1736). `add` lists the boards it
+finds, and keeps the ones you name:
+
+```bash
+agni designs add boards/memory_unit --remote http://localhost:8080
+agni designs add boards/memory_unit --yes --series b200 --remote http://localhost:8080
+```
+
+The server copies each board's files, and each artifact records the mount and folder they came
+from.
 
 In a container, give the store and the uploads a volume. The image makes `/var/lib/agni/meta` and
 `/var/lib/agni/files` owned by its user, so a named volume on either starts out writable. The

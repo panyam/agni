@@ -129,31 +129,40 @@ type artifactRecord struct {
 	Companions []string     `yaml:"companions,omitempty"`
 	UpdateTime time.Time    `yaml:"update_time"`
 	Files      []fileRecord `yaml:"files"`
-	// Source is where a linked artifact's files come from (agni issue 1723). An uploaded artifact has
-	// none.
+	// Source is where in a mount the files were read from, by a link (agni issue 1723) or when a
+	// mounted folder's design was added (agni issue 1736). An uploaded artifact has none.
 	Source *sourceRecord `yaml:"source,omitempty"`
 }
 
-// sourceRecord is a linked artifact's webapi.ArtifactSource as the record keeps it.
+// sourceRecord is an artifact's webapi.ArtifactSource as the record keeps it. An added design's
+// artifact has a mount and path alone, and a link fills the rest.
 type sourceRecord struct {
 	Mount    string    `yaml:"mount"`
 	Path     string    `yaml:"path,omitempty"`
 	Ref      string    `yaml:"ref,omitempty"`
 	Follow   bool      `yaml:"follow,omitempty"`
 	Version  string    `yaml:"version,omitempty"`
-	ReadTime time.Time `yaml:"read_time"`
-	ReadHash string    `yaml:"read_hash"`
+	ReadTime time.Time `yaml:"read_time,omitempty"`
+	ReadHash string    `yaml:"read_hash,omitempty"`
 }
 
 func sourceRecordOf(src *webapi.ArtifactSource) *sourceRecord {
 	if src == nil {
 		return nil
 	}
-	return &sourceRecord{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: src.GetFollow(), Version: src.GetVersion(), ReadTime: src.GetReadTime().AsTime().UTC(), ReadHash: src.GetReadHash()}
+	out := &sourceRecord{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: src.GetFollow(), Version: src.GetVersion(), ReadHash: src.GetReadHash()}
+	if src.GetReadTime() != nil {
+		out.ReadTime = src.GetReadTime().AsTime().UTC()
+	}
+	return out
 }
 
 func (r *sourceRecord) proto() *webapi.ArtifactSource {
-	return &webapi.ArtifactSource{Mount: r.Mount, Path: r.Path, Ref: r.Ref, Follow: r.Follow, Version: r.Version, ReadTime: timestamppb.New(r.ReadTime), ReadHash: r.ReadHash}
+	out := &webapi.ArtifactSource{Mount: r.Mount, Path: r.Path, Ref: r.Ref, Follow: r.Follow, Version: r.Version, ReadHash: r.ReadHash}
+	if !r.ReadTime.IsZero() {
+		out.ReadTime = timestamppb.New(r.ReadTime)
+	}
+	return out
 }
 
 type fileRecord struct {

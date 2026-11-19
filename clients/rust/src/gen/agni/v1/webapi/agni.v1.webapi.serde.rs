@@ -1,4 +1,221 @@
 // @generated
+impl serde::Serialize for AddDesignsRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.uri.is_empty() {
+            len += 1;
+        }
+        if !self.designs.is_empty() {
+            len += 1;
+        }
+        if self.validate_only {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.AddDesignsRequest", len)?;
+        if !self.uri.is_empty() {
+            struct_ser.serialize_field("uri", &self.uri)?;
+        }
+        if !self.designs.is_empty() {
+            struct_ser.serialize_field("designs", &self.designs)?;
+        }
+        if self.validate_only {
+            struct_ser.serialize_field("validateOnly", &self.validate_only)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for AddDesignsRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "uri",
+            "designs",
+            "validate_only",
+            "validateOnly",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Uri,
+            Designs,
+            ValidateOnly,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "uri" => Ok(GeneratedField::Uri),
+                            "designs" => Ok(GeneratedField::Designs),
+                            "validateOnly" | "validate_only" => Ok(GeneratedField::ValidateOnly),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = AddDesignsRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.AddDesignsRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<AddDesignsRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut uri__ = None;
+                let mut designs__ = None;
+                let mut validate_only__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Uri => {
+                            if uri__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("uri"));
+                            }
+                            uri__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Designs => {
+                            if designs__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("designs"));
+                            }
+                            designs__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ValidateOnly => {
+                            if validate_only__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("validateOnly"));
+                            }
+                            validate_only__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(AddDesignsRequest {
+                    uri: uri__.unwrap_or_default(),
+                    designs: designs__.unwrap_or_default(),
+                    validate_only: validate_only__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.AddDesignsRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for AddDesignsResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.designs.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.AddDesignsResponse", len)?;
+        if !self.designs.is_empty() {
+            struct_ser.serialize_field("designs", &self.designs)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for AddDesignsResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "designs",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Designs,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "designs" => Ok(GeneratedField::Designs),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = AddDesignsResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.AddDesignsResponse")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<AddDesignsResponse, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut designs__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Designs => {
+                            if designs__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("designs"));
+                            }
+                            designs__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(AddDesignsResponse {
+                    designs: designs__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.AddDesignsResponse", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for AnalysisConfig {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -4925,6 +5142,149 @@ impl<'de> serde::Deserialize<'de> for DesignFile {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.DesignFile", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for DesignToAdd {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.folder.is_empty() {
+            len += 1;
+        }
+        if !self.design_id.is_empty() {
+            len += 1;
+        }
+        if !self.title.is_empty() {
+            len += 1;
+        }
+        if !self.series.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.DesignToAdd", len)?;
+        if !self.folder.is_empty() {
+            struct_ser.serialize_field("folder", &self.folder)?;
+        }
+        if !self.design_id.is_empty() {
+            struct_ser.serialize_field("designId", &self.design_id)?;
+        }
+        if !self.title.is_empty() {
+            struct_ser.serialize_field("title", &self.title)?;
+        }
+        if !self.series.is_empty() {
+            struct_ser.serialize_field("series", &self.series)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for DesignToAdd {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "folder",
+            "design_id",
+            "designId",
+            "title",
+            "series",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Folder,
+            DesignId,
+            Title,
+            Series,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "folder" => Ok(GeneratedField::Folder),
+                            "designId" | "design_id" => Ok(GeneratedField::DesignId),
+                            "title" => Ok(GeneratedField::Title),
+                            "series" => Ok(GeneratedField::Series),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = DesignToAdd;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.DesignToAdd")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<DesignToAdd, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut folder__ = None;
+                let mut design_id__ = None;
+                let mut title__ = None;
+                let mut series__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Folder => {
+                            if folder__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("folder"));
+                            }
+                            folder__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::DesignId => {
+                            if design_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("designId"));
+                            }
+                            design_id__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Title => {
+                            if title__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("title"));
+                            }
+                            title__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Series => {
+                            if series__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("series"));
+                            }
+                            series__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(DesignToAdd {
+                    folder: folder__.unwrap_or_default(),
+                    design_id: design_id__.unwrap_or_default(),
+                    title: title__.unwrap_or_default(),
+                    series: series__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.DesignToAdd", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for DiffDesignsRequest {

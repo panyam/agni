@@ -2644,9 +2644,10 @@ pub struct Artifact {
     /// update_time is when the artifact's files last changed. It is output only.
     #[prost(message, optional, tag="5")]
     pub update_time: ::core::option::Option<::pbjson_types::Timestamp>,
-    /// source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
-    /// server's uploads mount, and a linked artifact's is another, such as a github one. It is output
-    /// only, set by UpdateArtifact and LinkArtifact.
+    /// source is where the files were read from. An uploaded artifact's mount is the server's uploads
+    /// mount. A linked artifact's is another, such as a github one (agni issue 1723), and so is an
+    /// artifact added from a mounted folder (agni issue 1736). The server keeps its own copy of the files
+    /// by hash either way. It is output only.
     #[prost(message, optional, tag="6")]
     pub source: ::core::option::Option<ArtifactSource>,
 }
@@ -2656,7 +2657,9 @@ pub struct ArtifactSource {
     /// mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
     #[prost(string, tag="1")]
     pub mount: ::prost::alloc::string::String,
-    /// path is the file or folder inside the mount, such as "hw/board.kicad_sch". Empty is its root.
+    /// path is where in the mount the files were read from. A link names the file or folder it was
+    /// made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+    /// mounted folder names the folder its file paths are relative to.
     #[prost(string, tag="2")]
     pub path: ::prost::alloc::string::String,
     /// ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
@@ -2674,11 +2677,44 @@ pub struct ArtifactSource {
     /// read_time is when the server last read the files from the source. It is output only.
     #[prost(message, optional, tag="6")]
     pub read_time: ::core::option::Option<::pbjson_types::Timestamp>,
-    /// read_hash is the SHA-256 of the files as the server last read them, each path and its contents'
-    /// hash in path order, "sha256:<hex>". A mount with no history has no version, so a sync compares
-    /// this instead. It is output only.
+    /// read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+    /// in path order, "sha256:<hex>". A mount with no history has no version, so a sync compares this
+    /// instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
     #[prost(string, tag="7")]
     pub read_hash: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AddDesignsRequest {
+    /// uri is the folder to propose designs in, "mount://<mount>/<dir>".
+    #[prost(string, tag="1")]
+    pub uri: ::prost::alloc::string::String,
+    /// designs are the proposals to add, each named by its folder.
+    #[prost(message, repeated, tag="2")]
+    pub designs: ::prost::alloc::vec::Vec<DesignToAdd>,
+    /// validate_only answers the designs the request would make, and writes nothing (AIP-163).
+    #[prost(bool, tag="3")]
+    pub validate_only: bool,
+}
+/// DesignToAdd picks one proposal and names the design it becomes.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DesignToAdd {
+    /// folder is the proposal's folder, mount-relative, as ProposedDesign.folder spells it.
+    #[prost(string, tag="1")]
+    pub folder: ::prost::alloc::string::String,
+    /// design_id is the new design's id. Empty takes the proposal's name, lowercased.
+    #[prost(string, tag="2")]
+    pub design_id: ::prost::alloc::string::String,
+    /// title and series are the new design's. An empty title takes the proposal's.
+    #[prost(string, tag="3")]
+    pub title: ::prost::alloc::string::String,
+    #[prost(string, tag="4")]
+    pub series: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AddDesignsResponse {
+    /// designs are the designs made, in the request's order.
+    #[prost(message, repeated, tag="1")]
+    pub designs: ::prost::alloc::vec::Vec<Design>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetArtifactRequest {

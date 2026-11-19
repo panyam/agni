@@ -74,6 +74,17 @@ service DesignService {
   // are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
   rpc ImportDesignFiles(ImportDesignFilesRequest) returns (ImportDesignFilesResponse);
 
+  // AddDesigns makes designs from boards in a mounted folder (agni issue 1736). The server proposes
+  // the folder's designs as WorkspaceService.ProposeDesigns does, and a person picks which to add.
+  // Each added design is a stored one: the server copies its files by hash, groups them into
+  // artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
+  // series and intent come from the proposal and the request, so the server writes nothing into the
+  // mount. A proposal the request does not name is not added. With validate_only the server answers
+  // the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
+  // design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
+  // FAILED_PRECONDITION.
+  rpc AddDesigns(AddDesignsRequest) returns (AddDesignsResponse);
+
   // DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
   // design unable to be read until another is put.
   rpc DeleteArtifact(DeleteArtifactRequest) returns (google.protobuf.Empty);
@@ -270,9 +281,10 @@ message Artifact {
   string entry = 4;
   // update_time is when the artifact's files last changed. It is output only.
   google.protobuf.Timestamp update_time = 5;
-  // source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
-  // server's uploads mount, and a linked artifact's is another, such as a github one. It is output
-  // only, set by UpdateArtifact and LinkArtifact.
+  // source is where the files were read from. An uploaded artifact's mount is the server's uploads
+  // mount. A linked artifact's is another, such as a github one (agni issue 1723), and so is an
+  // artifact added from a mounted folder (agni issue 1736). The server keeps its own copy of the files
+  // by hash either way. It is output only.
   ArtifactSource source = 6;
 }
 
@@ -280,7 +292,9 @@ message Artifact {
 message ArtifactSource {
   // mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
   string mount = 1;
-  // path is the file or folder inside the mount, such as "hw/board.kicad_sch". Empty is its root.
+  // path is where in the mount the files were read from. A link names the file or folder it was
+  // made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+  // mounted folder names the folder its file paths are relative to.
   string path = 2;
   // ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
   // on a github mount is its default branch.
@@ -293,10 +307,35 @@ message ArtifactSource {
   string version = 5;
   // read_time is when the server last read the files from the source. It is output only.
   google.protobuf.Timestamp read_time = 6;
-  // read_hash is the SHA-256 of the files as the server last read them, each path and its contents'
-  // hash in path order, "sha256:<hex>". A mount with no history has no version, so a sync compares
-  // this instead. It is output only.
+  // read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+  // in path order, "sha256:<hex>". A mount with no history has no version, so a sync compares this
+  // instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
   string read_hash = 7;
+}
+
+message AddDesignsRequest {
+  // uri is the folder to propose designs in, "mount://<mount>/<dir>".
+  string uri = 1;
+  // designs are the proposals to add, each named by its folder.
+  repeated DesignToAdd designs = 2;
+  // validate_only answers the designs the request would make, and writes nothing (AIP-163).
+  bool validate_only = 3;
+}
+
+// DesignToAdd picks one proposal and names the design it becomes.
+message DesignToAdd {
+  // folder is the proposal's folder, mount-relative, as ProposedDesign.folder spells it.
+  string folder = 1;
+  // design_id is the new design's id. Empty takes the proposal's name, lowercased.
+  string design_id = 2;
+  // title and series are the new design's. An empty title takes the proposal's.
+  string title = 3;
+  string series = 4;
+}
+
+message AddDesignsResponse {
+  // designs are the designs made, in the request's order.
+  repeated Design designs = 1;
 }
 
 // ArtifactType is what an artifact holds, found from its entry's format.

@@ -477,7 +477,8 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	}
 	urls := serveURLs(addr, lanIPs)
 	if o.mcp != "" {
-		mcpOpts := mcpserver.Options{Version: version.Version(), Budget: budget.Enforce}
+		// The tools name designs by path, so they list the designs the mounted folders declare too.
+		mcpOpts := mcpserver.Options{Version: version.Version(), Budget: budget.Enforce, Folders: projects.NewMountedDesignsFunc(liveTrees(table))}
 		switch {
 		case o.mcp == mcpStdio && o.mcpLinks != "":
 			mcpOpts.URLBase = o.mcpLinks

@@ -23,6 +23,7 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/jaala/datalog"
 	"github.com/panyam/jaala/frontends/mcp"
@@ -50,6 +51,15 @@ type Options struct {
 	Budget int64
 	// Timeout is the longest one call may take; zero is no limit.
 	Timeout time.Duration
+	// Folders lists the designs the mounted folders declare in a design.yaml. A tool names a design by
+	// its path, and a read by path honours the folder's design.yaml, so the designs tool lists these
+	// beside the server's stored designs (agni issue 1736). Nil lists none.
+	Folders FolderDesigns
+}
+
+// FolderDesigns lists the designs mounted folders declare, as internal/projects.MountedDesigns does.
+type FolderDesigns interface {
+	Designs(ctx context.Context) ([]*webapi.Design, error)
 }
 
 // New is the MCP server over api's services. api is the same value `agni serve` registers on its

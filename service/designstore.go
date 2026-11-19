@@ -80,13 +80,15 @@ type DesignRecord struct {
 }
 
 // ArtifactWrite is one artifact's new files. AllowMissing creates the artifact when the design has
-// none of that id (AIP-134). Source is where a linked artifact's files were read from (agni issue
-// 1723), kept as given. A nil Source writes an uploaded artifact, whose source is the uploads mount.
+// none of that id (AIP-134). A nil Source writes an uploaded artifact, whose source is the uploads
+// mount.
 type ArtifactWrite struct {
 	ID           string
 	Files        []*webapi.SnapshotFile
 	AllowMissing bool
-	Source       *webapi.ArtifactSource
+	// Source is where in a mount the files were read from, nil for an upload (agni issues 1723, 1736).
+	// The store keeps it as given.
+	Source *webapi.ArtifactSource
 }
 
 // BlobSource returns a file's contents by its hash, "sha256:<hex>" as SnapshotFile.sha256 writes it.

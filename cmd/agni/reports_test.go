@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/mounts"
 )
 
 // reportKeys is a report's findings as findingKeys writes a check's, sorted.
@@ -175,58 +173,14 @@ func TestAReportAppliesItsProjectsDefaultPacks(t *testing.T) {
 	}
 }
 
-// A report on a design a mounted folder declares hashes the files in that folder, grouped as an
-// import would group them. Changing the netlist marks it as run on earlier files, and a file no reader
-// opens does not (agni issue 1746).
-func TestAReportOnAMountedDesignHashesItsFolder(t *testing.T) {
-	ctx := context.Background()
-	project := tutorialProject(t)
-	srv := designServer(t, t.TempDir(), t.TempDir(), mounts.Mount{Name: "tut", Root: project})
-	out, err := runReports(t, srv.URL, "create", "designs/gw", "--id", "mounted")
-	if err != nil || !strings.HasSuffix(strings.TrimSpace(out), "current") {
-		t.Fatalf("reports create on the mounted gw = %q, %v; want a current report", out, err)
-	}
-	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
-	get := func() *webapi.Report {
-		t.Helper()
-		r, err := designs.GetReport(ctx, connect.NewRequest(&webapi.GetReportRequest{Name: "designs/gw/reports/mounted"}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		return r.Msg
-	}
-	first := get()
-	if local := findingKeys(t, "check", filepath.Join(project, "designs", "gw")); !slices.Equal(reportKeys(first), local) {
-		t.Errorf("the report = %d findings, check on the folder = %d; want the same set", len(reportKeys(first)), len(local))
-	}
-	gw := filepath.Join(project, "designs", "gw")
-	if err := os.WriteFile(filepath.Join(gw, "NOTES.txt"), []byte("a note no reader opens\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if r := get(); r.GetDesignChanged() {
-		t.Error("after a file no reader opens was added, the report says the design changed; want it current")
-	}
-	f, err := os.OpenFile(filepath.Join(gw, "gateway.edn"), os.O_APPEND|os.O_WRONLY, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := f.WriteString("\n"); err != nil {
-		t.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if r := get(); !r.GetDesignChanged() {
-		t.Error("after the netlist changed, the report says it ran on the current files; want design_changed")
-	}
-}
-
 // A listing leaves each report's run out and says how many findings it holds, and a get, or a
 // listing that asks for the full view, sends the run (agni issue 1753).
 func TestAReportListingLeavesTheRunOut(t *testing.T) {
 	ctx := context.Background()
-	project := tutorialProject(t)
-	srv := designServer(t, t.TempDir(), t.TempDir(), mounts.Mount{Name: "tut", Root: project})
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	if out, err := runDesigns(t, srv.URL, "push", filepath.Join(tutorialProject(t), "designs", "gw"), "--id", "gw", "--no-pack"); err != nil {
+		t.Fatalf("designs push: %v\n%s", err, out)
+	}
 	if out, err := runReports(t, srv.URL, "create", "designs/gw", "--id", "r"); err != nil {
 		t.Fatalf("reports create: %v\n%s", err, out)
 	}

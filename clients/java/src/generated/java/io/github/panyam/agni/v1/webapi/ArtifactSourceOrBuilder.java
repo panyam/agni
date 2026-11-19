@@ -32,7 +32,9 @@ public interface ArtifactSourceOrBuilder extends
 
   /**
    * <pre>
-   * path is the file or folder inside the mount, such as "hw/board.kicad_sch". Empty is its root.
+   * path is where in the mount the files were read from. A link names the file or folder it was
+   * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+   * mounted folder names the folder its file paths are relative to.
    * </pre>
    *
    * <code>string path = 2 [json_name = "path"];</code>
@@ -41,7 +43,9 @@ public interface ArtifactSourceOrBuilder extends
   java.lang.String getPath();
   /**
    * <pre>
-   * path is the file or folder inside the mount, such as "hw/board.kicad_sch". Empty is its root.
+   * path is where in the mount the files were read from. A link names the file or folder it was
+   * made with, such as "hw/board.kicad_sch", and empty is the mount's root. An artifact added from a
+   * mounted folder names the folder its file paths are relative to.
    * </pre>
    *
    * <code>string path = 2 [json_name = "path"];</code>
@@ -134,9 +138,9 @@ public interface ArtifactSourceOrBuilder extends
 
   /**
    * <pre>
-   * read_hash is the SHA-256 of the files as the server last read them, each path and its contents'
-   * hash in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares
-   * this instead. It is output only.
+   * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+   * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+   * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
    * </pre>
    *
    * <code>string read_hash = 7 [json_name = "readHash"];</code>
@@ -145,9 +149,9 @@ public interface ArtifactSourceOrBuilder extends
   java.lang.String getReadHash();
   /**
    * <pre>
-   * read_hash is the SHA-256 of the files as the server last read them, each path and its contents'
-   * hash in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares
-   * this instead. It is output only.
+   * read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
+   * in path order, "sha256:&lt;hex&gt;". A mount with no history has no version, so a sync compares this
+   * instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
    * </pre>
    *
    * <code>string read_hash = 7 [json_name = "readHash"];</code>

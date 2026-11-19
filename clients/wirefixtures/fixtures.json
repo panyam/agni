@@ -404,29 +404,43 @@
       }
     },
     {
-      "name": "get-design",
+      "name": "add-designs-validate-only",
+      "service": "agni.v1.webapi.DesignService",
+      "method": "AddDesigns",
+      "request": {
+        "uri": "mount://probe/designs/jetson-cut",
+        "designs": [
+          {
+            "folder": "designs/jetson-cut",
+            "designId": "jetson-cut",
+            "series": "probe"
+          }
+        ],
+        "validateOnly": true
+      },
+      "response": {
+        "designs": [
+          {
+            "name": "designs/jetson-cut",
+            "series": "probe",
+            "artifacts": [
+              "designs/jetson-cut/artifacts/schematic",
+              "designs/jetson-cut/artifacts/board"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "get-design-not-added",
       "service": "agni.v1.webapi.DesignService",
       "method": "GetDesign",
       "request": {
         "name": "designs/jetson-cut"
       },
-      "response": {
-        "name": "designs/jetson-cut",
-        "title": "Jetson AGX Thor baseboard, cut for the cross-probe walk",
-        "uri": "mount://probe/designs/jetson-cut",
-        "entryUri": "mount://probe/designs/jetson-cut/jetson-cut.kicad_sch",
-        "companionUris": [
-          "mount://probe/designs/jetson-cut/jetson-cut.kicad_pcb"
-        ],
-        "config": {
-          "extends": "projects/cross-probe"
-        },
-        "updateTime": "2026-11-18T16:47:10.295986303Z",
-        "readOnly": true
-      },
-      "ignore": [
-        "update_time"
-      ]
+      "error": {
+        "code": "not_found"
+      }
     },
     {
       "name": "snapshot-not-found",

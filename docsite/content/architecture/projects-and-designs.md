@@ -389,10 +389,21 @@ name, across a restart, and a stored design is that place.
 
 A design is named `designs/{design}` and ties to no project (agni issue 1694). A stored project is a
 title and a list of design names, so a design can sit in many projects, and deleting a project
-deletes none of them. A mounted project lists the designs whose `extends` names it. `DesignService`
-creates, reads, changes and deletes designs, and `ProjectService` does the same for stored projects.
-`agni serve --store` keeps both as records, and `--uploads` keeps a stored design's files. A design id is unique per server, so an id two mounted folders
-both declare is left out of a listing and named in its `unreachable`.
+deletes none of them. `DesignService` creates, reads, changes and deletes designs, and
+`ProjectService` does the same for stored projects. `agni serve --store` keeps both as records, and
+`--uploads` keeps a stored design's files.
+
+`agni serve`'s designs are its records alone (agni issue 1736). A folder in a mount makes no design,
+whatever `design.yaml` it holds. So a server with mounts and no `--store` lists no designs. Picture
+an engineer who mounts the team's boards folder. They pick the boards to keep, and each becomes a
+design. `AddDesigns`, and `agni designs add <mount>/<path>`, propose the folder's designs as
+`ProposeDesigns` does, one per board. The server keeps the ones named, copies their files by hash,
+and records each artifact's `source`, the mount and folder its files came from. It writes nothing
+into the mount. A design's title, series and intent come from the proposal and the request, never
+from a `design.yaml`. `ListDesigns` with `source = "mount://<mount>/<path>"` lists the designs read
+from a folder. Reading a folder by its path, as `agni check <folder>` does, still honours its
+`design.yaml`. The browser engine and the static demo still list their seeded boards, since they
+have no store.
 
 ## A stored design holds artifacts
 
@@ -426,7 +437,7 @@ store, holding each artifact's type, entry and manifest of paths and hashes. The
 by hash, in the uploads. A design reads through a view in the uploads mount,
 `<id>/<rev>/<artifact>/<path>`, whose files link to those blobs, beside a `design.yaml` the store
 writes from the record. A write builds a new revision's view and never changes an old one. A design
-with no artifact a reader opens has no view. A database adapter would keep the same records as rows. A mounted design has no artifacts, because its folder's `design.yaml` names its files.
+with no artifact a reader opens has no view. A database adapter would keep the same records as rows.
 
 A snapshot names a design by `designs/{design}` in `Snapshot.design`, and the server looks the name
 up at every read (agni issue 1695). So a snapshot rebuilt after a restart, or ingested again after an
@@ -500,10 +511,7 @@ tab opens. Each finding there links to `/designs/{design}/view` under the report
 verdict the finding came from (`Finding.verdict_ids`). A finding of a rule that states no verdicts
 has no link, since the viewer has nothing to open it on.
 
-A mounted design takes a report too (agni issue 1746). It has no artifacts kept, so its hash groups
-the files in its folder into artifacts the way an import of that folder would, and hashes those. A
-file no reader opens, such as a README beside the board, is left out, and so are the project files
-outside the folder. The folder adapter, `DirReports`, keeps each report as
+A report needs a stored design, since only a stored design has artifacts to hash. The folder adapter, `DirReports`, keeps each report as
 `<design>/<report>.json` in the store. A report the server names gets an id that sorts by creation
 time, and `ListReports` returns the newest first.
 
@@ -511,8 +519,9 @@ time, and `ListReports` returns the newest first.
 designs/bb-1.1.3` marks each report "run on earlier design files" or "packs/<k> changed since".
 
 That makes `Project` and `Design` the declared-identity case in
-[C23](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md), with two homes. A mounted one has
-`Get` and `List`. A stored one has every standard method. A pack is a full resource, and a report is
+[C23](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md). A project has two homes. A mounted
+one has `Get` and `List`, and a stored one has every standard method. A design has only the stored
+home on `agni serve`. A pack is a full resource, and a report is
 one nested under its design.
 
 ## Every surface has to HOLD the resolver, and a missing one is silent
