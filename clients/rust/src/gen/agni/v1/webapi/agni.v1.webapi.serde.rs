@@ -16,6 +16,9 @@ impl serde::Serialize for AddDesignsRequest {
         if self.validate_only {
             len += 1;
         }
+        if self.no_symbol_copy {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.AddDesignsRequest", len)?;
         if !self.uri.is_empty() {
             struct_ser.serialize_field("uri", &self.uri)?;
@@ -25,6 +28,9 @@ impl serde::Serialize for AddDesignsRequest {
         }
         if self.validate_only {
             struct_ser.serialize_field("validateOnly", &self.validate_only)?;
+        }
+        if self.no_symbol_copy {
+            struct_ser.serialize_field("noSymbolCopy", &self.no_symbol_copy)?;
         }
         struct_ser.end()
     }
@@ -40,6 +46,8 @@ impl<'de> serde::Deserialize<'de> for AddDesignsRequest {
             "designs",
             "validate_only",
             "validateOnly",
+            "no_symbol_copy",
+            "noSymbolCopy",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -47,6 +55,7 @@ impl<'de> serde::Deserialize<'de> for AddDesignsRequest {
             Uri,
             Designs,
             ValidateOnly,
+            NoSymbolCopy,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -71,6 +80,7 @@ impl<'de> serde::Deserialize<'de> for AddDesignsRequest {
                             "uri" => Ok(GeneratedField::Uri),
                             "designs" => Ok(GeneratedField::Designs),
                             "validateOnly" | "validate_only" => Ok(GeneratedField::ValidateOnly),
+                            "noSymbolCopy" | "no_symbol_copy" => Ok(GeneratedField::NoSymbolCopy),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -93,6 +103,7 @@ impl<'de> serde::Deserialize<'de> for AddDesignsRequest {
                 let mut uri__ = None;
                 let mut designs__ = None;
                 let mut validate_only__ = None;
+                let mut no_symbol_copy__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Uri => {
@@ -113,12 +124,19 @@ impl<'de> serde::Deserialize<'de> for AddDesignsRequest {
                             }
                             validate_only__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::NoSymbolCopy => {
+                            if no_symbol_copy__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("noSymbolCopy"));
+                            }
+                            no_symbol_copy__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(AddDesignsRequest {
                     uri: uri__.unwrap_or_default(),
                     designs: designs__.unwrap_or_default(),
                     validate_only: validate_only__.unwrap_or_default(),
+                    no_symbol_copy: no_symbol_copy__.unwrap_or_default(),
                 })
             }
         }
@@ -136,9 +154,15 @@ impl serde::Serialize for AddDesignsResponse {
         if !self.designs.is_empty() {
             len += 1;
         }
+        if !self.uncopied_symbols.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.AddDesignsResponse", len)?;
         if !self.designs.is_empty() {
             struct_ser.serialize_field("designs", &self.designs)?;
+        }
+        if !self.uncopied_symbols.is_empty() {
+            struct_ser.serialize_field("uncopiedSymbols", &self.uncopied_symbols)?;
         }
         struct_ser.end()
     }
@@ -151,11 +175,14 @@ impl<'de> serde::Deserialize<'de> for AddDesignsResponse {
     {
         const FIELDS: &[&str] = &[
             "designs",
+            "uncopied_symbols",
+            "uncopiedSymbols",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Designs,
+            UncopiedSymbols,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -178,6 +205,7 @@ impl<'de> serde::Deserialize<'de> for AddDesignsResponse {
                     {
                         match value {
                             "designs" => Ok(GeneratedField::Designs),
+                            "uncopiedSymbols" | "uncopied_symbols" => Ok(GeneratedField::UncopiedSymbols),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -198,6 +226,7 @@ impl<'de> serde::Deserialize<'de> for AddDesignsResponse {
                     V: serde::de::MapAccess<'de>,
             {
                 let mut designs__ = None;
+                let mut uncopied_symbols__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Designs => {
@@ -206,10 +235,17 @@ impl<'de> serde::Deserialize<'de> for AddDesignsResponse {
                             }
                             designs__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::UncopiedSymbols => {
+                            if uncopied_symbols__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("uncopiedSymbols"));
+                            }
+                            uncopied_symbols__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(AddDesignsResponse {
                     designs: designs__.unwrap_or_default(),
+                    uncopied_symbols: uncopied_symbols__.unwrap_or_default(),
                 })
             }
         }
@@ -1220,6 +1256,7 @@ impl serde::Serialize for ArtifactType {
             Self::Schematic => "ARTIFACT_TYPE_SCHEMATIC",
             Self::Board => "ARTIFACT_TYPE_BOARD",
             Self::Other => "ARTIFACT_TYPE_OTHER",
+            Self::Symbols => "ARTIFACT_TYPE_SYMBOLS",
         };
         serializer.serialize_str(variant)
     }
@@ -1236,6 +1273,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactType {
             "ARTIFACT_TYPE_SCHEMATIC",
             "ARTIFACT_TYPE_BOARD",
             "ARTIFACT_TYPE_OTHER",
+            "ARTIFACT_TYPE_SYMBOLS",
         ];
 
         struct GeneratedVisitor;
@@ -1281,6 +1319,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactType {
                     "ARTIFACT_TYPE_SCHEMATIC" => Ok(ArtifactType::Schematic),
                     "ARTIFACT_TYPE_BOARD" => Ok(ArtifactType::Board),
                     "ARTIFACT_TYPE_OTHER" => Ok(ArtifactType::Other),
+                    "ARTIFACT_TYPE_SYMBOLS" => Ok(ArtifactType::Symbols),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -4758,6 +4797,9 @@ impl serde::Serialize for Design {
         if self.read_only {
             len += 1;
         }
+        if !self.packs.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Design", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -4795,6 +4837,9 @@ impl serde::Serialize for Design {
         if self.read_only {
             struct_ser.serialize_field("readOnly", &self.read_only)?;
         }
+        if !self.packs.is_empty() {
+            struct_ser.serialize_field("packs", &self.packs)?;
+        }
         struct_ser.end()
     }
 }
@@ -4823,6 +4868,7 @@ impl<'de> serde::Deserialize<'de> for Design {
             "artifacts",
             "read_only",
             "readOnly",
+            "packs",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -4839,6 +4885,7 @@ impl<'de> serde::Deserialize<'de> for Design {
             SeriesLatest,
             Artifacts,
             ReadOnly,
+            Packs,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -4872,6 +4919,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                             "seriesLatest" | "series_latest" => Ok(GeneratedField::SeriesLatest),
                             "artifacts" => Ok(GeneratedField::Artifacts),
                             "readOnly" | "read_only" => Ok(GeneratedField::ReadOnly),
+                            "packs" => Ok(GeneratedField::Packs),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -4903,6 +4951,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                 let mut series_latest__ = None;
                 let mut artifacts__ = None;
                 let mut read_only__ = None;
+                let mut packs__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -4977,6 +5026,12 @@ impl<'de> serde::Deserialize<'de> for Design {
                             }
                             read_only__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::Packs => {
+                            if packs__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("packs"));
+                            }
+                            packs__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Design {
@@ -4992,6 +5047,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                     series_latest: series_latest__.unwrap_or_default(),
                     artifacts: artifacts__.unwrap_or_default(),
                     read_only: read_only__.unwrap_or_default(),
+                    packs: packs__.unwrap_or_default(),
                 })
             }
         }

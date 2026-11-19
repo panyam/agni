@@ -173,6 +173,22 @@ private static final long serialVersionUID = 0L;
     return validateOnly_;
   }
 
+  public static final int NO_SYMBOL_COPY_FIELD_NUMBER = 4;
+  private boolean noSymbolCopy_ = false;
+  /**
+   * <pre>
+   * no_symbol_copy leaves out the symbol folders each design's design.yaml names, for a person who
+   * serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
+   * </pre>
+   *
+   * <code>bool no_symbol_copy = 4 [json_name = "noSymbolCopy"];</code>
+   * @return The noSymbolCopy.
+   */
+  @java.lang.Override
+  public boolean getNoSymbolCopy() {
+    return noSymbolCopy_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -196,6 +212,9 @@ private static final long serialVersionUID = 0L;
     if (validateOnly_ != false) {
       output.writeBool(3, validateOnly_);
     }
+    if (noSymbolCopy_ != false) {
+      output.writeBool(4, noSymbolCopy_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -215,6 +234,10 @@ private static final long serialVersionUID = 0L;
     if (validateOnly_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(3, validateOnly_);
+    }
+    if (noSymbolCopy_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(4, noSymbolCopy_);
     }
     return size;
   }
@@ -246,6 +269,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getDesignsList())) return false;
     if (getValidateOnly()
         != other.getValidateOnly()) return false;
+    if (getNoSymbolCopy()
+        != other.getNoSymbolCopy()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -266,6 +291,9 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + VALIDATE_ONLY_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getValidateOnly());
+    hash = (37 * hash) + NO_SYMBOL_COPY_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getNoSymbolCopy());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -406,6 +434,7 @@ private static final long serialVersionUID = 0L;
       }
       bitField0_ = (bitField0_ & ~0x00000002);
       validateOnly_ = false;
+      noSymbolCopy_ = false;
       return this;
     }
 
@@ -458,6 +487,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.validateOnly_ = validateOnly_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.noSymbolCopy_ = noSymbolCopy_;
+      }
     }
 
     @java.lang.Override
@@ -506,6 +538,9 @@ private static final long serialVersionUID = 0L;
       if (other.getValidateOnly() != false) {
         setValidateOnly(other.getValidateOnly());
       }
+      if (other.getNoSymbolCopy() != false) {
+        setNoSymbolCopy(other.getNoSymbolCopy());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -553,6 +588,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 24
+            case 32: {
+              noSymbolCopy_ = input.readBool();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1008,6 +1048,53 @@ private static final long serialVersionUID = 0L;
     public Builder clearValidateOnly() {
       bitField0_ = (bitField0_ & ~0x00000004);
       validateOnly_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean noSymbolCopy_ ;
+    /**
+     * <pre>
+     * no_symbol_copy leaves out the symbol folders each design's design.yaml names, for a person who
+     * serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
+     * </pre>
+     *
+     * <code>bool no_symbol_copy = 4 [json_name = "noSymbolCopy"];</code>
+     * @return The noSymbolCopy.
+     */
+    @java.lang.Override
+    public boolean getNoSymbolCopy() {
+      return noSymbolCopy_;
+    }
+    /**
+     * <pre>
+     * no_symbol_copy leaves out the symbol folders each design's design.yaml names, for a person who
+     * serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
+     * </pre>
+     *
+     * <code>bool no_symbol_copy = 4 [json_name = "noSymbolCopy"];</code>
+     * @param value The noSymbolCopy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNoSymbolCopy(boolean value) {
+
+      noSymbolCopy_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * no_symbol_copy leaves out the symbol folders each design's design.yaml names, for a person who
+     * serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
+     * </pre>
+     *
+     * <code>bool no_symbol_copy = 4 [json_name = "noSymbolCopy"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearNoSymbolCopy() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      noSymbolCopy_ = false;
       onChanged();
       return this;
     }

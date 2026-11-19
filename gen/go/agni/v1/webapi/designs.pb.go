@@ -92,6 +92,10 @@ const (
 	// ARTIFACT_TYPE_OTHER is files no reader opens, such as a BOM or a PDF. They are kept with the
 	// design and never read.
 	ArtifactType_ARTIFACT_TYPE_OTHER ArtifactType = 4
+	// ARTIFACT_TYPE_SYMBOLS is a folder of symbol files, such as gEDA, Lepton or xschem `.sym` or KiCad
+	// `.kicad_sym`, that the design's schematic finds its parts' pins in (agni issue 1756). The view's
+	// design.yaml names it under `symbols:`, so a read searches it.
+	ArtifactType_ARTIFACT_TYPE_SYMBOLS ArtifactType = 5
 )
 
 // Enum value maps for ArtifactType.
@@ -102,6 +106,7 @@ var (
 		2: "ARTIFACT_TYPE_SCHEMATIC",
 		3: "ARTIFACT_TYPE_BOARD",
 		4: "ARTIFACT_TYPE_OTHER",
+		5: "ARTIFACT_TYPE_SYMBOLS",
 	}
 	ArtifactType_value = map[string]int32{
 		"ARTIFACT_TYPE_UNSPECIFIED": 0,
@@ -109,6 +114,7 @@ var (
 		"ARTIFACT_TYPE_SCHEMATIC":   2,
 		"ARTIFACT_TYPE_BOARD":       3,
 		"ARTIFACT_TYPE_OTHER":       4,
+		"ARTIFACT_TYPE_SYMBOLS":     5,
 	}
 )
 
@@ -1122,7 +1128,10 @@ type AddDesignsRequest struct {
 	// designs are the proposals to add, each named by its folder.
 	Designs []*DesignToAdd `protobuf:"bytes,2,rep,name=designs,proto3" json:"designs,omitempty"`
 	// validate_only answers the designs the request would make, and writes nothing (AIP-163).
-	ValidateOnly  bool `protobuf:"varint,3,opt,name=validate_only,json=validateOnly,proto3" json:"validate_only,omitempty"`
+	ValidateOnly bool `protobuf:"varint,3,opt,name=validate_only,json=validateOnly,proto3" json:"validate_only,omitempty"`
+	// no_symbol_copy leaves out the symbol folders each design's design.yaml names, for a person who
+	// serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
+	NoSymbolCopy  bool `protobuf:"varint,4,opt,name=no_symbol_copy,json=noSymbolCopy,proto3" json:"no_symbol_copy,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1174,6 +1183,13 @@ func (x *AddDesignsRequest) GetDesigns() []*DesignToAdd {
 func (x *AddDesignsRequest) GetValidateOnly() bool {
 	if x != nil {
 		return x.ValidateOnly
+	}
+	return false
+}
+
+func (x *AddDesignsRequest) GetNoSymbolCopy() bool {
+	if x != nil {
+		return x.NoSymbolCopy
 	}
 	return false
 }
@@ -1263,9 +1279,13 @@ func (x *DesignToAdd) GetEntry() string {
 type AddDesignsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// designs are the designs made, in the request's order.
-	Designs       []*Design `protobuf:"bytes,1,rep,name=designs,proto3" json:"designs,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Designs []*Design `protobuf:"bytes,1,rep,name=designs,proto3" json:"designs,omitempty"`
+	// uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+	// "designs/{design}: mount://<mount>/<dir>". A read of that design finds those parts only through
+	// a pack holding the folder.
+	UncopiedSymbols []string `protobuf:"bytes,2,rep,name=uncopied_symbols,json=uncopiedSymbols,proto3" json:"uncopied_symbols,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AddDesignsResponse) Reset() {
@@ -1301,6 +1321,13 @@ func (*AddDesignsResponse) Descriptor() ([]byte, []int) {
 func (x *AddDesignsResponse) GetDesigns() []*Design {
 	if x != nil {
 		return x.Designs
+	}
+	return nil
+}
+
+func (x *AddDesignsResponse) GetUncopiedSymbols() []string {
+	if x != nil {
+		return x.UncopiedSymbols
 	}
 	return nil
 }
@@ -2150,19 +2177,21 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x06follow\x18\x04 \x01(\bR\x06follow\x12\x18\n" +
 	"\aversion\x18\x05 \x01(\tR\aversion\x127\n" +
 	"\tread_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\breadTime\x12\x1b\n" +
-	"\tread_hash\x18\a \x01(\tR\breadHash\"\x81\x01\n" +
+	"\tread_hash\x18\a \x01(\tR\breadHash\"\xa7\x01\n" +
 	"\x11AddDesignsRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\x125\n" +
 	"\adesigns\x18\x02 \x03(\v2\x1b.agni.v1.webapi.DesignToAddR\adesigns\x12#\n" +
-	"\rvalidate_only\x18\x03 \x01(\bR\fvalidateOnly\"\x86\x01\n" +
+	"\rvalidate_only\x18\x03 \x01(\bR\fvalidateOnly\x12$\n" +
+	"\x0eno_symbol_copy\x18\x04 \x01(\bR\fnoSymbolCopy\"\x86\x01\n" +
 	"\vDesignToAdd\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x1b\n" +
 	"\tdesign_id\x18\x02 \x01(\tR\bdesignId\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12\x16\n" +
 	"\x06series\x18\x04 \x01(\tR\x06series\x12\x14\n" +
-	"\x05entry\x18\x05 \x01(\tR\x05entry\"F\n" +
+	"\x05entry\x18\x05 \x01(\tR\x05entry\"q\n" +
 	"\x12AddDesignsResponse\x120\n" +
-	"\adesigns\x18\x01 \x03(\v2\x16.agni.v1.webapi.DesignR\adesigns\"(\n" +
+	"\adesigns\x18\x01 \x03(\v2\x16.agni.v1.webapi.DesignR\adesigns\x12)\n" +
+	"\x10uncopied_symbols\x18\x02 \x03(\tR\x0funcopiedSymbols\"(\n" +
 	"\x12GetArtifactRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"j\n" +
 	"\x14ListArtifactsRequest\x12\x16\n" +
@@ -2213,13 +2242,14 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"ReportView\x12\x1b\n" +
 	"\x17REPORT_VIEW_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11REPORT_VIEW_BASIC\x10\x01\x12\x14\n" +
-	"\x10REPORT_VIEW_FULL\x10\x02*\x97\x01\n" +
+	"\x10REPORT_VIEW_FULL\x10\x02*\xb2\x01\n" +
 	"\fArtifactType\x12\x1d\n" +
 	"\x19ARTIFACT_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15ARTIFACT_TYPE_NETLIST\x10\x01\x12\x1b\n" +
 	"\x17ARTIFACT_TYPE_SCHEMATIC\x10\x02\x12\x17\n" +
 	"\x13ARTIFACT_TYPE_BOARD\x10\x03\x12\x17\n" +
-	"\x13ARTIFACT_TYPE_OTHER\x10\x042\xc6\f\n" +
+	"\x13ARTIFACT_TYPE_OTHER\x10\x04\x12\x19\n" +
+	"\x15ARTIFACT_TYPE_SYMBOLS\x10\x052\xc6\f\n" +
 	"\rDesignService\x12K\n" +
 	"\fCreateDesign\x12#.agni.v1.webapi.CreateDesignRequest\x1a\x16.agni.v1.webapi.Design\x12E\n" +
 	"\tGetDesign\x12 .agni.v1.webapi.GetDesignRequest\x1a\x16.agni.v1.webapi.Design\x12V\n" +

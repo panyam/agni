@@ -403,7 +403,15 @@ names the board's entry. The server keeps the ones named, copies their files by 
 and records each artifact's `source`, the mount and folder its files came from. It writes nothing
 into the mount. A design's title, series and intent come from the proposal and the request, never
 from a `design.yaml`. `ListDesigns` with `source = "mount://<mount>/<path>"` lists the designs read
-from a folder. Reading a folder by its path, as `agni check <folder>` does, still honours its
+from a folder.
+
+Two things from a folder's `design.yaml` do carry over, and both are about symbols (agni issue
+1756). A symbol folder it names under `symbols:` is copied in as an artifact of type
+`ARTIFACT_TYPE_SYMBOLS`, which the view's `design.yaml` names, so the stored design reads its parts'
+pins alone. The project it `extends` is kept as a pack, and the design's `packs` name it. A read
+that names no packs, a snapshot naming the design or a report naming no project, reads under them.
+So symbols the design names are the design's, pinned, and symbols its project names are shared
+through one pack. `AddDesignsRequest.no_symbol_copy` leaves the design's own folders out. Reading a folder by its path, as `agni check <folder>` does, still honours its
 `design.yaml`. The browser engine and the static demo still list their seeded boards, since they
 have no store.
 

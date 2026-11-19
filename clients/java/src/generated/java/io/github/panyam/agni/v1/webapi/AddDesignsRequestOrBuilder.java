@@ -83,4 +83,15 @@ public interface AddDesignsRequestOrBuilder extends
    * @return The validateOnly.
    */
   boolean getValidateOnly();
+
+  /**
+   * <pre>
+   * no_symbol_copy leaves out the symbol folders each design's design.yaml names, for a person who
+   * serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
+   * </pre>
+   *
+   * <code>bool no_symbol_copy = 4 [json_name = "noSymbolCopy"];</code>
+   * @return The noSymbolCopy.
+   */
+  boolean getNoSymbolCopy();
 }

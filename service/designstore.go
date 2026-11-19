@@ -74,6 +74,9 @@ type DesignRecord struct {
 	Title            string
 	Series           string
 	FlattenHierarchy bool
+	// Packs are the packs a read of the design layers its config over when the request names none,
+	// each "packs/{pack}" (agni issue 1756).
+	Packs []string
 	// Intent is the design's declared architecture (agni issue 1704), as `intent:` in a design.yaml.
 	// Nil declares none. A pack's intent, or a request's, replaces it for one read.
 	Intent *configpb.DesignIntent

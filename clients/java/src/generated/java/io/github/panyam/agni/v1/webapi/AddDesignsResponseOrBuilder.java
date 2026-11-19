@@ -53,4 +53,53 @@ public interface AddDesignsResponseOrBuilder extends
    */
   io.github.panyam.agni.v1.webapi.DesignOrBuilder getDesignsOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+   * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+   * a pack holding the folder.
+   * </pre>
+   *
+   * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+   * @return A list containing the uncopiedSymbols.
+   */
+  java.util.List<java.lang.String>
+      getUncopiedSymbolsList();
+  /**
+   * <pre>
+   * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+   * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+   * a pack holding the folder.
+   * </pre>
+   *
+   * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+   * @return The count of uncopiedSymbols.
+   */
+  int getUncopiedSymbolsCount();
+  /**
+   * <pre>
+   * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+   * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+   * a pack holding the folder.
+   * </pre>
+   *
+   * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+   * @param index The index of the element to return.
+   * @return The uncopiedSymbols at the given index.
+   */
+  java.lang.String getUncopiedSymbols(int index);
+  /**
+   * <pre>
+   * uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+   * "designs/{design}: mount://&lt;mount&gt;/&lt;dir&gt;". A read of that design finds those parts only through
+   * a pack holding the folder.
+   * </pre>
+   *
+   * <code>repeated string uncopied_symbols = 2 [json_name = "uncopiedSymbols"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the uncopiedSymbols at the given index.
+   */
+  com.google.protobuf.ByteString
+      getUncopiedSymbolsBytes(int index);
 }

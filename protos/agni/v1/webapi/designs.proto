@@ -79,7 +79,13 @@ service DesignService {
   // Each added design is a stored one: the server copies its files by hash, groups them into
   // artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
   // series and intent come from the proposal and the request, so the server writes nothing into the
-  // mount. A proposal the request does not name is not added. With validate_only the server answers
+  // mount. A proposal the request does not name is not added.
+  //
+  // A design keeps the symbol folders its design.yaml names under `symbols:` as artifacts of type
+  // ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). When its design.yaml
+  // extends a project, the server keeps that project as a pack, as `agni designs push` does, and
+  // sets the design's packs to it, so the project's own symbol folders are shared rather than copied
+  // into each design. With validate_only the server answers
   // the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
   // design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
   // FAILED_PRECONDITION.
@@ -320,6 +326,9 @@ message AddDesignsRequest {
   repeated DesignToAdd designs = 2;
   // validate_only answers the designs the request would make, and writes nothing (AIP-163).
   bool validate_only = 3;
+  // no_symbol_copy leaves out the symbol folders each design's design.yaml names, for a person who
+  // serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
+  bool no_symbol_copy = 4;
 }
 
 // DesignToAdd picks one proposal and names the design it becomes.
@@ -339,6 +348,10 @@ message DesignToAdd {
 message AddDesignsResponse {
   // designs are the designs made, in the request's order.
   repeated Design designs = 1;
+  // uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
+  // "designs/{design}: mount://<mount>/<dir>". A read of that design finds those parts only through
+  // a pack holding the folder.
+  repeated string uncopied_symbols = 2;
 }
 
 // ArtifactType is what an artifact holds, found from its entry's format.
@@ -353,6 +366,10 @@ enum ArtifactType {
   // ARTIFACT_TYPE_OTHER is files no reader opens, such as a BOM or a PDF. They are kept with the
   // design and never read.
   ARTIFACT_TYPE_OTHER = 4;
+  // ARTIFACT_TYPE_SYMBOLS is a folder of symbol files, such as gEDA, Lepton or xschem `.sym` or KiCad
+  // `.kicad_sym`, that the design's schematic finds its parts' pins in (agni issue 1756). The view's
+  // design.yaml names it under `symbols:`, so a read searches it.
+  ARTIFACT_TYPE_SYMBOLS = 5;
 }
 
 message GetArtifactRequest {

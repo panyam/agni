@@ -11,14 +11,29 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/goapplib/storage/mounts"
+	"gopkg.in/yaml.v3"
 )
 
 // DesignProposer proposes the designs a mounted folder's files make, as
 // WorkspaceService.ProposeDesigns does.
 type DesignProposer interface {
 	ProposeDesigns(ctx context.Context, req *webapi.ProposeDesignsRequest) (*webapi.ProposeDesignsResponse, error)
+	// ListDir lists one folder of a mount, which AddDesigns walks to copy a design's symbol folders.
+	ListDir(ctx context.Context, req *webapi.ListDirRequest) (*webapi.ListDirResponse, error)
+}
+
+// ProjectPacker keeps the project a mounted design.yaml extends as a pack and returns its name,
+// "packs/{pack}", as `agni designs push` does from a folder (agni issue 1756). project is the
+// project.yaml's URI. A pack the server holds with the same hash is left as it is.
+type ProjectPacker func(ctx context.Context, project mounts.URI) (string, error)
+
+// WithProjectPacks lets AddDesigns keep each design's project as a pack and read the design under
+// it, and returns s. Without it, an added design names no packs.
+func (s *DesignService) WithProjectPacks(p ProjectPacker) *DesignService {
+	s.packer = p
+	return s
 }
 
 // WithMountFiles lets AddDesigns make designs from mounted folders, and returns s (agni issue 1736).
@@ -36,6 +51,10 @@ type addedDesign struct {
 	record   DesignRecord
 	writes   []ArtifactWrite
 	contents map[string][]byte
+	// project is the project.yaml the design's descriptor extends, zero for none.
+	project mounts.URI
+	// uncopied are the symbol folders no_symbol_copy left out.
+	uncopied []string
 }
 
 // AddDesigns makes stored designs from the proposals a mounted folder makes that the request names.
@@ -68,6 +87,9 @@ func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRe
 		if err != nil {
 			return nil, err
 		}
+		if err := s.planSymbols(ctx, u.Mount, p, &add, req.GetNoSymbolCopy()); err != nil {
+			return nil, err
+		}
 		if ids[add.id] {
 			return nil, fmt.Errorf("%w: two proposals would both be %s", ErrInvalidArgument, StandaloneDesignName(add.id))
 		}
@@ -90,9 +112,21 @@ func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRe
 		}
 		return resp, nil
 	}
+	for i, a := range adds {
+		if !a.project.IsZero() && s.packer != nil {
+			pack, err := s.packer(ctx, a.project)
+			if err != nil {
+				return nil, fmt.Errorf("%s: keeping its project %s as a pack: %w", StandaloneDesignName(a.id), a.project, err)
+			}
+			adds[i].record.Packs = []string{pack}
+		}
+	}
 	for _, a := range adds {
 		if err := s.writeAdded(ctx, a); err != nil {
 			return nil, err
+		}
+		for _, u := range a.uncopied {
+			resp.UncopiedSymbols = append(resp.UncopiedSymbols, StandaloneDesignName(a.id)+": "+u)
 		}
 	}
 	// Read back once every design is written, so a series' latest is marked among all of them.
@@ -280,5 +314,98 @@ func (s *DesignService) SourcedFrom(ctx context.Context, mount, dir string) ([]s
 		}
 	}
 	slices.Sort(out)
+	return out, nil
+}
+
+// planSymbols reads the proposal's design.yaml for the project it extends and the symbol folders
+// it names (agni issue 1756). Each symbol folder becomes an artifact of type ARTIFACT_TYPE_SYMBOLS,
+// named symbols, symbols-2 and so on, with its files copied by hash and its source in the mount, so
+// the design reads alone. A folder may sit outside the design's own folder, as a library a sibling
+// design keeps does. With noCopy the folders are listed in add.uncopied instead. A proposal with no
+// design.yaml has neither.
+func (s *DesignService) planSymbols(ctx context.Context, mount string, p *webapi.ProposedDesign, add *addedDesign, noCopy bool) error {
+	descriptor, err := mounts.NewURI(mount, path.Join(strings.Trim(p.GetFolder(), "/"), DesignDescriptorName))
+	if err != nil {
+		return err
+	}
+	raw, err := s.mountRead.ReadFile(ctx, descriptor)
+	if err != nil {
+		return nil
+	}
+	var d struct {
+		Extends string   `yaml:"extends"`
+		Symbols []string `yaml:"symbols"`
+	}
+	if yaml.Unmarshal(raw, &d) != nil {
+		return nil
+	}
+	if d.Extends != "" {
+		if add.project, err = descriptor.Resolve(d.Extends); err != nil {
+			return fmt.Errorf("%w: %s extends %q: %v", ErrInvalidArgument, descriptor, d.Extends, err)
+		}
+	}
+	taken := map[string]bool{}
+	for _, w := range add.writes {
+		taken[w.ID] = true
+	}
+	for _, ref := range d.Symbols {
+		dir, err := descriptor.Resolve(ref)
+		if err != nil {
+			return fmt.Errorf("%w: %s names the symbol folder %q: %v", ErrInvalidArgument, descriptor, ref, err)
+		}
+		if noCopy {
+			add.uncopied = append(add.uncopied, dir.String())
+			continue
+		}
+		files, err := s.walk(ctx, dir)
+		if err != nil {
+			return fmt.Errorf("%s names the symbol folder %s: %w", descriptor, dir, err)
+		}
+		id := "symbols"
+		for i := 2; taken[id]; i++ {
+			id = fmt.Sprintf("symbols-%d", i)
+		}
+		taken[id] = true
+		w := ArtifactWrite{ID: id, AllowMissing: true, Source: &webapi.ArtifactSource{Mount: dir.Mount, Path: dir.Path}}
+		for _, f := range files {
+			b, err := s.mountRead.ReadFile(ctx, f)
+			if err != nil {
+				return ClassifyLoadErr(err)
+			}
+			sum := sha256.Sum256(b)
+			h := "sha256:" + hex.EncodeToString(sum[:])
+			add.contents[h] = b
+			w.Files = append(w.Files, &webapi.SnapshotFile{Path: strings.TrimPrefix(f.Path, dir.Path+"/"), Sha256: h, Size: int64(len(b))})
+		}
+		if len(w.Files) == 0 {
+			continue
+		}
+		add.writes = append(add.writes, w)
+	}
+	return nil
+}
+
+// walk lists every file under dir in its mount, through the proposer's ListDir.
+func (s *DesignService) walk(ctx context.Context, dir mounts.URI) ([]mounts.URI, error) {
+	resp, err := s.proposer.ListDir(ctx, &webapi.ListDirRequest{Uri: dir.String()})
+	if err != nil {
+		return nil, err
+	}
+	var out []mounts.URI
+	for _, e := range resp.GetEntries() {
+		u, err := dir.Join(e.GetName())
+		if err != nil {
+			return nil, err
+		}
+		if !e.GetIsDir() {
+			out = append(out, u)
+			continue
+		}
+		sub, err := s.walk(ctx, u)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, sub...)
+	}
 	return out, nil
 }

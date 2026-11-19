@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/panyam/goapplib/storage/blobs"
+	"github.com/panyam/goapplib/storage/mounts"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
@@ -105,6 +106,11 @@ func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir
 	}
 	// AddDesigns proposes a mounted folder's designs and reads their files (agni issue 1736).
 	designSvc.WithMountFiles(service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)), osFiles(ms))
+	if packStore != nil && resolver != nil && resolver.Blobs != nil {
+		// An added design's project becomes a pack it reads under, as `agni designs push` keeps one
+		// (agni issue 1756).
+		designSvc.WithProjectPacks(projectPacker(ms, packSvc, resolver.Blobs))
+	}
 	return projectSvc, designSvc, packSvc, nil
 }
 
@@ -169,4 +175,34 @@ func sweepUploads(ms *mountset.Table, dirStore *projects.DirStore, packs *projec
 		fmt.Fprintf(log, "note: swept %d old design views, %d old pack views and %d files nothing names from --uploads\n", views, packViews, removed)
 	}
 	return nil
+}
+
+// projectPacker keeps a mounted project.yaml as a pack, as `agni designs push` keeps the project a
+// folder's design.yaml extends (agni issue 1756). It reads the project through its host path with
+// localPack, puts the files' contents in the uploads, and imports the pack. A pack the server holds
+// with the same hash is left as it is.
+func projectPacker(ms *mountset.Table, packs *service.PackService, blobs service.UploadStore) service.ProjectPacker {
+	return func(ctx context.Context, project mounts.URI) (string, error) {
+		host, err := ms.Resolve(project)
+		if err != nil {
+			return "", err
+		}
+		pack, files, _, err := localPack(host, "", "")
+		if err != nil {
+			return "", fmt.Errorf("%w: %v", service.ErrInvalidArgument, err)
+		}
+		if have, err := packs.GetPack(ctx, &webapi.GetPackRequest{Name: pack.GetName()}); err == nil && have.GetHash() == service.PackHash(pack) {
+			return pack.GetName(), nil
+		}
+		for _, b := range files.byHash {
+			if _, err := blobs.Put(b); err != nil {
+				return "", err
+			}
+		}
+		out, err := packs.ImportPackFiles(ctx, &webapi.ImportPackFilesRequest{PackId: strings.TrimPrefix(pack.GetName(), "packs/"), Title: pack.GetTitle(), Files: files.files})
+		if err != nil {
+			return "", err
+		}
+		return out.GetName(), nil
+	}
 }

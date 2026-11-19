@@ -117,6 +117,7 @@ type recordYAML struct {
 	Title            string           `yaml:"title,omitempty"`
 	Series           string           `yaml:"series,omitempty"`
 	FlattenHierarchy bool             `yaml:"flatten_hierarchy,omitempty"`
+	Packs            []string         `yaml:"packs,omitempty"`
 	Intent           yaml.Node        `yaml:"intent,omitempty"`
 	Rev              string           `yaml:"rev,omitempty"`
 	UpdateTime       time.Time        `yaml:"update_time"`
@@ -229,7 +230,18 @@ func (s *DirStore) designOf(id string, rec recordYAML) (*webapi.Design, error) {
 				return nil, err
 			}
 		}
+		for _, dir := range symbolDirs(rec) {
+			u, err := join(dir)
+			if err != nil {
+				return nil, err
+			}
+			if d.Config == nil {
+				d.Config = &webapi.AnalysisConfig{}
+			}
+			d.Config.SymbolPathUris = append(d.Config.SymbolPathUris, u)
+		}
 	}
+	d.Packs = rec.Packs
 	d.Name = service.StandaloneDesignName(id)
 	if !rec.UpdateTime.IsZero() {
 		d.UpdateTime = timestamppb.New(rec.UpdateTime)
@@ -252,7 +264,7 @@ func describe(id string, rec recordYAML) (entry string, companions []string, raw
 	}
 	// The view's descriptor holds what reading the board needs. The series stays in the record alone,
 	// so moving a design to another series keeps its view.
-	y := descriptorYAML{Name: id, Title: rec.Title, Entry: entry, Companions: companions, FlattenHierarchy: rec.FlattenHierarchy, Intent: rec.Intent}
+	y := descriptorYAML{Name: id, Title: rec.Title, Entry: entry, Companions: companions, FlattenHierarchy: rec.FlattenHierarchy, Intent: rec.Intent, Symbols: symbolDirs(rec)}
 	if raw, err = yaml.Marshal(&y); err != nil {
 		return "", nil, nil, err
 	}
@@ -307,7 +319,7 @@ func (s *DirStore) CreateDesign(_ context.Context, id string, rec service.Design
 	} else if !errors.Is(err, service.ErrNotFound) {
 		return nil, err
 	}
-	r := recordYAML{Title: rec.Title, Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy}
+	r := recordYAML{Title: rec.Title, Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy, Packs: rec.Packs}
 	var err error
 	if r.Intent, err = encodeIntent(rec.Intent); err != nil {
 		return nil, err
@@ -326,12 +338,12 @@ func (s *DirStore) UpdateDesign(_ context.Context, id string, update func(*servi
 	if err != nil {
 		return nil, err
 	}
-	rec := service.DesignRecord{Title: r.Title, Series: r.Series, FlattenHierarchy: r.FlattenHierarchy}
+	rec := service.DesignRecord{Title: r.Title, Series: r.Series, FlattenHierarchy: r.FlattenHierarchy, Packs: r.Packs}
 	if rec.Intent, err = decodeIntent(r.Intent); err != nil {
 		return nil, err
 	}
 	update(&rec)
-	r.Title, r.Series, r.FlattenHierarchy = rec.Title, rec.Series, rec.FlattenHierarchy
+	r.Title, r.Series, r.FlattenHierarchy, r.Packs = rec.Title, rec.Series, rec.FlattenHierarchy, rec.Packs
 	if r.Intent, err = encodeIntent(rec.Intent); err != nil {
 		return nil, err
 	}
@@ -762,4 +774,17 @@ func storedPath(p string) (string, error) {
 		}
 	}
 	return clean, nil
+}
+
+// symbolDirs names the design's symbol folders in its view, one per artifact of type
+// ARTIFACT_TYPE_SYMBOLS, each the artifact's own folder (agni issue 1756). The view's design.yaml
+// lists them under `symbols:`, so a read searches them for its parts.
+func symbolDirs(rec recordYAML) []string {
+	var out []string
+	for _, a := range rec.Artifacts {
+		if a.Type == webapi.ArtifactType_ARTIFACT_TYPE_SYMBOLS.String() {
+			out = append(out, a.ID)
+		}
+	}
+	return out
 }

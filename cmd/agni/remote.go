@@ -16,11 +16,11 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -430,4 +430,27 @@ func (r remoteLexicon) ExplainNet(ctx context.Context, req *webapi.ExplainNetReq
 
 func (r remoteLexicon) CompareLexicons(ctx context.Context, req *webapi.CompareLexiconsRequest) (*webapi.CompareLexiconsResponse, error) {
 	return unary(ctx, r.c.CompareLexicons, req)
+}
+
+// storedDesignPacks is the packs a stored design reads under by default, when check or review names
+// one, designs/<id>, on a server and passes no --pack (agni issue 1756). A design added from a
+// mounted project names that project's pack, so its rules apply with no flag. It notes the packs on
+// stderr, since rules nobody typed decide the run. Anything else returns none.
+func storedDesignPacks(cmd *cobra.Command, remoteURL, arg string) ([]string, error) {
+	if remoteURL == "" || !storedDesignArg(arg) {
+		return nil, nil
+	}
+	r, err := dialRemote(cmd.Context(), remoteURL)
+	if err != nil {
+		return nil, err
+	}
+	d, err := webapiconnect.NewDesignServiceClient(r.http, r.url).GetDesign(cmd.Context(), connect.NewRequest(&webapi.GetDesignRequest{Name: service.StandaloneDesignName(strings.TrimPrefix(arg, "designs/"))}))
+	if err != nil {
+		return nil, rpcFailed(err)
+	}
+	packs := d.Msg.GetPacks()
+	if len(packs) > 0 {
+		fmt.Fprintf(cmd.ErrOrStderr(), "note: reading %s under its packs %s; pass --pack to name others\n", arg, strings.Join(packs, ", "))
+	}
+	return packs, nil
 }

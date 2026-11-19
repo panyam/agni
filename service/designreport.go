@@ -79,7 +79,15 @@ func (s *DesignService) CreateReport(ctx context.Context, req *webapi.CreateRepo
 	if err != nil {
 		return nil, err
 	}
-	packs, err := s.reportPacks(ctx, req.GetProject(), req.GetReport().GetPacks())
+	named := req.GetReport().GetPacks()
+	if len(named) == 0 && req.GetProject() == "" {
+		// A report naming neither packs nor a project reads under the design's own packs (agni issue
+		// 1756), as a snapshot naming the design does.
+		if d, err := s.catalog.Design(ctx, req.GetParent()); err == nil {
+			named = d.GetPacks()
+		}
+	}
+	packs, err := s.reportPacks(ctx, req.GetProject(), named)
 	if err != nil {
 		return nil, err
 	}

@@ -309,6 +309,17 @@ agni designs add boards/memory_unit --yes --series b200 --remote http://localhos
 The server copies each board's files, and each artifact records the mount and folder they came
 from.
 
+Some schematics keep their parts' pins in separate symbol files: gEDA, Lepton and xschem read `.sym`
+files from the folders a `design.yaml` names under `symbols:` (agni issue 1756). An added design
+keeps each of those folders as an artifact of its own, a symbol library, even when the folder sits
+beside the board's rather than inside it. So the design reads alone. When the `design.yaml` extends
+a project, the server keeps that project as a pack, as `agni designs push` does, and the design
+reads under it. So the project's own symbol folders, profiles and conventions are shared by every
+design added from it, held once. `agni check designs/<id>` with no `--pack` reads under the design's
+packs, and says so. The files themselves are stored once by hash, however many designs copy them.
+`--no-symbol-copy` leaves the design's own symbol folders out, for a library a pack already holds,
+and names each one it left out.
+
 In a container, give the store and the uploads a volume. The image makes `/var/lib/agni/meta` and
 `/var/lib/agni/files` owned by its user, so a named volume on either starts out writable. The
 compose bundle (`deploy/compose.yaml`) mounts one volume, `data`, on `/var/lib/agni` and keeps both

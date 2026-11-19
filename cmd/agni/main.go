@@ -702,6 +702,11 @@ func checkCmd() *cobra.Command {
 			// coverage line counts the verdicts alone, and rulesRun is counted from the server's listing.
 			var runRules []*check.Rule
 			rulesRun := 0
+			if len(packs) == 0 {
+				if packs, err = storedDesignPacks(cmd, remoteURL, args[0]); err != nil {
+					return err
+				}
+			}
 			if len(packs) > 0 {
 				// The packs compose the run's catalog on the server, and this process never sees it. So
 				// --rule names go as written and the server refuses one it lacks, and no --rule runs the
@@ -1103,6 +1108,12 @@ func reviewCmd() *cobra.Command {
 			// since a checklist nobody typed cannot be recovered from the outcomes.
 			// Under --pack the designs are ones a server keeps, and a checklist named or left out
 			// comes from the packs, once the server is dialled below (agni issue 1746).
+			if len(packs) == 0 && len(args) == 1 {
+				var err error
+				if packs, err = storedDesignPacks(cmd, remoteURL, args[0]); err != nil {
+					return err
+				}
+			}
 			if len(packs) > 0 {
 				if remoteURL == "" || slices.ContainsFunc(args, func(a string) bool { return !storedDesignArg(a) }) {
 					return fmt.Errorf("--pack names a pack an agni server keeps, so it applies to designs that server keeps: agni review designs/<id> --pack <k> --remote <url>")

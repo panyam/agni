@@ -26,8 +26,14 @@ type artifactRole struct {
 // sources. Files making none hold no design, unless there is one file a reader opens, such as a lone
 // `.kicad_pcb`, which the proposer leaves to its schematic.
 func classifyArtifact(id string, files []string, read func(string) ([]byte, error)) (artifactRole, error) {
-	resp := service.ProposeFromFiles("", files, read)
 	role := artifactRole{id: id, typ: webapi.ArtifactType_ARTIFACT_TYPE_OTHER}
+	// A folder of symbol files alone is a symbol library the design's schematic searches (agni issue
+	// 1756), and no reader opens it as a design.
+	if len(files) > 0 && !slices.ContainsFunc(files, func(f string) bool { return !symbolFile(f) }) {
+		role.typ = webapi.ArtifactType_ARTIFACT_TYPE_SYMBOLS
+		return role, nil
+	}
+	resp := service.ProposeFromFiles("", files, read)
 	switch len(resp.GetDesigns()) {
 	case 0:
 		var readable []string
@@ -118,4 +124,11 @@ func ids(rs []artifactRole) string {
 
 func typeWord(t webapi.ArtifactType) string {
 	return strings.ToLower(strings.TrimPrefix(t.String(), "ARTIFACT_TYPE_"))
+}
+
+// symbolFile reports whether f is a symbol file a schematic reads its parts from: gEDA, Lepton or
+// xschem `.sym`, or KiCad `.kicad_sym`.
+func symbolFile(f string) bool {
+	ext := strings.ToLower(path.Ext(f))
+	return ext == ".sym" || ext == ".kicad_sym"
 }

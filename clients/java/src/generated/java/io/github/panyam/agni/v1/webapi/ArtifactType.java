@@ -52,6 +52,16 @@ public enum ArtifactType
    * <code>ARTIFACT_TYPE_OTHER = 4;</code>
    */
   ARTIFACT_TYPE_OTHER(4),
+  /**
+   * <pre>
+   * ARTIFACT_TYPE_SYMBOLS is a folder of symbol files, such as gEDA, Lepton or xschem `.sym` or KiCad
+   * `.kicad_sym`, that the design's schematic finds its parts' pins in (agni issue 1756). The view's
+   * design.yaml names it under `symbols:`, so a read searches it.
+   * </pre>
+   *
+   * <code>ARTIFACT_TYPE_SYMBOLS = 5;</code>
+   */
+  ARTIFACT_TYPE_SYMBOLS(5),
   UNRECOGNIZED(-1),
   ;
 
@@ -101,6 +111,16 @@ public enum ArtifactType
    * <code>ARTIFACT_TYPE_OTHER = 4;</code>
    */
   public static final int ARTIFACT_TYPE_OTHER_VALUE = 4;
+  /**
+   * <pre>
+   * ARTIFACT_TYPE_SYMBOLS is a folder of symbol files, such as gEDA, Lepton or xschem `.sym` or KiCad
+   * `.kicad_sym`, that the design's schematic finds its parts' pins in (agni issue 1756). The view's
+   * design.yaml names it under `symbols:`, so a read searches it.
+   * </pre>
+   *
+   * <code>ARTIFACT_TYPE_SYMBOLS = 5;</code>
+   */
+  public static final int ARTIFACT_TYPE_SYMBOLS_VALUE = 5;
 
 
   public final int getNumber() {
@@ -132,6 +152,7 @@ public enum ArtifactType
       case 2: return ARTIFACT_TYPE_SCHEMATIC;
       case 3: return ARTIFACT_TYPE_BOARD;
       case 4: return ARTIFACT_TYPE_OTHER;
+      case 5: return ARTIFACT_TYPE_SYMBOLS;
       default: return null;
     }
   }
