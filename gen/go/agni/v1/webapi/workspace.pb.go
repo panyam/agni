@@ -165,7 +165,10 @@ type Mount struct {
 	Fixed bool `protobuf:"varint,8,opt,name=fixed,proto3" json:"fixed,omitempty"`
 	// writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
 	// are written only by the server's own stores, so neither is writable.
-	Writable      bool `protobuf:"varint,9,opt,name=writable,proto3" json:"writable,omitempty"`
+	Writable bool `protobuf:"varint,9,opt,name=writable,proto3" json:"writable,omitempty"`
+	// connection is the connection the server reads the mount through, "connections/{connection}",
+	// empty for a public or local source (agni issue 1724).
+	Connection    string `protobuf:"bytes,10,opt,name=connection,proto3" json:"connection,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -263,15 +266,25 @@ func (x *Mount) GetWritable() bool {
 	return false
 }
 
+func (x *Mount) GetConnection() string {
+	if x != nil {
+		return x.Connection
+	}
+	return ""
+}
+
 type CreateMountRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the new mount's handle. It follows the rules of a mount:// authority.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// source names what to mount, as a URL. github://<owner>/<repo> is the one source this build
-	// makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+	// makes. A public repo needs no sign-in, and a private one reads through a connection.
 	Source string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
 	// ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
-	Ref           string `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
+	Ref string `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
+	// connection is the connection the server reads the source through, "connections/{connection}"
+	// (agni issue 1724). Empty reads a public source with no sign-in.
+	Connection    string `protobuf:"bytes,4,opt,name=connection,proto3" json:"connection,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -323,6 +336,13 @@ func (x *CreateMountRequest) GetSource() string {
 func (x *CreateMountRequest) GetRef() string {
 	if x != nil {
 		return x.Ref
+	}
+	return ""
+}
+
+func (x *CreateMountRequest) GetConnection() string {
+	if x != nil {
+		return x.Connection
 	}
 	return ""
 }
@@ -1371,7 +1391,7 @@ var File_agni_v1_webapi_workspace_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\n" +
-	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\x1a\x1cagni/v1/webapi/project.proto\"\xe4\x01\n" +
+	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\x1a\x1cagni/v1/webapi/project.proto\"\x84\x02\n" +
 	"\x05Mount\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n" +
@@ -1381,11 +1401,18 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x03ref\x18\x06 \x01(\tR\x03ref\x12\x16\n" +
 	"\x06commit\x18\a \x01(\tR\x06commit\x12\x14\n" +
 	"\x05fixed\x18\b \x01(\bR\x05fixed\x12\x1a\n" +
-	"\bwritable\x18\t \x01(\bR\bwritable\"R\n" +
+	"\bwritable\x18\t \x01(\bR\bwritable\x12\x1e\n" +
+	"\n" +
+	"connection\x18\n" +
+	" \x01(\tR\n" +
+	"connection\"r\n" +
 	"\x12CreateMountRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12\x10\n" +
-	"\x03ref\x18\x03 \x01(\tR\x03ref\"(\n" +
+	"\x03ref\x18\x03 \x01(\tR\x03ref\x12\x1e\n" +
+	"\n" +
+	"connection\x18\x04 \x01(\tR\n" +
+	"connection\"(\n" +
 	"\x12DeleteMountRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x15\n" +
 	"\x13DeleteMountResponse\"%\n" +

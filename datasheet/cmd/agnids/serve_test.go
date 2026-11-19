@@ -193,7 +193,7 @@ func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := serve.CreateMount(t.Context(), "vendor", "github://ti/datasheets", ""); err != nil {
+	if _, err := serve.CreateMount(t.Context(), "vendor", "github://ti/datasheets", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 40; i++ {

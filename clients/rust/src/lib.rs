@@ -41,6 +41,7 @@ use tonic::transport::{Channel, Endpoint};
 use tonic::{Code, Request, Status};
 
 use agni::v1::webapi::check_service_client::CheckServiceClient;
+use agni::v1::webapi::connection_service_client::ConnectionServiceClient;
 use agni::v1::webapi::design_service_client::DesignServiceClient;
 use agni::v1::webapi::design_view_service_client::DesignViewServiceClient;
 use agni::v1::webapi::pack_service_client::PackServiceClient;
@@ -133,6 +134,12 @@ impl Client {
     /// `agni.v1.webapi.DesignService`, the designs a server holds (agni issue 1694).
     pub fn designs(&self) -> DesignServiceClient<Transport> {
         DesignServiceClient::new(self.transport())
+    }
+
+    /// `agni.v1.webapi.ConnectionService`, the connections a server reads private sources through
+    /// (agni issue 1724).
+    pub fn connections(&self) -> ConnectionServiceClient<Transport> {
+        ConnectionServiceClient::new(self.transport())
     }
 
     /// `agni.v1.webapi.PackService`, the packs of rules a server keeps (agni issue 1704).

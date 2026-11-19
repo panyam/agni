@@ -38,6 +38,9 @@ type MountInfo struct {
 	// Fixed marks a mount from the server's flags, and Writable one the server writes into.
 	Fixed    bool
 	Writable bool
+	// Connection is the id of the connection the mount reads through, empty for a public or local
+	// source (agni issue 1724).
+	Connection string
 }
 
 // DirEntry is one raw filesystem entry, before the service labels a file with its design format.
@@ -117,7 +120,7 @@ type WorkspaceService struct {
 // for a source or ref that does not exist, ErrResourceExhausted for a source over the size cap, and
 // ErrFailedPrecondition for a mount it may not delete.
 type MountMaker interface {
-	CreateMount(ctx context.Context, name, source, ref string) (MountInfo, error)
+	CreateMount(ctx context.Context, name, source, ref, connection string) (MountInfo, error)
 	DeleteMount(ctx context.Context, name string) error
 }
 
@@ -164,7 +167,7 @@ func (s *WorkspaceService) CreateMount(ctx context.Context, req *webapi.CreateMo
 			return nil, fmt.Errorf("%w: a mount named %q is already served", ErrAlreadyExists, m.Name)
 		}
 	}
-	info, err := s.maker.CreateMount(ctx, req.GetName(), req.GetSource(), req.GetRef())
+	info, err := s.maker.CreateMount(ctx, req.GetName(), req.GetSource(), req.GetRef(), ConnectionID(req.GetConnection()))
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +210,15 @@ func mountProto(m MountInfo) (*webapi.Mount, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: mount %q cannot be addressed: %s", ErrInternal, m.Name, err)
 	}
-	return &webapi.Mount{Name: m.Name, Root: m.Root, Uri: uri.String(), Kind: m.Kind, Source: m.Source, Ref: m.Ref, Commit: m.Commit, Fixed: m.Fixed, Writable: m.Writable}, nil
+	return &webapi.Mount{Name: m.Name, Root: m.Root, Uri: uri.String(), Kind: m.Kind, Source: m.Source, Ref: m.Ref, Commit: m.Commit, Fixed: m.Fixed, Writable: m.Writable, Connection: connectionRef(m.Connection)}, nil
+}
+
+// connectionRef is a connection id as the wire names it, "connections/{connection}", or "" for none.
+func connectionRef(id string) string {
+	if id == "" {
+		return ""
+	}
+	return ConnectionName(id)
 }
 
 // NewWorkspaceService returns a WorkspaceService backed by ws.

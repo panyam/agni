@@ -177,4 +177,26 @@ public interface MountOrBuilder extends
    * @return The writable.
    */
   boolean getWritable();
+
+  /**
+   * <pre>
+   * connection is the connection the server reads the mount through, "connections/{connection}",
+   * empty for a public or local source (agni issue 1724).
+   * </pre>
+   *
+   * <code>string connection = 10 [json_name = "connection"];</code>
+   * @return The connection.
+   */
+  java.lang.String getConnection();
+  /**
+   * <pre>
+   * connection is the connection the server reads the mount through, "connections/{connection}",
+   * empty for a public or local source (agni issue 1724).
+   * </pre>
+   *
+   * <code>string connection = 10 [json_name = "connection"];</code>
+   * @return The bytes for connection.
+   */
+  com.google.protobuf.ByteString
+      getConnectionBytes();
 }

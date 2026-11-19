@@ -354,7 +354,8 @@ from its files. A snapshot over 256 MB is refused.
 the server's flags, and deleting one is refused. So is deleting a mount that an artifact is linked
 to, as the next section describes. A runtime mount can only come from GitHub, since a
 client must not choose which folder on the server's disk is served. `--mount` names a folder. A
-private repo waits on agni issue 1724, and S3 and SharePoint on agni issues 1729 and 1730.
+private repo reads through a connection, as "Connections" below describes. S3 and SharePoint wait on
+agni issues 1729 and 1730.
 
 `ListMounts` and `GetMount` say how each mount is reached in `kind`, where it came from in `source`,
 `ref` and `commit`, and whether it is `fixed`. `ListMounts` also says in `can_create_mounts` whether
@@ -398,7 +399,40 @@ uploaded one again, keeping its files. A mount with artifacts linked to it can't
 they are unlinked or deleted. The calls are `DesignService.LinkArtifact`, `UnlinkArtifact` and
 `SyncDesign`, and `Artifact.source` carries the mount, path, ref, version and read time.
 `make exercise-linked-sources` links Jetson 1.1.2, checks it against the same files on disk, moves
-it to 1.1.3, syncs, and reads it all back after a restart. Private repos wait on agni issue 1724.
+it to 1.1.3, syncs, and reads it all back after a restart. A private repo links and syncs the same
+way, through the connection its mount names.
+
+## Connections
+
+A private repo needs a sign-in, and a server with `--store` keeps one as a connection (agni issue
+1724). Say the team's boards live in a private repo in their GitHub organisation. Either a GitHub App
+installed on the organisation, or a token, lets the server read it. The server keeps a record of the
+connection and never the secret: the record names where the secret is, as `env:NAME` or
+`file:/abs/path`, and the server reads it from there each time it needs a token. A connection
+holding a bare token is refused. A server on Windows uses `env:`, since a `file:` path must start
+with `/`.
+
+```bash
+agni connections add acme --github-token env:GITHUB_TOKEN --remote http://localhost:8080
+agni mounts add board github://acme/board --connection acme --remote http://localhost:8080
+```
+
+A GitHub App installation suits an organisation, since its token is scoped to the repos the
+installation covers rather than to one person. The server signs a token with the App's private key,
+trades it with GitHub for an installation token, and reuses that token until shortly before it
+expires:
+
+```bash
+agni connections add acme-app --github-app 12345 --installation 678 --key file:/run/secrets/app.pem --remote http://localhost:8080
+```
+
+Several mounts can read through one connection. `agni mounts ls` names a mount's connection after
+its source, and `agni connections ls` lists each connection with where its secret is and whether its
+last token request worked. A connection a mount reads through can't be removed until the mount is.
+The `/mounts/` page's "Add a GitHub mount" form offers the server's connections. The records live in
+`connections/` under `--store`, and goapplib storage's connections package reads them. A connection
+owned by one person, signed in through GitHub, waits on the server knowing who is asking (agni issue
+1728).
 
 ## Keeping review runs
 

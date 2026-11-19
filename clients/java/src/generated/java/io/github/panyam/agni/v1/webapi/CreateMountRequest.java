@@ -31,6 +31,7 @@ private static final long serialVersionUID = 0L;
     name_ = "";
     source_ = "";
     ref_ = "";
+    connection_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -104,7 +105,7 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-   * makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+   * makes. A public repo needs no sign-in, and a private one reads through a connection.
    * </pre>
    *
    * <code>string source = 2 [json_name = "source"];</code>
@@ -126,7 +127,7 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-   * makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+   * makes. A public repo needs no sign-in, and a private one reads through a connection.
    * </pre>
    *
    * <code>string source = 2 [json_name = "source"];</code>
@@ -194,6 +195,55 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int CONNECTION_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object connection_ = "";
+  /**
+   * <pre>
+   * connection is the connection the server reads the source through, "connections/{connection}"
+   * (agni issue 1724). Empty reads a public source with no sign-in.
+   * </pre>
+   *
+   * <code>string connection = 4 [json_name = "connection"];</code>
+   * @return The connection.
+   */
+  @java.lang.Override
+  public java.lang.String getConnection() {
+    java.lang.Object ref = connection_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      connection_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * connection is the connection the server reads the source through, "connections/{connection}"
+   * (agni issue 1724). Empty reads a public source with no sign-in.
+   * </pre>
+   *
+   * <code>string connection = 4 [json_name = "connection"];</code>
+   * @return The bytes for connection.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getConnectionBytes() {
+    java.lang.Object ref = connection_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      connection_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -217,6 +267,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ref_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 3, ref_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(connection_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, connection_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -229,6 +282,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ref_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(3, ref_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(connection_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, connection_);
     }
     return size;
   }
@@ -260,6 +316,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getSource())) return false;
     if (!getRef()
         .equals(other.getRef())) return false;
+    if (!getConnection()
+        .equals(other.getConnection())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -277,6 +335,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getSource().hashCode();
     hash = (37 * hash) + REF_FIELD_NUMBER;
     hash = (53 * hash) + getRef().hashCode();
+    hash = (37 * hash) + CONNECTION_FIELD_NUMBER;
+    hash = (53 * hash) + getConnection().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -411,6 +471,7 @@ private static final long serialVersionUID = 0L;
       name_ = "";
       source_ = "";
       ref_ = "";
+      connection_ = "";
       return this;
     }
 
@@ -453,6 +514,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.ref_ = ref_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.connection_ = connection_;
+      }
     }
 
     @java.lang.Override
@@ -480,6 +544,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getRef().isEmpty()) {
         ref_ = other.ref_;
         bitField0_ |= 0x00000004;
+        onChanged();
+      }
+      if (!other.getConnection().isEmpty()) {
+        connection_ = other.connection_;
+        bitField0_ |= 0x00000008;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -521,6 +590,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 34: {
+              connection_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -634,7 +708,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-     * makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+     * makes. A public repo needs no sign-in, and a private one reads through a connection.
      * </pre>
      *
      * <code>string source = 2 [json_name = "source"];</code>
@@ -655,7 +729,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-     * makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+     * makes. A public repo needs no sign-in, and a private one reads through a connection.
      * </pre>
      *
      * <code>string source = 2 [json_name = "source"];</code>
@@ -677,7 +751,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-     * makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+     * makes. A public repo needs no sign-in, and a private one reads through a connection.
      * </pre>
      *
      * <code>string source = 2 [json_name = "source"];</code>
@@ -695,7 +769,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-     * makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+     * makes. A public repo needs no sign-in, and a private one reads through a connection.
      * </pre>
      *
      * <code>string source = 2 [json_name = "source"];</code>
@@ -710,7 +784,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-     * makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+     * makes. A public repo needs no sign-in, and a private one reads through a connection.
      * </pre>
      *
      * <code>string source = 2 [json_name = "source"];</code>
@@ -815,6 +889,103 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       ref_ = value;
       bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object connection_ = "";
+    /**
+     * <pre>
+     * connection is the connection the server reads the source through, "connections/{connection}"
+     * (agni issue 1724). Empty reads a public source with no sign-in.
+     * </pre>
+     *
+     * <code>string connection = 4 [json_name = "connection"];</code>
+     * @return The connection.
+     */
+    public java.lang.String getConnection() {
+      java.lang.Object ref = connection_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        connection_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * connection is the connection the server reads the source through, "connections/{connection}"
+     * (agni issue 1724). Empty reads a public source with no sign-in.
+     * </pre>
+     *
+     * <code>string connection = 4 [json_name = "connection"];</code>
+     * @return The bytes for connection.
+     */
+    public com.google.protobuf.ByteString
+        getConnectionBytes() {
+      java.lang.Object ref = connection_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        connection_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * connection is the connection the server reads the source through, "connections/{connection}"
+     * (agni issue 1724). Empty reads a public source with no sign-in.
+     * </pre>
+     *
+     * <code>string connection = 4 [json_name = "connection"];</code>
+     * @param value The connection to set.
+     * @return This builder for chaining.
+     */
+    public Builder setConnection(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      connection_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * connection is the connection the server reads the source through, "connections/{connection}"
+     * (agni issue 1724). Empty reads a public source with no sign-in.
+     * </pre>
+     *
+     * <code>string connection = 4 [json_name = "connection"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearConnection() {
+      connection_ = getDefaultInstance().getConnection();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * connection is the connection the server reads the source through, "connections/{connection}"
+     * (agni issue 1724). Empty reads a public source with no sign-in.
+     * </pre>
+     *
+     * <code>string connection = 4 [json_name = "connection"];</code>
+     * @param value The bytes for connection to set.
+     * @return This builder for chaining.
+     */
+    public Builder setConnectionBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      connection_ = value;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }

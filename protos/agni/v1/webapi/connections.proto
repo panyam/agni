@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// This file defines ConnectionService, which keeps the sign-ins a server reads private sources
+// through (agni issue 1724). A mount names a connection, and the server reads the mount's source
+// with that connection's token. Several mounts can share one, such as one GitHub App installation
+// over many repos. The records come from goapplib storage's connections package.
+//
+// A connection never holds a secret. Its key_source and token_source name where the secret is,
+// "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
+// secret is written to --store or sent back over this API.
+service ConnectionService {
+  // CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
+  // secret field holding anything but a reference, or a kind's field left empty, is
+  // INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION.
+  rpc CreateConnection(CreateConnectionRequest) returns (Connection);
+
+  // GetConnection returns one connection by resource name.
+  rpc GetConnection(GetConnectionRequest) returns (Connection);
+
+  // ListConnections returns the server's connections, ordered by name.
+  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse);
+
+  // DeleteConnection forgets a connection. One a mount still reads through is FAILED_PRECONDITION,
+  // naming the mounts, until they are deleted.
+  rpc DeleteConnection(DeleteConnectionRequest) returns (google.protobuf.Empty);
+}
+
+// Connection is one sign-in the server reads a source through, named "connections/{connection}".
+message Connection {
+  string name = 1; // "connections/{connection}"
+  ConnectionKind kind = 2;
+  // display_name is what a page shows, such as "acme org (App)". Empty shows the id.
+  string display_name = 3;
+  // base_url is the service's API root. Empty is https://api.github.com. GitHub Enterprise
+  // names its own.
+  string base_url = 4;
+  // app_id and installation_id identify a GitHub App installation, for CONNECTION_KIND_GITHUB_APP.
+  string app_id = 5;
+  int64 installation_id = 6;
+  // key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
+  // CONNECTION_KIND_GITHUB_APP.
+  string key_source = 7;
+  // token_source is where the token is, "env:NAME" or "file:/abs/path", for
+  // CONNECTION_KIND_GITHUB_TOKEN.
+  string token_source = 8;
+  // status is CONNECTION_STATUS_OK until a token request fails, and last_error says why, with no
+  // secret in it. Output only.
+  ConnectionStatus status = 9;
+  string last_error = 10;
+  // create_time and last_use_time are output only. last_use_time moves at most once an hour.
+  google.protobuf.Timestamp create_time = 11;
+  google.protobuf.Timestamp last_use_time = 12;
+}
+
+enum ConnectionKind {
+  CONNECTION_KIND_UNSPECIFIED = 0;
+  // CONNECTION_KIND_GITHUB_APP signs in as a GitHub App installation, scoped to the repos the
+  // installation covers rather than to one person.
+  CONNECTION_KIND_GITHUB_APP = 1;
+  // CONNECTION_KIND_GITHUB_TOKEN sends a token, such as a fine-grained personal access token.
+  CONNECTION_KIND_GITHUB_TOKEN = 2;
+}
+
+enum ConnectionStatus {
+  CONNECTION_STATUS_UNSPECIFIED = 0;
+  CONNECTION_STATUS_OK = 1;
+  // CONNECTION_STATUS_FAILED is a token request that failed, such as a key ref naming nothing.
+  CONNECTION_STATUS_FAILED = 2;
+}
+
+message CreateConnectionRequest {
+  // connection_id is the new connection's id: a-z and 0-9 first, then also '-', '_' and '.'.
+  string connection_id = 1;
+  // connection holds the kind and its fields. Its name and output fields are ignored.
+  Connection connection = 2;
+}
+
+message GetConnectionRequest {
+  string name = 1; // "connections/{connection}"
+}
+
+message ListConnectionsRequest {}
+
+message ListConnectionsResponse {
+  repeated Connection connections = 1;
+}
+
+message DeleteConnectionRequest {
+  string name = 1; // "connections/{connection}"
+}

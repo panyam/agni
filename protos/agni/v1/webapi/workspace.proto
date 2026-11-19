@@ -100,6 +100,9 @@ message Mount {
   // writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
   // are written only by the server's own stores, so neither is writable.
   bool writable = 9;
+  // connection is the connection the server reads the mount through, "connections/{connection}",
+  // empty for a public or local source (agni issue 1724).
+  string connection = 10;
 }
 
 // MountKind is how a mount's files are reached. S3, GCS and SharePoint come with agni issues 1729
@@ -118,10 +121,13 @@ message CreateMountRequest {
   // name is the new mount's handle. It follows the rules of a mount:// authority.
   string name = 1;
   // source names what to mount, as a URL. github://<owner>/<repo> is the one source this build
-  // makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+  // makes. A public repo needs no sign-in, and a private one reads through a connection.
   string source = 2;
   // ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
   string ref = 3;
+  // connection is the connection the server reads the source through, "connections/{connection}"
+  // (agni issue 1724). Empty reads a public source with no sign-in.
+  string connection = 4;
 }
 
 message DeleteMountRequest {

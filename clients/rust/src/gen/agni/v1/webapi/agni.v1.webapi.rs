@@ -1112,6 +1112,137 @@ impl CheckReportFormat {
         }
     }
 }
+/// Connection is one sign-in the server reads a source through, named "connections/{connection}".
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Connection {
+    /// "connections/{connection}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(enumeration="ConnectionKind", tag="2")]
+    pub kind: i32,
+    /// display_name is what a page shows, such as "acme org (App)". Empty shows the id.
+    #[prost(string, tag="3")]
+    pub display_name: ::prost::alloc::string::String,
+    /// base_url is the service's API root. Empty is <https://api.github.com.> GitHub Enterprise
+    /// names its own.
+    #[prost(string, tag="4")]
+    pub base_url: ::prost::alloc::string::String,
+    /// app_id and installation_id identify a GitHub App installation, for CONNECTION_KIND_GITHUB_APP.
+    #[prost(string, tag="5")]
+    pub app_id: ::prost::alloc::string::String,
+    #[prost(int64, tag="6")]
+    pub installation_id: i64,
+    /// key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
+    /// CONNECTION_KIND_GITHUB_APP.
+    #[prost(string, tag="7")]
+    pub key_source: ::prost::alloc::string::String,
+    /// token_source is where the token is, "env:NAME" or "file:/abs/path", for
+    /// CONNECTION_KIND_GITHUB_TOKEN.
+    #[prost(string, tag="8")]
+    pub token_source: ::prost::alloc::string::String,
+    /// status is CONNECTION_STATUS_OK until a token request fails, and last_error says why, with no
+    /// secret in it. Output only.
+    #[prost(enumeration="ConnectionStatus", tag="9")]
+    pub status: i32,
+    #[prost(string, tag="10")]
+    pub last_error: ::prost::alloc::string::String,
+    /// create_time and last_use_time are output only. last_use_time moves at most once an hour.
+    #[prost(message, optional, tag="11")]
+    pub create_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    #[prost(message, optional, tag="12")]
+    pub last_use_time: ::core::option::Option<::pbjson_types::Timestamp>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CreateConnectionRequest {
+    /// connection_id is the new connection's id: a-z and 0-9 first, then also '-', '_' and '.'.
+    #[prost(string, tag="1")]
+    pub connection_id: ::prost::alloc::string::String,
+    /// connection holds the kind and its fields. Its name and output fields are ignored.
+    #[prost(message, optional, tag="2")]
+    pub connection: ::core::option::Option<Connection>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetConnectionRequest {
+    /// "connections/{connection}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListConnectionsRequest {
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListConnectionsResponse {
+    #[prost(message, repeated, tag="1")]
+    pub connections: ::prost::alloc::vec::Vec<Connection>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteConnectionRequest {
+    /// "connections/{connection}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ConnectionKind {
+    Unspecified = 0,
+    /// CONNECTION_KIND_GITHUB_APP signs in as a GitHub App installation, scoped to the repos the
+    /// installation covers rather than to one person.
+    GithubApp = 1,
+    /// CONNECTION_KIND_GITHUB_TOKEN sends a token, such as a fine-grained personal access token.
+    GithubToken = 2,
+}
+impl ConnectionKind {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "CONNECTION_KIND_UNSPECIFIED",
+            Self::GithubApp => "CONNECTION_KIND_GITHUB_APP",
+            Self::GithubToken => "CONNECTION_KIND_GITHUB_TOKEN",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CONNECTION_KIND_UNSPECIFIED" => Some(Self::Unspecified),
+            "CONNECTION_KIND_GITHUB_APP" => Some(Self::GithubApp),
+            "CONNECTION_KIND_GITHUB_TOKEN" => Some(Self::GithubToken),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ConnectionStatus {
+    Unspecified = 0,
+    Ok = 1,
+    /// CONNECTION_STATUS_FAILED is a token request that failed, such as a key ref naming nothing.
+    Failed = 2,
+}
+impl ConnectionStatus {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "CONNECTION_STATUS_UNSPECIFIED",
+            Self::Ok => "CONNECTION_STATUS_OK",
+            Self::Failed => "CONNECTION_STATUS_FAILED",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CONNECTION_STATUS_UNSPECIFIED" => Some(Self::Unspecified),
+            "CONNECTION_STATUS_OK" => Some(Self::Ok),
+            "CONNECTION_STATUS_FAILED" => Some(Self::Failed),
+            _ => None,
+        }
+    }
+}
 /// SheetRef identifies a drawable sheet within a design.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SheetRef {
@@ -4127,6 +4258,10 @@ pub struct Mount {
     /// are written only by the server's own stores, so neither is writable.
     #[prost(bool, tag="9")]
     pub writable: bool,
+    /// connection is the connection the server reads the mount through, "connections/{connection}",
+    /// empty for a public or local source (agni issue 1724).
+    #[prost(string, tag="10")]
+    pub connection: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateMountRequest {
@@ -4134,12 +4269,16 @@ pub struct CreateMountRequest {
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
     /// source names what to mount, as a URL. github://<owner>/<repo> is the one source this build
-    /// makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+    /// makes. A public repo needs no sign-in, and a private one reads through a connection.
     #[prost(string, tag="2")]
     pub source: ::prost::alloc::string::String,
     /// ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
     #[prost(string, tag="3")]
     pub r#ref: ::prost::alloc::string::String,
+    /// connection is the connection the server reads the source through, "connections/{connection}"
+    /// (agni issue 1724). Empty reads a public source with no sign-in.
+    #[prost(string, tag="4")]
+    pub connection: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeleteMountRequest {

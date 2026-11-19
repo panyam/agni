@@ -9,6 +9,7 @@ import { LexiconService } from "@panyam/agni-client/gen/agni/v1/webapi/lexicon_p
 import { createClient, type Client, type Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
+import { ConnectionService } from "@panyam/agni-client/gen/agni/v1/webapi/connections_pb";
 import { DesignViewService } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { CheckService } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { DiffService } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
@@ -117,6 +118,12 @@ export function resetSnapshots(): void {
 // workspaceClient returns a typed client for WorkspaceService (mounts and their contents).
 export function workspaceClient(baseUrl?: string): Client<typeof WorkspaceService> {
   return createClient(WorkspaceService, newTransport(baseUrl));
+}
+
+// connectionClient returns a typed client for ConnectionService, the sign-ins a server reads private
+// repos through (agni issue 1724).
+export function connectionClient(baseUrl?: string): Client<typeof ConnectionService> {
+  return createClient(ConnectionService, newTransport(baseUrl));
 }
 
 // designViewClient returns a typed client for DesignViewService (design summary + packed sheets).

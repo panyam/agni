@@ -27,11 +27,14 @@ type API struct {
 	Design *service.DesignService
 	// Pack serves the stored packs, "packs/{pack}" (agni issue 1704). Nil serves none and refuses
 	// every write.
-	Pack   *service.PackService
-	Check  *service.CheckService
-	Diff   *service.DiffService
-	Query  *service.QueryService
-	Review *service.ReviewService
+	Pack *service.PackService
+	// Connection serves the sign-ins private sources are read through, "connections/{connection}"
+	// (agni issue 1724). Nil serves none and refuses a write.
+	Connection *service.ConnectionService
+	Check      *service.CheckService
+	Diff       *service.DiffService
+	Query      *service.QueryService
+	Review     *service.ReviewService
 	// Info answers ServerService.GetServerInfo (agni issue 1629). Nil answers this build's version and
 	// the snapshot features alone, as the browser engine does.
 	Info *service.ServerInfoService
@@ -87,6 +90,11 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 		pack = service.NewPackService(nil, nil)
 	}
 	add(webapiconnect.NewPackServiceHandler(NewPack(pack), timed))
+	conns := a.Connection
+	if conns == nil {
+		conns = service.NewConnectionService(nil, nil)
+	}
+	add(webapiconnect.NewConnectionServiceHandler(NewConnection(conns), timed))
 	add(pick(a.Check == nil, func() (string, http.Handler) {
 		return webapiconnect.NewCheckServiceHandler(webapiconnect.UnimplementedCheckServiceHandler{}, queried...)
 	}, func() (string, http.Handler) {
