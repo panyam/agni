@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"gopkg.in/yaml.v3"
 )
@@ -43,7 +43,7 @@ func (s *WorkspaceService) DeclareCompanion(ctx context.Context, req *webapi.Dec
 	if !ok {
 		return nil, fmt.Errorf("%w: %s is outside the design's folder %q, and a design.yaml declares only what sits inside it; move it in, or keep it attached to the page", ErrInvalidArgument, companion.Path, folder)
 	}
-	descriptor, err := artifact.New(design.Mount, joinPath(folder, DesignDescriptorName))
+	descriptor, err := mounts.NewURI(design.Mount, joinPath(folder, DesignDescriptorName))
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (s *WorkspaceService) DeclareCompanion(ctx context.Context, req *webapi.Dec
 
 // newDescriptor is a design.yaml naming the design as ProposeDesigns would, its entry and the companion, and extending the nearest
 // project.yaml above the folder when there is one.
-func (s *WorkspaceService) newDescriptor(ctx context.Context, design artifact.URI, folder, rel string) []byte {
+func (s *WorkspaceService) newDescriptor(ctx context.Context, design mounts.URI, folder, rel string) []byte {
 	var b strings.Builder
 	fmt.Fprintf(&b, "name: %s\n", yamlScalar(designID(stemOf(design.Path))))
 	if p := s.projectAbove(ctx, design.Mount, folder); p != "" {
@@ -82,7 +82,7 @@ func (s *WorkspaceService) newDescriptor(ctx context.Context, design artifact.UR
 func (s *WorkspaceService) projectAbove(ctx context.Context, mount, folder string) string {
 	up := ""
 	for dir := folder; ; dir = parentPath(dir) {
-		u, err := artifact.New(mount, joinPath(dir, ProjectDescriptorName))
+		u, err := mounts.NewURI(mount, joinPath(dir, ProjectDescriptorName))
 		if err != nil {
 			return ""
 		}

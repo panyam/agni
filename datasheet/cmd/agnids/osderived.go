@@ -10,9 +10,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/datasheet/dsservice"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -33,7 +33,7 @@ type derived struct {
 
 // dir returns the store folder for the datasheet at uri. It hashes the PDF, so a PDF the mount
 // lacks is service.ErrNotFound. A server with no corpus returns dsservice.ErrNoCorpus.
-func (d derived) dir(uri artifact.URI) (string, error) {
+func (d derived) dir(uri mounts.URI) (string, error) {
 	if d.corpus == "" {
 		return "", dsservice.ErrNoCorpus
 	}
@@ -58,6 +58,6 @@ func (d derived) dir(uri artifact.URI) (string, error) {
 
 // legacy resolves a file an older layout derived beside the PDF, such as LM1117.doc.textproto
 // beside LM1117.pdf. It is only read.
-func (d derived) legacy(uri artifact.URI, derive func(string) string) (string, error) {
+func (d derived) legacy(uri mounts.URI, derive func(string) string) (string, error) {
 	return resolveSibling(d.mounts, uri, derive)
 }

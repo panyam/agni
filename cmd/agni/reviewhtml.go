@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 // checklistLinks settles whether a review's page may promise links, and where they point. The page

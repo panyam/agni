@@ -6,6 +6,7 @@ require (
 	connectrpc.com/connect v1.20.0
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/goapplib v0.7.15
+	github.com/panyam/goapplib/storage v0.7.15
 	github.com/panyam/servicekit v0.2.2
 	github.com/spf13/cobra v1.10.2
 	google.golang.org/protobuf v1.36.12
@@ -22,7 +23,6 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
-	github.com/panyam/goapplib/storage v0.7.15 // indirect
 	github.com/panyam/gocurrent v0.1.2 // indirect
 	github.com/panyam/goutils v0.1.14 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
@@ -33,6 +33,7 @@ require (
 	github.com/stangelandcl/ppmd v0.1.1 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
+	golang.org/x/oauth2 v0.38.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
 )

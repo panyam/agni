@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/datasheet/doc"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 )
@@ -33,7 +33,7 @@ type osDocLoader struct {
 // Document reads the doc-IR for the datasheet at uri. mounts.Resolve classifies an unknown mount or
 // a path escaping the mount, as service.ErrNotFound or ErrInvalidPath. No doc-IR returns (nil, nil).
 // An unparseable one returns a parse error, and the service classifies it as invalid.
-func (l *osDocLoader) Document(ctx context.Context, uri artifact.URI) (*docpb.Document, error) {
+func (l *osDocLoader) Document(ctx context.Context, uri mounts.URI) (*docpb.Document, error) {
 	if l.derived.corpus != "" {
 		dir, err := l.derived.dir(uri)
 		if err != nil {

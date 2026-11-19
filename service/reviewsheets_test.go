@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -17,7 +17,7 @@ import (
 // in-memory design and geometry as a check run.
 type manifestFakeLoader struct{ fakeLoader }
 
-func (manifestFakeLoader) Manifest(context.Context, artifact.URI) (review.Manifest, error) {
+func (manifestFakeLoader) Manifest(context.Context, mounts.URI) (review.Manifest, error) {
 	return review.Manifest{}, nil
 }
 

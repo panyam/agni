@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -50,7 +50,7 @@ func TestUploadsServeAsTheUploadsMount(t *testing.T) {
 		t.Fatalf("stored design = %v, %v; want its netlist in the uploads mount", stored, err)
 	}
 	read := projects.NewFSStore(projectTrees(ms)...)
-	u, err := artifact.Parse(stored.GetEntryUri())
+	u, err := mounts.ParseURI(stored.GetEntryUri())
 	if err != nil {
 		t.Fatal(err)
 	}

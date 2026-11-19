@@ -12,7 +12,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/wasmengine"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 // TestTheSeedRouteServesADesignsStoreUnderItsVersion covers agni issue 1525's server half. A design

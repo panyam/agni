@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/agni/mountset"
 )
 
 // rawFileHandler serves one file inside a mount at /raw/<mount>/<path>, for a page that analyses a
@@ -17,7 +17,7 @@ func rawFileHandler(ms *mountset.Table) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rest := strings.TrimPrefix(r.URL.Path, "/raw/")
 		mount, p, _ := strings.Cut(rest, "/")
-		u, err := artifact.New(mount, p)
+		u, err := mounts.NewURI(mount, p)
 		if err != nil || p == "" {
 			http.NotFound(w, r)
 			return

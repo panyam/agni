@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -28,7 +28,7 @@ func (c *osProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.Analysi
 	for _, m := range list {
 		ms = append(ms, fshost.Mount{Name: m.Name, FS: os.DirFS(m.Root)})
 	}
-	r := &fshost.ConfigResolver{Mounts: ms, SymbolPath: func(u artifact.URI) (string, error) {
+	r := &fshost.ConfigResolver{Mounts: ms, SymbolPath: func(u mounts.URI) (string, error) {
 		return c.mounts.Resolve(u)
 	}}
 	return r.ResolveConfig(ctx, cfg, namespace)
@@ -36,7 +36,7 @@ func (c *osProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.Analysi
 
 // dir resolves a project-config URI to a host directory inside its mount.
 func (c *osProjectConfig) dir(uri string) (string, error) {
-	u, err := artifact.Parse(uri)
+	u, err := mounts.ParseURI(uri)
 	if err != nil {
 		return "", err
 	}

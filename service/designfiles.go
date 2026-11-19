@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/readers/formats"
 )
@@ -18,7 +18,7 @@ import (
 // port. It is separate from Workspace, so the hosts that only browse (the datasheet service) need
 // not read.
 type FileReader interface {
-	ReadFile(ctx context.Context, uri artifact.URI) ([]byte, error)
+	ReadFile(ctx context.Context, uri mounts.URI) ([]byte, error)
 }
 
 // ProjectDescriptorName is the file that makes a folder a project. internal/projects owns the name
@@ -79,7 +79,7 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 			return nil, ClassifyLoadErr(err)
 		}
 		if design != nil {
-			du, err := artifact.Parse(design.GetUri())
+			du, err := mounts.ParseURI(design.GetUri())
 			if err != nil {
 				return nil, err
 			}
@@ -89,7 +89,7 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 		addConfig := func(cfg *webapi.AnalysisConfig) error {
 			for _, list := range [][]string{cfg.GetProfileUris(), cfg.GetParamUris(), cfg.GetSymbolPathUris(), cfg.GetLibraryUris(), cfg.GetQuerySetUris()} {
 				for _, raw := range list {
-					cu, err := artifact.Parse(raw)
+					cu, err := mounts.ParseURI(raw)
 					if err != nil {
 						return err
 					}
@@ -112,7 +112,7 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 			}
 		}
 		for depth := 0; project != nil && depth <= maxExtendsDepth; depth++ {
-			pu, err := artifact.Parse(project.GetUri())
+			pu, err := mounts.ParseURI(project.GetUri())
 			if err != nil {
 				return nil, err
 			}
@@ -156,7 +156,7 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 	resp := &webapi.ListDesignFilesResponse{Mount: u.Mount}
 	board := s.boardFile(ctx, u)
 	for _, p := range paths {
-		fu, err := artifact.New(u.Mount, p)
+		fu, err := mounts.NewURI(u.Mount, p)
 		if err != nil {
 			return nil, err
 		}
@@ -182,11 +182,11 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 // drawing read from it, and "" otherwise.
 // The browser engine holds that file back from a worker until a question there reads the board (agni
 // issue 992).
-func (s *WorkspaceService) boardFile(ctx context.Context, u artifact.URI) string {
+func (s *WorkspaceService) boardFile(ctx context.Context, u mounts.URI) string {
 	if s.projects == nil || s.projects.Store == nil {
 		return ""
 	}
-	nu, bu, gu, err := s.projects.TierURIs(ctx, u, artifact.URI{}, false)
+	nu, bu, gu, err := s.projects.TierURIs(ctx, u, mounts.URI{}, false)
 	if err != nil || bu.IsZero() || bu.Mount != u.Mount || bu == nu || bu == gu {
 		return ""
 	}
@@ -194,11 +194,11 @@ func (s *WorkspaceService) boardFile(ctx context.Context, u artifact.URI) string
 }
 
 // isDir reports whether u names a directory, by listing its parent.
-func (s *WorkspaceService) isDir(ctx context.Context, u artifact.URI) (bool, error) {
+func (s *WorkspaceService) isDir(ctx context.Context, u mounts.URI) (bool, error) {
 	if u.Path == "" {
 		return true, nil
 	}
-	pu, err := artifact.New(u.Mount, parentPath(u.Path))
+	pu, err := mounts.NewURI(u.Mount, parentPath(u.Path))
 	if err != nil {
 		return false, err
 	}
@@ -221,7 +221,7 @@ func (s *WorkspaceService) walkFiles(ctx context.Context, mount, dir string, add
 		return fmt.Errorf("%w: the design's folder holds more than %d directories", ErrResourceExhausted, designFilesMaxDirs)
 	}
 	*budget--
-	du, err := artifact.New(mount, dir)
+	du, err := mounts.NewURI(mount, dir)
 	if err != nil {
 		return err
 	}

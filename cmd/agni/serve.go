@@ -36,7 +36,7 @@ import (
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/storeurl"
 	"github.com/panyam/agni/internal/version"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/stdlib/relations"

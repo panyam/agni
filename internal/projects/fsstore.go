@@ -3,7 +3,7 @@ package projects
 import (
 	"context"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"io/fs"
 	"path"
 	"sort"
@@ -191,7 +191,7 @@ func (s *FSStore) extending(byDescriptor map[string]string) (map[string][]*webap
 // Suppose instead that a project descriptor sits above a design that extends nothing. The author
 // most likely forgot the `extends`, and reading the design would run it on the built-in config with
 // nothing said. So that case is an error.
-func (s *FSStore) ResolveDesign(_ context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (s *FSStore) ResolveDesign(_ context.Context, uri mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	t, ok := s.tree(uri.Mount)
 	if !ok {
 		return nil, nil, fmt.Errorf("no such mount %q: %w", uri.Mount, service.ErrNotFound)
@@ -269,7 +269,7 @@ func (s *FSStore) readProject(t Tree, dir, name string, deps *[]string) (string,
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
-	u, err := artifact.New(t.Mount, normalizeDir(dir))
+	u, err := mounts.NewURI(t.Mount, normalizeDir(dir))
 	if err != nil {
 		return "", nil, err
 	}
@@ -288,7 +288,7 @@ func (s *FSStore) readProject(t Tree, dir, name string, deps *[]string) (string,
 // A source naming nothing is an ERROR. Nothing is found by its folder's name any more. So each path
 // in the descriptor is a tier the operator asked for. Reading on without it would report as though
 // the team declared none. Each same-tree source joins deps, so removing one revalidates the descriptor.
-func (s *FSStore) attachSources(t Tree, base artifact.URI, src Sources, cfg *webapi.AnalysisConfig, deps *[]string) error {
+func (s *FSStore) attachSources(t Tree, base mounts.URI, src Sources, cfg *webapi.AnalysisConfig, deps *[]string) error {
 	// fix says what to do about a source that cannot be read. The advice differs for the parent. A
 	// design copied or mounted without its project reads on its own once its extends line is
 	// removed.
@@ -299,7 +299,7 @@ func (s *FSStore) attachSources(t Tree, base artifact.URI, src Sources, cfg *web
 		return "fix the path, or delete it to run without that " + field
 	}
 	resolve := func(field, ref string) (string, error) {
-		if !strings.HasPrefix(strings.TrimSpace(ref), artifact.Scheme+"://") {
+		if !strings.HasPrefix(strings.TrimSpace(ref), mounts.Scheme) {
 			if joined := path.Join(base.Path, CleanRel(ref)); joined == ".." || strings.HasPrefix(joined, "../") {
 				return "", fmt.Errorf("%s %q is outside mount %q, so it cannot be read; %s", field, ref, base.Mount, fix(field))
 			}
@@ -352,10 +352,10 @@ func (s *FSStore) attachSources(t Tree, base artifact.URI, src Sources, cfg *web
 // resolveSource turns a descriptor's source into a URI. A mount:// URI is kept as written. A path
 // is joined onto the descriptor's folder, and artifact refuses the join when it climbs out of the
 // mount.
-func resolveSource(base artifact.URI, ref string) (artifact.URI, error) {
+func resolveSource(base mounts.URI, ref string) (mounts.URI, error) {
 	ref = strings.TrimSpace(ref)
-	if strings.HasPrefix(ref, artifact.Scheme+"://") {
-		return artifact.Parse(ref)
+	if strings.HasPrefix(ref, mounts.Scheme) {
+		return mounts.ParseURI(ref)
 	}
 	return base.Join(CleanRel(ref))
 }
@@ -363,7 +363,7 @@ func resolveSource(base artifact.URI, ref string) (artifact.URI, error) {
 // projectAt loads a project from the descriptor that a design or project names in `extends`. The
 // loaded project names its own parent as a resource name.
 func (s *FSStore) projectAt(descriptor string) (*webapi.Project, error) {
-	u, err := artifact.Parse(descriptor)
+	u, err := mounts.ParseURI(descriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -386,13 +386,13 @@ func (s *FSStore) projectAt(descriptor string) (*webapi.Project, error) {
 // visiting guards against a cycle through descriptors with different ids.
 func (s *FSStore) nameParent(p *webapi.Project, visiting map[string]bool) error {
 	parent := p.GetConfig().GetExtends()
-	if parent == "" || !strings.HasPrefix(parent, artifact.Scheme+"://") {
+	if parent == "" || !strings.HasPrefix(parent, mounts.Scheme) {
 		return nil
 	}
 	if visiting[parent] {
 		return fmt.Errorf("%w: extends cycle through %s", service.ErrInvalidArgument, parent)
 	}
-	u, err := artifact.Parse(parent)
+	u, err := mounts.ParseURI(parent)
 	if err != nil {
 		return err
 	}
@@ -411,7 +411,7 @@ func (s *FSStore) nameParent(p *webapi.Project, visiting map[string]bool) error 
 // descriptorURI returns the URI of the descriptor a loaded project was read from. A design naming
 // that project in `extends` resolves to this URI.
 func descriptorURI(p *webapi.Project) string {
-	u, err := artifact.Parse(p.GetUri())
+	u, err := mounts.ParseURI(p.GetUri())
 	if err != nil {
 		return ""
 	}
@@ -447,7 +447,7 @@ func (s *FSStore) readDesign(t Tree, dir, name string, deps *[]string) (string, 
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
-	base, err := artifact.New(t.Mount, normalizeDir(dir))
+	base, err := mounts.NewURI(t.Mount, normalizeDir(dir))
 	if err != nil {
 		return "", nil, err
 	}
@@ -546,10 +546,10 @@ func displayDir(dir string) string {
 
 // uriOf parses a resource's stored artifact URI. On a parse failure it returns the zero URI, which
 // matches nothing rather than failing a listing.
-func uriOf(s string) artifact.URI {
-	u, err := artifact.Parse(s)
+func uriOf(s string) mounts.URI {
+	u, err := mounts.ParseURI(s)
 	if err != nil {
-		return artifact.URI{}
+		return mounts.URI{}
 	}
 	return u
 }

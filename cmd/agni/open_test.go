@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 // The banner exists to be pasted. A mount minted by the serving process means nothing to

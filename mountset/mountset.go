@@ -11,13 +11,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/service"
 )
 
 // Mount is one configured root folder the web API serves. A client passes Name back to address the
 // mount, and Root is the resolved absolute host path. Clients never send absolute
-// paths. They send an artifact.URI naming a mount and a mount-relative path, which Resolve joins.
+// paths. They send an mounts.URI naming a mount and a mount-relative path, which Resolve joins.
 // The OS-backed service adapters in cmd/agni hold these, so the service package can be os-free
 // (CONSTRAINTS C13).
 type Mount struct {
@@ -178,7 +178,7 @@ func Find(mounts []Mount, name string) (Mount, bool) {
 // adapters. An unknown mount returns service.ErrNotFound, so the service classifies without
 // importing os. artifact.Parse decides containment, and a parsed URI cannot escape its mount,
 // so the SafeResolve call below is only an assertion.
-func Resolve(mounts []Mount, uri artifact.URI) (string, error) {
+func Resolve(mounts []Mount, uri mounts.URI) (string, error) {
 	m, ok := Find(mounts, uri.Mount)
 	if !ok {
 		return "", fmt.Errorf("no such mount %q: %w", uri.Mount, service.ErrNotFound)

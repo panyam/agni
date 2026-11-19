@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/datasheet/doc"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 )
@@ -31,7 +31,7 @@ func (e *osDocExtractor) Available() bool { return len(e.cmd) > 0 }
 // returning the parsed and validated Document. The source PDF resolves inside the mount through
 // mounts.Resolve. A server with no corpus returns dsservice.ErrNoCorpus. A non-zero exit, an
 // unreadable output, or an invalid doc-IR is an error, and the service maps it to Internal.
-func (e *osDocExtractor) Extract(ctx context.Context, uri artifact.URI) (*docpb.Document, error) {
+func (e *osDocExtractor) Extract(ctx context.Context, uri mounts.URI) (*docpb.Document, error) {
 	pdfAbs, err := e.derived.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -72,20 +72,20 @@ func (w *cliWorkspace) Mounts() []mountset.Mount {
 //
 // A path that does not exist is NOT an error here, because the reader already produces the
 // not-found message a user knows.
-func (w *cliWorkspace) URI(arg string) (artifact.URI, error) {
-	if strings.HasPrefix(arg, artifact.Scheme+"://") {
-		u, err := artifact.Parse(arg)
+func (w *cliWorkspace) URI(arg string) (mounts.URI, error) {
+	if strings.HasPrefix(arg, mounts.Scheme) {
+		u, err := mounts.ParseURI(arg)
 		if err != nil {
-			return artifact.URI{}, err
+			return mounts.URI{}, err
 		}
 		if _, ok := mountset.Find(w.Mounts(), u.Mount); !ok {
-			return artifact.URI{}, fmt.Errorf("%s names mount %q, which was not declared; pass --mount %s=<path>", arg, u.Mount, u.Mount)
+			return mounts.URI{}, fmt.Errorf("%s names mount %q, which was not declared; pass --mount %s=<path>", arg, u.Mount, u.Mount)
 		}
 		return u, nil
 	}
 	abs, err := filepath.Abs(arg)
 	if err != nil {
-		return artifact.URI{}, err
+		return mounts.URI{}, err
 	}
 	if u, ok := w.inDeclared(abs); ok {
 		return u, nil
@@ -113,7 +113,7 @@ func (w *cliWorkspace) Declared(name string) bool {
 // a mount this run already minted counts too, and a second argument under it reuses that mount. The
 // longest root wins, so nested mounts resolve to the most specific one rather than to whichever was
 // typed first.
-func (w *cliWorkspace) inDeclared(abs string) (artifact.URI, bool) {
+func (w *cliWorkspace) inDeclared(abs string) (mounts.URI, bool) {
 	var best mountset.Mount
 	var bestRel string
 	for _, m := range w.Mounts() {
@@ -126,11 +126,11 @@ func (w *cliWorkspace) inDeclared(abs string) (artifact.URI, bool) {
 		}
 	}
 	if best.Name == "" {
-		return artifact.URI{}, false
+		return mounts.URI{}, false
 	}
-	u, err := artifact.New(best.Name, filepath.ToSlash(bestRel))
+	u, err := mounts.NewURI(best.Name, filepath.ToSlash(bestRel))
 	if err != nil {
-		return artifact.URI{}, false
+		return mounts.URI{}, false
 	}
 	return u, true
 }
@@ -149,10 +149,10 @@ const browserMount = "local"
 // Rooting at the PROJECT makes the URI mean something off this machine.
 // `mount://gateway/designs/gateway/gateway.edn` says which design of which project, and reads the
 // same as the URI a server with that project mounted would produce.
-func (w *cliWorkspace) mint(abs string) (artifact.URI, error) {
+func (w *cliWorkspace) mint(abs string) (mounts.URI, error) {
 	root, name, err := projectRootAbove(abs)
 	if err != nil {
-		return artifact.URI{}, err
+		return mounts.URI{}, err
 	}
 	if root == "" {
 		root = filepath.Dir(abs)
@@ -167,9 +167,9 @@ func (w *cliWorkspace) mint(abs string) (artifact.URI, error) {
 
 	rel, err := filepath.Rel(root, abs)
 	if err != nil {
-		return artifact.URI{}, err
+		return mounts.URI{}, err
 	}
-	return artifact.New(name, filepath.ToSlash(rel))
+	return mounts.NewURI(name, filepath.ToSlash(rel))
 }
 
 // uniqueNameLocked returns the mount name to use for root, reusing an existing mount with the same
@@ -339,7 +339,7 @@ func (c cliProjectStore) Projects(ctx context.Context) ([]*webapi.Project, error
 	return s.Projects(ctx)
 }
 
-func (c cliProjectStore) ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (c cliProjectStore) ResolveDesign(ctx context.Context, uri mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	s, err := c.store()
 	if err != nil {
 		return nil, nil, err

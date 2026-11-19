@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -29,7 +29,7 @@ func rawDatasheetHandler(ms *mountset.Table) http.Handler {
 			http.Error(w, "only .pdf datasheets are served raw", http.StatusBadRequest)
 			return
 		}
-		uri, err := artifact.New(mountName, rel)
+		uri, err := mounts.NewURI(mountName, rel)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

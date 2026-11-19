@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing/fstest"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/mesh"
@@ -68,7 +68,7 @@ func withinMount(name string) string {
 }
 
 // name maps a URI to its path in Root. An unknown mount is service.ErrNotFound.
-func (h *Host) name(uri artifact.URI) (string, error) {
+func (h *Host) name(uri mounts.URI) (string, error) {
 	for _, m := range h.mounts {
 		if m.Name == uri.Mount {
 			n := path.Join(uri.Mount, uri.Path)
@@ -82,7 +82,7 @@ func (h *Host) name(uri artifact.URI) (string, error) {
 }
 
 // Design reads the netlist IR.
-func (h *Host) Design(ctx context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+func (h *Host) Design(ctx context.Context, uri mounts.URI, opts ...service.ReadOption) (*ir.Design, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (h *Host) Design(ctx context.Context, uri artifact.URI, opts ...service.Rea
 
 // Geometry draws a netlist's companion schematic where it has one, else the design's own geometry or
 // an auto-layout.
-func (h *Host) Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
+func (h *Host) Geometry(ctx context.Context, uri mounts.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (h *Host) Geometry(ctx context.Context, uri artifact.URI, layout string, fa
 }
 
 // Report classifies how an auto-layout draws each component.
-func (h *Host) Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
+func (h *Host) Report(ctx context.Context, uri mounts.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (h *Host) Report(ctx context.Context, uri artifact.URI, faithfulSymbols boo
 }
 
 // Expectations loads a `<design>.expect.yaml` sidecar, and (nil, nil) when there is none.
-func (h *Host) Expectations(_ context.Context, uri artifact.URI) (*expect.Expectations, error) {
+func (h *Host) Expectations(_ context.Context, uri mounts.URI) (*expect.Expectations, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (h *Host) Expectations(_ context.Context, uri artifact.URI) (*expect.Expect
 }
 
 // Board reads the physical board sidecar for a format that carries one, and (nil, nil) otherwise.
-func (h *Host) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+func (h *Host) Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeometry, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (h *Host) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry
 }
 
 // BoardMeshes reads model meshes by the keys in a board's model_instances (agni issue 1652).
-func (h *Host) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+func (h *Host) BoardMeshes(ctx context.Context, uri mounts.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, nil, err
@@ -149,7 +149,7 @@ func (h *Host) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string)
 }
 
 // Manifest parses a review checklist. Absent is an error, since a manifest is a required input.
-func (h *Host) Manifest(_ context.Context, uri artifact.URI) (review.Manifest, error) {
+func (h *Host) Manifest(_ context.Context, uri mounts.URI) (review.Manifest, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return review.Manifest{}, err
@@ -163,7 +163,7 @@ func (h *Host) Manifest(_ context.Context, uri artifact.URI) (review.Manifest, e
 }
 
 // Convention parses a naming-convention config. Absent is an error once named.
-func (h *Host) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
+func (h *Host) Convention(_ context.Context, uri mounts.URI) (*configpb.NamingConvention, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func (h *Host) Convention(_ context.Context, uri artifact.URI) (*configpb.Naming
 
 // DesignHash is "sha256:<hex>" over the design's entry file, or "" for an unreadable one inside the
 // mount. The caller passes a resolved tier (see service.Loader).
-func (h *Host) DesignHash(_ context.Context, uri artifact.URI) (string, error) {
+func (h *Host) DesignHash(_ context.Context, uri mounts.URI) (string, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return "", err
@@ -225,7 +225,7 @@ func (w workspace) Mounts() []service.MountInfo { return w.h.MountInfo() }
 
 // ListDir reads one directory level. An unknown mount or a missing directory is an error, and the
 // service maps it to NotFound.
-func (w workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEntry, error) {
+func (w workspace) ListDir(_ context.Context, uri mounts.URI) ([]service.DirEntry, error) {
 	n, err := w.h.name(uri)
 	if err != nil {
 		return nil, err
@@ -242,7 +242,7 @@ func (w workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEn
 }
 
 // ReadFile reads one file inside its mount, for service.FileReader.
-func (w workspace) ReadFile(_ context.Context, uri artifact.URI) ([]byte, error) {
+func (w workspace) ReadFile(_ context.Context, uri mounts.URI) ([]byte, error) {
 	n, err := w.h.name(uri)
 	if err != nil {
 		return nil, err

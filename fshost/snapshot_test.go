@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -29,7 +29,7 @@ type readCountingHost struct {
 	reads atomic.Int64
 }
 
-func (h *readCountingHost) Design(ctx context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+func (h *readCountingHost) Design(ctx context.Context, uri mounts.URI, opts ...service.ReadOption) (*ir.Design, error) {
 	h.reads.Add(1)
 	return h.Host.Design(ctx, uri, opts...)
 }

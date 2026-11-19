@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/timing"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -73,13 +73,13 @@ type ProjectResolver struct {
 // built-in vocabulary. On one folder that gave 40 findings the project's lexicon would not have
 // raised, and missed 95 it would have (#307). A malformed descriptor for an UNRELATED design still
 // does not surface here. See docsite/content/architecture/projects-and-designs.md#resolution-is-an-interface-not-a-path-convention.
-func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
+func (r *ProjectResolver) Overlay(ctx context.Context, uri mounts.URI, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	return r.OverlayUnder(ctx, uri, nil, req, baseConvention)
 }
 
 // OverlayUnder is Overlay with packs layered between the design's config and the request's, each in
 // the order given (agni issue 1704). OverlayFor says how a pack layers.
-func (r *ProjectResolver) OverlayUnder(ctx context.Context, uri artifact.URI, packs []*webapi.Pack, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
+func (r *ProjectResolver) OverlayUnder(ctx context.Context, uri mounts.URI, packs []*webapi.Pack, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	defer timing.Begin(ctx, "resolve.overlay")()
 	var p *webapi.Project
 	var d *webapi.Design
@@ -127,7 +127,7 @@ func (r *ProjectResolver) OverlayUnder(ctx context.Context, uri artifact.URI, pa
 // returns (nil, "", nil), and so does a deployment that resolves none. A project whose chain declares
 // none returns (nil, name, nil). A caller can then tell an operator which fix applies. A descriptor
 // that exists and does not parse is an error, as for Overlay.
-func (r *ProjectResolver) Checklists(ctx context.Context, uri artifact.URI) ([]*webapi.NamedChecklist, string, error) {
+func (r *ProjectResolver) Checklists(ctx context.Context, uri mounts.URI) ([]*webapi.NamedChecklist, string, error) {
 	cfg, project, err := r.designConfig(ctx, uri)
 	if err != nil || cfg == nil {
 		return nil, project, err
@@ -140,7 +140,7 @@ func (r *ProjectResolver) Checklists(ctx context.Context, uri artifact.URI) ([]*
 // Checklists. Only the query-set tier is resolved, so a listing reads no profile, corpus or library,
 // and a broken one cannot fail it. A set file that does not parse fails the listing, since leaving it
 // out would read as the design having no such set.
-func (r *ProjectResolver) QuerySets(ctx context.Context, uri artifact.URI) ([]NamedQuerySet, string, error) {
+func (r *ProjectResolver) QuerySets(ctx context.Context, uri mounts.URI) ([]NamedQuerySet, string, error) {
 	cfg, project, err := r.designConfig(ctx, uri)
 	if err != nil || cfg == nil {
 		return nil, project, err
@@ -162,7 +162,7 @@ func (r *ProjectResolver) QuerySets(ctx context.Context, uri artifact.URI) ([]Na
 // designConfig returns the config a design composes and the project's name. The config is its
 // project's chain with the design's own descriptor layered on top, as OverlayFor composes it. A uri
 // naming no design returns a nil config.
-func (r *ProjectResolver) designConfig(ctx context.Context, uri artifact.URI) (*webapi.AnalysisConfig, string, error) {
+func (r *ProjectResolver) designConfig(ctx context.Context, uri mounts.URI) (*webapi.AnalysisConfig, string, error) {
 	if r == nil || r.Store == nil {
 		return nil, "", nil
 	}
@@ -279,7 +279,7 @@ func (o Overlay) SpecsOver(shared param.ParamProvider) param.ParamProvider {
 //
 // asNamed comes off the request, because the CLI is a client of these services and its --as-named
 // asks for the file it named.
-func (r *ProjectResolver) Sources(ctx context.Context, uri artifact.URI, asNamed bool) (Resolution, error) {
+func (r *ProjectResolver) Sources(ctx context.Context, uri mounts.URI, asNamed bool) (Resolution, error) {
 	ref := uri.String()
 	plain := Resolution{DesignSources: DesignSources{NetlistURI: ref, BoardURI: ref, GeometryURI: ref}}
 	if r == nil || r.Store == nil {
@@ -300,7 +300,7 @@ func (r *ProjectResolver) Sources(ctx context.Context, uri artifact.URI, asNamed
 //
 // boardOverride is the request's own board_uri and it WINS over the design's declaration, matching
 // `--board-path` on the CLI. A zero override, which is nearly every call, leaves the declared board.
-func (r *ProjectResolver) TierURIs(ctx context.Context, u artifact.URI, boardOverride artifact.URI, asNamed bool) (netlist, board, geometry artifact.URI, err error) {
+func (r *ProjectResolver) TierURIs(ctx context.Context, u mounts.URI, boardOverride mounts.URI, asNamed bool) (netlist, board, geometry mounts.URI, err error) {
 	defer timing.Begin(ctx, "resolve.tiers")()
 	src, err := r.Sources(ctx, u, asNamed)
 	if err != nil {

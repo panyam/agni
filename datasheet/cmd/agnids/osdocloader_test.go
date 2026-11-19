@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 func TestDocSibling(t *testing.T) {

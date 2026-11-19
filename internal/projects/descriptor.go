@@ -21,7 +21,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/review"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -328,19 +328,19 @@ func validRel(field, rel string) error {
 
 // validSource checks the shape of one source in a descriptor. A source is a mount:// URI or a path
 // relative to the descriptor. A relative path may climb with `..`, since the containment boundary
-// is the mount and artifact.URI.Join refuses a path that leaves it.
+// is the mount and mounts.URI.Join refuses a path that leaves it.
 func validSource(field, ref string) error {
 	ref = strings.TrimSpace(ref)
 	switch {
 	case ref == "":
 		return fmt.Errorf("%s names an empty path", field)
-	case strings.HasPrefix(ref, artifact.Scheme+"://"):
-		if _, err := artifact.Parse(ref); err != nil {
+	case strings.HasPrefix(ref, mounts.Scheme):
+		if _, err := mounts.ParseURI(ref); err != nil {
 			return fmt.Errorf("%s %q: %w", field, ref, err)
 		}
 		return nil
 	case strings.Contains(ref, "://"):
-		return fmt.Errorf("%s %q: a source is a path relative to the descriptor or a %s:// URI", field, ref, artifact.Scheme)
+		return fmt.Errorf("%s %q: a source is a path relative to the descriptor or a %s URI", field, ref, mounts.Scheme)
 	case path.IsAbs(CleanRel(ref)) || strings.HasPrefix(ref, "/"):
 		return fmt.Errorf("%s %q must be relative to the descriptor, not absolute", field, ref)
 	}

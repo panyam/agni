@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"path/filepath"
 	"testing"
 
 	"github.com/panyam/agni/core/graph"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/readers/formats"
 )
 
@@ -61,8 +61,8 @@ func hasWireNet(g *geom.SchematicGeometry, net string) bool {
 
 // mustURI builds an artifact URI from a mount and a path, both declared by the test itself. It panics
 // rather than returning an error, since a fixture URI that will not parse means the test is broken.
-func mustURI(mount, p string) artifact.URI {
-	u, err := artifact.New(mount, p)
+func mustURI(mount, p string) mounts.URI {
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
 		panic(err)
 	}

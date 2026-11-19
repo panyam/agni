@@ -3,7 +3,7 @@ package dsservice
 import (
 	"context"
 	"errors"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"strings"
 	"testing"
 
@@ -22,7 +22,7 @@ type fakeDocLoader struct {
 	err error
 }
 
-func (f *fakeDocLoader) Document(context.Context, artifact.URI) (*docpb.Document, error) {
+func (f *fakeDocLoader) Document(context.Context, mounts.URI) (*docpb.Document, error) {
 	return f.doc, f.err
 }
 
@@ -71,7 +71,7 @@ type fakeDocExtractor struct {
 }
 
 func (f *fakeDocExtractor) Available() bool { return f.available }
-func (f *fakeDocExtractor) Extract(context.Context, artifact.URI) (*docpb.Document, error) {
+func (f *fakeDocExtractor) Extract(context.Context, mounts.URI) (*docpb.Document, error) {
 	return f.doc, f.err
 }
 
@@ -84,11 +84,11 @@ type fakeAnnotationStore struct {
 	saveErr error
 }
 
-func (f *fakeAnnotationStore) Get(context.Context, artifact.URI) ([]*dsapi.AnnotationSet, error) {
+func (f *fakeAnnotationStore) Get(context.Context, mounts.URI) ([]*dsapi.AnnotationSet, error) {
 	return f.sets, nil
 }
 
-func (f *fakeAnnotationStore) Save(_ context.Context, _ artifact.URI, author string, set *dsapi.AnnotationSet) error {
+func (f *fakeAnnotationStore) Save(_ context.Context, _ mounts.URI, author string, set *dsapi.AnnotationSet) error {
 	f.author = author
 	f.saved = set
 	return f.saveErr

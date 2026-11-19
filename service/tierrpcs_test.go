@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/render"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -18,14 +18,14 @@ type uriLoader struct {
 	design, report []string
 }
 
-func (l *uriLoader) Design(ctx context.Context, u artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+func (l *uriLoader) Design(ctx context.Context, u mounts.URI, opts ...ReadOption) (*ir.Design, error) {
 	l.mu.Lock()
 	l.design = append(l.design, u.String())
 	l.mu.Unlock()
 	return l.recordingLoader.Design(ctx, u, opts...)
 }
 
-func (l *uriLoader) Report(ctx context.Context, u artifact.URI, faithful bool, opts ...ReadOption) (*graph.ConversionReport, error) {
+func (l *uriLoader) Report(ctx context.Context, u mounts.URI, faithful bool, opts ...ReadOption) (*graph.ConversionReport, error) {
 	l.mu.Lock()
 	l.report = append(l.report, u.String())
 	l.mu.Unlock()

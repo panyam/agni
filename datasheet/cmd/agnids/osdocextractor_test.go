@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/datasheet/dsservice"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 // stubProducer writes a minimal valid doc-IR to its -o path (invoked as `<script> <pdf> -o <out>`,

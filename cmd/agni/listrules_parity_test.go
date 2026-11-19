@@ -10,7 +10,7 @@ import (
 	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/wasmengine"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 // The viewer selects the rules ListRules calls available and runs those (agni issue 950). Suppose a

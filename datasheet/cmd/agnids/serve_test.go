@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 func writeEmpty(t *testing.T, path string) {

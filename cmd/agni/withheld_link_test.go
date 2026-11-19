@@ -11,7 +11,7 @@ import (
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 // The reason a run withheld its links has to reach the saved page, not just stderr (issue 626).

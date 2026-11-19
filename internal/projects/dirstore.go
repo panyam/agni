@@ -20,7 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/yaml.v3"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
@@ -191,7 +191,7 @@ func (s *DirStore) designOf(id string, rec recordYAML) (*webapi.Design, error) {
 	}
 	var d *webapi.Design
 	if entry == "" || rec.Rev == "" {
-		base, err := artifact.New(s.mount, id)
+		base, err := mounts.NewURI(s.mount, id)
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +208,7 @@ func (s *DirStore) designOf(id string, rec recordYAML) (*webapi.Design, error) {
 			return nil, err
 		}
 		d.Series = rec.Series
-		base, err := artifact.New(s.mount, path.Join(id, rec.Rev))
+		base, err := mounts.NewURI(s.mount, path.Join(id, rec.Rev))
 		if err != nil {
 			return nil, err
 		}

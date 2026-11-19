@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 

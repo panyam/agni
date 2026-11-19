@@ -13,7 +13,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // Table is a server's live mount list (agni issue 1735). The mounts from its flags are fixed. A
@@ -73,7 +73,7 @@ func (t *Table) List() []Mount {
 func (t *Table) Find(name string) (Mount, bool) { return Find(t.List(), name) }
 
 // Resolve maps uri to a host path inside its mount, as the package's Resolve does.
-func (t *Table) Resolve(uri artifact.URI) (string, error) { return Resolve(t.List(), uri) }
+func (t *Table) Resolve(uri mounts.URI) (string, error) { return Resolve(t.List(), uri) }
 
 // Fixed reports whether name is a mount from the flags.
 func (t *Table) Fixed(name string) bool {
@@ -264,7 +264,7 @@ func ValidName(name string) error {
 			return fmt.Errorf("mount name %q may hold only a-z, 0-9, and - _ . after the first character", name)
 		}
 	}
-	if _, err := artifact.New(name, ""); err != nil {
+	if _, err := mounts.NewURI(name, ""); err != nil {
 		return fmt.Errorf("mount name %q: %w", name, err)
 	}
 	return nil

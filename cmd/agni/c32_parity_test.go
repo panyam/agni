@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/service"
 )
 
@@ -40,7 +40,7 @@ func tiersFromCLI(t *testing.T, path string) service.DesignSources {
 // ProjectResolver the services hold.
 func tiersFromService(t *testing.T, ref string) service.DesignSources {
 	t.Helper()
-	u, err := artifact.Parse(ref)
+	u, err := mounts.ParseURI(ref)
 	if err != nil {
 		t.Fatalf("parse %s: %v", ref, err)
 	}

@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/agni/mountset"
 )
 
 // openCmd serves ONE design and prints the URL that shows it.
@@ -46,7 +46,7 @@ func openCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			u, err := artifact.Parse(src.NetlistURI)
+			u, err := mounts.ParseURI(src.NetlistURI)
 			if err != nil {
 				return err
 			}

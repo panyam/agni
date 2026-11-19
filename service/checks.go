@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/stdlib/profiles"
 	"sort"
 	"sync"
@@ -66,7 +66,7 @@ func (s *CheckService) WithProfileIndex(byName map[string][]profiles.Profile) *C
 // request (C22), so CheckDesign needs no filesystem. It backs the resolver rpc. A client with a ref
 // and no filesystem calls that rpc first.
 type ConventionLoader interface {
-	Convention(ctx context.Context, uri artifact.URI) (*configpb.NamingConvention, error)
+	Convention(ctx context.Context, uri mounts.URI) (*configpb.NamingConvention, error)
 }
 
 // NewCheckService returns a CheckService backed by the given loader, rule catalog, and (optional)
@@ -132,7 +132,7 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 	// would show rules that will not run and hide the ones that will.
 	ov := snap.Overlay
 	if !ok {
-		if ov, err = s.projects.Overlay(ctx, artifact.URI{}, nil, s.baseConvention); err != nil {
+		if ov, err = s.projects.Overlay(ctx, mounts.URI{}, nil, s.baseConvention); err != nil {
 			return nil, err
 		}
 	}

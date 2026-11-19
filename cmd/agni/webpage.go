@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/internal/version"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
 )
@@ -253,7 +253,7 @@ func viewDesign(w http.ResponseWriter, r *http.Request, lookup service.DesignLoo
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	u, err := artifact.Parse(d.GetEntryUri())
+	u, err := mounts.ParseURI(d.GetEntryUri())
 	if err != nil || d.GetEntryUri() == "" {
 		http.Error(w, name+" has no file a reader opens yet; put its netlist, schematic or board first", http.StatusNotFound)
 		return

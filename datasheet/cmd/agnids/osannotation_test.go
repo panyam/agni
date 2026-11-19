@@ -10,7 +10,7 @@ import (
 
 	"github.com/panyam/agni/datasheet/dsservice"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 func TestAnnotationsDirAndSafeAuthor(t *testing.T) {

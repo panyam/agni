@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/param"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
@@ -36,7 +36,7 @@ var ErrExtractNotEnabled = errors.New("doc-IR extraction not enabled")
 // mount or a containment violation is returned already classified (service.ErrNotFound / service.ErrInvalidPath),
 // and a present-but-unparseable doc-IR is any other error, classified as invalid.
 type DocLoader interface {
-	Document(ctx context.Context, uri artifact.URI) (*docpb.Document, error)
+	Document(ctx context.Context, uri mounts.URI) (*docpb.Document, error)
 }
 
 // DraftStore keeps drafts and publishes them (agni issue 749). A draft is the editing copy of a
@@ -80,7 +80,7 @@ func (e *PublishRefused) Error() string { return e.Reason }
 // parse failure, or a bad URI).
 type DocExtractor interface {
 	Available() bool
-	Extract(ctx context.Context, uri artifact.URI) (*docpb.Document, error)
+	Extract(ctx context.Context, uri mounts.URI) (*docpb.Document, error)
 }
 
 // AnnotationStore persists and loads a datasheet's per-author region-annotation overlays
@@ -90,8 +90,8 @@ type DocExtractor interface {
 // Get returns an empty slice (not an error) when nobody has annotated yet. author is a
 // client-supplied coordination namespace, not an authenticated identity.
 type AnnotationStore interface {
-	Get(ctx context.Context, uri artifact.URI) ([]*dsapi.AnnotationSet, error)
-	Save(ctx context.Context, uri artifact.URI, author string, set *dsapi.AnnotationSet) error
+	Get(ctx context.Context, uri mounts.URI) ([]*dsapi.AnnotationSet, error)
+	Save(ctx context.Context, uri mounts.URI, author string, set *dsapi.AnnotationSet) error
 }
 
 // DatasheetService serves a datasheet's doc-IR and its saved PartSpec to the extraction workbench

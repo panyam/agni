@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/mesh"
@@ -19,7 +19,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/expect"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/service"
 )
@@ -83,7 +83,7 @@ func (l *localLoader) note(key, text string) {
 
 // Design reads the netlist tier and says, once per file, when the read left out hierarchical blocks,
 // so check, query, review and trace warn the way readDesign's commands do (agni issue 707).
-func (l *localLoader) Design(ctx context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+func (l *localLoader) Design(ctx context.Context, uri mounts.URI, opts ...service.ReadOption) (*ir.Design, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (l *localLoader) Design(ctx context.Context, uri artifact.URI, opts ...serv
 	return d, nil
 }
 
-func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+func (l *localLoader) Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeometry, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardG
 }
 
 // BoardMeshes reads model meshes by the keys in the board tier's model_instances (agni issue 1652).
-func (l *localLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+func (l *localLoader) BoardMeshes(ctx context.Context, uri mounts.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, nil, err
@@ -119,7 +119,7 @@ func (l *localLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []
 // companion that cannot be read, and which placements the back-annotation relabelled. The services
 // treat a failed geometry read as no sheets and go on, so without the warning a broken companion
 // reads as every part drawn on no sheet (agni issue 1230).
-func (l *localLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithful bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
+func (l *localLoader) Geometry(ctx context.Context, uri mounts.URI, layout string, faithful bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func (l *localLoader) Geometry(ctx context.Context, uri artifact.URI, layout str
 	return g, err
 }
 
-func (l *localLoader) Report(ctx context.Context, uri artifact.URI, faithful bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
+func (l *localLoader) Report(ctx context.Context, uri mounts.URI, faithful bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (l *localLoader) Report(ctx context.Context, uri artifact.URI, faithful boo
 
 // Expectations reads the sidecar beside the ENTRY rather than beside the named file. An expectation
 // set states what this design should read, and the design is its entry.
-func (l *localLoader) Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error) {
+func (l *localLoader) Expectations(ctx context.Context, uri mounts.URI) (*expect.Expectations, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
@@ -155,14 +155,14 @@ func (l *localLoader) Expectations(ctx context.Context, uri artifact.URI) (*expe
 	return expect.Load(sidecar)
 }
 
-func (l *localLoader) Manifest(_ context.Context, uri artifact.URI) (review.Manifest, error) {
+func (l *localLoader) Manifest(_ context.Context, uri mounts.URI) (review.Manifest, error) {
 	return loadManifest(localPath(uri))
 }
 
 // Convention resolves a naming-convention config from a local path. Nothing in the CLI calls it,
 // since the CLI reads its own --conventions at the edge and sends the value. It exists so localLoader
 // and osLoader satisfy the same interfaces and are swappable.
-func (l *localLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
+func (l *localLoader) Convention(_ context.Context, uri mounts.URI) (*configpb.NamingConvention, error) {
 	return naming.Load(localPath(uri))
 }
 
@@ -173,7 +173,7 @@ func (l *localLoader) Convention(_ context.Context, uri artifact.URI) (*configpb
 //
 // It hashes the ENTRY the descriptor declares, not the ref the caller passed, so a run recorded
 // against a companion and one recorded against the design folder carry the same revision identity.
-func (l *localLoader) DesignHash(ctx context.Context, uri artifact.URI) (string, error) {
+func (l *localLoader) DesignHash(ctx context.Context, uri mounts.URI) (string, error) {
 	e, err := l.designEntry(ctx, uri)
 	if err != nil {
 		return "", err
@@ -188,12 +188,12 @@ func (l *localLoader) DesignHash(ctx context.Context, uri artifact.URI) (string,
 // A verdict link takes both its path and its hash from this ENTRY, so the two halves name the same
 // artifact (agni issue 489). A link built from the caller's argument instead would open nothing for
 // a folder argument and report a false revision mismatch for a companion.
-func (l *localLoader) designEntry(ctx context.Context, uri artifact.URI) (artifact.URI, error) {
+func (l *localLoader) designEntry(ctx context.Context, uri mounts.URI) (mounts.URI, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
-		return artifact.URI{}, err
+		return mounts.URI{}, err
 	}
-	return artifact.Parse(src.NetlistURI)
+	return mounts.ParseURI(src.NetlistURI)
 }
 
 // loadManifest reads and validates a checklist from a local path. `agni review` calls it directly
@@ -215,7 +215,7 @@ func loadManifest(path string) (review.Manifest, error) {
 // one contained value and the readers below it see plain paths. It resolves through the run's mount
 // table as the served adapter does, so every path the CLI reads is inside a mount, even when that
 // mount was minted from the argument (#179). A URI that does not resolve falls back to its path.
-func localPath(uri artifact.URI) string {
+func localPath(uri mounts.URI) string {
 	ws, err := workspace()
 	if err != nil {
 		return filepath.FromSlash(uri.Path)
@@ -231,7 +231,7 @@ func localPath(uri artifact.URI) string {
 // through a port. It is localPath with the parse folded in, and it passes a non-URI through
 // unchanged so a caller holding a plain path is not broken by it.
 func localOf(s string) string {
-	u, err := artifact.Parse(s)
+	u, err := mounts.ParseURI(s)
 	if err != nil {
 		return s
 	}

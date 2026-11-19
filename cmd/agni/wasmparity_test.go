@@ -24,7 +24,7 @@ import (
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/wasmengine"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/render"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -18,7 +18,7 @@ type geomCountingLoader struct {
 	reads *int
 }
 
-func (l geomCountingLoader) Geometry(ctx context.Context, u artifact.URI, layout string, faithful bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
+func (l geomCountingLoader) Geometry(ctx context.Context, u mounts.URI, layout string, faithful bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
 	*l.reads++
 	return l.fakeLoader.Geometry(ctx, u, layout, faithful, opts...)
 }

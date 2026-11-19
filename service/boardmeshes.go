@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/mesh"
 	"github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -33,7 +33,7 @@ const (
 // ModelInstance.mesh values. A key the loader cannot read goes in unread with its reason. A host
 // resolves each key as its board read resolved the model, so the service opens no file (C1, C13).
 type BoardMeshLoader interface {
-	BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (meshes map[string]*mesh.Mesh, unread map[string]string, err error)
+	BoardMeshes(ctx context.Context, uri mounts.URI, keys []string) (meshes map[string]*mesh.Mesh, unread map[string]string, err error)
 }
 
 // GetBoardMeshes answers a page of the snapshot's board meshes, fitted to the request's

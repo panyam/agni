@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 // TestRawFileHandlerServesFilesInsideAMountOnly checks the read-only route's containment. A file in

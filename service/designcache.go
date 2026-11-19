@@ -10,7 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/mesh"
@@ -442,7 +442,7 @@ func (l *CachingLoader) Cache() *DesignCache { return l.cache }
 // are unchanged. Both are stored. A later worker under the same overlay restores the derived design.
 // A worker under another overlay restores the parse and runs only the derive, which costs about a
 // tenth of the parse on a large board.
-func (l *CachingLoader) Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+func (l *CachingLoader) Design(ctx context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error) {
 	o := ReadOpts(opts...)
 	derive := func(ctx context.Context) (any, error) {
 		p, err := l.parse(ctx, uri, o.SymbolPaths, o.FlattenHierarchy)
@@ -475,7 +475,7 @@ func (l *CachingLoader) Design(ctx context.Context, uri artifact.URI, opts ...Re
 // hierarchy choice (agni issues 1061, 718). It is keyed on no overlay. So two projects'
 // conventions, or a request's own intent, derive from one parse rather than reading the files
 // again. The value is the cache's own, for Design to copy before deriving into it.
-func (l *CachingLoader) parse(ctx context.Context, uri artifact.URI, symbolPaths []string, flatten bool) (*ir.Design, error) {
+func (l *CachingLoader) parse(ctx context.Context, uri mounts.URI, symbolPaths []string, flatten bool) (*ir.Design, error) {
 	parts := []string{"parse", uri.String(), strings.Join(symbolPaths, "\x01")}
 	if flatten {
 		parts = append(parts, "flat")
@@ -498,7 +498,7 @@ func (l *CachingLoader) parse(ctx context.Context, uri artifact.URI, symbolPaths
 }
 
 // Geometry returns a copy of the drawing, read once per layout, symbol source and identity.
-func (l *CachingLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
+func (l *CachingLoader) Geometry(ctx context.Context, uri mounts.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
 	sym := "glyph"
 	if faithfulSymbols {
 		sym = "faithful"
@@ -521,7 +521,7 @@ func (l *CachingLoader) Geometry(ctx context.Context, uri artifact.URI, layout s
 }
 
 // Board returns a copy of the board sidecar. A board read takes no options, so its key is the URI.
-func (l *CachingLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+func (l *CachingLoader) Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeometry, error) {
 	ok, key := l.key("board", uri.String(), nil)
 	if !ok {
 		return l.CacheableLoader.Board(ctx, uri)
@@ -541,7 +541,7 @@ func (l *CachingLoader) Board(ctx context.Context, uri artifact.URI) (*geom.Boar
 
 // BoardMeshes passes through to the wrapped loader's BoardMeshes, or reports every key unread when
 // it has none. Meshes stay out of the DesignCache, since GetBoardMeshes keeps its own fitted sets.
-func (l *CachingLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+func (l *CachingLoader) BoardMeshes(ctx context.Context, uri mounts.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
 	if ml, ok := l.CacheableLoader.(BoardMeshLoader); ok {
 		return ml.BoardMeshes(ctx, uri, keys)
 	}
@@ -554,7 +554,7 @@ func (l *CachingLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys 
 
 // BoardPersisted reports whether the board read for uri is in the cache's persistent tier, so another
 // process over the same files restores it rather than parsing it.
-func (l *CachingLoader) BoardPersisted(uri artifact.URI) bool {
+func (l *CachingLoader) BoardPersisted(uri mounts.URI) bool {
 	ok, key := l.key("board", uri.String(), nil)
 	return ok && l.cache.persisted(key)
 }
@@ -612,7 +612,7 @@ func (b *builtModel) baseFor(ctx context.Context, reg *facts.Registry) *query.Ba
 //
 // It returns the fact base too, built on first use, so a query does not spend 100ms projecting every
 // relation again.
-func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider) (check.Model, func(*facts.Registry) *query.Base, error) {
+func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI mounts.URI, ov Overlay, serverSpecs param.ParamProvider) (check.Model, func(*facts.Registry) *query.Base, error) {
 	return BuildModelCachedTier(ctx, loader, uri, boardURI, ov, serverSpecs, ReadBoard)
 }
 
@@ -620,7 +620,7 @@ func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI art
 // are kept apart. A SkipBoard request takes a model already kept WITH the board when there is one,
 // since that model answers everything the board-less one would. So a server that has run checks on
 // a design builds no second model for its coverage panel (agni issues 985, 987).
-func BuildModelCachedTier(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider, board BoardTier) (check.Model, func(*facts.Registry) *query.Base, error) {
+func BuildModelCachedTier(ctx context.Context, loader ModelLoader, uri, boardURI mounts.URI, ov Overlay, serverSpecs param.ParamProvider, board BoardTier) (check.Model, func(*facts.Registry) *query.Base, error) {
 	b, err := buildModelEntry(ctx, loader, uri, boardURI, ov, serverSpecs, board)
 	if err != nil {
 		return nil, nil, err
@@ -631,7 +631,7 @@ func BuildModelCachedTier(ctx context.Context, loader ModelLoader, uri, boardURI
 // buildModelEntry is BuildModelCachedTier returning the entry itself. A check run also keeps its
 // rules' results on that entry (runKept). An entry built for one request alone is marked unkept, so
 // nothing is stored on it for a later request to find.
-func buildModelEntry(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider, board BoardTier) (*builtModel, error) {
+func buildModelEntry(ctx context.Context, loader ModelLoader, uri, boardURI mounts.URI, ov Overlay, serverSpecs param.ParamProvider, board BoardTier) (*builtModel, error) {
 	specs := ov.SpecsOver(serverSpecs)
 	opts := ov.ReadOptions()
 	c := cacheOf(loader)

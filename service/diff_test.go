@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"strings"
 	"testing"
 
@@ -23,7 +23,7 @@ type pairLoader struct {
 	geo     map[string]*geom.SchematicGeometry
 }
 
-func (p pairLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+func (p pairLoader) Design(_ context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error) {
 	d, ok := p.designs[uri.Path]
 	if !ok {
 		return nil, fmt.Errorf("no design %q: %w", uri.Path, ErrNotFound)
@@ -31,7 +31,7 @@ func (p pairLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadOpti
 	return d, nil
 }
 
-func (p pairLoader) Geometry(_ context.Context, uri artifact.URI, _ string, _ bool, _ ...ReadOption) (*geom.SchematicGeometry, error) {
+func (p pairLoader) Geometry(_ context.Context, uri mounts.URI, _ string, _ bool, _ ...ReadOption) (*geom.SchematicGeometry, error) {
 	g, ok := p.geo[uri.Path]
 	if !ok {
 		return nil, fmt.Errorf("no geometry %q: %w", uri.Path, ErrNotFound)

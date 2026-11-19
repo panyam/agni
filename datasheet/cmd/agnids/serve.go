@@ -23,7 +23,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/storeurl"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
 	skhttp "github.com/panyam/servicekit/http"

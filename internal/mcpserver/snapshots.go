@@ -7,7 +7,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
@@ -40,7 +40,7 @@ func newDesigns(svc ingester) *designs {
 	return &designs{svc: svc, held: map[string]*held{}}
 }
 
-func (d *designs) entry(u artifact.URI) *held {
+func (d *designs) entry(u mounts.URI) *held {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	h := d.held[u.String()]
@@ -52,7 +52,7 @@ func (d *designs) entry(u artifact.URI) *held {
 }
 
 // snapshot is the snapshot held for u, ingesting the design the first time it is named.
-func (d *designs) snapshot(ctx context.Context, u artifact.URI) (*webapi.Snapshot, error) {
+func (d *designs) snapshot(ctx context.Context, u mounts.URI) (*webapi.Snapshot, error) {
 	h := d.entry(u)
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -69,7 +69,7 @@ func (d *designs) snapshot(ctx context.Context, u artifact.URI) (*webapi.Snapsho
 
 // ask runs fn over u's snapshot, and once more over a fresh one when fn reports the snapshot lost or
 // stale, deleting the one it replaces.
-func (d *designs) ask(ctx context.Context, u artifact.URI, fn func(*webapi.Snapshot) error) error {
+func (d *designs) ask(ctx context.Context, u mounts.URI, fn func(*webapi.Snapshot) error) error {
 	s, err := d.snapshot(ctx, u)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (d *designs) ask(ctx context.Context, u artifact.URI, fn func(*webapi.Snaps
 }
 
 // forget drops s as u's snapshot, if it still is, and deletes it on the host.
-func (d *designs) forget(ctx context.Context, u artifact.URI, s *webapi.Snapshot) {
+func (d *designs) forget(ctx context.Context, u mounts.URI, s *webapi.Snapshot) {
 	h := d.entry(u)
 	h.mu.Lock()
 	if h.snap == s {

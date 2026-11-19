@@ -2,7 +2,7 @@ package projects
 
 import (
 	"context"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -58,7 +58,7 @@ func TestFSStoreProjectsAndDesigns(t *testing.T) {
 		t.Fatalf("designs = %+v", ds)
 	}
 	// Descriptor-relative names become mount:// URIs HERE, once, because every consumer above
-	// the port addresses files by artifact.URI and none knows where the design folder sits.
+	// the port addresses files by mounts.URI and none knows where the design folder sits.
 	if ds[0].GetEntryUri() != "mount://m/designs/gateway/gateway.edn" {
 		t.Errorf("entry ref = %q", ds[0].GetEntryUri())
 	}
@@ -217,11 +217,11 @@ func TestFSStoreUnknownMount(t *testing.T) {
 
 // testURI builds an artifact URI for a test. It fails the test rather than returning an error. A
 // hard-coded fixture URI that will not parse is a broken test, not a condition under test.
-func testURI(t *testing.T, mount, p string) artifact.URI {
+func testURI(t *testing.T, mount, p string) mounts.URI {
 	t.Helper()
-	u, err := artifact.New(mount, p)
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
-		t.Fatalf("artifact.New(%q, %q): %v", mount, p, err)
+		t.Fatalf("mounts.NewURI(%q, %q): %v", mount, p, err)
 	}
 	return u
 }

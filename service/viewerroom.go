@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -47,8 +47,8 @@ func (s *ViewerRoomService) Room(ctx context.Context, design string) (string, er
 	if d == "" {
 		return "", fmt.Errorf("%w: name a design, as mount/path", ErrInvalidArgument)
 	}
-	if !strings.HasPrefix(d, artifact.Scheme+"://") {
-		d = artifact.Scheme + "://" + strings.TrimPrefix(d, "/")
+	if !strings.HasPrefix(d, mounts.Scheme) {
+		d = mounts.Scheme + strings.TrimPrefix(d, "/")
 	}
 	p, err := linkMountPath(ctx, s.projects, d)
 	if err != nil {

@@ -15,7 +15,7 @@ import (
 	"github.com/panyam/agni/datasheet/corpus"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	"github.com/panyam/agni/internal/paramclient"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 // This test covers the whole read path of `agni serve --params-url`. agnids serves a published

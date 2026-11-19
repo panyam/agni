@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -38,7 +38,7 @@ type ConfigResolver struct {
 	// symbol library is handed to the reader rather than read here, so it has to be spelled in the
 	// reader's name space, such as a host path for a loader reading the host filesystem. Nil spells
 	// it as its path in Root, and a Host's loader opens that.
-	SymbolPath func(uri artifact.URI) (string, error)
+	SymbolPath func(uri mounts.URI) (string, error)
 }
 
 // ResolveConfig loads what an AnalysisConfig's URIs point at, whether it came from a project
@@ -79,7 +79,7 @@ func (c *ConfigResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisCo
 		out.Specs = set
 	}
 	for _, uri := range cfg.GetSymbolPathUris() {
-		u, err := artifact.Parse(uri)
+		u, err := mounts.ParseURI(uri)
 		if err != nil {
 			return service.ResolvedConfig{}, err
 		}
@@ -148,7 +148,7 @@ func (c *ConfigResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisCo
 
 // dir resolves a project-config URI to a directory inside its mount's own FS.
 func (c *ConfigResolver) dir(uri string) (DigestRoot, error) {
-	u, err := artifact.Parse(uri)
+	u, err := mounts.ParseURI(uri)
 	if err != nil {
 		return DigestRoot{}, err
 	}

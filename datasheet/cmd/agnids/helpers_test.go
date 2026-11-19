@@ -7,14 +7,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/agni/mountset"
 )
 
 // mustURI builds a mount-relative URI a test names directly, failing the test rather than the
 // assertion when the literal is malformed.
-func mustURI(mount, p string) artifact.URI {
-	u, err := artifact.New(mount, p)
+func mustURI(mount, p string) mounts.URI {
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
 		panic(err)
 	}

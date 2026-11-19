@@ -13,7 +13,7 @@ import (
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 )
 
 // twoBoards is a folder holding two boards and no design.yaml: the Jetson cut's KiCad schematic and

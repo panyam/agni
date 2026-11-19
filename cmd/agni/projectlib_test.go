@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -174,7 +174,7 @@ func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
 	loader := &osLoader{mounts: tableOf(ms), loader: newLoader()}
 	svc := service.NewReviewService(loader, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{}, "", testProjectResolver(ms))
 	// The served side takes the checklist off the project's config, as a viewer does, with no read.
-	u, err := artifact.Parse("mount://tut/designs/gateway")
+	u, err := mounts.ParseURI("mount://tut/designs/gateway")
 	if err != nil {
 		t.Fatal(err)
 	}

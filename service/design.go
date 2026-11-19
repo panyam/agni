@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/num"
 	"path"
 	"strings"
@@ -54,30 +54,30 @@ var (
 	ErrFailedPrecondition = errors.New("failed precondition")
 )
 
-// Loader materializes a design's read model from an artifact.URI. osLoader in cmd/agni is the
+// Loader materializes a design's read model from an mounts.URI. osLoader in cmd/agni is the
 // os-backed server adapter. All file I/O lives in the adapter, never here (CONSTRAINTS C13).
 type Loader interface {
 	// Design returns the netlist IR (for counts and checks). A geometry-only file has none and
 	// returns an error the caller treats as "no netlist".
-	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
+	Design(ctx context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error)
 	// Geometry resolves drawable geometry for the layout and symbol source (the design's own
 	// symbols when faithfulSymbols, else synthetic glyphs). It takes ReadOptions because a symbol
 	// library changes what the read CONTAINS (agni issue 347). An unresolved symbol contributes no
 	// shapes, so its placement and pickable entity keys drop out while its ref-des still draws, and
 	// the sheet looks complete with every component and pin on it silently unclickable.
-	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
+	Geometry(ctx context.Context, uri mounts.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
 	// Report classifies how an auto-layout draws each component (the conversion report). It takes
 	// ReadOptions for the same reason Geometry does. Report would REPORT an unresolved symbol, so a
 	// read blind to the project's library would diagnose a problem it caused.
-	Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool, opts ...ReadOption) (*graph.ConversionReport, error)
+	Report(ctx context.Context, uri mounts.URI, faithfulSymbols bool, opts ...ReadOption) (*graph.ConversionReport, error)
 	// Expectations loads a design's `<path>.expect.yaml` sidecar (WS6-006). A design with no sidecar
 	// returns a nil map and a nil error, since absence is normal. The caller then renders an empty
 	// panel rather than an error.
-	Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error)
+	Expectations(ctx context.Context, uri mounts.URI) (*expect.Expectations, error)
 	// Board returns the physical board sidecar (WS1-006) for formats that carry one
 	// (.kicad_pcb, IPC-2581 .xml/.cvg). nil with a nil error means the format has none. That is
 	// normal, as with Expectations, and the design then lists no board sheet.
-	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
+	Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeometry, error)
 	// DesignHash returns "sha256:<hex>" over the design's entry file. A verdict link is checked
 	// against this revision identity (agni issue 392). The review service's port and `agni check
 	// --url-base` use this same method, so both sides of the link compare values from one
@@ -92,7 +92,7 @@ type Loader interface {
 	// An error means this server could not hash the file, and GetSummary then reports an empty
 	// content_hash. That is a THIRD state, distinct from a match and a mismatch. The response's doc
 	// comment binds the consumer to keep it distinct.
-	DesignHash(ctx context.Context, uri artifact.URI) (string, error)
+	DesignHash(ctx context.Context, uri mounts.URI) (string, error)
 }
 
 // boardSheetID is the synthetic sheet id the board renders under (WS7-034). It is a sheet,
@@ -144,8 +144,8 @@ var (
 // Available reports whether NATIVE can be offered for a file; Render returns the page's SVG or one
 // of the ErrNative* gate errors.
 type NativeRenderer interface {
-	Available(uri artifact.URI) bool
-	Render(ctx context.Context, uri artifact.URI, page int) (string, error)
+	Available(uri mounts.URI) bool
+	Render(ctx context.Context, uri mounts.URI, page int) (string, error)
 }
 
 // DesignViewService loads and renders one design over injected ports (CONSTRAINTS C13). It
@@ -614,10 +614,10 @@ func nameOnlyCanvas(g *geom.SchematicGeometry) bool {
 // its mount, so containment is a property of the type and the adapters below the ports do not
 // re-check it (#179 replaced 26 separate containment checks). Exported for the same reason as
 // ClassifyLoadErr.
-func ParseArtifactURI(s string) (artifact.URI, error) {
-	u, err := artifact.Parse(s)
+func ParseArtifactURI(s string) (mounts.URI, error) {
+	u, err := mounts.ParseURI(s)
 	if err != nil {
-		return artifact.URI{}, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+		return mounts.URI{}, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	return u, nil
 }
@@ -625,9 +625,9 @@ func ParseArtifactURI(s string) (artifact.URI, error) {
 // optionalArtifactURI is ParseArtifactURI for a field whose absence is legal, such as a board export
 // a design may not have. An empty string yields the zero URI and no error. Anything else must still
 // parse, so a typo is not silently read as "not supplied".
-func optionalArtifactURI(s string) (artifact.URI, error) {
+func optionalArtifactURI(s string) (mounts.URI, error) {
 	if s == "" {
-		return artifact.URI{}, nil
+		return mounts.URI{}, nil
 	}
 	return ParseArtifactURI(s)
 }

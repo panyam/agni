@@ -7,7 +7,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/mesh"
 	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -21,7 +21,7 @@ type meshLoader struct {
 	reads  *int
 }
 
-func (l meshLoader) BoardMeshes(_ context.Context, _ artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+func (l meshLoader) BoardMeshes(_ context.Context, _ mounts.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
 	*l.reads++
 	out, unread := map[string]*mesh.Mesh{}, map[string]string{}
 	for _, k := range keys {

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -51,30 +51,30 @@ func (l *recordingLoader) symbolPathsFor(method string) [][]string {
 	return out
 }
 
-func (l *recordingLoader) Design(_ context.Context, _ artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+func (l *recordingLoader) Design(_ context.Context, _ mounts.URI, opts ...ReadOption) (*ir.Design, error) {
 	l.record("Design", opts)
 	return &ir.Design{Name: "D", Nets: []*ir.Net{{Name: "N1"}}}, nil
 }
 
-func (l *recordingLoader) Geometry(_ context.Context, _ artifact.URI, _ string, _ bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
+func (l *recordingLoader) Geometry(_ context.Context, _ mounts.URI, _ string, _ bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
 	l.record("Geometry", opts)
 	return twoSheetGeom(), nil
 }
 
-func (l *recordingLoader) Report(_ context.Context, _ artifact.URI, _ bool, opts ...ReadOption) (*graph.ConversionReport, error) {
+func (l *recordingLoader) Report(_ context.Context, _ mounts.URI, _ bool, opts ...ReadOption) (*graph.ConversionReport, error) {
 	l.record("Report", opts)
 	return &graph.ConversionReport{}, nil
 }
 
-func (l *recordingLoader) Expectations(context.Context, artifact.URI) (*expect.Expectations, error) {
+func (l *recordingLoader) Expectations(context.Context, mounts.URI) (*expect.Expectations, error) {
 	return nil, nil
 }
 
-func (l *recordingLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
+func (l *recordingLoader) Board(context.Context, mounts.URI) (*geom.BoardGeometry, error) {
 	return nil, nil
 }
 
-func (l *recordingLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+func (l *recordingLoader) DesignHash(context.Context, mounts.URI) (string, error) {
 	return "", nil
 }
 
@@ -94,7 +94,7 @@ func (s stubProjectStore) Design(context.Context, string) (*webapi.Design, error
 func (s stubProjectStore) Designs(context.Context, string) ([]*webapi.Design, error) {
 	return []*webapi.Design{{}}, nil
 }
-func (s stubProjectStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (s stubProjectStore) ResolveDesign(context.Context, mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	return &webapi.Design{}, s.project, nil
 }
 

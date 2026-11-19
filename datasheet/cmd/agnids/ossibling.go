@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/agni/mountset"
 )
 
 // resolveSibling resolves a file DERIVED from another artifact's path (a datasheet's doc-IR beside
@@ -11,8 +11,8 @@ import (
 // The derivation is a pure function of the mount-relative path (`docSibling`, `annotationsDir`).
 // The result is rebuilt through artifact.New rather than pasted onto a string. So a derivation that
 // escapes the mount is caught at the same boundary as a client-supplied URI.
-func resolveSibling(ms *mountset.Table, uri artifact.URI, derive func(string) string) (string, error) {
-	sib, err := artifact.New(uri.Mount, derive(uri.Path))
+func resolveSibling(ms *mountset.Table, uri mounts.URI, derive func(string) string) (string, error) {
+	sib, err := mounts.NewURI(uri.Mount, derive(uri.Path))
 	if err != nil {
 		return "", err
 	}

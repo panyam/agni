@@ -16,10 +16,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -249,7 +249,7 @@ func (r remoteSnapshot) upload(ctx context.Context, hashes []string, read func(s
 // It names them as ListDesignFiles does for a browser, and adds a --board-path outside that set. It
 // returns a function that reads a file's contents by its hash.
 func sendFiles(ctx context.Context, def *webapi.Snapshot) (func(sha string) ([]byte, error), error) {
-	u, err := artifact.Parse(def.GetUri())
+	u, err := mounts.ParseURI(def.GetUri())
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func sendFiles(ctx context.Context, def *webapi.Snapshot) (func(sha string) ([]b
 		byHash[f.GetSha256()], have[f.GetPath()] = f.GetPath(), true
 	}
 	if b := def.GetBoardUri(); b != "" {
-		bu, err := artifact.Parse(b)
+		bu, err := mounts.ParseURI(b)
 		if err != nil {
 			return nil, err
 		}
@@ -294,7 +294,7 @@ func sendFiles(ctx context.Context, def *webapi.Snapshot) (func(sha string) ([]b
 		if !ok {
 			return nil, fmt.Errorf("--remote: the server asked for a file this design does not have (%s)", sha)
 		}
-		f, err := artifact.New(u.Mount, p)
+		f, err := mounts.NewURI(u.Mount, p)
 		if err != nil {
 			return nil, err
 		}

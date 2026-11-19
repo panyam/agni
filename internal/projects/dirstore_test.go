@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
@@ -466,9 +466,9 @@ func dirNames(t *testing.T, dir string) []string {
 	return out
 }
 
-func artifactURI(t *testing.T, s string) artifact.URI {
+func artifactURI(t *testing.T, s string) mounts.URI {
 	t.Helper()
-	u, err := artifact.Parse(s)
+	u, err := mounts.ParseURI(s)
 	if err != nil {
 		t.Fatal(err)
 	}

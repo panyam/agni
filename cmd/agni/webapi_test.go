@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -197,7 +197,7 @@ func TestWorkspaceServiceListMountsPrunesEmptyMounts(t *testing.T) {
 // parse is a broken test rather than a condition under test, so it panics instead of returning an
 // error nobody would check.
 func uriStr(mount, p string) string {
-	u, err := artifact.New(mount, p)
+	u, err := mounts.NewURI(mount, p)
 	if err != nil {
 		panic(err)
 	}

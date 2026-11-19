@@ -28,7 +28,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/datasheet/corpus"
 	"github.com/panyam/agni/datasheet/doc"
 )
@@ -172,7 +172,7 @@ func scan(root, mount, toolchain string) ([]partInfo, error) {
 		}
 		uri := ""
 		if rel, rerr := filepath.Rel(root, path); rerr == nil {
-			if u, uerr := artifact.New(mount, filepath.ToSlash(rel)); uerr == nil {
+			if u, uerr := mounts.NewURI(mount, filepath.ToSlash(rel)); uerr == nil {
 				uri = u.String()
 			}
 		}

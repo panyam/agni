@@ -19,7 +19,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/mcpserver"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/mcpkit/client"
 	"github.com/panyam/mcpkit/core"

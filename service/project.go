@@ -8,7 +8,7 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"strings"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -41,7 +41,7 @@ type ProjectStore interface {
 	//
 	// A MISS is (nil, nil, nil), never ErrNotFound. A ref that belongs to no declared design is the
 	// ORDINARY case on a mounted folder.
-	ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error)
+	ResolveDesign(ctx context.Context, uri mounts.URI) (*webapi.Design, *webapi.Project, error)
 }
 
 // Resource-name prefixes and separators, written once. A store deals in ids and an API deals in
@@ -518,7 +518,7 @@ func paginate(n int, pageSize int32, pageToken string, nameAt func(int) string) 
 // mount. A URI that will not parse yields "", which never matches. A listing does not fail on a
 // stored value, and the resource itself carries the malformed URI for a client to see.
 func uriMount(s string) string {
-	u, err := artifact.Parse(s)
+	u, err := mounts.ParseURI(s)
 	if err != nil {
 		return ""
 	}

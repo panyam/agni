@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -164,7 +164,7 @@ func (s *DesignService) planAdd(ctx context.Context, mount string, p *webapi.Pro
 		if !ok || path.Base(f) == DesignDescriptorName {
 			continue
 		}
-		fu, err := artifact.New(mount, f)
+		fu, err := mounts.NewURI(mount, f)
 		if err != nil {
 			return addedDesign{}, err
 		}

@@ -18,7 +18,7 @@ import (
 	viewerpb "github.com/panyam/agni/gen/go/agni/v1/viewer"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/mcpserver"
-	"github.com/panyam/agni/internal/mountset"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/mcpkit/client"
 	"github.com/panyam/mcpkit/core"
 	"github.com/panyam/mcpkit/server/stateless"

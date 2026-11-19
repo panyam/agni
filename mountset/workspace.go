@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/service"
@@ -52,7 +52,7 @@ func Info(m Mount) service.MountInfo {
 // ListDir resolves the URI and reads one directory level. The service maps an error wrapping
 // service.ErrInvalidPath to InvalidArgument. It maps any other error to NotFound, including an
 // unknown mount or a missing directory.
-func (w *Workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEntry, error) {
+func (w *Workspace) ListDir(_ context.Context, uri mounts.URI) ([]service.DirEntry, error) {
 	abs, err := w.t.Resolve(uri)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (w *Workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirE
 }
 
 // ReadFile reads one file inside its mount, for service.FileReader. A directory is an error.
-func (w *Workspace) ReadFile(_ context.Context, uri artifact.URI) ([]byte, error) {
+func (w *Workspace) ReadFile(_ context.Context, uri mounts.URI) ([]byte, error) {
 	abs, err := w.t.Resolve(uri)
 	if err != nil {
 		return nil, err

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -38,7 +38,7 @@ func hierCopy(t *testing.T) (string, *service.CachingLoader, *service.DesignCach
 
 func netNames(t *testing.T, l *service.CachingLoader, opts ...service.ReadOption) map[string]bool {
 	t.Helper()
-	d, err := l.Design(context.Background(), artifact.URI{Mount: "m", Path: "hier_root.kicad_sch"}, opts...)
+	d, err := l.Design(context.Background(), mounts.URI{Mount: "m", Path: "hier_root.kicad_sch"}, opts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestOptionsWithNoIdentityAreNeverCached(t *testing.T) {
 // what an uncached read under it gives. As a control, an edited file reads the parse again.
 func TestAnotherConventionDerivesFromTheSameParse(t *testing.T) {
 	dir, l, c := hierCopy(t)
-	u := artifact.URI{Mount: "m", Path: "hier_root.kicad_sch"}
+	u := mounts.URI{Mount: "m", Path: "hier_root.kicad_sch"}
 	a := []service.ReadOption{service.WithIdentity("a", 0)}
 	// A vocabulary naming no role at all, so a design derived under the wrong one cannot pass.
 	lex := &classify.Lexicon{Role: &classify.RoleVocab{}, Class: classify.DefaultClassVocab(), Value: classify.DefaultValueVocab()}
@@ -168,7 +168,7 @@ func TestAnotherConventionDerivesFromTheSameParse(t *testing.T) {
 // what the next caller reads. check.NewModel's datasheet pass stamps that way.
 func TestACopyIsHandedOut(t *testing.T) {
 	_, l, _ := hierCopy(t)
-	u := artifact.URI{Mount: "m", Path: "hier_root.kicad_sch"}
+	u := mounts.URI{Mount: "m", Path: "hier_root.kicad_sch"}
 	d1, err := l.Design(context.Background(), u)
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +193,7 @@ func TestAModelIsKeptWhenTheCorpusIsLocal(t *testing.T) {
 	res := &service.ProjectResolver{Store: projects.NewFSStore(trees...), Config: &ConfigResolver{Mounts: ms}}
 	loader := service.NewCachingLoader(New(ms...), service.NewDesignCache(8))
 	ctx := context.Background()
-	u := artifact.URI{Mount: "m", Path: "designs/gateway"}
+	u := mounts.URI{Mount: "m", Path: "designs/gateway"}
 	ov, err := res.Overlay(ctx, u, nil, "")
 	if err != nil {
 		t.Fatal(err)
@@ -201,7 +201,7 @@ func TestAModelIsKeptWhenTheCorpusIsLocal(t *testing.T) {
 	if _, ok := ov.Identity(); !ok {
 		t.Fatal("the tutorial project's overlay does not identify, so no model could be kept and this proves nothing")
 	}
-	nu, bu, _, err := res.TierURIs(ctx, u, artifact.URI{}, false)
+	nu, bu, _, err := res.TierURIs(ctx, u, mounts.URI{}, false)
 	if err != nil {
 		t.Fatal(err)
 	}

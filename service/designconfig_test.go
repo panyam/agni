@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -17,7 +17,7 @@ type layeredStore struct {
 	project *webapi.Project
 }
 
-func (s layeredStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (s layeredStore) ResolveDesign(context.Context, mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	return s.design, s.project, nil
 }
 
@@ -41,7 +41,7 @@ func TestADesignLayersItsOwnConfigOverItsProject(t *testing.T) {
 	}
 	r := &ProjectResolver{Store: store}
 	ctx := context.Background()
-	lists, project, err := r.Checklists(ctx, artifact.URI{Mount: "m", Path: "d"})
+	lists, project, err := r.Checklists(ctx, mounts.URI{Mount: "m", Path: "d"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestADesignInNoProjectListsItsOwnChecklists(t *testing.T) {
 	r := &ProjectResolver{Store: declaringStore{design: &webapi.Design{Uri: "mount://m/d", Config: &webapi.AnalysisConfig{
 		Checklists: []*webapi.NamedChecklist{namedChecklist("bench", "bench")},
 	}}}}
-	lists, project, err := r.Checklists(context.Background(), artifact.URI{Mount: "m", Path: "d"})
+	lists, project, err := r.Checklists(context.Background(), mounts.URI{Mount: "m", Path: "d"})
 	if err != nil || project != "" || len(lists) != 1 || lists[0].GetName() != "bench" {
 		t.Errorf("checklists = %v in %q, %v; want the design's bench and no project", lists, project, err)
 	}

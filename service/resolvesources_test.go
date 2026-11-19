@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -16,7 +16,7 @@ type declaringStore struct {
 	design *webapi.Design
 }
 
-func (s declaringStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (s declaringStore) ResolveDesign(context.Context, mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	return s.design, nil, nil
 }
 
@@ -28,9 +28,9 @@ func withCompanion() *webapi.Design {
 	}
 }
 
-func mustURI(t *testing.T, s string) artifact.URI {
+func mustURI(t *testing.T, s string) mounts.URI {
 	t.Helper()
-	u, err := artifact.Parse(s)
+	u, err := mounts.ParseURI(s)
 	if err != nil {
 		t.Fatalf("parse %q: %v", s, err)
 	}

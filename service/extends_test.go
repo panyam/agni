@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/artifact"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -23,7 +23,7 @@ func (t projectTable) Design(context.Context, string) (*webapi.Design, error) {
 func (t projectTable) Designs(context.Context, string) ([]*webapi.Design, error) {
 	return nil, nil
 }
-func (t projectTable) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+func (t projectTable) ResolveDesign(context.Context, mounts.URI) (*webapi.Design, *webapi.Project, error) {
 	return nil, nil, nil
 }
 
