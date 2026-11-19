@@ -30,7 +30,7 @@ type osDocLoader struct {
 	derived derived
 }
 
-// Document reads the doc-IR for the datasheet at uri. mounts.Resolve classifies an unknown mount or
+// Document reads the doc-IR for the datasheet at uri. mountset.Table.Resolve classifies an unknown mount or
 // a path escaping the mount, as service.ErrNotFound or ErrInvalidPath. No doc-IR returns (nil, nil).
 // An unparseable one returns a parse error, and the service classifies it as invalid.
 func (l *osDocLoader) Document(ctx context.Context, uri mounts.URI) (*docpb.Document, error) {

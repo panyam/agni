@@ -42,7 +42,9 @@ docker run -p 8080:8080 \
 
 That gives two mounts, `boards` and `datasheets`. Each mount is a containment boundary, because the
 browser addresses files as a mount name plus a mount-relative path, never an absolute one, and the
-server rejects any path that escapes its mount.
+server rejects any path that escapes its mount. A symbolic link inside a mount is followed when it
+points at a file or folder in the same mount, written as a relative path. A link that leads out of
+the mount, or names its target by an absolute path, reads as missing (agni issue 1759).
 
 {{ includeFile "figures/mount-topology.svg" }}
 
@@ -278,8 +280,8 @@ The store keeps the design's record as `designs/memory_unit.yaml`. The uploads k
 Each write makes a new revision's folder, named by a hash of what it holds, and never changes an old
 one. So a snapshot read from the older revision keeps answering. That folder also holds a
 `design.yaml` the server writes from the record, so `agni check` on it reads it like any other
-design folder. At startup the server removes revisions and files that no record or snapshot names
-and that are over an hour old.
+design folder. At startup, and every hour while it runs, the server removes revisions and files
+that no record or snapshot names and that are over an hour old (agni issue 1742).
 
 A project is a title and a list of design names, kept as `projects/<id>.json` in the store, so one
 design can sit in several projects. `agni projects create` and `agni projects add` make one and list

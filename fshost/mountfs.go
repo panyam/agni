@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// Mount is one named tree. A client addresses it by Name in an artifact.URI.
+// Mount is one named tree. A client addresses it by Name in a mounts.URI.
 type Mount struct {
 	Name string
 	FS   fs.FS

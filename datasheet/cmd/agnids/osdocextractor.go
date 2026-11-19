@@ -29,7 +29,7 @@ func (e *osDocExtractor) Available() bool { return len(e.cmd) > 0 }
 
 // Extract runs the producer over the datasheet at uri, writing its doc-IR into the corpus store and
 // returning the parsed and validated Document. The source PDF resolves inside the mount through
-// mounts.Resolve. A server with no corpus returns dsservice.ErrNoCorpus. A non-zero exit, an
+// mountset.Table.Resolve. A server with no corpus returns dsservice.ErrNoCorpus. A non-zero exit, an
 // unreadable output, or an invalid doc-IR is an error, and the service maps it to Internal.
 func (e *osDocExtractor) Extract(ctx context.Context, uri mounts.URI) (*docpb.Document, error) {
 	pdfAbs, err := e.derived.mounts.Resolve(uri)
@@ -45,7 +45,7 @@ func (e *osDocExtractor) Extract(ctx context.Context, uri mounts.URI) (*docpb.Do
 	}
 	outAbs := filepath.Join(dir, docFile)
 	args := append(append([]string{}, e.cmd[1:]...), pdfAbs, "-o", outAbs)
-	if out, err := exec.CommandContext(ctx, e.cmd[0], args...).CombinedOutput(); err != nil { // #nosec G204 -- runs the configured pdf2doc over paths mounts.Resolve admitted
+	if out, err := exec.CommandContext(ctx, e.cmd[0], args...).CombinedOutput(); err != nil { // #nosec G204 -- runs the configured pdf2doc over paths mountset.Table.Resolve admitted
 		return nil, fmt.Errorf("pdf2doc %q: %v: %s", e.cmd[0], err, strings.TrimSpace(string(out)))
 	}
 	f, err := os.Open(outAbs) // #nosec G304 -- outAbs is under the corpus store

@@ -48,8 +48,9 @@ the open-core boundary.
   `datasheet/derive`.
 - `cmd/` is the CLI, `protos/` and `gen/` are the schema and its generated code, `internal/`
   holds engine-private helpers, and `docsite/` is this documentation site, a separate module.
-- An embedder composes against `service/` and `artifact/`. `service/` holds the transport-neutral
-  services, and their ports speak the `mount://` URI that `artifact/` defines. `intake/`, `web/` and
+- An embedder composes against `service/` and `mountset/`. `service/` holds the transport-neutral
+  services, and their ports speak the `mount://` URI that goapplib storage's `mounts.URI` defines.
+  `mountset/` serves an embedder's folders and GitHub repos through goapplib's mounts registry. `intake/`, `web/` and
   `clients/python` hold the sanitized design summary, the browser viewer, and the typed Python
   client.
 

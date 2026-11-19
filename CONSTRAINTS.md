@@ -335,8 +335,9 @@ except the first one, and it made the heading false. An extension at `github.com
 not name the package at all, so option 3 (embed the engine as a library) could not reach option 1
 (the web console) without forking `cmd/agni`. `examples/resolve-design` shows the gap was real. It
 reaches the tier only because its own module path is nested under `github.com/panyam/agni/`. So we
-shipped an embedding example that no embedder could reproduce. `artifact` moved with it, because
-`artifact.URI` is in the loader ports' signatures.
+shipped an embedding example that no embedder could reproduce. The URI type is in the loader ports'
+signatures, so it is public too: goapplib storage's `mounts.URI`, which replaced agni's `artifact`
+package (agni issue 1759).
 **Verify:** no `os.`, `syscall/js`, or `connectrpc.com` imports in `service/` impl
 files (`service/transport_guard_test.go` runs the transport check in CI); service
 constructors take ports; `cmd/agni` builds the OS-backed adapters and registers
@@ -617,7 +618,7 @@ namespace and the URI is not a host path; nothing above the Loader may treat it 
 The URI replaced a `(mount, path)` PAIR (agni issue 177). The Loader was indifferent to which form it
 got, but nothing above it was: two fields that mean one thing must travel together, and 24 request
 messages repeated that pairing by hand. Two properties came with the collapse. **Parsing IS the
-containment check**, so a parsed `artifact.URI` cannot name a location outside the mount it claims and
+containment check**, so a parsed `mounts.URI` cannot name a location outside the mount it claims and
 the 26 call sites that re-checked stopped needing to. An adapter can no longer forget, because it
 cannot receive a bad value. And **relative resolution became specified rather than hand-rolled**, so a
 schematic naming its sub-sheets or a symbol library resolves against the file being read. A URI path

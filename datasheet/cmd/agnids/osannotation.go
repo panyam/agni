@@ -49,7 +49,7 @@ func annotationsDir(path string) string {
 
 // safeAuthor maps a client-supplied author id to a single filename component, keeping [A-Za-z0-9_-]
 // and replacing everything else with '_', so an author cannot traverse out of its datasheet's
-// annotation directory (mounts.Resolve is the containment backstop). Distinct exotic authors may
+// annotation directory (mountset.Table.Resolve is the containment backstop). Distinct exotic authors may
 // collide after mapping.
 func safeAuthor(author string) string {
 	var b strings.Builder

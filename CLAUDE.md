@@ -58,7 +58,7 @@ These hold the detail. Each loads when a session reads files in its directory.
 
 Engine analysis lives under `core/`, format readers under `readers/` (`readers/formats` is the
 registry and Loader), and the shipped rules, relations, profiles and intent under `stdlib/`. The
-embedding surface is `service/`, `artifact/` and `mounts/`. `datasheet/` is its own Go module and
+embedding surface is `service/` and `mountset/`, over goapplib storage's `mounts` (agni 1759). `datasheet/` is its own Go module and
 depends on the root, never the reverse (C34, C18). The Datalog engine is the separate module
 `github.com/panyam/jaala`. A language change is a jaala PR and tag first. Notes older than this
 layout name old directories, so grep the symbol, not the directory.
