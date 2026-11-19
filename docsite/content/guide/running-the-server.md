@@ -409,7 +409,8 @@ A private repo needs a sign-in, and a server with `--store` keeps one as a conne
 installed on the organisation, or a token, lets the server read it. The server keeps a record of the
 connection and never the secret: the record names where the secret is, as `env:NAME` or
 `file:/abs/path`, and the server reads it from there each time it needs a token. A connection
-holding a bare token is refused.
+holding a bare token is refused. A server on Windows uses `env:`, since a `file:` path must start
+with `/`.
 
 ```bash
 agni connections add acme --github-token env:GITHUB_TOKEN --remote http://localhost:8080
