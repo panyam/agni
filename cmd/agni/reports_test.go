@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -66,7 +67,7 @@ func TestReportsKeepEachRunAndSayWhatChanged(t *testing.T) {
 	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
 	list := func(designs webapiconnect.DesignServiceClient) map[string]*webapi.Report {
 		t.Helper()
-		resp, err := designs.ListReports(ctx, connect.NewRequest(&webapi.ListReportsRequest{Parent: "designs/gw"}))
+		resp, err := designs.ListReports(ctx, connect.NewRequest(&webapi.ListReportsRequest{Parent: "designs/gw", View: webapi.ReportView_REPORT_VIEW_FULL}))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -217,6 +218,40 @@ func TestAReportOnAMountedDesignHashesItsFolder(t *testing.T) {
 	}
 	if r := get(); !r.GetDesignChanged() {
 		t.Error("after the netlist changed, the report says it ran on the current files; want design_changed")
+	}
+}
+
+// A listing leaves each report's run out and says how many findings it holds, and a get, or a
+// listing that asks for the full view, sends the run (agni issue 1753).
+func TestAReportListingLeavesTheRunOut(t *testing.T) {
+	ctx := context.Background()
+	project := tutorialProject(t)
+	srv := designServer(t, t.TempDir(), t.TempDir(), mounts.Mount{Name: "tut", Root: project})
+	if out, err := runReports(t, srv.URL, "create", "designs/gw", "--id", "r"); err != nil {
+		t.Fatalf("reports create: %v\n%s", err, out)
+	}
+	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	full, err := designs.GetReport(ctx, connect.NewRequest(&webapi.GetReportRequest{Name: "designs/gw/reports/r"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := len(full.Msg.GetResults().GetFindings())
+	if n == 0 || int(full.Msg.GetFindingCount()) != n || len(full.Msg.GetResults().GetVerdicts()) == 0 {
+		t.Fatalf("GetReport = %d findings, count %d, %d verdicts; want the whole run, counted", n, full.Msg.GetFindingCount(), len(full.Msg.GetResults().GetVerdicts()))
+	}
+	list, err := designs.ListReports(ctx, connect.NewRequest(&webapi.ListReportsRequest{Parent: "designs/gw"}))
+	if err != nil || len(list.Msg.GetReports()) != 1 {
+		t.Fatalf("ListReports = %v, %v; want one report", list, err)
+	}
+	if r := list.Msg.GetReports()[0]; r.GetResults() != nil || int(r.GetFindingCount()) != n {
+		t.Errorf("a listed report = results %v, count %d; want no results and the count %d", r.GetResults() != nil, r.GetFindingCount(), n)
+	}
+	basic, err := designs.GetReport(ctx, connect.NewRequest(&webapi.GetReportRequest{Name: "designs/gw/reports/r", View: webapi.ReportView_REPORT_VIEW_BASIC}))
+	if err != nil || basic.Msg.GetResults() != nil || int(basic.Msg.GetFindingCount()) != n {
+		t.Errorf("GetReport BASIC = results %v, count %d, %v; want no results and the count", basic.Msg.GetResults() != nil, basic.Msg.GetFindingCount(), err)
+	}
+	if out, err := runReports(t, srv.URL, "list", "gw"); err != nil || !strings.Contains(out, fmt.Sprintf("\t%d findings\t", n)) {
+		t.Errorf("reports list = %q, %v; want the count %d", out, err, n)
 	}
 }
 

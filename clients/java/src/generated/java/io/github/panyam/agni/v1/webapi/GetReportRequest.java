@@ -29,6 +29,7 @@ private static final long serialVersionUID = 0L;
   }
   private GetReportRequest() {
     name_ = "";
+    view_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -96,6 +97,32 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int VIEW_FIELD_NUMBER = 2;
+  private int view_ = 0;
+  /**
+   * <pre>
+   * view is how much of the report to return. Unspecified returns it whole.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ReportView view = 2 [json_name = "view"];</code>
+   * @return The enum numeric value on the wire for view.
+   */
+  @java.lang.Override public int getViewValue() {
+    return view_;
+  }
+  /**
+   * <pre>
+   * view is how much of the report to return. Unspecified returns it whole.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ReportView view = 2 [json_name = "view"];</code>
+   * @return The view.
+   */
+  @java.lang.Override public io.github.panyam.agni.v1.webapi.ReportView getView() {
+    io.github.panyam.agni.v1.webapi.ReportView result = io.github.panyam.agni.v1.webapi.ReportView.forNumber(view_);
+    return result == null ? io.github.panyam.agni.v1.webapi.ReportView.UNRECOGNIZED : result;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -113,12 +140,19 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(name_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 1, name_);
     }
+    if (view_ != io.github.panyam.agni.v1.webapi.ReportView.REPORT_VIEW_UNSPECIFIED.getNumber()) {
+      output.writeEnum(2, view_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
     int size = 0;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(name_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(1, name_);
+    }
+    if (view_ != io.github.panyam.agni.v1.webapi.ReportView.REPORT_VIEW_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(2, view_);
     }
     return size;
   }
@@ -146,6 +180,7 @@ private static final long serialVersionUID = 0L;
 
     if (!getName()
         .equals(other.getName())) return false;
+    if (view_ != other.view_) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -159,6 +194,8 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAME_FIELD_NUMBER;
     hash = (53 * hash) + getName().hashCode();
+    hash = (37 * hash) + VIEW_FIELD_NUMBER;
+    hash = (53 * hash) + view_;
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -291,6 +328,7 @@ private static final long serialVersionUID = 0L;
       super.clear();
       bitField0_ = 0;
       name_ = "";
+      view_ = 0;
       return this;
     }
 
@@ -327,6 +365,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.name_ = name_;
       }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.view_ = view_;
+      }
     }
 
     @java.lang.Override
@@ -345,6 +386,9 @@ private static final long serialVersionUID = 0L;
         name_ = other.name_;
         bitField0_ |= 0x00000001;
         onChanged();
+      }
+      if (other.view_ != 0) {
+        setViewValue(other.getViewValue());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -375,6 +419,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000001;
               break;
             } // case 10
+            case 16: {
+              view_ = input.readEnum();
+              bitField0_ |= 0x00000002;
+              break;
+            } // case 16
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -480,6 +529,78 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       name_ = value;
       bitField0_ |= 0x00000001;
+      onChanged();
+      return this;
+    }
+
+    private int view_ = 0;
+    /**
+     * <pre>
+     * view is how much of the report to return. Unspecified returns it whole.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ReportView view = 2 [json_name = "view"];</code>
+     * @return The enum numeric value on the wire for view.
+     */
+    @java.lang.Override public int getViewValue() {
+      return view_;
+    }
+    /**
+     * <pre>
+     * view is how much of the report to return. Unspecified returns it whole.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ReportView view = 2 [json_name = "view"];</code>
+     * @param value The enum numeric value on the wire for view to set.
+     * @return This builder for chaining.
+     */
+    public Builder setViewValue(int value) {
+      view_ = value;
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * view is how much of the report to return. Unspecified returns it whole.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ReportView view = 2 [json_name = "view"];</code>
+     * @return The view.
+     */
+    @java.lang.Override
+    public io.github.panyam.agni.v1.webapi.ReportView getView() {
+      io.github.panyam.agni.v1.webapi.ReportView result = io.github.panyam.agni.v1.webapi.ReportView.forNumber(view_);
+      return result == null ? io.github.panyam.agni.v1.webapi.ReportView.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * view is how much of the report to return. Unspecified returns it whole.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ReportView view = 2 [json_name = "view"];</code>
+     * @param value The view to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setView(io.github.panyam.agni.v1.webapi.ReportView value) {
+      java.util.Objects.requireNonNull(value);
+      bitField0_ |= 0x00000002;
+      view_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * view is how much of the report to return. Unspecified returns it whole.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ReportView view = 2 [json_name = "view"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearView() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      view_ = 0;
       onChanged();
       return this;
     }

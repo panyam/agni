@@ -15,6 +15,12 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class ReportView(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    REPORT_VIEW_UNSPECIFIED: _ClassVar[ReportView]
+    REPORT_VIEW_BASIC: _ClassVar[ReportView]
+    REPORT_VIEW_FULL: _ClassVar[ReportView]
+
 class ArtifactType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     ARTIFACT_TYPE_UNSPECIFIED: _ClassVar[ArtifactType]
@@ -22,6 +28,9 @@ class ArtifactType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ARTIFACT_TYPE_SCHEMATIC: _ClassVar[ArtifactType]
     ARTIFACT_TYPE_BOARD: _ClassVar[ArtifactType]
     ARTIFACT_TYPE_OTHER: _ClassVar[ArtifactType]
+REPORT_VIEW_UNSPECIFIED: ReportView
+REPORT_VIEW_BASIC: ReportView
+REPORT_VIEW_FULL: ReportView
 ARTIFACT_TYPE_UNSPECIFIED: ArtifactType
 ARTIFACT_TYPE_NETLIST: ArtifactType
 ARTIFACT_TYPE_SCHEMATIC: ArtifactType
@@ -29,7 +38,7 @@ ARTIFACT_TYPE_BOARD: ArtifactType
 ARTIFACT_TYPE_OTHER: ArtifactType
 
 class Report(_message.Message):
-    __slots__ = ("name", "packs", "project", "design_hash", "pack_hashes", "results", "create_time", "design_changed", "packs_changed")
+    __slots__ = ("name", "packs", "project", "design_hash", "pack_hashes", "results", "create_time", "design_changed", "packs_changed", "finding_count")
     NAME_FIELD_NUMBER: _ClassVar[int]
     PACKS_FIELD_NUMBER: _ClassVar[int]
     PROJECT_FIELD_NUMBER: _ClassVar[int]
@@ -39,6 +48,7 @@ class Report(_message.Message):
     CREATE_TIME_FIELD_NUMBER: _ClassVar[int]
     DESIGN_CHANGED_FIELD_NUMBER: _ClassVar[int]
     PACKS_CHANGED_FIELD_NUMBER: _ClassVar[int]
+    FINDING_COUNT_FIELD_NUMBER: _ClassVar[int]
     name: str
     packs: _containers.RepeatedScalarFieldContainer[str]
     project: str
@@ -48,7 +58,8 @@ class Report(_message.Message):
     create_time: _timestamp_pb2.Timestamp
     design_changed: bool
     packs_changed: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, name: _Optional[str] = ..., packs: _Optional[_Iterable[str]] = ..., project: _Optional[str] = ..., design_hash: _Optional[str] = ..., pack_hashes: _Optional[_Iterable[str]] = ..., results: _Optional[_Union[_checks_pb2.CheckDesignResponse, _Mapping]] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., design_changed: _Optional[bool] = ..., packs_changed: _Optional[_Iterable[str]] = ...) -> None: ...
+    finding_count: int
+    def __init__(self, name: _Optional[str] = ..., packs: _Optional[_Iterable[str]] = ..., project: _Optional[str] = ..., design_hash: _Optional[str] = ..., pack_hashes: _Optional[_Iterable[str]] = ..., results: _Optional[_Union[_checks_pb2.CheckDesignResponse, _Mapping]] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., design_changed: _Optional[bool] = ..., packs_changed: _Optional[_Iterable[str]] = ..., finding_count: _Optional[int] = ...) -> None: ...
 
 class CreateReportRequest(_message.Message):
     __slots__ = ("parent", "report_id", "report", "project")
@@ -63,22 +74,26 @@ class CreateReportRequest(_message.Message):
     def __init__(self, parent: _Optional[str] = ..., report_id: _Optional[str] = ..., report: _Optional[_Union[Report, _Mapping]] = ..., project: _Optional[str] = ...) -> None: ...
 
 class GetReportRequest(_message.Message):
-    __slots__ = ("name",)
+    __slots__ = ("name", "view")
     NAME_FIELD_NUMBER: _ClassVar[int]
+    VIEW_FIELD_NUMBER: _ClassVar[int]
     name: str
-    def __init__(self, name: _Optional[str] = ...) -> None: ...
+    view: ReportView
+    def __init__(self, name: _Optional[str] = ..., view: _Optional[_Union[ReportView, str]] = ...) -> None: ...
 
 class ListReportsRequest(_message.Message):
-    __slots__ = ("parent", "page_size", "page_token", "filter")
+    __slots__ = ("parent", "page_size", "page_token", "filter", "view")
     PARENT_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     FILTER_FIELD_NUMBER: _ClassVar[int]
+    VIEW_FIELD_NUMBER: _ClassVar[int]
     parent: str
     page_size: int
     page_token: str
     filter: str
-    def __init__(self, parent: _Optional[str] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ..., filter: _Optional[str] = ...) -> None: ...
+    view: ReportView
+    def __init__(self, parent: _Optional[str] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ..., filter: _Optional[str] = ..., view: _Optional[_Union[ReportView, str]] = ...) -> None: ...
 
 class ListReportsResponse(_message.Message):
     __slots__ = ("reports", "next_page_token")

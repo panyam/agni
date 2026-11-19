@@ -486,6 +486,13 @@ every artifact's files by path and hash. Every `GetReport` and `ListReports` com
 hashes now and sets `design_changed` and `packs_changed`. A report is never updated, since it is what
 the run found. `DeleteDesign` removes a design's reports with it.
 
+A report keeps its whole run, every verdict included, so one on Jetson runs to 15 MB. `ListReports`
+therefore returns each report without its run by default, with `finding_count` set, and `GetReport`
+returns it whole (`ReportView`, AIP-157, agni issue 1753). The designs page fetches a report when its
+tab opens. Each finding there links to `/designs/{design}/view` under the report's packs, naming the
+verdict the finding came from (`Finding.verdict_ids`). A finding of a rule that states no verdicts
+has no link, since the viewer has nothing to open it on.
+
 A mounted design takes a report too (agni issue 1746). It has no artifacts kept, so its hash groups
 the files in its folder into artifacts the way an import of that folder would, and hashes those. A
 file no reader opens, such as a README beside the board, is left out, and so are the project files

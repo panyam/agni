@@ -473,6 +473,22 @@ private static final long serialVersionUID = 0L;
     return packsChanged_.getByteString(index);
   }
 
+  public static final int FINDING_COUNT_FIELD_NUMBER = 10;
+  private int findingCount_ = 0;
+  /**
+   * <pre>
+   * finding_count is how many findings results holds, set on every read, so a BASIC view that leaves
+   * results out still says it (agni issue 1753). Output only.
+   * </pre>
+   *
+   * <code>int32 finding_count = 10 [json_name = "findingCount"];</code>
+   * @return The findingCount.
+   */
+  @java.lang.Override
+  public int getFindingCount() {
+    return findingCount_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -513,6 +529,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < packsChanged_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 9, packsChanged_.getRaw(i));
+    }
+    if (findingCount_ != 0) {
+      output.writeInt32(10, findingCount_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -563,6 +582,10 @@ private static final long serialVersionUID = 0L;
       size += dataSize;
       size += 1 * getPacksChangedList().size();
     }
+    if (findingCount_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(10, findingCount_);
+    }
     return size;
   }
   @java.lang.Override
@@ -611,6 +634,8 @@ private static final long serialVersionUID = 0L;
         != other.getDesignChanged()) return false;
     if (!getPacksChangedList()
         .equals(other.getPacksChangedList())) return false;
+    if (getFindingCount()
+        != other.getFindingCount()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -651,6 +676,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + PACKS_CHANGED_FIELD_NUMBER;
       hash = (53 * hash) + getPacksChangedList().hashCode();
     }
+    hash = (37 * hash) + FINDING_COUNT_FIELD_NUMBER;
+    hash = (53 * hash) + getFindingCount();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -815,6 +842,7 @@ private static final long serialVersionUID = 0L;
       designChanged_ = false;
       packsChanged_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
+      findingCount_ = 0;
       return this;
     }
 
@@ -885,6 +913,9 @@ private static final long serialVersionUID = 0L;
         packsChanged_.makeImmutable();
         result.packsChanged_ = packsChanged_;
       }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.findingCount_ = findingCount_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -953,6 +984,9 @@ private static final long serialVersionUID = 0L;
           packsChanged_.addAll(other.packsChanged_);
         }
         onChanged();
+      }
+      if (other.getFindingCount() != 0) {
+        setFindingCount(other.getFindingCount());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1027,6 +1061,11 @@ private static final long serialVersionUID = 0L;
               packsChanged_.add(input.readStringRequireUtf8());
               break;
             } // case 74
+            case 80: {
+              findingCount_ = input.readInt32();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 80
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2155,6 +2194,53 @@ private static final long serialVersionUID = 0L;
       ensurePacksChangedIsMutable();
       packsChanged_.add(value);
       bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private int findingCount_ ;
+    /**
+     * <pre>
+     * finding_count is how many findings results holds, set on every read, so a BASIC view that leaves
+     * results out still says it (agni issue 1753). Output only.
+     * </pre>
+     *
+     * <code>int32 finding_count = 10 [json_name = "findingCount"];</code>
+     * @return The findingCount.
+     */
+    @java.lang.Override
+    public int getFindingCount() {
+      return findingCount_;
+    }
+    /**
+     * <pre>
+     * finding_count is how many findings results holds, set on every read, so a BASIC view that leaves
+     * results out still says it (agni issue 1753). Output only.
+     * </pre>
+     *
+     * <code>int32 finding_count = 10 [json_name = "findingCount"];</code>
+     * @param value The findingCount to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFindingCount(int value) {
+
+      findingCount_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * finding_count is how many findings results holds, set on every read, so a BASIC view that leaves
+     * results out still says it (agni issue 1753). Output only.
+     * </pre>
+     *
+     * <code>int32 finding_count = 10 [json_name = "findingCount"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFindingCount() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      findingCount_ = 0;
       onChanged();
       return this;
     }

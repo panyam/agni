@@ -24,7 +24,8 @@ vi.mock("./api.js", () => ({
     },
     getDesign: async () => fake.design,
     listArtifacts: async () => ({ artifacts: fake.artifacts, nextPageToken: "" }),
-    listReports: async () => ({ reports: fake.reports, nextPageToken: "" }),
+    listReports: async () => ({ reports: (fake.reports as { results?: unknown }[]).map((r) => ({ ...r, results: undefined })), nextPageToken: "" }),
+    getReport: async (req: { name: string }) => (fake.reports as { name: string }[]).find((r) => r.name === req.name),
     createReport: async (req: unknown) => {
       fake.created.push(req);
       const made = create(ReportSchema, { name: "designs/bb/reports/new", packs: ["packs/house"] });
@@ -69,7 +70,7 @@ describe("the library list", () => {
     const latest = [...el.querySelectorAll(".lb-row")].filter((r) => r.querySelector(".lb-latest")).map((r) => (r as HTMLElement).dataset.design);
     expect(latest).toEqual(["designs/bb-1.1.3"]);
     expect(el.querySelector('[data-design="designs/bb-1.1.3"] a.lb-link')?.getAttribute("href")).toBe("/designs/bb-1.1.3");
-    expect(el.querySelector('[data-design="designs/bb-1.1.3"] a.lb-open')?.getAttribute("href")).toBe("/mounts/store/bb-1.1.3/schematic/bb.kicad_sch/view");
+    expect(el.querySelector('[data-design="designs/bb-1.1.3"] a.lb-open')?.getAttribute("href")).toBe("/designs/bb-1.1.3/view");
     expect(el.querySelector('[data-design="designs/draft"] a.lb-open')).toBeNull();
   });
 
@@ -137,12 +138,26 @@ describe("a design's reports", () => {
     fake.design = create(DesignSchema, { name: "designs/bb", entryUri: "mount://uploads/bb/r/schematic/bb.kicad_sch" });
     fake.packs = [create(PackSchema, { name: "packs/house", title: "House rules" })];
     fake.reports = [
-      create(ReportSchema, { name: "designs/bb/reports/older", packs: ["packs/house"], designChanged: true, results: { findings: [{ rule: "bulk-cap", severity: "warning", subject: { kind: "net", ref: "VCC" }, message: "no bulk cap" }] } }),
+      create(ReportSchema, {
+        name: "designs/bb/reports/older",
+        packs: ["packs/house"],
+        designChanged: true,
+        findingCount: 2,
+        results: {
+          findings: [
+            { rule: "bulk-cap", severity: "warning", subject: { kind: "net", ref: "VCC" }, message: "no bulk cap", verdictIds: ["bulk-cap:(net:VCC)"] },
+            { rule: "house/naming", severity: "warning", subject: { kind: "net", ref: "x" }, message: "off-convention" },
+          ],
+        },
+      }),
     ];
     const el = mount((e) => designIsland(e, null, "bb"));
     await vi.waitFor(() => expect(el.querySelector('[data-testid="report-state"]')?.textContent).toBe("run on earlier design files"));
     expect(el.querySelector('[data-rule="bulk-cap"] summary')?.textContent).toBe("warning bulk-cap 1");
     expect(el.querySelector('[data-rule="bulk-cap"] li')?.textContent).toBe("net VCC no bulk cap");
+    expect(el.querySelector('[data-rule="bulk-cap"] li a')?.getAttribute("href")).toBe("/designs/bb/view?pack=house&verdict=bulk-cap%3A%28net%3AVCC%29&rule=bulk-cap");
+    expect(el.querySelector('[data-rule="house/naming"] li a')).toBeNull();
+    expect(el.querySelector('[data-testid="report"]')?.getAttribute("data-total")).toBe("2");
     const details = el.querySelector('[data-testid="validate"]') as HTMLDetailsElement;
     details.open = true;
     details.dispatchEvent(new Event("toggle"));

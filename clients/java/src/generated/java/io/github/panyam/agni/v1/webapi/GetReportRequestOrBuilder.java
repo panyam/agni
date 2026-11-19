@@ -29,4 +29,23 @@ public interface GetReportRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getNameBytes();
+
+  /**
+   * <pre>
+   * view is how much of the report to return. Unspecified returns it whole.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ReportView view = 2 [json_name = "view"];</code>
+   * @return The enum numeric value on the wire for view.
+   */
+  int getViewValue();
+  /**
+   * <pre>
+   * view is how much of the report to return. Unspecified returns it whole.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ReportView view = 2 [json_name = "view"];</code>
+   * @return The view.
+   */
+  io.github.panyam.agni.v1.webapi.ReportView getView();
 }

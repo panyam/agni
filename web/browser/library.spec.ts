@@ -140,6 +140,16 @@ describe("the designs page", () => {
       expect(await page.locator(".lb-rule").count()).toBeGreaterThan(0);
       await shot(page, "report.png");
 
+      // A finding in the report opens the viewer on its own verdict, which the canvas lights.
+      const finding = await page.locator(".lb-rule li a.lb-subject").first().getAttribute("href");
+      expect(finding).toMatch(/^\/designs\/bb-1\.1\.3\/view\?pack=jetson&verdict=.+&rule=/);
+      await page.goto(`${server.base}${finding}`);
+      await page.waitForURL(/\/mounts\/uploads\/bb-1\.1\.3\/.*\/view\?.*verdict=/, { timeout: 120_000 });
+      await page.waitForFunction(() => [...document.querySelectorAll("[data-highlight]")].some((e) => e.getAttribute("data-highlight") !== ""), null, { timeout: 120_000 });
+      await shot(page, "finding.png");
+      await page.goBack();
+      await page.getByTestId("report").waitFor({ timeout: 60_000 });
+
       // The report opens the viewer on 1.1.3 read by name under the pack, and the viewer's own run
       // checks it under the pack's convention, which a read by file address lacks.
       await page.getByTestId("report-view").click();

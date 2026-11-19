@@ -105,7 +105,11 @@ func (s *DesignService) CreateReport(ctx context.Context, req *webapi.CreateRepo
 	for _, p := range read {
 		r.PackHashes = append(r.PackHashes, p.GetHash())
 	}
-	return s.reports.CreateReport(ctx, design, req.GetReportId(), r)
+	kept, err := s.reports.CreateReport(ctx, design, req.GetReportId(), r)
+	if err != nil {
+		return nil, err
+	}
+	return inView(kept, webapi.ReportView_REPORT_VIEW_FULL, webapi.ReportView_REPORT_VIEW_FULL), nil
 }
 
 // DesignFileLister lists the files a design's analysis reads, as WorkspaceService.ListDesignFiles
@@ -275,7 +279,24 @@ func (s *DesignService) GetReport(ctx context.Context, req *webapi.GetReportRequ
 	if err != nil {
 		return nil, err
 	}
-	return s.withChanges(ctx, r, newHashes(s))
+	out, err := s.withChanges(ctx, r, newHashes(s))
+	if err != nil {
+		return nil, err
+	}
+	return inView(out, req.GetView(), webapi.ReportView_REPORT_VIEW_FULL), nil
+}
+
+// inView returns r as view asks, with fallback standing for an unspecified view. Every view sets
+// finding_count, and BASIC leaves results out.
+func inView(r *webapi.Report, view, fallback webapi.ReportView) *webapi.Report {
+	if view == webapi.ReportView_REPORT_VIEW_UNSPECIFIED {
+		view = fallback
+	}
+	r.FindingCount = int32(len(r.GetResults().GetFindings()))
+	if view == webapi.ReportView_REPORT_VIEW_BASIC {
+		r.Results = nil
+	}
+	return r
 }
 
 // ListReports returns a design's reports, newest first, each saying what changed since it ran.
@@ -302,7 +323,7 @@ func (s *DesignService) ListReports(ctx context.Context, req *webapi.ListReports
 		if err != nil {
 			return nil, err
 		}
-		resp.Reports = append(resp.Reports, r)
+		resp.Reports = append(resp.Reports, inView(r, req.GetView(), webapi.ReportView_REPORT_VIEW_BASIC))
 	}
 	return resp, nil
 }
