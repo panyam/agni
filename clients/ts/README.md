@@ -27,8 +27,10 @@ plain object and returns the response message. The messages, enums and services 
 `createAgniClient(baseUrl, options)` builds the client. `connect(baseUrl, options, needs)` builds it
 and calls `checkServer(needs)` before it returns.
 
-- `token` goes on every call as `Authorization: Bearer <token>`. The server does not check it yet.
-  Agni issue 1627 makes a shared server refuse a call without one.
+- `token` goes on every call as `Authorization: Bearer <token>`. A server started with `--auth
+  tokens` refuses a call without a good one (agni issue 1627).
+- In Node, `ca` is PEM CA certificates to trust for an `https://` server, in place of Node's own,
+  such as a team's own CA (agni issue 1765). `NODE_EXTRA_CA_CERTS` adds one to Node's instead.
 - In Node, `protocol` picks `"connect"` (the default), `"grpc"` or `"grpc-web"`, and `httpVersion`
   picks `"1.1"` (the default) or `"2"`. `json: true` sends Connect's JSON form.
 - In a browser, `protocol` picks `"connect"` or `"grpc-web"`, and `binary: true` sends binary

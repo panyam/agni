@@ -56,6 +56,11 @@ func dialRemote(ctx context.Context, raw string) (*remoteServer, error) {
 		return nil, fmt.Errorf("--remote %q: want a URL like http://localhost:8080", raw)
 	}
 	r := &remoteServer{url: strings.TrimRight(raw, "/"), http: http.DefaultClient}
+	// A shared server asks every call for a token (agni issue 1627), which `agni token create` made
+	// on the server and the caller passes in AGNI_TOKEN.
+	if token := os.Getenv(envToken); token != "" {
+		r.http = &http.Client{Transport: bearerTransport{token: token, next: http.DefaultTransport}}
+	}
 	ctx, cancel := context.WithTimeout(ctx, remoteMountTimeout)
 	defer cancel()
 	if _, err := webapiconnect.NewWorkspaceServiceClient(r.http, r.url).
@@ -453,4 +458,19 @@ func storedDesignPacks(cmd *cobra.Command, remoteURL, arg string) ([]string, err
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: reading %s under its packs %s; pass --pack to name others\n", arg, strings.Join(packs, ", "))
 	}
 	return packs, nil
+}
+
+// envToken names the variable a CLI command reads its --remote server's token from.
+const envToken = "AGNI_TOKEN"
+
+// bearerTransport sends a bearer token on every request.
+type bearerTransport struct {
+	token string
+	next  http.RoundTripper
+}
+
+func (b bearerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.Header.Set("Authorization", "Bearer "+b.token)
+	return b.next.RoundTrip(r)
 }

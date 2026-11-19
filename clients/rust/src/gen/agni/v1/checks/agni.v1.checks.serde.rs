@@ -5482,6 +5482,9 @@ impl serde::Serialize for ResultsMeta {
         if self.coverage_axis {
             len += 1;
         }
+        if !self.created_by.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.checks.ResultsMeta", len)?;
         if !self.schema.is_empty() {
             struct_ser.serialize_field("schema", &self.schema)?;
@@ -5497,6 +5500,9 @@ impl serde::Serialize for ResultsMeta {
         }
         if self.coverage_axis {
             struct_ser.serialize_field("coverageAxis", &self.coverage_axis)?;
+        }
+        if !self.created_by.is_empty() {
+            struct_ser.serialize_field("createdBy", &self.created_by)?;
         }
         struct_ser.end()
     }
@@ -5516,6 +5522,8 @@ impl<'de> serde::Deserialize<'de> for ResultsMeta {
             "createdAt",
             "coverage_axis",
             "coverageAxis",
+            "created_by",
+            "createdBy",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -5525,6 +5533,7 @@ impl<'de> serde::Deserialize<'de> for ResultsMeta {
             ProducerVersion,
             CreatedAt,
             CoverageAxis,
+            CreatedBy,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -5551,6 +5560,7 @@ impl<'de> serde::Deserialize<'de> for ResultsMeta {
                             "producerVersion" | "producer_version" => Ok(GeneratedField::ProducerVersion),
                             "createdAt" | "created_at" => Ok(GeneratedField::CreatedAt),
                             "coverageAxis" | "coverage_axis" => Ok(GeneratedField::CoverageAxis),
+                            "createdBy" | "created_by" => Ok(GeneratedField::CreatedBy),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -5575,6 +5585,7 @@ impl<'de> serde::Deserialize<'de> for ResultsMeta {
                 let mut producer_version__ = None;
                 let mut created_at__ = None;
                 let mut coverage_axis__ = None;
+                let mut created_by__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Schema => {
@@ -5607,6 +5618,12 @@ impl<'de> serde::Deserialize<'de> for ResultsMeta {
                             }
                             coverage_axis__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::CreatedBy => {
+                            if created_by__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("createdBy"));
+                            }
+                            created_by__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(ResultsMeta {
@@ -5615,6 +5632,7 @@ impl<'de> serde::Deserialize<'de> for ResultsMeta {
                     producer_version: producer_version__.unwrap_or_default(),
                     created_at: created_at__.unwrap_or_default(),
                     coverage_axis: coverage_axis__.unwrap_or_default(),
+                    created_by: created_by__.unwrap_or_default(),
                 })
             }
         }

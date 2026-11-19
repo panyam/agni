@@ -23,6 +23,9 @@ import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.TlsChannelCredentials;
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
@@ -61,13 +64,35 @@ public final class AgniClient implements AutoCloseable {
   /**
    * A client of the server at {@code address}. The address is {@code http://host:port} or {@code
    * host:port} for cleartext HTTP/2, or {@code https://host:port} for TLS. A non-empty {@code token}
-   * goes out as {@code authorization: Bearer <token>} on every call. The server does not check it
-   * yet (agni issue 1627).
+   * goes out as {@code authorization: Bearer <token>} on every call. A server started with {@code
+   * --auth tokens} refuses a call without a good one (agni issue 1627).
    */
   public static AgniClient create(String address, String token) {
+    return create(address, token, null);
+  }
+
+  /**
+   * A client of the server at {@code address} with {@code token}, as {@link #create(String,
+   * String)}, that trusts the CA certificates in the PEM file {@code caFile} for an {@code https://}
+   * address, in place of the system's (agni issue 1765). A team's own CA signs its server's
+   * certificate this way. A null or empty {@code caFile} trusts the system's CAs.
+   *
+   * @throws UncheckedIOException when {@code caFile} can't be read
+   */
+  public static AgniClient create(String address, String token, String caFile) {
     Target t = Target.parse(address);
-    ChannelCredentials creds =
-        t.tls ? TlsChannelCredentials.create() : InsecureChannelCredentials.create();
+    ChannelCredentials creds;
+    if (!t.tls) {
+      creds = InsecureChannelCredentials.create();
+    } else if (caFile == null || caFile.isEmpty()) {
+      creds = TlsChannelCredentials.create();
+    } else {
+      try {
+        creds = TlsChannelCredentials.newBuilder().trustManager(new File(caFile)).build();
+      } catch (IOException e) {
+        throw new UncheckedIOException("cannot read the CA file " + caFile, e);
+      }
+    }
     ManagedChannel managed = Grpc.newChannelBuilderForAddress(t.host, t.port, creds).build();
     Channel channel = managed;
     if (token != null && !token.isEmpty()) {

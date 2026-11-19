@@ -27,8 +27,8 @@ export const API = "agni.v1";
 /** ClientOptions are what every transport takes. */
 export interface ClientOptions {
   /**
-   * token is sent on every call as `Authorization: Bearer <token>`. A shared server will refuse a
-   * call without one (agni issue 1627).
+   * token is sent on every call as `Authorization: Bearer <token>`. A server started with `--auth
+   * tokens` refuses a call without a good one (agni issue 1627).
    */
   token?: string;
   /** interceptors run on every call, after the one that sends the token. */

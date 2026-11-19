@@ -409,8 +409,7 @@ A private repo needs a sign-in, and a server with `--store` keeps one as a conne
 installed on the organisation, or a token, lets the server read it. The server keeps a record of the
 connection and never the secret: the record names where the secret is, as `env:NAME` or
 `file:/abs/path`, and the server reads it from there each time it needs a token. A connection
-holding a bare token is refused. A server on Windows uses `env:`, since a `file:` path must start
-with `/`.
+holding a bare token is refused.
 
 ```bash
 agni connections add acme --github-token env:GITHUB_TOKEN --remote http://localhost:8080
@@ -531,12 +530,54 @@ because both are large and neither is needed to read, check, diff, or query a de
 - Datasheet extraction, the workbench's "Extract (first pass)" action, belongs to the separate
   datasheet service, which has [its own image](#the-datasheet-service-image).
 
-## A shared deployment
+## Running a shared server
 
-Everything above assumes one engineer, one machine. There is no authentication, no per-user
-scoping, and no session isolation, so anyone who can reach the port sees every mount, and anyone who
-can reach `agnids` can write through the datasheets workbench. That is the right trade for localhost and the wrong one for a
-shared host. Put it behind something that authenticates before you expose it.
+Say a team wants one `agni serve` for everyone, with their tools and browsers on other machines. By
+default the server asks nobody who they are, so anyone who can reach the port sees every mount. That
+suits localhost. A shared server asks every caller for a token instead (agni issue 1627).
+
+The operator makes a token for each person or tool on the server's machine, with the same `--store`
+the server uses. `agni token create` prints the token once, and the store keeps only its hash:
+
+```bash
+agni token create alice --store file:///srv/agni/meta
+```
+
+Then the server starts with `--auth tokens`, and with a certificate so the tokens don't cross the
+network in the clear:
+
+```bash
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files \
+  --auth tokens --tls-cert /etc/agni/cert.pem --tls-key /etc/agni/key.pem
+```
+
+- Every call needs `Authorization: Bearer <token>`. A call without a good one is refused as
+  `unauthenticated`, in Connect, gRPC or gRPC-Web, whichever it spoke. HTTP/2 comes over TLS, so
+  gRPC clients reach the server too.
+- The CLI's `--remote` sends the token in `AGNI_TOKEN`. The client libraries take one when they
+  connect.
+- A browser that opens a page is sent to `/signin`, where its person pastes a token. The server
+  keeps it in an HttpOnly session cookie. `/healthz` and the viewer's static files need no token.
+- The server records who asked on what it keeps. A review run records the token's name in
+  `results.meta.created_by`.
+- `GetServerInfo` lists `auth` among its features. `ListMounts` leaves each mount's `root` empty,
+  since a caller on another machine has no business with the server's folder layout.
+- `agni token ls` lists the tokens, and `agni token revoke <id>` revokes one. The server trusts a
+  token it checked for a minute, so a revoked token stops working within a minute.
+
+`--auth tokens` needs `--store`. Without `--tls-cert` and `--tls-key` it starts only on a localhost
+address, with a warning. Signing in through an identity provider, and per-person viewer tabs, are
+agni issue 1176.
+
+`agnids` takes the same three flags and checks the same tokens, read from the `--store` it shares
+with `agni serve` (agni issue 1765). Without them, anyone who can reach it can write through the
+datasheets workbench. A browser signs in to it separately, at its own `/signin`. An `agni serve`
+with `--params-url` pointing at an `agnids` that asks for tokens sends the one in its own
+`AGNI_TOKEN`, so the operator makes a token for the server too.
+
+A team whose certificate comes from its own CA hands each client the CA's file. The TypeScript client
+on Node takes it as `ca`, Rust as `connect_with_ca`, Java as `AgniClient.create`'s `caFile`, and C++
+as `agni::Client`'s `ca_file`. Each client's README says more.
 
 ## Analysing in the visitor's browser
 

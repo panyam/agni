@@ -1,6 +1,9 @@
 #include "agni/client.h"
 
 #include <algorithm>
+#include <fstream>
+#include <iterator>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 
@@ -48,12 +51,8 @@ std::string GrpcTarget(std::string_view server) {
   std::string_view s = server;
   if (auto at = s.find("://"); at != std::string_view::npos) {
     std::string_view scheme = s.substr(0, at);
-    if (scheme == "https") {
-      throw std::invalid_argument("agni serve has no TLS yet (agni issue 1627), so " + std::string(server) +
-                                  " cannot be reached; use http://");
-    }
-    if (scheme != "http") {
-      throw std::invalid_argument("the server " + std::string(server) + " is not http:// or host:port");
+    if (scheme != "http" && scheme != "https") {
+      throw std::invalid_argument("the server " + std::string(server) + " is not http://, https:// or host:port");
     }
     s.remove_prefix(at + 3);
   }
@@ -64,8 +63,21 @@ std::string GrpcTarget(std::string_view server) {
   return std::string(s);
 }
 
-Client::Client(std::string_view server, std::string token) : target_(GrpcTarget(server)) {
-  auto creds = grpc::InsecureChannelCredentials();
+Client::Client(std::string_view server, std::string token, const std::string& ca_file)
+    : target_(GrpcTarget(server)) {
+  std::shared_ptr<grpc::ChannelCredentials> creds;
+  if (server.substr(0, 8) == "https://") {
+    // The system's CAs, or the ones in ca_file, such as a team's own (agni issue 1765).
+    grpc::SslCredentialsOptions ssl;
+    if (!ca_file.empty()) {
+      std::ifstream in(ca_file, std::ios::binary);
+      if (!in) throw std::invalid_argument("cannot read the CA file " + ca_file);
+      ssl.pem_root_certs.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+    creds = grpc::SslCredentials(ssl);
+  } else {
+    creds = grpc::InsecureChannelCredentials();
+  }
   if (token.empty()) {
     channel_ = grpc::CreateChannel(target_, creds);
     return;

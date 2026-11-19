@@ -12,6 +12,11 @@ export interface NodeClientOptions extends ClientOptions {
   httpVersion?: "1.1" | "2";
   /** json sends Connect's JSON form rather than binary protobuf. */
   json?: boolean;
+  /**
+   * ca is PEM CA certificates to trust for an https:// server, in place of Node's own, such as a
+   * team's own CA (agni issue 1765). `NODE_EXTRA_CA_CERTS` adds one to Node's instead.
+   */
+  ca?: string | Buffer;
 }
 
 /** createAgniClient returns a client for the server at baseUrl, such as "http://127.0.0.1:8080". */
@@ -32,13 +37,14 @@ export async function connect(baseUrl: string, opts: NodeClientOptions = {}, nee
 function nodeTransport(baseUrl: string, opts: NodeClientOptions): Transport {
   const interceptors = interceptorsFor(opts);
   const httpVersion = opts.httpVersion ?? "1.1";
+  const nodeOptions = opts.ca ? { ca: opts.ca } : undefined;
   switch (opts.protocol ?? "connect") {
     case "grpc":
-      return createGrpcTransport({ baseUrl, interceptors });
+      return createGrpcTransport({ baseUrl, interceptors, nodeOptions });
     case "grpc-web":
-      return createGrpcWebTransport({ baseUrl, httpVersion, interceptors });
+      return createGrpcWebTransport({ baseUrl, httpVersion, interceptors, nodeOptions });
     case "connect":
-      return createConnectTransport({ baseUrl, httpVersion, interceptors, useBinaryFormat: !opts.json });
+      return createConnectTransport({ baseUrl, httpVersion, interceptors, nodeOptions, useBinaryFormat: !opts.json });
   }
 }
 

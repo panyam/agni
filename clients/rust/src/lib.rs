@@ -37,7 +37,7 @@ use std::fmt;
 use tonic::metadata::{Ascii, MetadataValue};
 use tonic::service::Interceptor;
 use tonic::service::interceptor::InterceptedService;
-use tonic::transport::{Channel, Endpoint};
+use tonic::transport::{Certificate, Channel, ClientTlsConfig, Endpoint};
 use tonic::{Code, Request, Status};
 
 use agni::v1::webapi::check_service_client::CheckServiceClient;
@@ -80,12 +80,30 @@ pub struct Client {
 impl Client {
     /// Connects to the server at `address`, such as `http://127.0.0.1:8080`, and checks it.
     ///
-    /// With a token, every call carries `authorization: Bearer <token>`. The server does not check
-    /// it yet (agni issue 1627).
+    /// With a token, every call carries `authorization: Bearer <token>`. A server started with
+    /// `--auth tokens` refuses a call without a good one (agni issue 1627). An `https://` address
+    /// speaks TLS and trusts the system's CAs.
     pub async fn connect(address: impl Into<String>, token: Option<&str>) -> Result<Client, Error> {
+        Client::connect_with_ca(address, token, None).await
+    }
+
+    /// Connects as [`Client::connect`] does, and for an `https://` address also trusts the PEM CA
+    /// certificates in `ca_pem`, such as a team's own CA (agni issue 1765).
+    pub async fn connect_with_ca(
+        address: impl Into<String>,
+        token: Option<&str>,
+        ca_pem: Option<&[u8]>,
+    ) -> Result<Client, Error> {
         let address = address.into();
-        let endpoint = Endpoint::from_shared(address.clone())
+        let mut endpoint = Endpoint::from_shared(address.clone())
             .map_err(|e| Error::Address(format!("{address}: {e}")))?;
+        if address.starts_with("https://") {
+            let mut tls = ClientTlsConfig::new().with_native_roots();
+            if let Some(pem) = ca_pem {
+                tls = tls.ca_certificate(Certificate::from_pem(pem));
+            }
+            endpoint = endpoint.tls_config(tls).map_err(Error::Transport)?;
+        }
         let channel = endpoint.connect().await.map_err(Error::Transport)?;
         Client::with_channel(channel, token).await
     }

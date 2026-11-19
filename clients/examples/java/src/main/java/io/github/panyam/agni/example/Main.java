@@ -85,7 +85,10 @@ public final class Main {
         usage("flag -" + a + " needs a value");
       }
     }
-    try (AgniClient client = AgniClient.create(server)) {
+    // A shared server asks every call for a token (agni issue 1627), passed in AGNI_TOKEN, and its
+    // certificate may come from a team's own CA (agni issue 1765), passed in AGNI_CA.
+    try (AgniClient client =
+        AgniClient.create(server, System.getenv("AGNI_TOKEN"), System.getenv("AGNI_CA"))) {
       System.out.println(run(client, design));
     } catch (RuntimeException e) {
       System.err.println(e.getMessage());

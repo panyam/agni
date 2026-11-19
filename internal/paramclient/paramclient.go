@@ -24,9 +24,19 @@ type Client struct {
 	rpc paramconnect.PartSpecServiceClient
 }
 
-// New returns a Client for the PartSpecService served at baseURL.
-func New(baseURL string) *Client {
-	return &Client{rpc: paramconnect.NewPartSpecServiceClient(&http.Client{Timeout: timeout}, baseURL)}
+// New returns a Client for the PartSpecService served at baseURL. A non-empty token goes on every
+// call as a bearer token, for an agnids started with --auth tokens (agni issue 1765).
+func New(baseURL, token string) *Client {
+	var opts []connect.ClientOption
+	if token != "" {
+		opts = append(opts, connect.WithInterceptors(connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+			return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+				req.Header().Set("Authorization", "Bearer "+token)
+				return next(ctx, req)
+			}
+		})))
+	}
+	return &Client{rpc: paramconnect.NewPartSpecServiceClient(&http.Client{Timeout: timeout}, baseURL, opts...)}
 }
 
 // BatchGet implements param.Fetcher.

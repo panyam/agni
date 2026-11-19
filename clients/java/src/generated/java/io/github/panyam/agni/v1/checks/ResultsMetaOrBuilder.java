@@ -107,4 +107,28 @@ public interface ResultsMetaOrBuilder extends
    * @return The coverageAxis.
    */
   boolean getCoverageAxis();
+
+  /**
+   * <pre>
+   * created_by is the subject of the caller a server ran this for, such as the name of the token
+   * the call carried (agni issue 1627). It is empty for a run made on a server with no
+   * authentication, and for a run the CLI made by itself.
+   * </pre>
+   *
+   * <code>string created_by = 6 [json_name = "createdBy"];</code>
+   * @return The createdBy.
+   */
+  java.lang.String getCreatedBy();
+  /**
+   * <pre>
+   * created_by is the subject of the caller a server ran this for, such as the name of the token
+   * the call carried (agni issue 1627). It is empty for a run made on a server with no
+   * authentication, and for a run the CLI made by itself.
+   * </pre>
+   *
+   * <code>string created_by = 6 [json_name = "createdBy"];</code>
+   * @return The bytes for createdBy.
+   */
+  com.google.protobuf.ByteString
+      getCreatedByBytes();
 }

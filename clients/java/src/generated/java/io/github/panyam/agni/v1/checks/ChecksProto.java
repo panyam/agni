@@ -296,41 +296,42 @@ public final class ChecksProto extends com.google.protobuf.GeneratedFile {
       "joined\022:\n\010unjoined\030\003 \003(\0132\036.agni.v1.check" +
       "s.UnjoinedReasonR\010unjoined\"Z\n\016UnjoinedRe" +
       "ason\022\026\n\006reason\030\001 \001(\tR\006reason\022\024\n\005count\030\002 " +
-      "\001(\005R\005count\022\032\n\010examples\030\003 \003(\tR\010examples\"\260" +
+      "\001(\005R\005count\022\032\n\010examples\030\003 \003(\tR\010examples\"\317" +
       "\001\n\013ResultsMeta\022\026\n\006schema\030\001 \001(\tR\006schema\022\032" +
       "\n\010producer\030\002 \001(\tR\010producer\022)\n\020producer_v" +
       "ersion\030\003 \001(\tR\017producerVersion\022\035\n\ncreated" +
       "_at\030\004 \001(\tR\tcreatedAt\022#\n\rcoverage_axis\030\005 " +
-      "\001(\010R\014coverageAxis\"\232\001\n\tDesignRef\022\026\n\006sourc" +
-      "e\030\001 \001(\tR\006source\022!\n\014content_hash\030\002 \001(\tR\013c" +
-      "ontentHash\022R\n\024unexpanded_hierarchy\030\003 \003(\013" +
-      "2\037.agni.v1.ir.UnexpandedHierarchyR\023unexp" +
-      "andedHierarchy\"\240\001\n\tRunConfig\022\026\n\006params\030\001" +
-      " \001(\010R\006params\022\032\n\010profiles\030\002 \001(\010R\010profiles" +
-      "\022\026\n\006intent\030\003 \001(\010R\006intent\022 \n\013conventions\030" +
-      "\004 \001(\tR\013conventions\022%\n\016ratified_floor\030\005 \001" +
-      "(\001R\rratifiedFloor\"9\n\013SkippedRule\022\022\n\004name" +
-      "\030\001 \001(\tR\004name\022\026\n\006reason\030\002 \001(\tR\006reason\"\311\001\n" +
-      "\nRuleRecord\022\022\n\004name\030\001 \001(\tR\004name\022\032\n\010sever" +
-      "ity\030\002 \001(\tR\010severity\022\030\n\007summary\030\003 \001(\tR\007su" +
-      "mmary\0228\n\004tags\030\004 \003(\0132$.agni.v1.checks.Rul" +
-      "eRecord.TagsEntryR\004tags\0327\n\tTagsEntry\022\020\n\003" +
-      "key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001" +
-      "*\376\001\n\014LocateReason\022\035\n\031LOCATE_REASON_UNSPE" +
-      "CIFIED\020\000\022 \n\034LOCATE_REASON_VIRTUAL_SYMBOL" +
-      "\020\001\022$\n LOCATE_REASON_POWER_RAIL_NO_WIRE\020\002" +
-      "\022\037\n\033LOCATE_REASON_NOT_IN_DESIGN\020\003\022\035\n\031LOC" +
-      "ATE_REASON_NO_GEOMETRY\020\004\022\037\n\033LOCATE_REASO" +
-      "N_BUS_NOT_DRAWN\020\005\022&\n\"LOCATE_REASON_SCHEM" +
-      "ATIC_UNREADABLE\020\006*\222\001\n\007Outcome\022\027\n\023OUTCOME" +
-      "_UNSPECIFIED\020\000\022\020\n\014OUTCOME_PASS\020\001\022\020\n\014OUTC" +
-      "OME_FAIL\020\002\022\024\n\020OUTCOME_NO_LIMIT\020\003\022\032\n\026OUTC" +
-      "OME_NOT_CONSIDERED\020\004\022\030\n\024OUTCOME_INCONCLU" +
-      "SIVE\020\005B\266\001\n\037io.github.panyam.agni.v1.chec" +
-      "ksB\013ChecksProtoP\001Z,github.com/panyam/agn" +
-      "i/gen/go/agni/v1/checks\242\002\003AVC\252\002\016Agni.V1." +
-      "Checks\312\002\016Agni\\V1\\Checks\342\002\032Agni\\V1\\Checks" +
-      "\\GPBMetadata\352\002\020Agni::V1::Checksb\006proto3"
+      "\001(\010R\014coverageAxis\022\035\n\ncreated_by\030\006 \001(\tR\tc" +
+      "reatedBy\"\232\001\n\tDesignRef\022\026\n\006source\030\001 \001(\tR\006" +
+      "source\022!\n\014content_hash\030\002 \001(\tR\013contentHas" +
+      "h\022R\n\024unexpanded_hierarchy\030\003 \003(\0132\037.agni.v" +
+      "1.ir.UnexpandedHierarchyR\023unexpandedHier" +
+      "archy\"\240\001\n\tRunConfig\022\026\n\006params\030\001 \001(\010R\006par" +
+      "ams\022\032\n\010profiles\030\002 \001(\010R\010profiles\022\026\n\006inten" +
+      "t\030\003 \001(\010R\006intent\022 \n\013conventions\030\004 \001(\tR\013co" +
+      "nventions\022%\n\016ratified_floor\030\005 \001(\001R\rratif" +
+      "iedFloor\"9\n\013SkippedRule\022\022\n\004name\030\001 \001(\tR\004n" +
+      "ame\022\026\n\006reason\030\002 \001(\tR\006reason\"\311\001\n\nRuleReco" +
+      "rd\022\022\n\004name\030\001 \001(\tR\004name\022\032\n\010severity\030\002 \001(\t" +
+      "R\010severity\022\030\n\007summary\030\003 \001(\tR\007summary\0228\n\004" +
+      "tags\030\004 \003(\0132$.agni.v1.checks.RuleRecord.T" +
+      "agsEntryR\004tags\0327\n\tTagsEntry\022\020\n\003key\030\001 \001(\t" +
+      "R\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001*\376\001\n\014Loca" +
+      "teReason\022\035\n\031LOCATE_REASON_UNSPECIFIED\020\000\022" +
+      " \n\034LOCATE_REASON_VIRTUAL_SYMBOL\020\001\022$\n LOC" +
+      "ATE_REASON_POWER_RAIL_NO_WIRE\020\002\022\037\n\033LOCAT" +
+      "E_REASON_NOT_IN_DESIGN\020\003\022\035\n\031LOCATE_REASO" +
+      "N_NO_GEOMETRY\020\004\022\037\n\033LOCATE_REASON_BUS_NOT" +
+      "_DRAWN\020\005\022&\n\"LOCATE_REASON_SCHEMATIC_UNRE" +
+      "ADABLE\020\006*\222\001\n\007Outcome\022\027\n\023OUTCOME_UNSPECIF" +
+      "IED\020\000\022\020\n\014OUTCOME_PASS\020\001\022\020\n\014OUTCOME_FAIL\020" +
+      "\002\022\024\n\020OUTCOME_NO_LIMIT\020\003\022\032\n\026OUTCOME_NOT_C" +
+      "ONSIDERED\020\004\022\030\n\024OUTCOME_INCONCLUSIVE\020\005B\266\001" +
+      "\n\037io.github.panyam.agni.v1.checksB\013Check" +
+      "sProtoP\001Z,github.com/panyam/agni/gen/go/" +
+      "agni/v1/checks\242\002\003AVC\252\002\016Agni.V1.Checks\312\002\016" +
+      "Agni\\V1\\Checks\342\002\032Agni\\V1\\Checks\\GPBMetad" +
+      "ata\352\002\020Agni::V1::Checksb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -492,7 +493,7 @@ public final class ChecksProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_checks_ResultsMeta_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_checks_ResultsMeta_descriptor,
-        new java.lang.String[] { "Schema", "Producer", "ProducerVersion", "CreatedAt", "CoverageAxis", });
+        new java.lang.String[] { "Schema", "Producer", "ProducerVersion", "CreatedAt", "CoverageAxis", "CreatedBy", });
     internal_static_agni_v1_checks_DesignRef_descriptor =
       getDescriptor().getMessageType(24);
     internal_static_agni_v1_checks_DesignRef_fieldAccessorTable = new

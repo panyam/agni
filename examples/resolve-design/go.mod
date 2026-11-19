@@ -46,7 +46,7 @@ require (
 	github.com/panyam/gocurrent v0.1.2 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
-	github.com/panyam/oneauth v0.3.7 // indirect
+	github.com/panyam/oneauth v0.3.8 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/afero v1.15.0 // indirect

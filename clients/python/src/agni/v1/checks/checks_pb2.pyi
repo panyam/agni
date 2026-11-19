@@ -352,18 +352,20 @@ class UnjoinedReason(_message.Message):
     def __init__(self, reason: _Optional[str] = ..., count: _Optional[int] = ..., examples: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ResultsMeta(_message.Message):
-    __slots__ = ("schema", "producer", "producer_version", "created_at", "coverage_axis")
+    __slots__ = ("schema", "producer", "producer_version", "created_at", "coverage_axis", "created_by")
     SCHEMA_FIELD_NUMBER: _ClassVar[int]
     PRODUCER_FIELD_NUMBER: _ClassVar[int]
     PRODUCER_VERSION_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     COVERAGE_AXIS_FIELD_NUMBER: _ClassVar[int]
+    CREATED_BY_FIELD_NUMBER: _ClassVar[int]
     schema: str
     producer: str
     producer_version: str
     created_at: str
     coverage_axis: bool
-    def __init__(self, schema: _Optional[str] = ..., producer: _Optional[str] = ..., producer_version: _Optional[str] = ..., created_at: _Optional[str] = ..., coverage_axis: _Optional[bool] = ...) -> None: ...
+    created_by: str
+    def __init__(self, schema: _Optional[str] = ..., producer: _Optional[str] = ..., producer_version: _Optional[str] = ..., created_at: _Optional[str] = ..., coverage_axis: _Optional[bool] = ..., created_by: _Optional[str] = ...) -> None: ...
 
 class DesignRef(_message.Message):
     __slots__ = ("source", "content_hash", "unexpanded_hierarchy")

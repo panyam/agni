@@ -201,6 +201,8 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			// A native run records what it could NOT check as well as what it found. See
 			// docsite/content/architecture/checks-contract.md#the-outcome-vocabulary-names-every-way-a-question-went-unanswered.
 			CoverageAxis: true,
+			// Who asked, when the server authenticates its callers (agni issue 1627).
+			CreatedBy: CallerFrom(ctx).Subject,
 		},
 		// The design records what the read left out, so the checklist page rendered from this
 		// document says so (agni issue 717).

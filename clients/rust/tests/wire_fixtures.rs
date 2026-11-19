@@ -118,7 +118,7 @@ fn serve(agni: &Path, work: &Path) -> Server {
 }
 
 /// Connects once the server answers, through the client's own connect step. The token goes out as
-/// `authorization` metadata, which this server accepts and does not check yet (agni issue 1627).
+/// `authorization` metadata, which this server ignores, since it runs without `--auth`.
 async fn connect(server: &Server) -> Client {
     let deadline = Instant::now() + Duration::from_secs(60);
     loop {

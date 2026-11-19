@@ -9,6 +9,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -59,7 +61,24 @@ func main() {
 }
 
 func run(ctx context.Context, server, design string) (*Summary, error) {
-	hc := http.DefaultClient
+	// A shared server asks every call for a token (agni issue 1627), and its certificate may come from
+	// a team's own CA (agni issue 1765). The exercise passes them in AGNI_TOKEN and AGNI_CA.
+	var transport http.RoundTripper = http.DefaultTransport
+	if ca := os.Getenv("AGNI_CA"); ca != "" {
+		pemBytes, err := os.ReadFile(ca) // #nosec G304 G703 -- a CA file the caller named in AGNI_CA
+		if err != nil {
+			return nil, fmt.Errorf("AGNI_CA: %w", err)
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(pemBytes) {
+			return nil, fmt.Errorf("AGNI_CA: %s holds no certificate", ca)
+		}
+		transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}}
+	}
+	if token := os.Getenv("AGNI_TOKEN"); token != "" {
+		transport = bearerTransport{token: token, next: transport}
+	}
+	hc := &http.Client{Transport: transport}
 	info, err := webapiconnect.NewServerServiceClient(hc, server).GetServerInfo(ctx, connect.NewRequest(&webapi.GetServerInfoRequest{}))
 	if err != nil {
 		return nil, fmt.Errorf("calling GetServerInfo: %w", err)
@@ -125,4 +144,16 @@ func boardGeometry(ctx context.Context, designs webapiconnect.DesignViewServiceC
 			return board, nil
 		}
 	}
+}
+
+// bearerTransport sends a bearer token on every request.
+type bearerTransport struct {
+	token string
+	next  http.RoundTripper
+}
+
+func (b bearerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.Header.Set("Authorization", "Bearer "+b.token)
+	return b.next.RoundTrip(r)
 }
