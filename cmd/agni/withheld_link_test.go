@@ -11,7 +11,7 @@ import (
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 )
 
 // The reason a run withheld its links has to reach the saved page, not just stderr (issue 626).
@@ -62,7 +62,7 @@ func newAgreeingServer(t *testing.T, name string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m, ok := mounts.Find(ws.Mounts(), name)
+	m, ok := mountset.Find(ws.Mounts(), name)
 	if !ok {
 		t.Fatalf("mount %q is not declared", name)
 	}

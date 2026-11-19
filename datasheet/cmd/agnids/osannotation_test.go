@@ -10,7 +10,7 @@ import (
 
 	"github.com/panyam/agni/datasheet/dsservice"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 )
 
 func TestAnnotationsDirAndSafeAuthor(t *testing.T) {
@@ -31,7 +31,7 @@ func TestAnnotationsDirAndSafeAuthor(t *testing.T) {
 func TestOsAnnotationStoreUnion(t *testing.T) {
 	dir, corpus := t.TempDir(), t.TempDir()
 	writePDF(t, filepath.Join(dir, "d.pdf"), "pdf-d")
-	st := &osAnnotationStore{derived: derived{mounts: tableOf([]mounts.Mount{{Name: "m", Root: dir}}), corpus: corpus}}
+	st := &osAnnotationStore{derived: derived{mounts: tableOf([]mountset.Mount{{Name: "m", Root: dir}}), corpus: corpus}}
 	ctx := context.Background()
 	region := func(id, typ string) []*dsapi.RegionAnnotation {
 		return []*dsapi.RegionAnnotation{{RegionId: id, Type: typ}}
@@ -94,7 +94,7 @@ func TestOsAnnotationStoreReadsTheOldLayout(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	ms := []mounts.Mount{{Name: "m", Root: dir}}
+	ms := []mountset.Mount{{Name: "m", Root: dir}}
 	st := &osAnnotationStore{derived: derived{mounts: tableOf(ms), corpus: corpus}}
 	ctx := context.Background()
 	if err := st.Save(ctx, mustURI("m", "d.pdf"), "alice", &dsapi.AnnotationSet{DocId: "d", Author: "alice", Annotations: []*dsapi.RegionAnnotation{{RegionId: "new.alice"}}}); err != nil {

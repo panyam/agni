@@ -17,7 +17,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -179,7 +179,7 @@ func boardRepo() *fakeRepo {
 func githubReaderOver(t *testing.T, repo *fakeRepo, srv *httptest.Server) service.MountReader {
 	t.Helper()
 	dir := t.TempDir()
-	table := mounts.NewTable(mounts.Mount{Name: "bb", Kind: mounts.KindGitHub, Source: "github://" + repo.owner + "/" + repo.repo})
+	table := mountset.NewTable(mountset.Mount{Name: "bb", Kind: mountset.KindGitHub, Source: "github://" + repo.owner + "/" + repo.repo})
 	maker, err := newMountMaker(table, filepath.Join(dir, "store", storeMountsDir), filepath.Join(dir, "uploads"), srv.URL)
 	if err != nil {
 		t.Fatal(err)
@@ -264,7 +264,7 @@ func TestAFolderReaderReadsAMountsFilesAndLeavesLinksOut(t *testing.T) {
 		t.Skip("symlinks unavailable:", err)
 	}
 	dir := t.TempDir()
-	table := mounts.NewTable(mounts.Mount{Name: "boards", Root: root})
+	table := mountset.NewTable(mountset.Mount{Name: "boards", Root: root})
 	maker, err := newMountMaker(table, filepath.Join(dir, "store", storeMountsDir), filepath.Join(dir, "uploads"), "http://127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)

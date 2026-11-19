@@ -7,7 +7,7 @@ require (
 	github.com/bodgit/sevenzip v1.6.5
 	github.com/ebitengine/purego v0.8.4
 	github.com/klauspost/compress v1.19.1
-	github.com/panyam/goapplib v0.7.13
+	github.com/panyam/goapplib v0.7.15
 	github.com/panyam/jaala/frontends/mcp v0.1.101
 	github.com/panyam/jaala/frontends/nl v0.1.101
 	github.com/panyam/massrelay v0.3.7
@@ -45,6 +45,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/panyam/goapplib/storage v0.7.15 // indirect
 	github.com/panyam/jaala/frontends/cypher v0.1.101 // indirect
 	github.com/panyam/oneauth v0.3.7 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
@@ -74,7 +75,7 @@ require (
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/net v0.61.0 // indirect
-	golang.org/x/oauth2 v0.37.0 // indirect
+	golang.org/x/oauth2 v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 )
 

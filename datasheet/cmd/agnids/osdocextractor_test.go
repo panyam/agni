@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/datasheet/dsservice"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 )
 
 // stubProducer writes a minimal valid doc-IR to its -o path (invoked as `<script> <pdf> -o <out>`,
@@ -29,7 +29,7 @@ func TestOsDocExtractor(t *testing.T) {
 
 	corpus := t.TempDir()
 	writePDF(t, filepath.Join(dir, "LM1117.pdf"), "pdf-lm1117")
-	ms := []mounts.Mount{{Name: "m", Root: dir}}
+	ms := []mountset.Mount{{Name: "m", Root: dir}}
 	e := &osDocExtractor{derived: derived{mounts: tableOf(ms), corpus: corpus}, cmd: []string{stub}}
 	if !e.Available() {
 		t.Fatal("a configured cmd should be available")

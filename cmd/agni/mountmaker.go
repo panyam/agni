@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -43,7 +43,7 @@ var githubName = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,100}$`)
 // building a view of hard links under <uploads>/mounts/<name>/<commit>/. It keeps one record per
 // mount in --store, and the table serves the view read-only.
 type mountMaker struct {
-	table   *mounts.Table
+	table   *mountset.Table
 	records string
 	uploads string
 	blobs   *projects.BlobDir
@@ -60,7 +60,7 @@ type mountMaker struct {
 var _ service.MountMaker = (*mountMaker)(nil)
 
 // newMountMaker reads the mount records into table and returns the maker that writes them.
-func newMountMaker(table *mounts.Table, records, uploads, api string) (*mountMaker, error) {
+func newMountMaker(table *mountset.Table, records, uploads, api string) (*mountMaker, error) {
 	blobs, err := projects.NewBlobDir(uploads)
 	if err != nil {
 		return nil, fmt.Errorf("--uploads %q: %w", uploads, err)
@@ -80,7 +80,7 @@ func newMountMaker(table *mounts.Table, records, uploads, api string) (*mountMak
 // lists. A blob the uploads lost leaves that mount's view unbuilt and is reported on log, so the
 // server still starts and the other mounts still serve.
 func (m *mountMaker) restore(log io.Writer) error {
-	recs, err := mounts.ReadRecords(m.records)
+	recs, err := mountset.ReadRecords(m.records)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (m *mountMaker) restore(log io.Writer) error {
 			fmt.Fprintf(log, "note: the mount record %q is not served, since a --mount of that name is\n", r.Name)
 			continue
 		}
-		view := mounts.SnapshotView(m.uploads, r.Name, r.Commit)
+		view := mountset.SnapshotView(m.uploads, r.Name, r.Commit)
 		if _, err := os.Stat(view); err == nil {
 			continue
 		}
@@ -101,14 +101,14 @@ func (m *mountMaker) restore(log io.Writer) error {
 }
 
 // buildView links files into a fresh view of name at commit, through a temp folder and a rename.
-func (m *mountMaker) buildView(name, commit string, files []mounts.RecordFile) error {
+func (m *mountMaker) buildView(name, commit string, files []mountset.RecordFile) error {
 	tmp, err := m.tempView(name)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmp)
 	for _, f := range files {
-		to, err := mounts.SafeResolve(tmp, filepath.FromSlash(f.Path))
+		to, err := mountset.SafeResolve(tmp, filepath.FromSlash(f.Path))
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func (m *mountMaker) buildView(name, commit string, files []mounts.RecordFile) e
 
 // tempView makes a temp folder beside name's views.
 func (m *mountMaker) tempView(name string) (string, error) {
-	dir := filepath.Join(m.uploads, mounts.SnapshotsDir, name)
+	dir := filepath.Join(m.uploads, mountset.SnapshotsDir, name)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", err
 	}
@@ -133,7 +133,7 @@ func (m *mountMaker) tempView(name string) (string, error) {
 
 // placeView renames a built temp folder into name's view at commit, replacing a stale one.
 func (m *mountMaker) placeView(tmp, name, commit string) error {
-	view := mounts.SnapshotView(m.uploads, name, commit)
+	view := mountset.SnapshotView(m.uploads, name, commit)
 	if err := os.RemoveAll(view); err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (m *mountMaker) placeView(tmp, name, commit string) error {
 
 // CreateMount snapshots source at ref and serves it as name.
 func (m *mountMaker) CreateMount(ctx context.Context, name, source, ref string) (service.MountInfo, error) {
-	if err := mounts.ValidName(name); err != nil {
+	if err := mountset.ValidName(name); err != nil {
 		return service.MountInfo{}, fmt.Errorf("%w: %s", service.ErrInvalidArgument, err)
 	}
 	owner, repo, err := githubSource(source)
@@ -162,14 +162,14 @@ func (m *mountMaker) CreateMount(ctx context.Context, name, source, ref string) 
 	if err != nil {
 		return service.MountInfo{}, err
 	}
-	rec := mounts.Record{Name: name, Kind: mounts.KindGitHub, Source: "github://" + owner + "/" + repo, Ref: ref, Commit: commit, Created: time.Now().UTC(), Files: files}
-	if err := mounts.WriteRecord(m.records, rec); err != nil {
+	rec := mountset.Record{Name: name, Kind: mountset.KindGitHub, Source: "github://" + owner + "/" + repo, Ref: ref, Commit: commit, Created: time.Now().UTC(), Files: files}
+	if err := mountset.WriteRecord(m.records, rec); err != nil {
 		return service.MountInfo{}, fmt.Errorf("%w: keeping the mount's record: %s", service.ErrInternal, err)
 	}
 	if err := m.table.Reload(); err != nil {
 		return service.MountInfo{}, fmt.Errorf("%w: %s", service.ErrInternal, err)
 	}
-	return mounts.Info(rec.Mount(m.uploads)), nil
+	return mountset.Info(rec.Mount(m.uploads)), nil
 }
 
 // DeleteMount forgets name's record and removes its views. Its blobs stay until the next startup's
@@ -184,13 +184,13 @@ func (m *mountMaker) DeleteMount(_ context.Context, name string) error {
 	if !mt.Runtime {
 		return fmt.Errorf("%w: the mount %q comes from the server's flags", service.ErrFailedPrecondition, name)
 	}
-	if err := mounts.RemoveRecord(m.records, name); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := mountset.RemoveRecord(m.records, name); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("%w: %s", service.ErrInternal, err)
 	}
 	if err := m.table.Reload(); err != nil {
 		return fmt.Errorf("%w: %s", service.ErrInternal, err)
 	}
-	if err := os.RemoveAll(filepath.Join(m.uploads, mounts.SnapshotsDir, name)); err != nil {
+	if err := os.RemoveAll(filepath.Join(m.uploads, mountset.SnapshotsDir, name)); err != nil {
 		return fmt.Errorf("%w: %s", service.ErrInternal, err)
 	}
 	return nil
@@ -232,7 +232,7 @@ func (m *mountMaker) resolveRef(ctx context.Context, owner, repo, ref string) (s
 	if err := m.getJSON(ctx, "/repos/"+owner+"/"+repo+"/commits/"+url.PathEscape(ref), &c); err != nil {
 		return "", err
 	}
-	if !mounts.ValidCommit(c.SHA) {
+	if !mountset.ValidCommit(c.SHA) {
 		return "", fmt.Errorf("%w: GitHub answered %q for %s/%s at %q, which is not a commit", service.ErrUnavailable, c.SHA, owner, repo, ref)
 	}
 	return c.SHA, nil
@@ -275,7 +275,7 @@ func (m *mountMaker) get(ctx context.Context, p, accept string) (*http.Response,
 // snapshot streams the commit's tarball into the blobs and builds the mount's view from it. It
 // returns the files it kept, sorted as the tarball lists them. Only regular files are kept. A link,
 // a device or a path that would leave the view is skipped, so the view holds plain files alone.
-func (m *mountMaker) snapshot(ctx context.Context, name, owner, repo, commit string) ([]mounts.RecordFile, error) {
+func (m *mountMaker) snapshot(ctx context.Context, name, owner, repo, commit string) ([]mountset.RecordFile, error) {
 	resp, err := m.get(ctx, "/repos/"+owner+"/"+repo+"/tarball/"+commit, "application/vnd.github+json")
 	if err != nil {
 		return nil, err
@@ -292,7 +292,7 @@ func (m *mountMaker) snapshot(ctx context.Context, name, owner, repo, commit str
 	}
 	defer os.RemoveAll(tmp)
 	tr := tar.NewReader(zr)
-	var files []mounts.RecordFile
+	var files []mountset.RecordFile
 	var total int64
 	for {
 		hdr, err := tr.Next()
@@ -325,7 +325,7 @@ func (m *mountMaker) snapshot(ctx context.Context, name, owner, repo, commit str
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", service.ErrInternal, err)
 		}
-		to, err := mounts.SafeResolve(tmp, filepath.FromSlash(rel))
+		to, err := mountset.SafeResolve(tmp, filepath.FromSlash(rel))
 		if err != nil {
 			continue
 		}
@@ -335,7 +335,7 @@ func (m *mountMaker) snapshot(ctx context.Context, name, owner, repo, commit str
 		if err := m.blobs.Link(h, to); err != nil {
 			return nil, fmt.Errorf("%w: %s", service.ErrInternal, err)
 		}
-		files = append(files, mounts.RecordFile{Path: rel, Sha256: h})
+		files = append(files, mountset.RecordFile{Path: rel, Sha256: h})
 	}
 	if err := m.placeView(tmp, name, commit); err != nil {
 		return nil, fmt.Errorf("%w: %s", service.ErrInternal, err)

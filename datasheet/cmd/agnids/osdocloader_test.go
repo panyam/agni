@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 )
 
 func TestDocSibling(t *testing.T) {
@@ -28,7 +28,7 @@ func TestOsDocLoaderDocument(t *testing.T) {
 		[]byte(`content_hash: "sha256:abc" producer: "hand" page_count: 1`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	l := &osDocLoader{derived: derived{mounts: tableOf([]mounts.Mount{{Name: "m", Root: dir}})}}
+	l := &osDocLoader{derived: derived{mounts: tableOf([]mountset.Mount{{Name: "m", Root: dir}})}}
 
 	// With no corpus, a doc-IR beside the PDF, from `make pdf2doc`, is still read.
 	doc, err := l.Document(context.Background(), mustURI("m", "d.pdf"))
@@ -64,7 +64,7 @@ func TestOsDocLoaderReadsTheStoreFirst(t *testing.T) {
 	} {
 		writePDF(t, path, `content_hash: "`+hash+`" producer: "hand" page_count: 1`)
 	}
-	l := &osDocLoader{derived: derived{mounts: tableOf([]mounts.Mount{{Name: "m", Root: dir}}), corpus: corpus}}
+	l := &osDocLoader{derived: derived{mounts: tableOf([]mountset.Mount{{Name: "m", Root: dir}}), corpus: corpus}}
 	for pdf, want := range map[string]string{"d.pdf": "sha256:store", "e.pdf": "sha256:beside-e"} {
 		doc, err := l.Document(context.Background(), mustURI("m", pdf))
 		if err != nil || doc.GetContentHash() != want {

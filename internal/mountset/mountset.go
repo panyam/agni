@@ -3,7 +3,7 @@
 // checked against the filesystem at parse time. The package is outside cmd/agni so any entrypoint
 // hosting the serve services reuses the same boundary. It is outside internal/ because one of those
 // entrypoints, the datasheet service, is in a module of its own (agni issue 744).
-package mounts
+package mountset
 
 import (
 	"fmt"

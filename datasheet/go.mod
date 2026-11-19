@@ -5,7 +5,7 @@ go 1.26.9
 require (
 	connectrpc.com/connect v1.20.0
 	github.com/panyam/agni v0.0.0
-	github.com/panyam/goapplib v0.7.13
+	github.com/panyam/goapplib v0.7.15
 	github.com/panyam/servicekit v0.2.2
 	github.com/spf13/cobra v1.10.2
 	google.golang.org/protobuf v1.36.12
@@ -22,6 +22,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
+	github.com/panyam/goapplib/storage v0.7.15 // indirect
 	github.com/panyam/gocurrent v0.1.2 // indirect
 	github.com/panyam/goutils v0.1.14 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect

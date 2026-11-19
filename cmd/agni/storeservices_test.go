@@ -18,7 +18,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -26,7 +26,7 @@ import (
 // builds over dir/store and dir/uploads, with the tutorial project mounted beside them.
 func storeServer(t *testing.T, dir string) *httptest.Server {
 	t.Helper()
-	ms, err := withUploadsMount([]mounts.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}, filepath.Join(dir, "uploads"))
+	ms, err := withUploadsMount([]mountset.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}, filepath.Join(dir, "uploads"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 )
 
 // openCmd serves ONE design and prints the URL that shows it.
@@ -50,7 +50,7 @@ func openCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			m, ok := mounts.Find(ws.Mounts(), u.Mount)
+			m, ok := mountset.Find(ws.Mounts(), u.Mount)
 			if !ok {
 				return fmt.Errorf("%s resolved to mount %q, which this run has no root for", args[0], u.Mount)
 			}
@@ -69,7 +69,7 @@ func openCmd() *cobra.Command {
 			return runViewer(cmd, viewerOpts{
 				addr:        addr,
 				webDir:      webDir,
-				extraMounts: []mounts.Mount{m},
+				extraMounts: []mountset.Mount{m},
 				banner: func(urls []string, _ int) {
 					openBanner(cmd.ErrOrStderr(), urls[0], m, src.NetlistURI, view)
 				},
@@ -137,7 +137,7 @@ func freePort() (string, error) {
 // The check line includes --mount. Mounts are minted PER PROCESS, so a second agni knows nothing of
 // the mount this server minted. It refuses the URI outright and says to pass --mount. With --mount
 // printed, the line runs when pasted rather than only illustrating.
-func openBanner(w io.Writer, rawURL string, m mounts.Mount, designURI, viewPath string) {
+func openBanner(w io.Writer, rawURL string, m mountset.Mount, designURI, viewPath string) {
 	base := strings.TrimSuffix(rawURL, "/")
 	fmt.Fprintf(w, "%s%s\n", base, viewPath)
 	fmt.Fprintf(w, "\ncheck it against this server:\n  agni check --mount %s=%s %s --verdicts --server %s\n",

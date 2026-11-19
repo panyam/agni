@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -24,7 +24,7 @@ func kicadSvc(t *testing.T, enabled map[string]bool) *service.DesignViewService 
 	if err != nil {
 		t.Fatal(err)
 	}
-	return newDesignSvcNative([]mounts.Mount{{Name: "k", Root: root}}, enabled)
+	return newDesignSvcNative([]mountset.Mount{{Name: "k", Root: root}}, enabled)
 }
 
 func TestGetSheetNativeGates(t *testing.T) {
@@ -44,7 +44,7 @@ func TestGetSheetNativeGates(t *testing.T) {
 
 	t.Run("unsupported format gates as no-tool", func(t *testing.T) {
 		root, _ := filepath.Abs(filepath.Join("..", "..", "readers", "edif", "testdata"))
-		svc := newDesignSvcNative([]mounts.Mount{{Name: "e", Root: root}}, map[string]bool{"kicad-cli": true})
+		svc := newDesignSvcNative([]mountset.Mount{{Name: "e", Root: root}}, map[string]bool{"kicad-cli": true})
 		if err := native(t, svc, "e", "sample.eds"); !errors.Is(err, service.ErrNativeNoTool) {
 			t.Fatalf("want ErrNativeNoTool for .eds native, got %v", err)
 		}

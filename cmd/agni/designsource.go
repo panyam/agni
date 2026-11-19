@@ -17,7 +17,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/readers/kicad"
 	"github.com/panyam/agni/service"
 	"github.com/spf13/cobra"
@@ -279,7 +279,7 @@ func edsSiblingNote(path string) string {
 // unknown. For the CLI that means the argument named a path that does not exist, since the workspace
 // mints a mount for anything real.
 func mountRoot(ws *cliWorkspace, uri artifact.URI) (string, bool) {
-	m, ok := mounts.Find(ws.Mounts(), uri.Mount)
+	m, ok := mountset.Find(ws.Mounts(), uri.Mount)
 	if !ok {
 		return "", false
 	}

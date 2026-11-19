@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 )
 
 func writeEmpty(t *testing.T, path string) {
@@ -50,7 +50,7 @@ func TestCheckWorkbenchAssets(t *testing.T) {
 func TestWorkbenchServesItsWholePage(t *testing.T) {
 	root := t.TempDir()
 	writeEmpty(t, filepath.Join(root, "ti", "LM1117.pdf"))
-	ms, err := mounts.Parse([]string{"ds=" + root})
+	ms, err := mountset.Parse([]string{"ds=" + root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,8 +186,8 @@ func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
 	// agni serve snapshots a repo into the shared uploads and writes its record to the shared store
 	// after agnids started.
 	const commit = "0123456789abcdef0123456789abcdef01234567"
-	writeEmpty(t, filepath.Join(mounts.SnapshotView(uploads, "vendor", commit), "ti", "TPS62.pdf"))
-	if err := mounts.WriteRecord(filepath.Join(store, mounts.RecordsDir), mounts.Record{Name: "vendor", Kind: mounts.KindGitHub, Source: "github://ti/datasheets", Commit: commit}); err != nil {
+	writeEmpty(t, filepath.Join(mountset.SnapshotView(uploads, "vendor", commit), "ti", "TPS62.pdf"))
+	if err := mountset.WriteRecord(filepath.Join(store, mountset.RecordsDir), mountset.Record{Name: "vendor", Kind: mountset.KindGitHub, Source: "github://ti/datasheets", Commit: commit}); err != nil {
 		t.Fatal(err)
 	}
 	if err := table.Reload(); err != nil {

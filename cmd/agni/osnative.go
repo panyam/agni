@@ -6,7 +6,7 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/internal/native"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -14,7 +14,7 @@ import (
 // format's own golden tool, the kicad-cli cache. It translates the cmd gate errors to the service's
 // ErrNative* sentinels, so the service maps them to Connect codes without importing the cache.
 type osNative struct {
-	mounts  *mounts.Table
+	mounts  *mountset.Table
 	enabled map[string]bool
 	cache   *native.Cache
 }

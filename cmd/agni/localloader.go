@@ -19,7 +19,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/expect"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/service"
 )
@@ -220,7 +220,7 @@ func localPath(uri artifact.URI) string {
 	if err != nil {
 		return filepath.FromSlash(uri.Path)
 	}
-	abs, err := mounts.Resolve(ws.Mounts(), uri)
+	abs, err := mountset.Resolve(ws.Mounts(), uri)
 	if err != nil {
 		return filepath.FromSlash(uri.Path)
 	}

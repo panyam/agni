@@ -14,7 +14,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/service"
 )
@@ -23,7 +23,7 @@ import (
 // its mount root and reads it through the engine's formats.Loader, via service.LoaderIn, which also
 // records the files a cached read depends on (agni issue 895).
 type osLoader struct {
-	mounts *mounts.Table
+	mounts *mountset.Table
 	loader *formats.Loader
 }
 
@@ -106,7 +106,7 @@ func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manif
 	if err != nil {
 		return review.Manifest{}, err
 	}
-	f, err := os.Open(abs) // #nosec G304 -- abs comes from mounts.Resolve, which refuses a path outside its mount
+	f, err := os.Open(abs) // #nosec G304 -- abs comes from mountset.Resolve, which refuses a path outside its mount
 	if err != nil {
 		return review.Manifest{}, err
 	}

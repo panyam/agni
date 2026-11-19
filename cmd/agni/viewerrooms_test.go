@@ -19,7 +19,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/mcpserver"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/mcpkit/client"
 	"github.com/panyam/mcpkit/core"
@@ -37,7 +37,7 @@ func viewerRoomsServer(t *testing.T) *httptest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := []mounts.Mount{{Name: parityMounts[0].name, Root: root}}
+	ms := []mountset.Mount{{Name: parityMounts[0].name, Root: root}}
 	api := servedAPIFor(t, ms, ms)
 	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projectTrees(ms)...), Config: &osProjectConfig{mounts: tableOf(ms)}}
 	mux := http.NewServeMux()

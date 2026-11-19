@@ -14,7 +14,7 @@ import (
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -29,7 +29,7 @@ const sweepGrace = time.Hour
 // blobs go to the same folder, so they outlive a restart, and a sweep at startup removes what nothing
 // names. With --store it keeps packs too, and a pack's files go to --uploads beside the designs'.
 // With --store and checks, it keeps each design's reports, each run by checks.
-func storeServices(ms *mounts.Table, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
+func storeServices(ms *mountset.Table, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
 	projectSvc := service.NewProjectService(projectStore)
 	var store service.DesignStore
 	var packStore service.PackStore
@@ -65,7 +65,7 @@ func storeServices(ms *mounts.Table, storeDir, uploadsDir string, projectStore s
 			}
 			maps.Copy(keep, packHashes)
 			// A runtime mount's snapshot is files in the blobs too (agni issue 1735).
-			recs, err := mounts.ReadRecords(filepath.Join(storeDir, storeMountsDir))
+			recs, err := mountset.ReadRecords(filepath.Join(storeDir, storeMountsDir))
 			if err != nil {
 				return nil, nil, nil, err
 			}

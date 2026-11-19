@@ -6,16 +6,16 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
 // rawDatasheetHandler streams a datasheet's PDF from a mount so the /datasheets page can render it
 // in pdf.js under the region overlay (WS13-006). It is mounted under /datasheets/raw/<mount>/<path...>,
-// and mounts.Resolve keeps the path inside its mount. Only .pdf files are served, since doc-IR goes
+// and mountset.Resolve keeps the path inside its mount. Only .pdf files are served, since doc-IR goes
 // structured over DatasheetService. Rendering happens in the browser, so the document goes no
 // further than the local client (C16).
-func rawDatasheetHandler(ms *mounts.Table) http.Handler {
+func rawDatasheetHandler(ms *mountset.Table) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// r.URL.Path is already stripped of the /datasheets/raw/ prefix, leaving "<mount>/<path...>".
 		mountName, rel, ok := strings.Cut(r.URL.Path, "/")
@@ -41,6 +41,6 @@ func rawDatasheetHandler(ms *mounts.Table) http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/pdf")
-		http.ServeFile(w, r, abs) // #nosec G703 -- abs comes from mounts.Resolve, which refuses a path outside its mount
+		http.ServeFile(w, r, abs) // #nosec G703 -- abs comes from mountset.Resolve, which refuses a path outside its mount
 	})
 }

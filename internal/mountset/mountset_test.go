@@ -1,4 +1,4 @@
-package mounts
+package mountset
 
 import (
 	"os"

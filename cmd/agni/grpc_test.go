@@ -13,7 +13,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -32,7 +32,7 @@ func TestAGRPCClientCallsTheServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := []mounts.Mount{{Name: parityMounts[0].name, Root: root}}
+	ms := []mountset.Mount{{Name: parityMounts[0].name, Root: root}}
 	api := servedAPIFor(t, ms, ms)
 	mux := http.NewServeMux()
 	api.Register(mux)

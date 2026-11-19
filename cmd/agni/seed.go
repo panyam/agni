@@ -15,7 +15,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/wasmengine"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -33,7 +33,7 @@ import (
 // design, so the visit finds it built or under way. A request and a warm for one seed share one build.
 type seeds struct {
 	ws      *service.WorkspaceService
-	ms      *mounts.Table
+	ms      *mountset.Table
 	version func() string
 
 	mu       sync.Mutex
@@ -57,7 +57,7 @@ var errNoDesign = errors.New("no such design")
 // keptSeeds is how many seeds a server keeps. The oldest goes first when it is full.
 const keptSeeds = 4
 
-func newSeeds(ws *service.WorkspaceService, ms *mounts.Table, version func() string) *seeds {
+func newSeeds(ws *service.WorkspaceService, ms *mountset.Table, version func() string) *seeds {
 	return &seeds{ws: ws, ms: ms, version: version, kept: map[string][]byte{}, building: map[string]*seedBuild{}}
 }
 
@@ -159,7 +159,7 @@ func (s *seeds) buildSeed(u artifact.URI, listed []*webapi.DesignFile, v string)
 		if err != nil {
 			return nil, errNoDesign
 		}
-		b, err := os.ReadFile(abs) // #nosec G304 G703 -- abs comes from mounts.Resolve, which refuses a path outside its mount
+		b, err := os.ReadFile(abs) // #nosec G304 G703 -- abs comes from mountset.Resolve, which refuses a path outside its mount
 		if err != nil {
 			return nil, errNoDesign
 		}

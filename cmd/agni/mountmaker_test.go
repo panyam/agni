@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -107,14 +107,14 @@ var jetsonTree = []tarEntry{
 // runtimeMounts is the parts of a server a runtime mount touches: the table, the maker, and the
 // WorkspaceService over both, composed as runViewer composes them.
 type runtimeMounts struct {
-	table *mounts.Table
+	table *mountset.Table
 	maker *mountMaker
 	ws    *service.WorkspaceService
 }
 
-func startRuntimeMounts(t *testing.T, store, uploads, api string, fixed ...mounts.Mount) runtimeMounts {
+func startRuntimeMounts(t *testing.T, store, uploads, api string, fixed ...mountset.Mount) runtimeMounts {
 	t.Helper()
-	table := mounts.NewTable(fixed...)
+	table := mountset.NewTable(fixed...)
 	maker, err := newMountMaker(table, filepath.Join(store, storeMountsDir), uploads, api)
 	if err != nil {
 		t.Fatal(err)
@@ -168,7 +168,7 @@ func TestAGitHubMountIsServedAfterARestart(t *testing.T) {
 
 	// A restart reads the record back. The view is removed first, so the restart has to rebuild it
 	// from the blobs.
-	if err := os.RemoveAll(filepath.Join(uploads, mounts.SnapshotsDir)); err != nil {
+	if err := os.RemoveAll(filepath.Join(uploads, mountset.SnapshotsDir)); err != nil {
 		t.Fatal(err)
 	}
 	again := startRuntimeMounts(t, store, uploads, "http://127.0.0.1:1")
@@ -190,7 +190,7 @@ func TestAGitHubMountIsServedAfterARestart(t *testing.T) {
 	if _, err := again.ws.GetMount(context.Background(), &webapi.GetMountRequest{Name: "jetson"}); !errors.Is(err, service.ErrNotFound) {
 		t.Fatalf("GetMount after DeleteMount = %v; want ErrNotFound", err)
 	}
-	if _, err := os.Stat(filepath.Join(uploads, mounts.SnapshotsDir, "jetson")); !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filepath.Join(uploads, mountset.SnapshotsDir, "jetson")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("DeleteMount left the view: %v", err)
 	}
 }
@@ -198,7 +198,7 @@ func TestAGitHubMountIsServedAfterARestart(t *testing.T) {
 func TestCreateMountRefusesWhatItCannotServe(t *testing.T) {
 	gh := fakeGitHub(t, "antmicro", "jetson-orin-baseboard", jetsonTree)
 	dir := t.TempDir()
-	fixed := mounts.Mount{Name: "boards", Root: t.TempDir()}
+	fixed := mountset.Mount{Name: "boards", Root: t.TempDir()}
 	s := startRuntimeMounts(t, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), gh.URL, fixed)
 	ctx := context.Background()
 	for _, tc := range []struct {
@@ -230,7 +230,7 @@ func TestCreateMountRefusesWhatItCannotServe(t *testing.T) {
 
 	// A server with no --store and --uploads makes no mounts, and says so in ListMounts so a client
 	// offers no form (agni issue 1749).
-	plain := service.NewWorkspaceService(osWorkspace(mounts.NewTable(fixed)))
+	plain := service.NewWorkspaceService(osWorkspace(mountset.NewTable(fixed)))
 	for _, tc := range []struct {
 		ws   *service.WorkspaceService
 		want bool
@@ -257,7 +257,7 @@ func TestASnapshotOverTheCapIsRefusedAndLeavesNoMount(t *testing.T) {
 	if _, ok := s.table.Find("jetson"); ok {
 		t.Fatal("a refused snapshot is still served")
 	}
-	views, _ := os.ReadDir(filepath.Join(uploads, mounts.SnapshotsDir, "jetson"))
+	views, _ := os.ReadDir(filepath.Join(uploads, mountset.SnapshotsDir, "jetson"))
 	if len(views) != 0 {
 		t.Fatalf("a refused snapshot left %d folders in the uploads", len(views))
 	}

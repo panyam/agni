@@ -19,7 +19,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -257,7 +257,7 @@ func sendFiles(ctx context.Context, def *webapi.Snapshot) (func(sha string) ([]b
 	if err != nil {
 		return nil, err
 	}
-	table := mounts.NewTable(ws.Mounts()...)
+	table := mountset.NewTable(ws.Mounts()...)
 	files := osFiles(table)
 	listed, err := service.NewWorkspaceService(osWorkspace(table)).WithDesignFiles(cliProjects(), files).
 		ListDesignFiles(ctx, &webapi.ListDesignFilesRequest{Uri: def.GetUri()})

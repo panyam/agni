@@ -14,7 +14,7 @@ var embeddingSurface = []string{
 	"github.com/panyam/agni",
 	"github.com/panyam/agni/service",
 	"github.com/panyam/agni/artifact",
-	"github.com/panyam/agni/mounts",
+	"github.com/panyam/agni/internal/mountset",
 	// The fs.FS backend, which an embedder holding designs in memory or in a zip serves from.
 	"github.com/panyam/agni/fshost",
 }

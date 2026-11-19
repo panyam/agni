@@ -11,7 +11,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -19,7 +19,7 @@ import (
 // design a DirStore writes there as a design of no project (agni issues 1693, 1694, 1739).
 func TestUploadsServeAsTheUploadsMount(t *testing.T) {
 	uploads := filepath.Join(t.TempDir(), "not-yet")
-	ms, err := withUploadsMount([]mounts.Mount{{Name: "tut", Root: t.TempDir()}}, uploads)
+	ms, err := withUploadsMount([]mountset.Mount{{Name: "tut", Root: t.TempDir()}}, uploads)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestUploadsServeAsTheUploadsMount(t *testing.T) {
 }
 
 func TestUploadsRefuseAMountNamedUploads(t *testing.T) {
-	_, err := withUploadsMount([]mounts.Mount{{Name: uploadsMount, Root: t.TempDir()}}, t.TempDir())
+	_, err := withUploadsMount([]mountset.Mount{{Name: uploadsMount, Root: t.TempDir()}}, t.TempDir())
 	if err == nil || !strings.Contains(err.Error(), "already declared") {
 		t.Fatalf("withUploadsMount over a mount named uploads = %v, want a refusal", err)
 	}

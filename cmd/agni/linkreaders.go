@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -38,7 +38,7 @@ const treeCacheSize = 8
 // 1723). A github mount is read through GitHub's trees API and its raw files. A folder from --mount
 // is read from disk. The uploads mount holds uploaded files and can't be linked.
 type linkReaders struct {
-	table *mounts.Table
+	table *mountset.Table
 	gh    *mountMaker // GitHub's API client, caps and the blobs
 	raw   string
 	index string // <uploads>/links/git
@@ -47,7 +47,7 @@ type linkReaders struct {
 	trees map[string][]service.MountFile // by owner/repo@commit
 }
 
-func newLinkReaders(table *mounts.Table, gh *mountMaker, raw string) *linkReaders {
+func newLinkReaders(table *mountset.Table, gh *mountMaker, raw string) *linkReaders {
 	return &linkReaders{table: table, gh: gh, raw: strings.TrimSuffix(raw, "/"), index: filepath.Join(gh.uploads, filepath.FromSlash(gitIndexDir)), trees: map[string][]service.MountFile{}}
 }
 
@@ -58,15 +58,15 @@ func (l *linkReaders) reader(_ context.Context, name string) (service.MountReade
 		return nil, fmt.Errorf("%w: no mount named %q", service.ErrNotFound, name)
 	}
 	switch m.Kind {
-	case mounts.KindUploads:
+	case mountset.KindUploads:
 		return nil, fmt.Errorf("%w: the mount %q holds uploaded files; UpdateArtifact puts them", service.ErrInvalidArgument, name)
-	case mounts.KindGitHub:
+	case mountset.KindGitHub:
 		owner, repo, err := githubSource(m.Source)
 		if err != nil {
 			return nil, err
 		}
 		return &githubReader{l: l, owner: owner, repo: repo}, nil
-	case mounts.KindFile:
+	case mountset.KindFile:
 		return &folderReader{root: m.Root, blobs: l.gh.blobs, maxBytes: l.gh.maxBytes, maxFiles: l.gh.maxFiles}, nil
 	}
 	return nil, fmt.Errorf("%w: the mount %q is of kind %q, which this server can't link", service.ErrInvalidArgument, name, m.Kind)
@@ -249,7 +249,7 @@ func writeIndex(dir, id, hash string) error {
 }
 
 // gitBlobID reports whether s is a 40-hex git object id.
-func gitBlobID(s string) bool { return mounts.ValidCommit(s) }
+func gitBlobID(s string) bool { return mountset.ValidCommit(s) }
 
 // gitBlobSHA is the id git gives contents b.
 func gitBlobSHA(b []byte) string {
@@ -273,7 +273,7 @@ func (r *folderReader) Resolve(context.Context, string) (string, bool, error) { 
 // List walks the folder at under, or returns the one file it names. A link and anything else that
 // is not a regular file is left out.
 func (r *folderReader) List(_ context.Context, _, under string) ([]service.MountFile, error) {
-	at, err := mounts.SafeResolve(r.root, filepath.FromSlash(under))
+	at, err := mountset.SafeResolve(r.root, filepath.FromSlash(under))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", service.ErrInvalidArgument, err)
 	}
@@ -323,7 +323,7 @@ func (r *folderReader) List(_ context.Context, _, under string) ([]service.Mount
 
 // Fetch reads f from disk and keeps it in the blobs. fetched is true when the blobs held no copy.
 func (r *folderReader) Fetch(_ context.Context, _ string, f service.MountFile) (string, bool, error) {
-	at, err := mounts.SafeResolve(r.root, filepath.FromSlash(f.Path))
+	at, err := mountset.SafeResolve(r.root, filepath.FromSlash(f.Path))
 	if err != nil {
 		return "", false, fmt.Errorf("%w: %s", service.ErrInvalidArgument, err)
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 
 	rpt "github.com/panyam/agni/core/report"
 )
@@ -55,7 +55,7 @@ func linkTarget(ws *cliWorkspace, designURI string, selfServed bool) (path, why 
 // UNREACHABLE IS NOT MISMATCHED. A report may be generated now and read once the viewer is up, so an
 // unreachable server keeps the links with a note that the table went unverified. A server that
 // answers and disagrees gets its links dropped.
-func verifyServerMount(ctx context.Context, urlBase string, want mounts.Mount) (ok bool, why string) {
+func verifyServerMount(ctx context.Context, urlBase string, want mountset.Mount) (ok bool, why string) {
 	ctx, cancel := context.WithTimeout(ctx, serverMountTimeout)
 	defer cancel()
 	client := webapiconnect.NewWorkspaceServiceClient(&http.Client{Timeout: serverMountTimeout}, urlBase)
@@ -152,7 +152,7 @@ func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, de
 	// Only a remote server is asked. Under `self`, this process is about to serve the table that the
 	// links name.
 	if spec.url != "" && mountPath != "" {
-		if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
+		if m, ok := mountset.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
 			keep, note := verifyServerMount(ctx, urlBase, m)
 			if note != "" {
 				fmt.Fprintf(cmd.ErrOrStderr(), "note: %s\n", note)

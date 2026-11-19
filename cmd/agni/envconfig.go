@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"gopkg.in/yaml.v3"
 )
 
@@ -110,7 +110,7 @@ func (c *envConfig) anchor(dir string) {
 // anchorPath resolves a relative path beside the file. A rooted one, such as /srv/boards on Windows,
 // stays as written, on the current drive (agni issue 1595).
 func anchorPath(dir, p string) string {
-	if p == "" || mounts.Rooted(p) || strings.Contains(p, "://") {
+	if p == "" || mountset.Rooted(p) || strings.Contains(p, "://") {
 		return p
 	}
 	return filepath.Join(dir, p)

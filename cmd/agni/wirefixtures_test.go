@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
@@ -91,7 +91,7 @@ func wireServer(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := []mounts.Mount{{Name: "probe", Root: root}}
+	ms := []mountset.Mount{{Name: "probe", Root: root}}
 	api := servedAPIFor(t, ms, ms)
 	mux := http.NewServeMux()
 	api.Register(mux)

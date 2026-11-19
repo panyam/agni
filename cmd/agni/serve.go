@@ -36,7 +36,7 @@ import (
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/storeurl"
 	"github.com/panyam/agni/internal/version"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/stdlib/relations"
@@ -197,7 +197,7 @@ type viewerOpts struct {
 	listener net.Listener
 	// extraMounts are mounts the caller composed itself, merged with the declared and discovered ones.
 	// `open` uses it to serve the mount it minted for the design named on the command line.
-	extraMounts []mounts.Mount
+	extraMounts []mountset.Mount
 	// banner replaces the default "serving ... at ..." line when non-nil. `open` prints the design's
 	// own URL instead, so the link opens the design rather than a browse tree.
 	banner func(urls []string, mountCount int)
@@ -295,29 +295,29 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if source == envWebDir {
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: serving web assets from %s (%s).\n", dir, source)
 	}
-	explicit, err := mounts.Parse(cliMountSpecs)
+	explicit, err := mountset.Parse(cliMountSpecs)
 	if err != nil {
 		return err
 	}
 	// --mount-root is the container's zero-flag path. Every subdirectory under it becomes a mount
 	// named after itself, so `-v ~/boards:/workspace/boards` needs no --mount. Explicit --mount
-	// values win on a name collision (see mounts.Merge). Empty disables discovery, as a local
+	// values win on a name collision (see mountset.Merge). Empty disables discovery, as a local
 	// `make serve` wants.
-	var discovered []mounts.Mount
+	var discovered []mountset.Mount
 	if mountRoot != "" {
-		if discovered, err = mounts.Discover(mountRoot); err != nil {
+		if discovered, err = mountset.Discover(mountRoot); err != nil {
 			return err
 		}
 	}
 	// A caller-composed mount is layered in last, so `open`'s minted mount sits alongside anything a
 	// flag or an agni.yaml declared.
-	fixed := mounts.Merge(discovered, append(explicit, o.extraMounts...))
+	fixed := mountset.Merge(discovered, append(explicit, o.extraMounts...))
 	if fixed, err = withUploadsMount(fixed, o.uploadsDir); err != nil {
 		return err
 	}
 	// The table serves the fixed mounts and, with --store and --uploads, the ones CreateMount made,
 	// read back from --store so they outlive a restart (agni issue 1735).
-	table := mounts.NewTable(fixed...)
+	table := mountset.NewTable(fixed...)
 	var maker *mountMaker
 	if o.storeDir != "" && o.uploadsDir != "" {
 		if maker, err = newMountMaker(table, filepath.Join(o.storeDir, storeMountsDir), o.uploadsDir, o.githubAPI); err != nil {
@@ -588,13 +588,13 @@ const (
 	storePacksDir     = "packs"
 	storeReportsDir   = "reports"
 	storeReviewsDir   = "reviews"
-	storeMountsDir    = mounts.RecordsDir
+	storeMountsDir    = mountset.RecordsDir
 )
 
 // withUploadsMount adds --uploads' design views as the mount "uploads", creating the folder (agni
 // issue 1739). A mount already named "uploads" is refused, since the two would answer one name. An
 // empty dir adds nothing.
-func withUploadsMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
+func withUploadsMount(ms []mountset.Mount, dir string) ([]mountset.Mount, error) {
 	if dir == "" {
 		return ms, nil
 	}
@@ -607,14 +607,14 @@ func withUploadsMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
 	if err := os.MkdirAll(views, 0o750); err != nil {
 		return nil, fmt.Errorf("--uploads %q: %w", dir, err)
 	}
-	return append(ms, mounts.Mount{Name: uploadsMount, Root: views, Kind: mounts.KindUploads}), nil
+	return append(ms, mountset.Mount{Name: uploadsMount, Root: views, Kind: mountset.KindUploads}), nil
 }
 
 // projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is
 // all of the OS adapter for projects. Each mount gets one os.DirFS, which makes containment
 // structural, since an fs.FS has no parent to climb into. An archive in a mount reads as its folder,
 // so a design.yaml inside one declares its design (agni issue 1591).
-func projectTrees(ms []mounts.Mount) []projects.Tree {
+func projectTrees(ms []mountset.Mount) []projects.Tree {
 	out := make([]projects.Tree, 0, len(ms))
 	for _, m := range ms {
 		out = append(out, projects.Tree{Mount: m.Name, FS: archivefs.Expand(os.DirFS(m.Root))})
@@ -624,7 +624,7 @@ func projectTrees(ms []mounts.Mount) []projects.Tree {
 
 // liveTrees returns the project trees of the mounts t serves now. A tree is kept while its mount's
 // root is unchanged, so an archive in it is not opened again on every read.
-func liveTrees(t *mounts.Table) func() []projects.Tree {
+func liveTrees(t *mountset.Table) func() []projects.Tree {
 	var mu sync.Mutex
 	byRoot := map[string]projects.Tree{}
 	return func() []projects.Tree {
@@ -637,7 +637,7 @@ func liveTrees(t *mounts.Table) func() []projects.Tree {
 			key := m.Name + "\x00" + m.Root
 			tr, ok := byRoot[key]
 			if !ok {
-				tr = projectTrees([]mounts.Mount{m})[0]
+				tr = projectTrees([]mountset.Mount{m})[0]
 			}
 			next[key] = tr
 			out = append(out, tr)
@@ -993,10 +993,10 @@ func themeNames() []string {
 
 // osWorkspace is the OS-backed listing over a mount table. It is a function rather than a call at the
 // use site because runViewer's local mount table shadows the mounts package there.
-func osWorkspace(ms *mounts.Table) service.Workspace { return mounts.NewWorkspace(ms) }
+func osWorkspace(ms *mountset.Table) service.Workspace { return mountset.NewWorkspace(ms) }
 
 // osFiles reads files inside the mounts, for ListDesignFiles.
-func osFiles(ms *mounts.Table) service.FileReader { return mounts.NewWorkspace(ms) }
+func osFiles(ms *mountset.Table) service.FileReader { return mountset.NewWorkspace(ms) }
 
 // uploadedHost reads a design that a client sent as files (agni issue 1061). It serves the files as
 // the one mount they name, with the projects they declare. The browser engine reads its own files

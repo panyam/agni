@@ -13,7 +13,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -45,14 +45,14 @@ const maxProjectWalk = 4
 // carrying `/Users/<someone>` would be recorded verbatim into every review document of the run.
 type cliWorkspace struct {
 	mu       sync.Mutex
-	declared []mounts.Mount
-	minted   []mounts.Mount
+	declared []mountset.Mount
+	minted   []mountset.Mount
 }
 
 // newCLIWorkspace parses the --mount flags once. A malformed spec is an error here rather than at
 // first use, so a typo fails before any design is read.
 func newCLIWorkspace() (*cliWorkspace, error) {
-	declared, err := mounts.Parse(cliMountSpecs)
+	declared, err := mountset.Parse(cliMountSpecs)
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +60,12 @@ func newCLIWorkspace() (*cliWorkspace, error) {
 }
 
 // Mounts returns every mount this run can resolve. The declared ones come first, then any minted
-// along the way. A declared mount wins a name collision, matching mounts.Merge, since the operator
+// along the way. A declared mount wins a name collision, matching mountset.Merge, since the operator
 // typed it and so it states the more specific intent.
-func (w *cliWorkspace) Mounts() []mounts.Mount {
+func (w *cliWorkspace) Mounts() []mountset.Mount {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return append(append([]mounts.Mount{}, w.declared...), w.minted...)
+	return append(append([]mountset.Mount{}, w.declared...), w.minted...)
 }
 
 // URI turns one command-line argument into an artifact URI, applying the three tiers above.
@@ -78,7 +78,7 @@ func (w *cliWorkspace) URI(arg string) (artifact.URI, error) {
 		if err != nil {
 			return artifact.URI{}, err
 		}
-		if _, ok := mounts.Find(w.Mounts(), u.Mount); !ok {
+		if _, ok := mountset.Find(w.Mounts(), u.Mount); !ok {
 			return artifact.URI{}, fmt.Errorf("%s names mount %q, which was not declared; pass --mount %s=<path>", arg, u.Mount, u.Mount)
 		}
 		return u, nil
@@ -105,7 +105,7 @@ func (w *cliWorkspace) URI(arg string) (artifact.URI, error) {
 func (w *cliWorkspace) Declared(name string) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	_, ok := mounts.Find(w.declared, name)
+	_, ok := mountset.Find(w.declared, name)
 	return ok
 }
 
@@ -114,7 +114,7 @@ func (w *cliWorkspace) Declared(name string) bool {
 // longest root wins, so nested mounts resolve to the most specific one rather than to whichever was
 // typed first.
 func (w *cliWorkspace) inDeclared(abs string) (artifact.URI, bool) {
-	var best mounts.Mount
+	var best mountset.Mount
 	var bestRel string
 	for _, m := range w.Mounts() {
 		rel, err := filepath.Rel(m.Root, abs)
@@ -179,7 +179,7 @@ func (w *cliWorkspace) mint(abs string) (artifact.URI, error) {
 // The suffix covers a diff of two designs in different trees that share a project id. Without it
 // the two roots would share one authority, and the second design would be unaddressable.
 func (w *cliWorkspace) uniqueNameLocked(want, root string) string {
-	all := append(append([]mounts.Mount{}, w.declared...), w.minted...)
+	all := append(append([]mountset.Mount{}, w.declared...), w.minted...)
 	for _, m := range all {
 		if m.Root == root {
 			return m.Name
@@ -199,7 +199,7 @@ func (w *cliWorkspace) uniqueNameLocked(want, root string) string {
 		}
 		name = fmt.Sprintf("%s%d", want, n)
 	}
-	w.minted = append(w.minted, mounts.Mount{Name: name, Root: root})
+	w.minted = append(w.minted, mountset.Mount{Name: name, Root: root})
 	return name
 }
 
@@ -354,7 +354,7 @@ func (cliProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisC
 	if err != nil {
 		return service.ResolvedConfig{}, err
 	}
-	return (&osProjectConfig{mounts: mounts.NewTable(ws.Mounts()...)}).ResolveConfig(ctx, cfg, namespace)
+	return (&osProjectConfig{mounts: mountset.NewTable(ws.Mounts()...)}).ResolveConfig(ctx, cfg, namespace)
 }
 
 // withProjectRules splices a design's project rules onto a catalog, for the CLI's own facet

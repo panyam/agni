@@ -18,13 +18,13 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
 // designServer serves what `agni serve --store <store> --uploads <uploads>` serves to a client that
 // checks, diffs and queries designs by name (agni issues 1695, 1739).
-func designServer(t *testing.T, store, uploads string, mounted ...mounts.Mount) *httptest.Server {
+func designServer(t *testing.T, store, uploads string, mounted ...mountset.Mount) *httptest.Server {
 	t.Helper()
 	ms, err := withUploadsMount(mounted, uploads)
 	if err != nil {

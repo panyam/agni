@@ -23,7 +23,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/storeurl"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
 	skhttp "github.com/panyam/servicekit/http"
@@ -92,7 +92,7 @@ func serveCmd() *cobra.Command {
 // newWorkbenchMux routes everything agnids serves: the DatasheetService API, the raw PDFs the
 // workbench renders, its static bundle, the page itself, and a liveness probe. It is separate from
 // serveCmd so a test can drive the real routes without a listener.
-func newWorkbenchMux(ms *mounts.Table, webDir string, pdf2doc []string, viewerURL string, corpusDir string, corpusStore param.Fetcher) *http.ServeMux {
+func newWorkbenchMux(ms *mountset.Table, webDir string, pdf2doc []string, viewerURL string, corpusDir string, corpusStore param.Fetcher) *http.ServeMux {
 	mux := http.NewServeMux()
 	// Drafts live in the published corpus's store, so a server with no --corpus has none, and the
 	// draft rpcs say to start it with one.
@@ -108,7 +108,7 @@ func newWorkbenchMux(ms *mounts.Table, webDir string, pdf2doc []string, viewerUR
 	path, handler := dsapiconnect.NewDatasheetServiceHandler(dsserver.NewDatasheet(svc))
 	mux.Handle(path, handler)
 	// The workbench lists its folders through the engine's own WorkspaceService, over these mounts.
-	wpath, whandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(mounts.NewWorkspace(ms))))
+	wpath, whandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(mountset.NewWorkspace(ms))))
 	mux.Handle(wpath, whandler)
 	// The published corpus's read side, for `agni serve --params-url`. Registered with no corpus too,
 	// so a caller is told to start agnids with --corpus rather than getting a 404.
@@ -197,24 +197,24 @@ func classifyCorpusErr(err error) error {
 // serveMounts composes the mount table from --mount and --mount-root. The root is the image's
 // zero-flag path, as on `agni serve`. Every subdirectory becomes a mount named after itself, so
 // `-v ~/datasheets/ti:/datasheets/ti` needs no flag. An explicit --mount of the same name wins.
-func serveMounts(specs []string, root string) ([]mounts.Mount, error) {
-	explicit, err := mounts.Parse(specs)
+func serveMounts(specs []string, root string) ([]mountset.Mount, error) {
+	explicit, err := mountset.Parse(specs)
 	if err != nil {
 		return nil, err
 	}
-	var discovered []mounts.Mount
+	var discovered []mountset.Mount
 	if root != "" {
-		if discovered, err = mounts.Discover(root); err != nil {
+		if discovered, err = mountset.Discover(root); err != nil {
 			return nil, err
 		}
 	}
-	return mounts.Merge(discovered, explicit), nil
+	return mountset.Merge(discovered, explicit), nil
 }
 
 // serveTable is the workbench's live mount table: the folders from --mount and --mount-root, and,
 // with agni serve's --store and --uploads, the mounts agni serve made at runtime, read from their
 // records (agni issue 1735). agnids only reads the records, and sees a new one within a second.
-func serveTable(specs []string, root, storeURL, uploadsURL string) (*mounts.Table, error) {
+func serveTable(specs []string, root, storeURL, uploadsURL string) (*mountset.Table, error) {
 	ms, err := serveMounts(specs, root)
 	if err != nil {
 		return nil, err
@@ -223,9 +223,9 @@ func serveTable(specs []string, root, storeURL, uploadsURL string) (*mounts.Tabl
 	if err != nil {
 		return nil, err
 	}
-	table := mounts.NewTable(ms...)
+	table := mountset.NewTable(ms...)
 	if storeDir != "" && uploadsDir != "" {
-		if _, err := table.WithRecords(filepath.Join(storeDir, mounts.RecordsDir), uploadsDir); err != nil {
+		if _, err := table.WithRecords(filepath.Join(storeDir, mountset.RecordsDir), uploadsDir); err != nil {
 			return nil, fmt.Errorf("--store: %w", err)
 		}
 	}

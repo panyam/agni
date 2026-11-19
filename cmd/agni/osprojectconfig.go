@@ -10,7 +10,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/internal/mountset"
 	"github.com/panyam/agni/service"
 )
 
@@ -18,7 +18,7 @@ import (
 // os.DirFS, with symbol libraries spelled as host paths because the CLI's and the server's loaders
 // read the host filesystem.
 type osProjectConfig struct {
-	mounts *mounts.Table
+	mounts *mountset.Table
 }
 
 // ResolveConfig loads what an AnalysisConfig's URIs point at. See fshost.ConfigResolver.
@@ -68,7 +68,7 @@ func refuseProfilePathTheProjectOwns(ctx context.Context, designArg, profilePath
 	if err != nil {
 		return nil
 	}
-	cfg := &osProjectConfig{mounts: mounts.NewTable(ws.Mounts()...)}
+	cfg := &osProjectConfig{mounts: mountset.NewTable(ws.Mounts()...)}
 	for _, uri := range p.GetConfig().GetProfileUris() {
 		owned, err := cfg.dir(uri)
 		if err != nil {
