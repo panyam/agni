@@ -146,4 +146,37 @@ public interface ArtifactOrBuilder extends
    * <code>.google.protobuf.Timestamp update_time = 5 [json_name = "updateTime"];</code>
    */
   com.google.protobuf.TimestampOrBuilder getUpdateTimeOrBuilder();
+
+  /**
+   * <pre>
+   * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+   * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+   * only, set by UpdateArtifact and LinkArtifact.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+   * @return Whether the source field is set.
+   */
+  boolean hasSource();
+  /**
+   * <pre>
+   * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+   * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+   * only, set by UpdateArtifact and LinkArtifact.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+   * @return The source.
+   */
+  io.github.panyam.agni.v1.webapi.ArtifactSource getSource();
+  /**
+   * <pre>
+   * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+   * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+   * only, set by UpdateArtifact and LinkArtifact.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+   */
+  io.github.panyam.agni.v1.webapi.ArtifactSourceOrBuilder getSourceOrBuilder();
 }

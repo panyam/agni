@@ -78,6 +78,26 @@ service DesignService {
   // design unable to be read until another is put.
   rpc DeleteArtifact(DeleteArtifactRequest) returns (google.protobuf.Empty);
 
+  // LinkArtifact points an artifact at a path in a mount, reads its files and keeps them by hash
+  // (agni issue 1723). With allow_missing it creates the artifact, and it replaces an uploaded one.
+  // A path naming a design's entry or companion takes the files a reader opens from it, grouped as
+  // ImportDesignFiles groups a folder, so a KiCad root sheet brings its child sheets. A path naming a
+  // folder takes every file under it. A ref that names a branch, or none, is followed and a sync
+  // moves it. A tag or a commit is pinned. An unknown mount or path is NOT_FOUND, the uploads mount is
+  // INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+  rpc LinkArtifact(LinkArtifactRequest) returns (Artifact);
+
+  // UnlinkArtifact makes a linked artifact an uploaded one. Its files stay as they are, and its
+  // source becomes the uploads mount, so UpdateArtifact can replace them. An uploaded artifact is
+  // returned unchanged.
+  rpc UnlinkArtifact(UnlinkArtifactRequest) returns (Artifact);
+
+  // SyncDesign brings a design's followed artifacts to their sources' current versions in one write
+  // (agni issue 1723). Artifacts linked to one mount at one ref move to one version together. An
+  // artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
+  // validate_only it reports what a sync would change and writes nothing.
+  rpc SyncDesign(SyncDesignRequest) returns (SyncDesignResponse);
+
   // CreateReport checks a stored design against packs and keeps the run as
   // "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
   // own intent: the default packs of the project the request names, then the packs the report names.
@@ -250,6 +270,33 @@ message Artifact {
   string entry = 4;
   // update_time is when the artifact's files last changed. It is output only.
   google.protobuf.Timestamp update_time = 5;
+  // source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+  // server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+  // only, set by UpdateArtifact and LinkArtifact.
+  ArtifactSource source = 6;
+}
+
+// ArtifactSource is where an artifact's files come from: a mount, a path inside it and a ref.
+message ArtifactSource {
+  // mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
+  string mount = 1;
+  // path is the file or folder inside the mount, such as "hw/board.kicad_sch". Empty is its root.
+  string path = 2;
+  // ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+  // on a github mount is its default branch.
+  string ref = 3;
+  // follow is true when a sync moves the artifact: a branch, an empty ref, or a mount with no
+  // history. A tag or commit is pinned. It is output only.
+  bool follow = 4;
+  // version is the source's own name for what the server last read, a commit SHA on a github mount.
+  // It is empty for a mount with no history. It is output only.
+  string version = 5;
+  // read_time is when the server last read the files from the source. It is output only.
+  google.protobuf.Timestamp read_time = 6;
+  // read_hash is the SHA-256 of the files as the server last read them, each path and its contents'
+  // hash in path order, "sha256:<hex>". A mount with no history has no version, so a sync compares
+  // this instead. It is output only.
+  string read_hash = 7;
 }
 
 // ArtifactType is what an artifact holds, found from its entry's format.
@@ -306,6 +353,49 @@ message BatchUpdateArtifactsResponse {
 
 message DeleteArtifactRequest {
   string name = 1; // "designs/{design}/artifacts/{artifact}"
+}
+
+message LinkArtifactRequest {
+  string name = 1; // "designs/{design}/artifacts/{artifact}"
+  // source names the mount, path and ref. Its other fields are ignored.
+  ArtifactSource source = 2;
+  // allow_missing creates the artifact when the design has none of that name. Without it, a missing
+  // artifact is NOT_FOUND.
+  bool allow_missing = 3;
+}
+
+message UnlinkArtifactRequest {
+  string name = 1; // "designs/{design}/artifacts/{artifact}"
+}
+
+message SyncDesignRequest {
+  string name = 1; // "designs/{design}"
+  // artifacts limits the sync to these artifact ids. Empty syncs every followed artifact. Naming one
+  // that is uploaded is INVALID_ARGUMENT, and naming a pinned one reports it unchanged.
+  repeated string artifacts = 2;
+  // validate_only reports what a sync would change and writes nothing.
+  bool validate_only = 3;
+}
+
+message SyncDesignResponse {
+  // artifacts holds one entry per linked artifact the sync looked at, ordered by name.
+  repeated ArtifactSync artifacts = 1;
+}
+
+// ArtifactSync is what a sync did to one artifact.
+message ArtifactSync {
+  string artifact = 1; // "designs/{design}/artifacts/{artifact}"
+  string from_version = 2;
+  // to_version equals from_version when nothing changed. On a mount with no history both are empty,
+  // and changed says whether the files differ.
+  string to_version = 3;
+  // changed is true when the artifact's files differ from what the server last read. A dry run on a
+  // mount with history reads no files, and sets it when the version moved.
+  bool changed = 4;
+  // files_fetched counts the files the server downloaded because it held no copy, and bytes_fetched
+  // their size. An unchanged version fetches none.
+  int32 files_fetched = 5;
+  int64 bytes_fetched = 6;
 }
 
 message ImportDesignFilesRequest {

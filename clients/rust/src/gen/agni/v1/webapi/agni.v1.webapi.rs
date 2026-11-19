@@ -2644,6 +2644,41 @@ pub struct Artifact {
     /// update_time is when the artifact's files last changed. It is output only.
     #[prost(message, optional, tag="5")]
     pub update_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    /// source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+    /// server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+    /// only, set by UpdateArtifact and LinkArtifact.
+    #[prost(message, optional, tag="6")]
+    pub source: ::core::option::Option<ArtifactSource>,
+}
+/// ArtifactSource is where an artifact's files come from: a mount, a path inside it and a ref.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ArtifactSource {
+    /// mount is the mount's name, as Mount.name gives it, such as "uploads" or "jetson".
+    #[prost(string, tag="1")]
+    pub mount: ::prost::alloc::string::String,
+    /// path is the file or folder inside the mount, such as "hw/board.kicad_sch". Empty is its root.
+    #[prost(string, tag="2")]
+    pub path: ::prost::alloc::string::String,
+    /// ref is a branch, tag or commit for a mount with history, and empty for one without. An empty ref
+    /// on a github mount is its default branch.
+    #[prost(string, tag="3")]
+    pub r#ref: ::prost::alloc::string::String,
+    /// follow is true when a sync moves the artifact: a branch, an empty ref, or a mount with no
+    /// history. A tag or commit is pinned. It is output only.
+    #[prost(bool, tag="4")]
+    pub follow: bool,
+    /// version is the source's own name for what the server last read, a commit SHA on a github mount.
+    /// It is empty for a mount with no history. It is output only.
+    #[prost(string, tag="5")]
+    pub version: ::prost::alloc::string::String,
+    /// read_time is when the server last read the files from the source. It is output only.
+    #[prost(message, optional, tag="6")]
+    pub read_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    /// read_hash is the SHA-256 of the files as the server last read them, each path and its contents'
+    /// hash in path order, "sha256:<hex>". A mount with no history has no version, so a sync compares
+    /// this instead. It is output only.
+    #[prost(string, tag="7")]
+    pub read_hash: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetArtifactRequest {
@@ -2702,6 +2737,67 @@ pub struct DeleteArtifactRequest {
     /// "designs/{design}/artifacts/{artifact}"
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct LinkArtifactRequest {
+    /// "designs/{design}/artifacts/{artifact}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// source names the mount, path and ref. Its other fields are ignored.
+    #[prost(message, optional, tag="2")]
+    pub source: ::core::option::Option<ArtifactSource>,
+    /// allow_missing creates the artifact when the design has none of that name. Without it, a missing
+    /// artifact is NOT_FOUND.
+    #[prost(bool, tag="3")]
+    pub allow_missing: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UnlinkArtifactRequest {
+    /// "designs/{design}/artifacts/{artifact}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SyncDesignRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// artifacts limits the sync to these artifact ids. Empty syncs every followed artifact. Naming one
+    /// that is uploaded is INVALID_ARGUMENT, and naming a pinned one reports it unchanged.
+    #[prost(string, repeated, tag="2")]
+    pub artifacts: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// validate_only reports what a sync would change and writes nothing.
+    #[prost(bool, tag="3")]
+    pub validate_only: bool,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SyncDesignResponse {
+    /// artifacts holds one entry per linked artifact the sync looked at, ordered by name.
+    #[prost(message, repeated, tag="1")]
+    pub artifacts: ::prost::alloc::vec::Vec<ArtifactSync>,
+}
+/// ArtifactSync is what a sync did to one artifact.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ArtifactSync {
+    /// "designs/{design}/artifacts/{artifact}"
+    #[prost(string, tag="1")]
+    pub artifact: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub from_version: ::prost::alloc::string::String,
+    /// to_version equals from_version when nothing changed. On a mount with no history both are empty,
+    /// and changed says whether the files differ.
+    #[prost(string, tag="3")]
+    pub to_version: ::prost::alloc::string::String,
+    /// changed is true when the artifact's files differ from what the server last read. A dry run on a
+    /// mount with history reads no files, and sets it when the version moved.
+    #[prost(bool, tag="4")]
+    pub changed: bool,
+    /// files_fetched counts the files the server downloaded because it held no copy, and bytes_fetched
+    /// their size. An unchanged version fetches none.
+    #[prost(int32, tag="5")]
+    pub files_fetched: i32,
+    #[prost(int64, tag="6")]
+    pub bytes_fetched: i64,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ImportDesignFilesRequest {

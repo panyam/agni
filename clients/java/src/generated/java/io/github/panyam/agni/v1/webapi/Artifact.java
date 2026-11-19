@@ -289,6 +289,50 @@ private static final long serialVersionUID = 0L;
     return updateTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : updateTime_;
   }
 
+  public static final int SOURCE_FIELD_NUMBER = 6;
+  private io.github.panyam.agni.v1.webapi.ArtifactSource source_;
+  /**
+   * <pre>
+   * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+   * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+   * only, set by UpdateArtifact and LinkArtifact.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+   * @return Whether the source field is set.
+   */
+  @java.lang.Override
+  public boolean hasSource() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+   * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+   * only, set by UpdateArtifact and LinkArtifact.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+   * @return The source.
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.webapi.ArtifactSource getSource() {
+    return source_ == null ? io.github.panyam.agni.v1.webapi.ArtifactSource.getDefaultInstance() : source_;
+  }
+  /**
+   * <pre>
+   * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+   * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+   * only, set by UpdateArtifact and LinkArtifact.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.webapi.ArtifactSourceOrBuilder getSourceOrBuilder() {
+    return source_ == null ? io.github.panyam.agni.v1.webapi.ArtifactSource.getDefaultInstance() : source_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -318,6 +362,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(5, getUpdateTime());
     }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeMessage(6, getSource());
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -344,6 +391,10 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(5, getUpdateTime());
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(6, getSource());
     }
     return size;
   }
@@ -381,6 +432,11 @@ private static final long serialVersionUID = 0L;
       if (!getUpdateTime()
           .equals(other.getUpdateTime())) return false;
     }
+    if (hasSource() != other.hasSource()) return false;
+    if (hasSource()) {
+      if (!getSource()
+          .equals(other.getSource())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -405,6 +461,10 @@ private static final long serialVersionUID = 0L;
     if (hasUpdateTime()) {
       hash = (37 * hash) + UPDATE_TIME_FIELD_NUMBER;
       hash = (53 * hash) + getUpdateTime().hashCode();
+    }
+    if (hasSource()) {
+      hash = (37 * hash) + SOURCE_FIELD_NUMBER;
+      hash = (53 * hash) + getSource().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -548,6 +608,7 @@ private static final long serialVersionUID = 0L;
               .alwaysUseFieldBuilders) {
         internalGetFilesFieldBuilder();
         internalGetUpdateTimeFieldBuilder();
+        internalGetSourceFieldBuilder();
       }
     }
     @java.lang.Override
@@ -568,6 +629,11 @@ private static final long serialVersionUID = 0L;
       if (updateTimeBuilder_ != null) {
         updateTimeBuilder_.dispose();
         updateTimeBuilder_ = null;
+      }
+      source_ = null;
+      if (sourceBuilder_ != null) {
+        sourceBuilder_.dispose();
+        sourceBuilder_ = null;
       }
       return this;
     }
@@ -631,6 +697,12 @@ private static final long serialVersionUID = 0L;
             : updateTimeBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.source_ = sourceBuilder_ == null
+            ? source_
+            : sourceBuilder_.build();
+        to_bitField0_ |= 0x00000002;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -687,6 +759,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasUpdateTime()) {
         mergeUpdateTime(other.getUpdateTime());
+      }
+      if (other.hasSource()) {
+        mergeSource(other.getSource());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -747,6 +822,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 42
+            case 50: {
+              input.readMessage(
+                  internalGetSourceFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1502,6 +1584,179 @@ private static final long serialVersionUID = 0L;
         updateTime_ = null;
       }
       return updateTimeBuilder_;
+    }
+
+    private io.github.panyam.agni.v1.webapi.ArtifactSource source_;
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.webapi.ArtifactSource, io.github.panyam.agni.v1.webapi.ArtifactSource.Builder, io.github.panyam.agni.v1.webapi.ArtifactSourceOrBuilder> sourceBuilder_;
+    /**
+     * <pre>
+     * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+     * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+     * only, set by UpdateArtifact and LinkArtifact.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+     * @return Whether the source field is set.
+     */
+    public boolean hasSource() {
+      return ((bitField0_ & 0x00000020) != 0);
+    }
+    /**
+     * <pre>
+     * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+     * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+     * only, set by UpdateArtifact and LinkArtifact.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+     * @return The source.
+     */
+    public io.github.panyam.agni.v1.webapi.ArtifactSource getSource() {
+      if (sourceBuilder_ == null) {
+        return source_ == null ? io.github.panyam.agni.v1.webapi.ArtifactSource.getDefaultInstance() : source_;
+      } else {
+        return sourceBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+     * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+     * only, set by UpdateArtifact and LinkArtifact.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+     */
+    public Builder setSource(io.github.panyam.agni.v1.webapi.ArtifactSource value) {
+      if (sourceBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        source_ = value;
+      } else {
+        sourceBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+     * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+     * only, set by UpdateArtifact and LinkArtifact.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+     */
+    public Builder setSource(
+        io.github.panyam.agni.v1.webapi.ArtifactSource.Builder builderForValue) {
+      if (sourceBuilder_ == null) {
+        source_ = builderForValue.build();
+      } else {
+        sourceBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+     * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+     * only, set by UpdateArtifact and LinkArtifact.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+     */
+    public Builder mergeSource(io.github.panyam.agni.v1.webapi.ArtifactSource value) {
+      if (sourceBuilder_ == null) {
+        if (((bitField0_ & 0x00000020) != 0) &&
+          source_ != null &&
+          source_ != io.github.panyam.agni.v1.webapi.ArtifactSource.getDefaultInstance()) {
+          getSourceBuilder().mergeFrom(value);
+        } else {
+          source_ = value;
+        }
+      } else {
+        sourceBuilder_.mergeFrom(value);
+      }
+      if (source_ != null) {
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+     * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+     * only, set by UpdateArtifact and LinkArtifact.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+     */
+    public Builder clearSource() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      source_ = null;
+      if (sourceBuilder_ != null) {
+        sourceBuilder_.dispose();
+        sourceBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+     * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+     * only, set by UpdateArtifact and LinkArtifact.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.ArtifactSource.Builder getSourceBuilder() {
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return internalGetSourceFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+     * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+     * only, set by UpdateArtifact and LinkArtifact.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.ArtifactSourceOrBuilder getSourceOrBuilder() {
+      if (sourceBuilder_ != null) {
+        return sourceBuilder_.getMessageOrBuilder();
+      } else {
+        return source_ == null ?
+            io.github.panyam.agni.v1.webapi.ArtifactSource.getDefaultInstance() : source_;
+      }
+    }
+    /**
+     * <pre>
+     * source is where the files were read from (agni issue 1723). An uploaded artifact's mount is the
+     * server's uploads mount, and a linked artifact's is another, such as a github one. It is output
+     * only, set by UpdateArtifact and LinkArtifact.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.webapi.ArtifactSource, io.github.panyam.agni.v1.webapi.ArtifactSource.Builder, io.github.panyam.agni.v1.webapi.ArtifactSourceOrBuilder> 
+        internalGetSourceFieldBuilder() {
+      if (sourceBuilder_ == null) {
+        sourceBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            io.github.panyam.agni.v1.webapi.ArtifactSource, io.github.panyam.agni.v1.webapi.ArtifactSource.Builder, io.github.panyam.agni.v1.webapi.ArtifactSourceOrBuilder>(
+                getSource(),
+                getParentForChildren(),
+                isClean());
+        source_ = null;
+      }
+      return sourceBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.Artifact)
