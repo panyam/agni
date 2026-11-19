@@ -20,19 +20,20 @@ import (
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // storeServer serves the project, design and snapshot services `agni serve --store --uploads`
 // builds over dir/store and dir/uploads, with the tutorial project mounted beside them.
 func storeServer(t *testing.T, dir string) *httptest.Server {
 	t.Helper()
-	ms, err := withUploadsMount([]mountset.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}, filepath.Join(dir, "uploads"))
+	ms, err := withUploadsMount([]mounts.Mount{mountset.Folder("tut", "../../examples/tutorial-project")}, filepath.Join(dir, "uploads"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
 	resolver := &service.ProjectResolver{Store: projectStore, Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
-	projectSvc, designSvc, _, err := storeServices(tableOf(ms), filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), projectStore, resolver, nil, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(t.Context(), tableOf(ms), filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), projectStore, resolver, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

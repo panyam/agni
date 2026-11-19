@@ -9,12 +9,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // cliMountSpecs holds the --mount flag values. It is a root PERSISTENT flag, so the same
@@ -45,8 +45,8 @@ const maxProjectWalk = 4
 // carrying `/Users/<someone>` would be recorded verbatim into every review document of the run.
 type cliWorkspace struct {
 	mu       sync.Mutex
-	declared []mountset.Mount
-	minted   []mountset.Mount
+	declared []mounts.Mount
+	minted   []mounts.Mount
 }
 
 // newCLIWorkspace parses the --mount flags once. A malformed spec is an error here rather than at
@@ -62,10 +62,10 @@ func newCLIWorkspace() (*cliWorkspace, error) {
 // Mounts returns every mount this run can resolve. The declared ones come first, then any minted
 // along the way. A declared mount wins a name collision, matching mountset.Merge, since the operator
 // typed it and so it states the more specific intent.
-func (w *cliWorkspace) Mounts() []mountset.Mount {
+func (w *cliWorkspace) Mounts() []mounts.Mount {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return append(append([]mountset.Mount{}, w.declared...), w.minted...)
+	return append(append([]mounts.Mount{}, w.declared...), w.minted...)
 }
 
 // URI turns one command-line argument into an artifact URI, applying the three tiers above.
@@ -114,14 +114,14 @@ func (w *cliWorkspace) Declared(name string) bool {
 // longest root wins, so nested mounts resolve to the most specific one rather than to whichever was
 // typed first.
 func (w *cliWorkspace) inDeclared(abs string) (mounts.URI, bool) {
-	var best mountset.Mount
+	var best mounts.Mount
 	var bestRel string
 	for _, m := range w.Mounts() {
-		rel, err := filepath.Rel(m.Root, abs)
+		rel, err := filepath.Rel(m.Source, abs)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			continue
 		}
-		if best.Name == "" || len(m.Root) > len(best.Root) {
+		if best.Name == "" || len(m.Source) > len(best.Source) {
 			best, bestRel = m, rel
 		}
 	}
@@ -179,9 +179,9 @@ func (w *cliWorkspace) mint(abs string) (mounts.URI, error) {
 // The suffix covers a diff of two designs in different trees that share a project id. Without it
 // the two roots would share one authority, and the second design would be unaddressable.
 func (w *cliWorkspace) uniqueNameLocked(want, root string) string {
-	all := append(append([]mountset.Mount{}, w.declared...), w.minted...)
+	all := append(append([]mounts.Mount{}, w.declared...), w.minted...)
 	for _, m := range all {
-		if m.Root == root {
+		if m.Source == root {
 			return m.Name
 		}
 	}
@@ -199,7 +199,7 @@ func (w *cliWorkspace) uniqueNameLocked(want, root string) string {
 		}
 		name = fmt.Sprintf("%s%d", want, n)
 	}
-	w.minted = append(w.minted, mountset.Mount{Name: name, Root: root})
+	w.minted = append(w.minted, mountset.Folder(name, root))
 	return name
 }
 
@@ -490,12 +490,12 @@ func (w *cliWorkspace) relName(abs string) string {
 	best := ""
 	bestRel := ""
 	for _, m := range w.Mounts() {
-		rel, err := filepath.Rel(m.Root, abs)
+		rel, err := filepath.Rel(m.Source, abs)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			continue
 		}
-		if best == "" || len(m.Root) > len(best) {
-			best, bestRel = m.Root, rel
+		if best == "" || len(m.Source) > len(best) {
+			best, bestRel = m.Source, rel
 		}
 	}
 	if best == "" {

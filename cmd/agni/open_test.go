@@ -16,7 +16,7 @@ import (
 // a second agni, so a line without --mount is illustrative rather than usable.
 func TestOpenBannerPrintsAPasteableCheckCommand(t *testing.T) {
 	var b bytes.Buffer
-	m := mountset.Mount{Name: "gateway", Root: "/boards/gw"}
+	m := mountset.Folder("gateway", "/boards/gw")
 	openBanner(&b, "http://127.0.0.1:5000/", m, "mount://gateway/designs/gw.edn", "/mounts/gateway/designs/gw.edn/view")
 	out := b.String()
 
@@ -35,7 +35,7 @@ func TestOpenBannerPrintsAPasteableCheckCommand(t *testing.T) {
 // in --server.
 func TestOpenBannerTrimsTheTrailingSlash(t *testing.T) {
 	var b bytes.Buffer
-	openBanner(&b, "http://127.0.0.1:5000/", mountset.Mount{Name: "m", Root: "/r"}, "mount://m/x.edn", "/mounts/m/x.edn/view")
+	openBanner(&b, "http://127.0.0.1:5000/", mountset.Folder("m", "/r"), "mount://m/x.edn", "/mounts/m/x.edn/view")
 	if strings.Contains(b.String(), "5000//designs") {
 		t.Errorf("doubled slash in the design URL:\n%s", b.String())
 	}
@@ -94,7 +94,7 @@ func TestFreePortIsBindable(t *testing.T) {
 // set the CLI actually defines, so the pair cannot drift again.
 func TestOpenBannerNamesNoRemovedFlag(t *testing.T) {
 	var b bytes.Buffer
-	openBanner(&b, "http://127.0.0.1:5000/", mountset.Mount{Name: "m", Root: "/r"},
+	openBanner(&b, "http://127.0.0.1:5000/", mountset.Folder("m", "/r"),
 		"mount://m/board.edn", "/mounts/m/board.edn/view")
 	known := knownFlags(rootCmd())
 	for _, m := range regexp.MustCompile(`--[a-z][a-z0-9-]*`).FindAllString(b.String(), -1) {

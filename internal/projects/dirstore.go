@@ -20,11 +20,12 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/yaml.v3"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/rules/intent"
+	"github.com/panyam/goapplib/storage/blobs"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // DirStore is the folder adapter of service.DesignStore (agni issues 1693, 1696, 1739). It keeps a
@@ -577,9 +578,10 @@ func (s *DirStore) buildView(id string, rec recordYAML, descriptor []byte) (stri
 func (s *DirStore) linkBlob(hash, to string) error { return s.blobs.Link(hash, to) }
 
 // Sweep removes views no record names and blobs nothing points at, each only once it is older than
-// grace. keep adds hashes something else holds, such as a snapshot sent as files. It returns how many
-// views and blobs it removed.
-func (s *DirStore) Sweep(keep map[string]bool, grace time.Duration) (views, blobs int, err error) {
+// grace. keep adds hashes something else holds, such as a snapshot sent as files, and more adds
+// referrers such as the mounts registry's snapshots (agni issue 1759). It returns how many views and
+// blobs it removed.
+func (s *DirStore) Sweep(keep map[string]bool, grace time.Duration, more ...blobs.Referrer) (views, removed int, err error) {
 	if s.blobs == nil {
 		return 0, 0, nil
 	}
@@ -641,8 +643,8 @@ func (s *DirStore) Sweep(keep map[string]bool, grace time.Duration) (views, blob
 			_ = os.Remove(dir)
 		}
 	}
-	blobs, err = s.blobs.Sweep(refs, grace)
-	return views, blobs, err
+	removed, err = s.blobs.Dir().Sweep(context.Background(), grace, append([]blobs.Referrer{keeping(refs)}, more...)...)
+	return views, removed, err
 }
 
 func (s *DirStore) recordPath(id string) string { return filepath.Join(s.records, id+".yaml") }

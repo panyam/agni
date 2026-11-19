@@ -15,16 +15,17 @@ import (
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // newDesignSvc builds a DesignViewService over the os-backed adapters for the given mounts (no native
 // tools enabled, default render style), the same composition serve.go wires.
-func newDesignSvc(mounts []mountset.Mount) *service.DesignViewService {
+func newDesignSvc(mounts []mounts.Mount) *service.DesignViewService {
 	return newDesignSvcNative(mounts, nil)
 }
 
 // newDesignSvcNative is newDesignSvc with a native-tool allowlist, for the native-gate tests.
-func newDesignSvcNative(mounts []mountset.Mount, enabled map[string]bool) *service.DesignViewService {
+func newDesignSvcNative(mounts []mounts.Mount, enabled map[string]bool) *service.DesignViewService {
 	return service.NewDesignViewService(
 		// The loader's newLoader() matches serve.go. Leaving it nil was survivable only because the
 		// edif fixtures resolve no external symbol library, so the nil reader was never
@@ -39,7 +40,7 @@ func newDesignSvcNative(mounts []mountset.Mount, enabled map[string]bool) *servi
 // testProjectResolver composes the project ports exactly as serve.go does, so a fixture with a
 // descriptor is read under its own config here too. It builds the resolver from the mounts rather
 // than passing nil. So these tests exercise the served composition rather than a simplified one.
-func testProjectResolver(ms []mountset.Mount) *service.ProjectResolver {
+func testProjectResolver(ms []mounts.Mount) *service.ProjectResolver {
 	return &service.ProjectResolver{
 		Store:  projects.NewFSStore(projectTrees(ms)...),
 		Config: &osProjectConfig{mounts: tableOf(ms)},
@@ -47,7 +48,7 @@ func testProjectResolver(ms []mountset.Mount) *service.ProjectResolver {
 }
 
 // newCheckSvc builds a CheckService over the same os-backed loader, with the built-in catalog.
-func newCheckSvc(mounts []mountset.Mount) *service.CheckService {
+func newCheckSvc(mounts []mounts.Mount) *service.CheckService {
 	return service.NewCheckService(&osLoader{mounts: tableOf(mounts), loader: newLoader()}, check.DefaultCatalog(), nil, "", nil, nil)
 }
 
@@ -58,13 +59,13 @@ func designFixtureSvc(t *testing.T) *service.DesignViewService {
 	return newDesignSvc(edifFixtureMounts(t))
 }
 
-func edifFixtureMounts(t *testing.T) []mountset.Mount {
+func edifFixtureMounts(t *testing.T) []mounts.Mount {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "edif", "testdata"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return []mountset.Mount{{Name: "t", Root: root}}
+	return []mounts.Mount{mountset.Folder("t", root)}
 }
 
 func TestDesignViewServiceGetSummary(t *testing.T) {
@@ -152,7 +153,7 @@ func TestDesignViewServiceCheckDesign(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "chk.edn"), []byte(fixture), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	svc := newCheckSvc([]mountset.Mount{{Name: "t", Root: dir}})
+	svc := newCheckSvc([]mounts.Mount{mountset.Folder("t", dir)})
 
 	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://t/chk.edn")})
 	if err != nil {
@@ -196,7 +197,7 @@ func TestDesignViewServiceGetCheckReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := newCheckSvc([]mountset.Mount{{Name: "t", Root: root}})
+	svc := newCheckSvc([]mounts.Mount{mountset.Folder("t", root)})
 	resp, err := svc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://t/fires.edn")})
 	if err != nil {
 		t.Fatal(err)
@@ -239,7 +240,7 @@ pending:
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	svc := newCheckSvc([]mountset.Mount{{Name: "t", Root: dir}})
+	svc := newCheckSvc([]mounts.Mount{mountset.Folder("t", dir)})
 
 	resp, err := svc.GetExpectations(context.Background(), &webapi.GetExpectationsRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://t/d.edn")})
 	if err != nil {
@@ -285,7 +286,7 @@ func TestDesignViewServiceKicadFaithful(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := newDesignSvc([]mountset.Mount{{Name: "k", Root: root}})
+	svc := newDesignSvc([]mounts.Mount{mountset.Folder("k", root)})
 
 	t.Run("kicad_sch renders faithfully with a packed sheet", func(t *testing.T) {
 		d, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch")})
@@ -348,7 +349,7 @@ func TestDesignViewServiceGetLayoutReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := newDesignSvc([]mountset.Mount{{Name: "k", Root: root}})
+	svc := newDesignSvc([]mounts.Mount{mountset.Folder("k", root)})
 	get := func(sym webapi.SymbolSource) *webapi.ConversionReport {
 		r, err := svc.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch"), Symbols: sym})
 		if err != nil {
@@ -454,7 +455,7 @@ func TestDesignViewServiceKicadHierarchy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := newDesignSvc([]mountset.Mount{{Name: "k", Root: root}})
+	svc := newDesignSvc([]mounts.Mount{mountset.Folder("k", root)})
 	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/hier.kicad_sch")})
 	if err != nil {
 		t.Fatal(err)
@@ -478,7 +479,7 @@ func TestDesignViewServiceKicadHierarchy(t *testing.T) {
 func TestLayoutAxis(t *testing.T) {
 	t.Run("GetSummary reports available_layouts and grid re-derives", func(t *testing.T) {
 		root, _ := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
-		svc := newDesignSvc([]mountset.Mount{{Name: "k", Root: root}})
+		svc := newDesignSvc([]mounts.Mount{mountset.Folder("k", root)})
 		faithful, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch")})
 		if err != nil {
 			t.Fatal(err)
@@ -542,13 +543,13 @@ func TestDesignViewServiceGetSheet(t *testing.T) {
 // tutorialMounts mounts examples/tutorial-project, the shipped fixture that declares a project and
 // a design and needs no flags to do it, because design.yaml names the entry and its companions and
 // a design's symbol library defaults to `symbols` beside the descriptor.
-func tutorialMounts(t *testing.T) []mountset.Mount {
+func tutorialMounts(t *testing.T) []mounts.Mount {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", "..", "examples", "tutorial-project"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return []mountset.Mount{{Name: "t", Root: root}}
+	return []mounts.Mount{mountset.Folder("t", root)}
 }
 
 // TestServedSheetResolvesProjectSymbolLibrary is agni issue 347 at the surface a reader actually

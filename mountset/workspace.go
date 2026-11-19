@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/panyam/goapplib/storage/mounts"
+
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/service"
@@ -28,25 +29,26 @@ func (w *Workspace) Mounts() []service.MountInfo {
 	ms := w.t.List()
 	out := make([]service.MountInfo, 0, len(ms))
 	for _, m := range ms {
-		out = append(out, Info(m))
+		out = append(out, w.t.Info(m))
 	}
 	return out
 }
 
 // Info is m as the service port describes it.
-func Info(m Mount) service.MountInfo {
+func (t *Table) Info(m mounts.Mount) service.MountInfo {
 	kind := webapi.MountKind_MOUNT_KIND_FILE
-	switch m.Kind {
-	case KindUploads:
-		kind = webapi.MountKind_MOUNT_KIND_UPLOADS
-	case KindGitHub:
-		kind = webapi.MountKind_MOUNT_KIND_GITHUB
-	}
 	source := m.Source
-	if source == "" && m.Kind == KindFile {
-		source = "file:///" + strings.TrimPrefix(filepath.ToSlash(m.Root), "/")
+	switch {
+	case m.Name == t.upMount && t.Fixed(m.Name):
+		kind, source = webapi.MountKind_MOUNT_KIND_UPLOADS, ""
+	case m.Kind == mounts.KindGitHub:
+		kind = webapi.MountKind_MOUNT_KIND_GITHUB
+	case m.Kind == mounts.KindFolder:
+		source = "file:///" + strings.TrimPrefix(filepath.ToSlash(m.Source), "/")
 	}
-	return service.MountInfo{Name: m.Name, Root: m.Root, Kind: kind, Source: source, Ref: m.Ref, Commit: m.Commit, Fixed: !m.Runtime, Writable: m.Kind == KindFile}
+	fixed := t.Fixed(m.Name)
+	return service.MountInfo{Name: m.Name, Root: t.Root(m), Kind: kind, Source: source, Ref: m.Ref, Commit: m.Version, Fixed: fixed,
+		Writable: kind == webapi.MountKind_MOUNT_KIND_FILE}
 }
 
 // ListDir resolves the URI and reads one directory level. The service maps an error wrapping

@@ -283,7 +283,7 @@ func mountRoot(ws *cliWorkspace, uri mounts.URI) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	return m.Root, true
+	return m.Source, true
 }
 
 // uriPath is the mount-relative path of a URI, or the string slash-normalized when it is not one, so

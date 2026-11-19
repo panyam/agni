@@ -6,8 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
 )
 
 func writeEmpty(t *testing.T, path string) {
@@ -142,7 +144,7 @@ func TestMountRootExposesEachFolder(t *testing.T) {
 	}
 	got := map[string]string{}
 	for _, m := range ms {
-		got[m.Name] = m.Root
+		got[m.Name] = m.Source
 	}
 	if len(got) != 2 {
 		t.Fatalf("mounts = %v, want exactly ti and adi", got)
@@ -184,14 +186,21 @@ func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
 		return rec.Body.String()
 	}
 	// agni serve snapshots a repo into the shared uploads and writes its record to the shared store
-	// after agnids started.
-	const commit = "0123456789abcdef0123456789abcdef01234567"
-	writeEmpty(t, filepath.Join(mountset.SnapshotView(uploads, "vendor", commit), "ti", "TPS62.pdf"))
-	if err := mountset.WriteRecord(filepath.Join(store, mountset.RecordsDir), mountset.Record{Name: "vendor", Kind: mountset.KindGitHub, Source: "github://ti/datasheets", Commit: commit}); err != nil {
+	// after agnids started. agnids sees the record within the registry's one-second recheck.
+	gh := githubtest.New(t)
+	gh.AddRepo("ti", "datasheets", false, map[string]string{"ti/TPS62.pdf": "%PDF-1.4"})
+	serve, err := mountset.Open(mountset.Config{Uploads: uploads, Records: filepath.Join(store, mountset.RecordsDir), GitHubAPI: gh.URL})
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := table.Reload(); err != nil {
+	if _, err := serve.CreateMount(t.Context(), "vendor", "github://ti/datasheets", ""); err != nil {
 		t.Fatal(err)
+	}
+	for i := 0; i < 40; i++ {
+		if _, ok := table.Find("vendor"); ok {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 	if got := call("ListMounts", `{}`); !strings.Contains(got, `"vendor"`) || !strings.Contains(got, "MOUNT_KIND_GITHUB") {
 		t.Fatalf("ListMounts = %s; want the runtime GitHub mount beside ds", got)

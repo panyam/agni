@@ -1,288 +1,245 @@
 package mountset
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"io/fs"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
-	"sync"
 	"time"
 
-	"gopkg.in/yaml.v3"
-
+	"github.com/panyam/goapplib/storage/blobs"
 	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/goapplib/storage/mounts/folder"
+	"github.com/panyam/goapplib/storage/mounts/fsstore"
+	"github.com/panyam/goapplib/storage/mounts/github"
+
+	"github.com/panyam/agni/internal/archivefs"
+	"github.com/panyam/agni/service"
 )
-
-// Table is a server's live mount list (agni issue 1735). The mounts from its flags are fixed. A
-// table with a records folder also serves the mounts CreateMount made, one record each in --store,
-// and rereads the folder when it changes. So agni serve and agnids, sharing one --store, list the
-// same runtime mounts. Every OS-backed adapter resolves through a Table rather than a slice taken
-// at startup, so a mount made at runtime is reachable at once.
-type Table struct {
-	mu      sync.Mutex
-	fixed   []Mount
-	records string
-	uploads string
-	runtime []Mount
-	// stamp is what the records folder held at the last read, by stampOf.
-	stamp   string
-	checked time.Time
-	// lastErr is the last reload's error, kept so a bad record does not empty the list.
-	lastErr error
-	// every is how often List looks at the records folder, recheck unless a test sets it.
-	every time.Duration
-}
-
-// recheck bounds how often List looks at the records folder, since every Resolve calls List.
-const recheck = time.Second
-
-// NewTable returns a table serving fixed and nothing else.
-func NewTable(fixed ...Mount) *Table {
-	return &Table{fixed: append([]Mount(nil), fixed...), every: recheck}
-}
-
-// WithRecords makes the table serve the runtime mounts recorded in records, with their files under
-// uploads. It reads them now, and a record it cannot read is an error. Later reads keep the last
-// good list.
-func (t *Table) WithRecords(records, uploads string) (*Table, error) {
-	t.mu.Lock()
-	t.records, t.uploads = records, uploads
-	t.mu.Unlock()
-	return t, t.Reload()
-}
-
-// List returns every mount the table serves, fixed ones first in configuration order, then runtime
-// ones by name. The caller owns the slice.
-func (t *Table) List() []Mount {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if t.records != "" && time.Since(t.checked) >= t.every {
-		t.checked = time.Now()
-		if stampOf(t.records) != t.stamp {
-			_ = t.reloadLocked()
-		}
-	}
-	out := make([]Mount, 0, len(t.fixed)+len(t.runtime))
-	return append(append(out, t.fixed...), t.runtime...)
-}
-
-// Find returns the mount named name.
-func (t *Table) Find(name string) (Mount, bool) { return Find(t.List(), name) }
-
-// Resolve maps uri to a host path inside its mount, as the package's Resolve does.
-func (t *Table) Resolve(uri mounts.URI) (string, error) { return Resolve(t.List(), uri) }
-
-// Fixed reports whether name is a mount from the flags.
-func (t *Table) Fixed(name string) bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	_, ok := Find(t.fixed, name)
-	return ok
-}
-
-// Reload rereads the records folder now. A process that just wrote a record calls it, so its own
-// change shows at once rather than at the next recheck.
-func (t *Table) Reload() error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.reloadLocked()
-}
-
-func (t *Table) reloadLocked() error {
-	if t.records == "" {
-		return nil
-	}
-	stamp := stampOf(t.records)
-	recs, err := ReadRecords(t.records)
-	if err != nil {
-		t.lastErr = err
-		return err
-	}
-	var runtime []Mount
-	for _, r := range recs {
-		if _, clash := Find(t.fixed, r.Name); clash {
-			continue
-		}
-		runtime = append(runtime, r.Mount(t.uploads))
-	}
-	t.runtime, t.lastErr, t.stamp = runtime, nil, stamp
-	t.checked = time.Now()
-	return nil
-}
-
-// stampOf describes the records folder by each record's name, size and modification time. A folder's
-// own modification time is not enough, since Windows does not always move it when a file is renamed
-// into the folder. A missing folder stamps as "".
-func stampOf(dir string) string {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return ""
-	}
-	var b strings.Builder
-	for _, e := range entries {
-		if !strings.HasSuffix(e.Name(), ".yaml") {
-			continue
-		}
-		fi, err := e.Info()
-		if err != nil {
-			continue
-		}
-		fmt.Fprintf(&b, "%s\x00%d\x00%d\n", e.Name(), fi.Size(), fi.ModTime().UnixNano())
-	}
-	return b.String()
-}
-
-// Record is a runtime mount as --store keeps it, in <store>/mounts/<name>.yaml. Files lists every
-// file in the snapshot with its hash, as a design's record does, so the uploads sweep keeps the
-// blobs and a restart can rebuild a view that went missing. It holds no file bytes.
-type Record struct {
-	Name    string       `yaml:"name"`
-	Kind    Kind         `yaml:"kind"`
-	Source  string       `yaml:"source"`
-	Ref     string       `yaml:"ref,omitempty"`
-	Commit  string       `yaml:"commit"`
-	Created time.Time    `yaml:"created"`
-	Files   []RecordFile `yaml:"files,omitempty"`
-}
-
-// RecordFile is one file of a snapshot, by its path in the mount and its "sha256:<hex>" hash.
-type RecordFile struct {
-	Path   string `yaml:"path"`
-	Sha256 string `yaml:"sha256"`
-}
 
 // RecordsDir is the folder under --store that holds one record per runtime mount.
 const RecordsDir = "mounts"
 
 // SnapshotsDir is the folder under --uploads that holds the views of runtime mounts. A view is
-// <uploads>/mounts/<name>/<commit>/, hard links to blobs laid out as the source had them.
+// <uploads>/mounts/<name>/<commit>/, hard links to the blobs laid out as the source had them.
 const SnapshotsDir = "mounts"
 
-// SnapshotView is the folder a runtime mount at commit serves from.
-func SnapshotView(uploads, name, commit string) string {
-	return filepath.Join(uploads, SnapshotsDir, name, commit)
+// BlobsDir is the folder under --uploads that holds every blob, laid out as goapplib's blobs.Dir
+// keeps them.
+const BlobsDir = "blobs"
+
+// Config says what a Table serves.
+type Config struct {
+	// Fixed are the mounts from the flags, in the order ListMounts shows them.
+	Fixed []mounts.Mount
+	// Uploads is the --uploads folder, "" for none. With Records, it holds runtime mounts' blobs and
+	// views.
+	Uploads string
+	// UploadsMount names the fixed mount that serves the uploaded designs, which a link can't name.
+	UploadsMount string
+	// Records is the folder of runtime mount records under --store, "" for none.
+	Records string
+	// GitHubAPI and GitHubRaw are GitHub's API root and raw host, set by a test or for GitHub
+	// Enterprise. Empty takes the library's defaults.
+	GitHubAPI, GitHubRaw string
+	// Limits caps a snapshot or a link. Zero takes the library's default of 256 MB and 100,000 files.
+	Limits mounts.Limits
+	// ReadOnly opens the records and blobs for reading alone, as agnids does over a store agni
+	// serve writes. Open then neither rewrites old records nor builds snapshot views.
+	ReadOnly bool
+	// Log gets a line for each old record Open rewrites or can't, and each view it can't build.
+	Log io.Writer
 }
 
-// Mount is the record as the table serves it, rooted at its view under uploads.
-func (r Record) Mount(uploads string) Mount {
-	return Mount{Name: r.Name, Root: SnapshotView(uploads, r.Name, r.Commit), Kind: r.Kind, Source: r.Source, Ref: r.Ref, Commit: r.Commit, Runtime: true}
+// Table is a server's live mount list over goapplib's mounts registry (agni issues 1735, 1759). The
+// mounts from its flags are fixed. With Records and Uploads it also serves the GitHub mounts
+// CreateMount made, each a record in --store, and every process sharing the store sees them within
+// a second. Every OS-backed adapter resolves through a Table, so a mount made at runtime is
+// reachable at once.
+type Table struct {
+	reg     *mounts.Registry
+	fixed   []mounts.Mount
+	blobs   *blobs.Dir
+	uploads string
+	upMount string
 }
 
-// ReadRecords reads every record in dir, sorted by name. A missing dir holds none. A record whose
-// file name and name disagree, or whose name cannot be a mount, is an error, since serving it would
-// put a mount under a handle the store never meant.
-func ReadRecords(dir string) ([]Record, error) {
-	r, err := os.OpenRoot(dir)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	entries, err := fs.ReadDir(r.FS(), ".")
-	if err != nil {
-		return nil, err
-	}
-	var out []Record
-	for _, e := range entries {
-		name, ok := strings.CutSuffix(e.Name(), ".yaml")
-		if !ok || e.IsDir() || strings.HasPrefix(name, ".") {
-			continue
-		}
-		b, err := r.ReadFile(e.Name())
+// NewTable returns a table serving fixed and nothing else, for the CLI and for a server with no
+// store.
+func NewTable(fixed ...mounts.Mount) *Table {
+	t, _ := Open(Config{Fixed: fixed})
+	return t
+}
+
+// Open returns the table cfg describes. With Records and Uploads it first rewrites any record an
+// older agni wrote (see migrate).
+func Open(cfg Config) (*Table, error) {
+	t := &Table{fixed: slices.Clone(cfg.Fixed), uploads: cfg.Uploads, upMount: cfg.UploadsMount}
+	folderOpts := []folder.Option{folder.WithLinksInside()}
+	drivers := []mounts.Driver{}
+	var store mounts.RecordStore
+	if cfg.Uploads != "" {
+		b, err := blobs.NewDir(filepath.Join(cfg.Uploads, BlobsDir))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("--uploads %q: %w", cfg.Uploads, err)
 		}
-		var rec Record
-		if err := yaml.Unmarshal(b, &rec); err != nil {
-			return nil, fmt.Errorf("mount record %s: %w", e.Name(), err)
+		t.blobs = b
+		folderOpts = append(folderOpts, folder.WithBlobs(b))
+		ghOpts := []github.Option{github.WithViews(filepath.Join(cfg.Uploads, SnapshotsDir)), github.WithHTTPClient(&http.Client{Timeout: 5 * time.Minute}), github.WithLimits(cfg.Limits)}
+		if cfg.GitHubAPI != "" {
+			ghOpts = append(ghOpts, github.WithBaseURL(cfg.GitHubAPI))
 		}
-		if rec.Name != name {
-			return nil, fmt.Errorf("mount record %s names the mount %q", e.Name(), rec.Name)
+		if cfg.GitHubRaw != "" {
+			ghOpts = append(ghOpts, github.WithRawURL(cfg.GitHubRaw))
 		}
-		if err := ValidName(rec.Name); err != nil {
-			return nil, fmt.Errorf("mount record %s: %w", e.Name(), err)
+		drivers = append(drivers, github.New(b, ghOpts...))
+		if cfg.Records != "" && cfg.ReadOnly {
+			// A read-only reader can't make the folder, so it waits for agni serve to (laterStore).
+			store = &laterStore{dir: cfg.Records}
+		} else if cfg.Records != "" {
+			if err := migrate(context.Background(), cfg.Records, b, cfg.Log); err != nil {
+				return nil, fmt.Errorf("--store: %w", err)
+			}
+			if store, err = fsstore.New(cfg.Records); err != nil {
+				return nil, fmt.Errorf("--store: %w", err)
+			}
 		}
-		if !commitPattern(rec.Commit) {
-			return nil, fmt.Errorf("mount record %s: commit %q is not a full hex commit", e.Name(), rec.Commit)
-		}
-		out = append(out, rec)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out, nil
+	drivers = append(drivers, folder.New(folderOpts...))
+	t.reg = mounts.NewRegistry(store, drivers, mounts.WithFixed(cfg.Fixed...), mounts.WithLimits(cfg.Limits))
+	if store != nil {
+		all, err := t.reg.List(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("--store: %w", err)
+		}
+		// Each snapshot's view is built now rather than on first use, so a reader sharing the
+		// uploads read-only, such as agnids, finds it. A view whose blobs are lost is reported, and
+		// the other mounts still serve.
+		for _, m := range all {
+			if cfg.ReadOnly || t.Fixed(m.Name) || m.Kind != mounts.KindGitHub {
+				continue
+			}
+			if _, err := t.reg.HostPath(context.Background(), mounts.URI{Mount: m.Name}); err != nil && cfg.Log != nil {
+				fmt.Fprintf(cfg.Log, "note: the mount %q cannot be served: %v\n", m.Name, err)
+			}
+		}
+	}
+	return t, nil
 }
 
-// WriteRecord writes rec into dir through a temp file and a rename, so a reader sees the whole
-// record or none.
-func WriteRecord(dir string, rec Record) error {
-	if err := ValidName(rec.Name); err != nil {
-		return err
+// Registry is the goapplib registry the table serves from.
+func (t *Table) Registry() *mounts.Registry { return t.reg }
+
+// Blobs is the blob store under --uploads, nil without one.
+func (t *Table) Blobs() *blobs.Dir { return t.blobs }
+
+// List returns every mount the table serves: the fixed ones in configuration order, then the
+// runtime ones by name. A store that fails after a good read keeps the last good list.
+func (t *Table) List() []mounts.Mount {
+	out := slices.Clone(t.fixed)
+	all, _ := t.reg.List(context.Background())
+	for _, m := range all {
+		if !t.Fixed(m.Name) {
+			out = append(out, m)
+		}
 	}
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return err
+	return out
+}
+
+// Find returns the mount named name.
+func (t *Table) Find(name string) (mounts.Mount, bool) { return Find(t.List(), name) }
+
+// Fixed reports whether name is a mount from the flags.
+func (t *Table) Fixed(name string) bool {
+	_, ok := Find(t.fixed, name)
+	return ok
+}
+
+// Resolve maps uri to a host path inside its mount, for the OS-backed adapters. An unknown mount is
+// service.ErrNotFound and a path that leaves its mount is service.ErrInvalidPath. A path may run
+// into an archive, which archivefs reads as a folder (agni issue 1591). The library resolves the
+// archive file, and the rest of the path is joined on for archivefs to read.
+func (t *Table) Resolve(uri mounts.URI) (string, error) {
+	ctx := context.Background()
+	p, err := t.reg.HostPath(ctx, uri)
+	if err == nil {
+		return p, nil
 	}
-	b, err := yaml.Marshal(rec)
+	if errors.Is(err, mounts.ErrInvalidPath) {
+		parts := strings.Split(uri.Path, "/")
+		for i := len(parts) - 1; i > 0; i-- {
+			if !archivefs.Candidate(parts[i-1]) {
+				continue
+			}
+			head, herr := t.reg.HostPath(ctx, mounts.URI{Mount: uri.Mount, Path: strings.Join(parts[:i], "/")})
+			if herr == nil {
+				return filepath.Join(head, filepath.FromSlash(strings.Join(parts[i:], "/"))), nil
+			}
+		}
+	}
+	return "", Err(err)
+}
+
+// Root returns the host folder m serves from: a folder mount's own path, or a GitHub snapshot's
+// view, built on first use. It returns "" for a mount with no folder here.
+func (t *Table) Root(m mounts.Mount) string {
+	if m.Kind == mounts.KindFolder {
+		return m.Source
+	}
+	p, err := t.reg.HostPath(context.Background(), mounts.URI{Mount: m.Name})
 	if err != nil {
-		return err
+		return ""
 	}
-	tmp, err := os.CreateTemp(dir, ".record-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(b); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), filepath.Join(dir, rec.Name+".yaml"))
+	return p
 }
 
-// RemoveRecord deletes name's record. A missing one is fs.ErrNotExist.
-func RemoveRecord(dir, name string) error {
-	if err := ValidName(name); err != nil {
-		return err
-	}
-	return os.Remove(filepath.Join(dir, name+".yaml"))
-}
+// noMaker is why a table with no store refuses CreateMount and DeleteMount.
+const noMaker = "this server makes no mounts at runtime; start it with --store and --uploads"
 
-// ValidName reports whether name can be a runtime mount's handle: what a mount:// authority takes,
-// and also safe as a file name in the records and uploads folders.
-func ValidName(name string) error {
-	if name == "" || len(name) > 64 {
-		return fmt.Errorf("mount name %q must be 1 to 64 characters", name)
+// CreateMount snapshots a github://<owner>/<repo> source at ref and serves it as name. A file://
+// source is refused, because a client must not choose which folder on the server's disk is served.
+func (t *Table) CreateMount(ctx context.Context, name, source, ref string) (service.MountInfo, error) {
+	if t.blobs == nil {
+		return service.MountInfo{}, fmt.Errorf("%w: %s", service.ErrFailedPrecondition, noMaker)
 	}
-	for i, c := range name {
-		ok := c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || (i > 0 && (c == '-' || c == '_' || c == '.'))
-		if !ok {
-			return fmt.Errorf("mount name %q may hold only a-z, 0-9, and - _ . after the first character", name)
+	if scheme, _, ok := strings.Cut(source, "://"); !ok || scheme != "github" {
+		if ok && scheme == "file" {
+			return service.MountInfo{}, fmt.Errorf("%w: a folder on the server is mounted with --mount, not at runtime", service.ErrInvalidArgument)
 		}
+		return service.MountInfo{}, fmt.Errorf("%w: source %q: this build makes github://<owner>/<repo> mounts", service.ErrInvalidArgument, source)
 	}
-	if _, err := mounts.NewURI(name, ""); err != nil {
-		return fmt.Errorf("mount name %q: %w", name, err)
+	if t.Fixed(name) {
+		return service.MountInfo{}, fmt.Errorf("%w: a mount named %q is already served", service.ErrAlreadyExists, name)
+	}
+	m, err := t.reg.Create(ctx, mounts.Mount{Name: name, Kind: mounts.KindGitHub, Source: strings.TrimSuffix(source, "/"), Ref: ref, Mode: mounts.ModeSnapshot})
+	if err != nil {
+		return service.MountInfo{}, Err(err)
+	}
+	// The view is built now, so a reader sharing the uploads read-only, such as agnids, finds it.
+	if _, err := t.reg.HostPath(ctx, mounts.URI{Mount: name}); err != nil {
+		return service.MountInfo{}, Err(err)
+	}
+	return t.Info(m), nil
+}
+
+// DeleteMount forgets a runtime mount and removes its views. Its blobs stay until a sweep finds
+// nothing naming them.
+func (t *Table) DeleteMount(ctx context.Context, name string) error {
+	if t.blobs == nil {
+		return fmt.Errorf("%w: %s", service.ErrFailedPrecondition, noMaker)
+	}
+	if err := t.reg.Delete(ctx, name); err != nil {
+		return Err(err)
+	}
+	if err := os.RemoveAll(filepath.Join(t.uploads, SnapshotsDir, name)); err != nil {
+		return fmt.Errorf("%w: %s", service.ErrInternal, err)
 	}
 	return nil
 }
 
-// commitPattern reports whether s is a full 40-hex git commit, so a record cannot name a view
-// outside its mount's folder.
-func commitPattern(s string) bool {
-	if len(s) != 40 {
-		return false
-	}
-	for _, c := range s {
-		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
-			return false
-		}
-	}
-	return true
-}
-
-// ValidCommit reports whether s is a full 40-hex git commit.
-func ValidCommit(s string) bool { return commitPattern(s) }
+var _ service.MountMaker = (*Table)(nil)

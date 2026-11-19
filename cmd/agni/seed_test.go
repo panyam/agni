@@ -13,6 +13,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/wasmengine"
 	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // TestTheSeedRouteServesADesignsStoreUnderItsVersion covers agni issue 1525's server half. A design
@@ -23,7 +24,7 @@ func TestTheSeedRouteServesADesignsStoreUnderItsVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := []mountset.Mount{{Name: "tut", Root: root}}
+	ms := []mounts.Mount{mountset.Folder("tut", root)}
 	ws := servedAPIFor(t, nil, ms).Workspace
 	get := func(h http.Handler, p string) *http.Response {
 		t.Helper()
@@ -62,7 +63,7 @@ func TestARequestNamingADesignWarmsItsSeedOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := []mountset.Mount{{Name: "tut", Root: root}}
+	ms := []mounts.Mount{mountset.Folder("tut", root)}
 	s := newSeeds(servedAPIFor(t, nil, ms).Workspace, tableOf(ms), func() string { return "v1" })
 
 	hook := warmSeeds(s)(func(context.Context, connect.AnyRequest) (connect.AnyResponse, error) {

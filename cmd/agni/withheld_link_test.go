@@ -66,7 +66,7 @@ func newAgreeingServer(t *testing.T, name string) string {
 	if !ok {
 		t.Fatalf("mount %q is not declared", name)
 	}
-	return newMountServer(t, name, m.Root)
+	return newMountServer(t, name, m.Source)
 }
 
 func assertLinked(t *testing.T, page string) {

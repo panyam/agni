@@ -16,6 +16,7 @@ import (
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	"github.com/panyam/agni/internal/paramclient"
 	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // This test covers the whole read path of `agni serve --params-url`. agnids serves a published
@@ -102,7 +103,7 @@ func TestADerivedDocIRLeavesTheCorpusLoadable(t *testing.T) {
 	if err := os.WriteFile(stub, []byte(stubProducer), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	d := derived{mounts: tableOf([]mountset.Mount{{Name: "m", Root: mount}}), corpus: dir}
+	d := derived{mounts: tableOf([]mounts.Mount{mountset.Folder("m", mount)}), corpus: dir}
 	if _, err := (&osDocExtractor{derived: d, cmd: []string{stub}}).Extract(context.Background(), mustURI("m", "LM1117.pdf")); err != nil {
 		t.Fatal(err)
 	}

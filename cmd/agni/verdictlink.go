@@ -9,10 +9,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 
 	rpt "github.com/panyam/agni/core/report"
 )
@@ -55,7 +55,7 @@ func linkTarget(ws *cliWorkspace, designURI string, selfServed bool) (path, why 
 // UNREACHABLE IS NOT MISMATCHED. A report may be generated now and read once the viewer is up, so an
 // unreachable server keeps the links with a note that the table went unverified. A server that
 // answers and disagrees gets its links dropped.
-func verifyServerMount(ctx context.Context, urlBase string, want mountset.Mount) (ok bool, why string) {
+func verifyServerMount(ctx context.Context, urlBase string, want mounts.Mount) (ok bool, why string) {
 	ctx, cancel := context.WithTimeout(ctx, serverMountTimeout)
 	defer cancel()
 	client := webapiconnect.NewWorkspaceServiceClient(&http.Client{Timeout: serverMountTimeout}, urlBase)
@@ -67,10 +67,10 @@ func verifyServerMount(ctx context.Context, urlBase string, want mountset.Mount)
 		if m.GetName() != want.Name {
 			continue
 		}
-		if m.GetRoot() == want.Root {
+		if m.GetRoot() == want.Source {
 			return true, ""
 		}
-		return false, fmt.Sprintf("%s serves mount %q from %s, not %s, so every link would name a different design", urlBase, want.Name, m.GetRoot(), want.Root)
+		return false, fmt.Sprintf("%s serves mount %q from %s, not %s, so every link would name a different design", urlBase, want.Name, m.GetRoot(), want.Source)
 	}
 	return false, fmt.Sprintf("%s serves no mount named %q, so every link would resolve to nothing", urlBase, want.Name)
 }

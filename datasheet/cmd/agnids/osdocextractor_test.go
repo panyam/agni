@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/datasheet/dsservice"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/mountset"
 )
 
@@ -29,7 +30,7 @@ func TestOsDocExtractor(t *testing.T) {
 
 	corpus := t.TempDir()
 	writePDF(t, filepath.Join(dir, "LM1117.pdf"), "pdf-lm1117")
-	ms := []mountset.Mount{{Name: "m", Root: dir}}
+	ms := []mounts.Mount{mountset.Folder("m", dir)}
 	e := &osDocExtractor{derived: derived{mounts: tableOf(ms), corpus: corpus}, cmd: []string{stub}}
 	if !e.Available() {
 		t.Fatal("a configured cmd should be available")

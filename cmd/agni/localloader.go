@@ -220,7 +220,7 @@ func localPath(uri mounts.URI) string {
 	if err != nil {
 		return filepath.FromSlash(uri.Path)
 	}
-	abs, err := mountset.Resolve(ws.Mounts(), uri)
+	abs, err := mountset.NewTable(ws.Mounts()...).Resolve(uri)
 	if err != nil {
 		return filepath.FromSlash(uri.Path)
 	}

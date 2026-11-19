@@ -1,15 +1,11 @@
 package main
 
 import (
-	"archive/tar"
-	"bytes"
-	"compress/gzip"
 	"context"
 	"errors"
 	"io"
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,110 +15,39 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
 )
 
-// fakeCommit is the commit the fake GitHub resolves 1.1.2 to, and fakeMainCommit the one its default
-// branch is at, so a test can tell which ref a request named.
-const (
-	fakeCommit     = "0123456789abcdef0123456789abcdef01234567"
-	fakeMainCommit = "89abcdef0123456789abcdef0123456789abcdef"
-)
-
-// tarEntry is one entry of a fake tarball. A non-empty link makes it a symlink.
-type tarEntry struct {
-	name, body, link string
-}
-
-// fakeGitHub serves owner/repo the way GitHub's REST API does: the repo's default branch, a ref's
-// commit, and the commit's tarball with every path under one top folder. Other paths are 404.
-func fakeGitHub(t *testing.T, owner, repo string, entries []tarEntry) *httptest.Server {
+// jetsonRepo is goapplib's fake GitHub holding antmicro/jetson-orin-baseboard: a README and two
+// schematics on main, and a link that leads out. It returns the fake and the commit main is at. A
+// tarball path that climbs out of the repo fails the whole snapshot in goapplib, whose own tests
+// hold that.
+func jetsonRepo(t *testing.T) (*githubtest.Server, string) {
 	t.Helper()
-	var buf bytes.Buffer
-	zw := gzip.NewWriter(&buf)
-	tw := tar.NewWriter(zw)
-	top := owner + "-" + repo + "-" + fakeCommit[:7] + "/"
-	if err := tw.WriteHeader(&tar.Header{Name: top, Typeflag: tar.TypeDir, Mode: 0o755}); err != nil {
-		t.Fatal(err)
-	}
-	for _, e := range entries {
-		h := &tar.Header{Name: top + e.name, Mode: 0o644, Size: int64(len(e.body)), Typeflag: tar.TypeReg}
-		if e.link != "" {
-			h = &tar.Header{Name: top + e.name, Mode: 0o777, Typeflag: tar.TypeSymlink, Linkname: e.link}
-		}
-		if err := tw.WriteHeader(h); err != nil {
-			t.Fatal(err)
-		}
-		if e.link == "" {
-			if _, err := tw.Write([]byte(e.body)); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-	if err := tw.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := zw.Close(); err != nil {
-		t.Fatal(err)
-	}
-	tarball := buf.Bytes()
-	base := "/repos/" + owner + "/" + repo
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET "+base, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = io.WriteString(w, `{"default_branch":"main"}`)
+	gh := githubtest.New(t)
+	repo := gh.AddRepo("antmicro", "jetson-orin-baseboard", false, map[string]string{
+		"README.md":          "# baseboard\n",
+		"hw/board.kicad_sch": "(kicad_sch (version 20231120))\n",
+		"hw/copy.kicad_sch":  "(kicad_sch (version 20231120))\n",
 	})
-	mux.HandleFunc("GET "+base+"/commits/{ref}", func(w http.ResponseWriter, r *http.Request) {
-		switch r.PathValue("ref") {
-		case "1.1.2", fakeCommit:
-			_, _ = io.WriteString(w, `{"sha":"`+fakeCommit+`"}`)
-		case "main", fakeMainCommit:
-			_, _ = io.WriteString(w, `{"sha":"`+fakeMainCommit+`"}`)
-		default:
-			http.Error(w, `{"message":"No commit found"}`, http.StatusUnprocessableEntity)
-		}
-	})
-	// GitHub answers the tarball with a redirect to codeload, so the fake does too.
-	for _, c := range []string{fakeCommit, fakeMainCommit} {
-		mux.HandleFunc("GET "+base+"/tarball/"+c, func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "/codeload/"+c, http.StatusFound)
-		})
-		mux.HandleFunc("GET /codeload/"+c, func(w http.ResponseWriter, _ *http.Request) {
-			_, _ = w.Write(tarball)
-		})
-	}
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-	return srv
+	return gh, repo.Symlink("main", "hw/escape", "../../../etc/passwd")
 }
 
-// jetsonTree is a small stand-in for a board repo, with a link and a climbing path GitHub would
-// never send but a hostile tarball could.
-var jetsonTree = []tarEntry{
-	{name: "README.md", body: "# baseboard\n"},
-	{name: "hw/board.kicad_sch", body: "(kicad_sch (version 20231120))\n"},
-	{name: "hw/copy.kicad_sch", body: "(kicad_sch (version 20231120))\n"},
-	{name: "hw/escape", link: "../../../etc/passwd"},
-	{name: "../outside.txt", body: "no"},
-}
-
-// runtimeMounts is the parts of a server a runtime mount touches: the table, the maker, and the
-// WorkspaceService over both, composed as runViewer composes them.
+// runtimeMounts is the parts of a server a runtime mount touches: the table and the
+// WorkspaceService over it, composed as runViewer composes them.
 type runtimeMounts struct {
 	table *mountset.Table
-	maker *mountMaker
 	ws    *service.WorkspaceService
 }
 
-func startRuntimeMounts(t *testing.T, store, uploads, api string, fixed ...mountset.Mount) runtimeMounts {
+func startRuntimeMounts(t *testing.T, store, uploads, api string, limits mounts.Limits, fixed ...mounts.Mount) runtimeMounts {
 	t.Helper()
-	table := mountset.NewTable(fixed...)
-	maker, err := newMountMaker(table, filepath.Join(store, storeMountsDir), uploads, api)
+	table, err := mountset.Open(mountset.Config{Fixed: fixed, Uploads: uploads, Records: filepath.Join(store, storeMountsDir), GitHubAPI: api, Limits: limits, Log: io.Discard})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := maker.restore(io.Discard); err != nil {
-		t.Fatal(err)
-	}
-	return runtimeMounts{table: table, maker: maker, ws: service.NewWorkspaceService(osWorkspace(table)).WithMountMaker(maker)}
+	return runtimeMounts{table: table, ws: service.NewWorkspaceService(osWorkspace(table)).WithMountMaker(table)}
 }
 
 func listNames(t *testing.T, ws *service.WorkspaceService, uri string) []string {
@@ -139,15 +64,15 @@ func listNames(t *testing.T, ws *service.WorkspaceService, uri string) []string 
 }
 
 func TestAGitHubMountIsServedAfterARestart(t *testing.T) {
-	gh := fakeGitHub(t, "antmicro", "jetson-orin-baseboard", jetsonTree)
+	gh, fakeCommit := jetsonRepo(t)
 	dir := t.TempDir()
 	store, uploads := filepath.Join(dir, "store"), filepath.Join(dir, "uploads")
-	s := startRuntimeMounts(t, store, uploads, gh.URL)
-	m, err := s.ws.CreateMount(context.Background(), &webapi.CreateMountRequest{Name: "jetson", Source: "github://antmicro/jetson-orin-baseboard", Ref: "1.1.2"})
+	s := startRuntimeMounts(t, store, uploads, gh.URL, mounts.Limits{})
+	m, err := s.ws.CreateMount(context.Background(), &webapi.CreateMountRequest{Name: "jetson", Source: "github://antmicro/jetson-orin-baseboard", Ref: fakeCommit})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.GetKind() != webapi.MountKind_MOUNT_KIND_GITHUB || m.GetCommit() != fakeCommit || m.GetRef() != "1.1.2" || m.GetFixed() || m.GetWritable() || m.GetUri() != "mount://jetson" {
+	if m.GetKind() != webapi.MountKind_MOUNT_KIND_GITHUB || m.GetCommit() != fakeCommit || m.GetRef() != fakeCommit || m.GetFixed() || m.GetWritable() || m.GetUri() != "mount://jetson" {
 		t.Fatalf("CreateMount = %v; want a GitHub mount at %s, not fixed, not writable", m, fakeCommit)
 	}
 	if got := strings.Join(listNames(t, s.ws, "mount://jetson/hw"), ","); got != "board.kicad_sch,copy.kicad_sch" {
@@ -171,7 +96,7 @@ func TestAGitHubMountIsServedAfterARestart(t *testing.T) {
 	if err := os.RemoveAll(filepath.Join(uploads, mountset.SnapshotsDir)); err != nil {
 		t.Fatal(err)
 	}
-	again := startRuntimeMounts(t, store, uploads, "http://127.0.0.1:1")
+	again := startRuntimeMounts(t, store, uploads, "http://127.0.0.1:1", mounts.Limits{})
 	got, err := again.ws.GetMount(context.Background(), &webapi.GetMountRequest{Name: "jetson"})
 	if err != nil || got.GetCommit() != fakeCommit || got.GetSource() != "github://antmicro/jetson-orin-baseboard" {
 		t.Fatalf("after a restart, GetMount = %v, %v; want the GitHub mount at %s", got, err, fakeCommit)
@@ -196,10 +121,10 @@ func TestAGitHubMountIsServedAfterARestart(t *testing.T) {
 }
 
 func TestCreateMountRefusesWhatItCannotServe(t *testing.T) {
-	gh := fakeGitHub(t, "antmicro", "jetson-orin-baseboard", jetsonTree)
+	gh, _ := jetsonRepo(t)
 	dir := t.TempDir()
-	fixed := mountset.Mount{Name: "boards", Root: t.TempDir()}
-	s := startRuntimeMounts(t, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), gh.URL, fixed)
+	fixed := mountset.Folder("boards", t.TempDir())
+	s := startRuntimeMounts(t, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), gh.URL, mounts.Limits{}, fixed)
 	ctx := context.Background()
 	for _, tc := range []struct {
 		name, source, ref string
@@ -245,11 +170,10 @@ func TestCreateMountRefusesWhatItCannotServe(t *testing.T) {
 }
 
 func TestASnapshotOverTheCapIsRefusedAndLeavesNoMount(t *testing.T) {
-	gh := fakeGitHub(t, "antmicro", "jetson-orin-baseboard", jetsonTree)
+	gh, _ := jetsonRepo(t)
 	dir := t.TempDir()
 	uploads := filepath.Join(dir, "uploads")
-	s := startRuntimeMounts(t, filepath.Join(dir, "store"), uploads, gh.URL)
-	s.maker.maxBytes = 20
+	s := startRuntimeMounts(t, filepath.Join(dir, "store"), uploads, gh.URL, mounts.Limits{MaxBytes: 20})
 	_, err := s.ws.CreateMount(context.Background(), &webapi.CreateMountRequest{Name: "jetson", Source: "github://antmicro/jetson-orin-baseboard"})
 	if !errors.Is(err, service.ErrResourceExhausted) {
 		t.Fatalf("CreateMount over the cap = %v; want ErrResourceExhausted", err)
@@ -264,10 +188,10 @@ func TestASnapshotOverTheCapIsRefusedAndLeavesNoMount(t *testing.T) {
 }
 
 func TestTheUploadsSweepKeepsASnapshotsFiles(t *testing.T) {
-	gh := fakeGitHub(t, "antmicro", "jetson-orin-baseboard", jetsonTree)
+	gh, _ := jetsonRepo(t)
 	dir := t.TempDir()
 	store, uploads := filepath.Join(dir, "store"), filepath.Join(dir, "uploads")
-	s := startRuntimeMounts(t, store, uploads, gh.URL)
+	s := startRuntimeMounts(t, store, uploads, gh.URL, mounts.Limits{})
 	if _, err := s.ws.CreateMount(context.Background(), &webapi.CreateMountRequest{Name: "jetson", Source: "github://antmicro/jetson-orin-baseboard"}); err != nil {
 		t.Fatal(err)
 	}
@@ -284,10 +208,10 @@ func TestTheUploadsSweepKeepsASnapshotsFiles(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if count != 2 {
-		t.Fatalf("the snapshot stored %d blobs; want 2 (README and one schematic, held once)", count)
+	if count != 3 {
+		t.Fatalf("the snapshot stored %d blobs; want 3 (README, one schematic held once, and the manifest)", count)
 	}
-	if _, _, _, err := storeServices(s.table, store, uploads, nil, &service.ProjectResolver{}, nil, io.Discard); err != nil {
+	if _, _, _, err := storeServices(t.Context(), s.table, store, uploads, nil, &service.ProjectResolver{}, nil, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	var left int
@@ -306,7 +230,7 @@ func TestTheUploadsSweepKeepsASnapshotsFiles(t *testing.T) {
 // and --github-api, and the Connect routes a client calls. A second runViewer over the same folders
 // is the restart.
 func TestServeMakesAGitHubMountOverConnect(t *testing.T) {
-	gh := fakeGitHub(t, "antmicro", "jetson-orin-baseboard", jetsonTree)
+	gh, fakeCommit := jetsonRepo(t)
 	dir := t.TempDir()
 	store, uploads := filepath.Join(dir, "store"), filepath.Join(dir, "uploads")
 	serve := func() string {
@@ -322,7 +246,7 @@ func TestServeMakesAGitHubMountOverConnect(t *testing.T) {
 		return resp.StatusCode, string(b)
 	}
 	first := serve()
-	if code, body := call(first, "CreateMount", `{"name":"jetson","source":"github://antmicro/jetson-orin-baseboard","ref":"1.1.2"}`); code != 200 || !strings.Contains(body, fakeCommit) {
+	if code, body := call(first, "CreateMount", `{"name":"jetson","source":"github://antmicro/jetson-orin-baseboard","ref":"`+fakeCommit+`"}`); code != 200 || !strings.Contains(body, fakeCommit) {
 		t.Fatalf("CreateMount = %d %s", code, body)
 	}
 	if code, body := call(first, "ListDir", `{"uri":"mount://jetson/hw"}`); code != 200 || !strings.Contains(body, "board.kicad_sch") {

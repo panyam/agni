@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"io"
 	"io/fs"
 	"net/http"
@@ -14,6 +13,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/goapplib/storage/mounts"
 
 	"connectrpc.com/connect"
 	"github.com/panyam/agni/core/render"
@@ -47,7 +49,7 @@ var parityMounts = []struct{ name, dir string }{
 // the --mount flag's variable as well as the serve table, because the server's loader names
 // provenance from that flag's table (newLoader), and without it every locator here records a
 // basename that a real `serve --mount` does not.
-func servedParityMux(t *testing.T, ms []mountset.Mount) http.Handler {
+func servedParityMux(t *testing.T, ms []mounts.Mount) http.Handler {
 	t.Helper()
 	return servedMuxFor(t, ms, ms)
 }
@@ -55,7 +57,7 @@ func servedParityMux(t *testing.T, ms []mountset.Mount) http.Handler {
 // servedMuxFor is servedParityMux with two mount tables. cli holds this process's mounts, and ms
 // holds the server's own. It serves a client whose files the server does not share. The server
 // takes uploaded files, as `agni serve` does by default (agni issue 1061).
-func servedMuxFor(t *testing.T, cli, ms []mountset.Mount) http.Handler {
+func servedMuxFor(t *testing.T, cli, ms []mounts.Mount) http.Handler {
 	t.Helper()
 	mux := http.NewServeMux()
 	servedAPIFor(t, cli, ms).Register(mux)
@@ -64,12 +66,12 @@ func servedMuxFor(t *testing.T, cli, ms []mountset.Mount) http.Handler {
 
 // servedAPIFor returns the services that servedMuxFor registers. A test uses it to serve them over
 // another transport beside Connect, as `agni serve --mcp` does.
-func servedAPIFor(t *testing.T, cli, ms []mountset.Mount) server.API {
+func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
 	t.Helper()
 	prevSpecs, prevVal, prevErr := cliMountSpecs, cliWSVal, cliWSErr
 	cliMountSpecs = nil
 	for _, m := range cli {
-		cliMountSpecs = append(cliMountSpecs, m.Name+"="+m.Root)
+		cliMountSpecs = append(cliMountSpecs, m.Name+"="+m.Source)
 	}
 	cliWSOnce, cliWSVal, cliWSErr = sync.Once{}, nil, nil
 	t.Cleanup(func() {
@@ -82,7 +84,7 @@ func servedAPIFor(t *testing.T, cli, ms []mountset.Mount) server.API {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, _, err := storeServices(tableOf(ms), "", "", resolver.Store, resolver, nil, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(t.Context(), tableOf(ms), "", "", resolver.Store, resolver, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,14 +157,14 @@ func newParityClients(t *testing.T, h http.Handler) parityClients {
 }
 
 func TestWasmEngineAnswersAsTheServerDoes(t *testing.T) {
-	var hostMounts []mountset.Mount
+	var hostMounts []mounts.Mount
 	var memMounts []fshost.Mount
 	for _, m := range parityMounts {
 		root, err := filepath.Abs(m.dir)
 		if err != nil {
 			t.Fatal(err)
 		}
-		hostMounts = append(hostMounts, mountset.Mount{Name: m.name, Root: root})
+		hostMounts = append(hostMounts, mountset.Folder(m.name, root))
 		memMounts = append(memMounts, fshost.Mount{Name: m.name, FS: memCopy(t, root)})
 	}
 	eng, err := wasmengine.New(memMounts...)
@@ -537,7 +539,7 @@ func TestWasmEngineAnswersAsTheServerDoesForAnAttachedBoard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	served := newParityClients(t, servedParityMux(t, []mountset.Mount{{Name: "odb", Root: root}}))
+	served := newParityClients(t, servedParityMux(t, []mounts.Mount{mountset.Folder("odb", root)}))
 	wasm := newParityClients(t, eng.Handler)
 	ctx := context.Background()
 	def := &webapi.Snapshot{Uri: "mount://odb/gateway.edn", BoardUri: "mount://odb/gateway-layout/matrix/matrix"}

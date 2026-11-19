@@ -23,6 +23,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/storeurl"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
@@ -197,12 +198,12 @@ func classifyCorpusErr(err error) error {
 // serveMounts composes the mount table from --mount and --mount-root. The root is the image's
 // zero-flag path, as on `agni serve`. Every subdirectory becomes a mount named after itself, so
 // `-v ~/datasheets/ti:/datasheets/ti` needs no flag. An explicit --mount of the same name wins.
-func serveMounts(specs []string, root string) ([]mountset.Mount, error) {
+func serveMounts(specs []string, root string) ([]mounts.Mount, error) {
 	explicit, err := mountset.Parse(specs)
 	if err != nil {
 		return nil, err
 	}
-	var discovered []mountset.Mount
+	var discovered []mounts.Mount
 	if root != "" {
 		if discovered, err = mountset.Discover(root); err != nil {
 			return nil, err
@@ -223,13 +224,11 @@ func serveTable(specs []string, root, storeURL, uploadsURL string) (*mountset.Ta
 	if err != nil {
 		return nil, err
 	}
-	table := mountset.NewTable(ms...)
+	cfg := mountset.Config{Fixed: ms, ReadOnly: true}
 	if storeDir != "" && uploadsDir != "" {
-		if _, err := table.WithRecords(filepath.Join(storeDir, mountset.RecordsDir), uploadsDir); err != nil {
-			return nil, fmt.Errorf("--store: %w", err)
-		}
+		cfg.Uploads, cfg.Records = uploadsDir, filepath.Join(storeDir, mountset.RecordsDir)
 	}
-	return table, nil
+	return mountset.Open(cfg)
 }
 
 // displayAddr turns a listen address into one a browser can open, since ":8090" listens on every

@@ -21,6 +21,7 @@ import (
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/mcpkit/client"
 	"github.com/panyam/mcpkit/core"
 	"github.com/panyam/mcpkit/experimental/ext/rooms"
@@ -37,7 +38,7 @@ func viewerRoomsServer(t *testing.T) *httptest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := []mountset.Mount{{Name: parityMounts[0].name, Root: root}}
+	ms := []mounts.Mount{mountset.Folder(parityMounts[0].name, root)}
 	api := servedAPIFor(t, ms, ms)
 	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projectTrees(ms)...), Config: &osProjectConfig{mounts: tableOf(ms)}}
 	mux := http.NewServeMux()

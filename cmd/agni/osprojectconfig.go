@@ -26,7 +26,7 @@ func (c *osProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.Analysi
 	list := c.mounts.List()
 	ms := make([]fshost.Mount, 0, len(list))
 	for _, m := range list {
-		ms = append(ms, fshost.Mount{Name: m.Name, FS: os.DirFS(m.Root)})
+		ms = append(ms, fshost.Mount{Name: m.Name, FS: os.DirFS(c.mounts.Root(m))})
 	}
 	r := &fshost.ConfigResolver{Mounts: ms, SymbolPath: func(u mounts.URI) (string, error) {
 		return c.mounts.Resolve(u)

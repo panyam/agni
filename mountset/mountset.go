@@ -1,56 +1,34 @@
-// Package mounts is the containment boundary of the web tier. It holds the named root folders the
-// server exposes, and the join that keeps every client-supplied path inside its mount. Mounts are
-// checked against the filesystem at parse time. The package is outside cmd/agni so any entrypoint
-// hosting the serve services reuses the same boundary. It is outside internal/ because one of those
-// entrypoints, the datasheet service, is in a module of its own (agni issue 744).
+// Package mountset is the set of mounts an agni server or CLI serves, over goapplib storage's mounts
+// registry (agni issue 1759). It reads the --mount and --mount-root flags into fixed folder mounts,
+// keeps the runtime mounts CreateMount makes in --store, resolves a mount:// URI to a host path for
+// the OS-backed adapters, and maps the library's errors onto agni's service errors. The library
+// keeps every path inside its mount. The package is outside internal/ so an embedder can serve the
+// same mounts (C13), and so the datasheet service, a module of its own, can import it (agni issue
+// 744).
 package mountset
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/panyam/goapplib/storage/mounts"
+
 	"github.com/panyam/agni/service"
 )
 
-// Mount is one configured root folder the web API serves. A client passes Name back to address the
-// mount, and Root is the resolved absolute host path. Clients never send absolute
-// paths. They send an mounts.URI naming a mount and a mount-relative path, which Resolve joins.
-// The OS-backed service adapters in cmd/agni hold these, so the service package can be os-free
-// (CONSTRAINTS C13).
-type Mount struct {
-	Name string
-	Root string
-	// Kind says how the files are reached. The zero value is KindFile.
-	Kind Kind
-	// Source, Ref and Commit say where a runtime mount's files came from (agni issue 1735). They are
-	// empty for a folder from the flags.
-	Source string
-	Ref    string
-	Commit string
-	// Runtime marks a mount CreateMount made. Every other mount comes from the server's flags and is
-	// fixed for the life of the process.
-	Runtime bool
+// Folder is the fixed mount that serves dir, an absolute path, as name.
+func Folder(name, dir string) mounts.Mount {
+	return mounts.Mount{Name: name, Kind: mounts.KindFolder, Source: dir, Mode: mounts.ModeLive}
 }
 
-// Kind is how a mount's files are reached.
-type Kind string
-
-// The kinds this build serves. A runtime kind keeps its files in --uploads, so every kind is read
-// from a local folder, and the OS-backed adapters need no kind of their own.
-const (
-	KindFile    Kind = ""
-	KindUploads Kind = "uploads"
-	KindGitHub  Kind = "github"
-)
-
-// Parse turns repeated `name=path` flag values into validated mounts, each path resolved to an
+// Parse turns repeated `name=path` flag values into fixed folder mounts, each path resolved to an
 // absolute directory. It rejects an empty name or path, a duplicate name, or a path that is not an
 // existing directory. Order is preserved so ListMounts reflects the command line.
-func Parse(specs []string) ([]Mount, error) {
-	var mounts []Mount
+func Parse(specs []string) ([]mounts.Mount, error) {
+	var out []mounts.Mount
 	seen := map[string]bool{}
 	for _, spec := range specs {
 		name, path, ok := strings.Cut(spec, "=")
@@ -59,6 +37,9 @@ func Parse(specs []string) ([]Mount, error) {
 		}
 		if seen[name] {
 			return nil, fmt.Errorf("duplicate mount name %q", name)
+		}
+		if _, err := mounts.NewURI(name, ""); err != nil {
+			return nil, fmt.Errorf("mount %q: %w", name, err)
 		}
 		abs, err := filepath.Abs(path)
 		if err != nil {
@@ -72,21 +53,20 @@ func Parse(specs []string) ([]Mount, error) {
 			return nil, fmt.Errorf("mount %q: %q is not a directory", name, abs)
 		}
 		seen[name] = true
-		mounts = append(mounts, Mount{Name: name, Root: abs})
+		out = append(out, Folder(name, abs))
 	}
-	return mounts, nil
+	return out, nil
 }
 
 // Discover turns each immediate SUBDIRECTORY of root into a mount named after it, so a container
 // can expose design folders by bind-mounting them under one path with no flags
-// (`-v ~/boards:/workspace/boards`). Parse is the explicit half, and Merge combines the two. The
-// subdirectories are the mounts rather than root, so each folder has its own handle in ListMounts.
+// (`-v ~/boards:/workspace/boards`). Parse is the explicit half, and Merge combines the two.
 //
 // A missing root is NOT an error and returns no mounts, because the container always passes
 // --mount-root and one with nothing bind-mounted should still start. A root that is a file is an
 // error. Order is os.ReadDir's (sorted by filename), so ListMounts is stable across restarts.
 // Non-directories and dotfiles (.DS_Store, .git) are skipped.
-func Discover(root string) ([]Mount, error) {
+func Discover(root string) ([]mounts.Mount, error) {
 	abs, err := filepath.Abs(root)
 	if err != nil {
 		return nil, fmt.Errorf("mount root %q: %w", root, err)
@@ -105,7 +85,7 @@ func Discover(root string) ([]Mount, error) {
 	if err != nil {
 		return nil, fmt.Errorf("mount root %q: %w", root, err)
 	}
-	var found []Mount
+	var found []mounts.Mount
 	for _, e := range entries {
 		name := e.Name()
 		if strings.HasPrefix(name, ".") {
@@ -118,7 +98,7 @@ func Discover(root string) ([]Mount, error) {
 		if err != nil || !si.IsDir() {
 			continue
 		}
-		found = append(found, Mount{Name: name, Root: sub})
+		found = append(found, Folder(name, sub))
 	}
 	return found, nil
 }
@@ -126,12 +106,12 @@ func Discover(root string) ([]Mount, error) {
 // Merge combines discovered mounts with explicitly configured ones. Explicit wins a name collision.
 // The operator typed --mount for this run, and a discovered mount is whatever sat under the mount
 // root. Order is discovered then explicit, so ListMounts is stable.
-func Merge(discovered, explicit []Mount) []Mount {
+func Merge(discovered, explicit []mounts.Mount) []mounts.Mount {
 	byName := map[string]bool{}
 	for _, m := range explicit {
 		byName[m.Name] = true
 	}
-	merged := make([]Mount, 0, len(discovered)+len(explicit))
+	merged := make([]mounts.Mount, 0, len(discovered)+len(explicit))
 	for _, m := range discovered {
 		if byName[m.Name] {
 			continue
@@ -141,53 +121,39 @@ func Merge(discovered, explicit []Mount) []Mount {
 	return append(merged, explicit...)
 }
 
-// Rooted reports whether a host path names a place from a root rather than from a folder: an
-// absolute path, a path with a volume such as C: or \\server\share, or a path that starts with a
-// separator. On Windows `\srv` and `C:srv` are rooted without being absolute, so filepath.IsAbs
-// alone would treat them as relative and join them under another folder (agni issue 1595).
-func Rooted(p string) bool {
-	return filepath.IsAbs(p) || filepath.VolumeName(p) != "" || (p != "" && os.IsPathSeparator(p[0]))
-}
-
-// SafeResolve joins a mount-relative path onto root and confirms the result is inside root,
-// returning the cleaned absolute path. It rejects rooted inputs (Rooted) and any path that escapes
-// the mount via "..". Resolve is its only non-test caller.
-func SafeResolve(root, rel string) (string, error) {
-	if Rooted(rel) {
-		return "", fmt.Errorf("path %q must be relative to the mount", rel)
-	}
-	joined := filepath.Join(root, rel)
-	within, err := filepath.Rel(root, joined)
-	if err != nil || within == ".." || strings.HasPrefix(within, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("path %q escapes the mount", rel)
-	}
-	return joined, nil
-}
-
 // Find returns the mount with the given name from a set of mounts.
-func Find(mounts []Mount, name string) (Mount, bool) {
-	for _, m := range mounts {
+func Find(ms []mounts.Mount, name string) (mounts.Mount, bool) {
+	for _, m := range ms {
 		if m.Name == name {
 			return m, true
 		}
 	}
-	return Mount{}, false
+	return mounts.Mount{}, false
 }
 
-// Resolve maps an artifact URI to an absolute host path inside its mount, for the OS-backed service
-// adapters. An unknown mount returns service.ErrNotFound, so the service classifies without
-// importing os. artifact.Parse decides containment, and a parsed URI cannot escape its mount,
-// so the SafeResolve call below is only an assertion.
-func Resolve(mounts []Mount, uri mounts.URI) (string, error) {
-	m, ok := Find(mounts, uri.Mount)
-	if !ok {
-		return "", fmt.Errorf("no such mount %q: %w", uri.Mount, service.ErrNotFound)
+// Err maps an error from goapplib's storage module onto agni's service errors, so the transport
+// classifies it as it classifies agni's own. An error that wraps none of the library's sentinels
+// passes through unchanged. The message is kept.
+func Err(err error) error {
+	if err == nil {
+		return nil
 	}
-	abs, err := SafeResolve(m.Root, uri.Path)
-	if err != nil {
-		// Unreachable for a parsed URI. If it fires, artifact.Parse and this join disagree, and
-		// the alternative to failing here is a silent traversal.
-		return "", fmt.Errorf("%w: %s", service.ErrInvalidPath, err)
+	for _, m := range []struct{ lib, svc error }{
+		{mounts.ErrNotFound, service.ErrNotFound},
+		{mounts.ErrExists, service.ErrAlreadyExists},
+		{mounts.ErrInvalidArgument, service.ErrInvalidArgument},
+		{mounts.ErrInvalidPath, service.ErrInvalidPath},
+		{mounts.ErrFixed, service.ErrFailedPrecondition},
+		{mounts.ErrInUse, service.ErrFailedPrecondition},
+		{mounts.ErrReadOnly, service.ErrFailedPrecondition},
+		{mounts.ErrNotLocal, service.ErrFailedPrecondition},
+		{mounts.ErrConflict, service.ErrFailedPrecondition},
+		{mounts.ErrTooLarge, service.ErrResourceExhausted},
+		{mounts.ErrUnavailable, service.ErrUnavailable},
+	} {
+		if errors.Is(err, m.lib) {
+			return fmt.Errorf("%w: %w", m.svc, err)
+		}
 	}
-	return abs, nil
+	return err
 }

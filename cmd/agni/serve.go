@@ -2,10 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/internal/archivefs"
-	"github.com/panyam/agni/internal/wasmengine"
 	"io"
 	"io/fs"
 	"maps"
@@ -17,6 +16,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/panyam/agni/internal/archivefs"
+	"github.com/panyam/agni/internal/wasmengine"
+	"github.com/panyam/goapplib/storage/mounts"
 
 	"connectrpc.com/connect"
 	skhttp "github.com/panyam/servicekit/http"
@@ -152,9 +155,9 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
 	c.Flags().StringVar(&storeURL, "store", "", "where this server keeps its records, as a URL: file:///srv/agni/meta keeps them as files in that folder, created if absent (agni issue 1732). The records are designs, each artifact's manifest of paths and hashes, projects, packs, each design's reports, snapshot definitions and review runs; they hold no file bytes. Without it, snapshots live in memory, review runs are not kept, and no design can be created. In a container, mount a volume here")
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "where this server keeps the files of designs its users upload, as a URL: file:///srv/agni/files, created if absent (agni issue 1739). It keeps each file once, by hash, and never changes one, and serves each design's files as the mount \""+uploadsMount+"\". Needs --store. Without it, a design's files cannot be written")
-	c.Flags().StringVar(&githubAPI, "github-api", defaultGitHubAPI, "the GitHub REST API a github:// mount is read through; a test or a GitHub Enterprise server names its own")
+	c.Flags().StringVar(&githubAPI, "github-api", "", "the GitHub REST API a github:// mount is read through; a test or a GitHub Enterprise server names its own")
 	_ = c.Flags().MarkHidden("github-api")
-	c.Flags().StringVar(&githubRaw, "github-raw", defaultGitHubRaw, "the host a linked github:// artifact's files are downloaded from; a test names its own")
+	c.Flags().StringVar(&githubRaw, "github-raw", "", "the host a linked github:// artifact's files are downloaded from; a test names its own")
 	_ = c.Flags().MarkHidden("github-raw")
 	return c
 }
@@ -197,7 +200,7 @@ type viewerOpts struct {
 	listener net.Listener
 	// extraMounts are mounts the caller composed itself, merged with the declared and discovered ones.
 	// `open` uses it to serve the mount it minted for the design named on the command line.
-	extraMounts []mountset.Mount
+	extraMounts []mounts.Mount
 	// banner replaces the default "serving ... at ..." line when non-nil. `open` prints the design's
 	// own URL instead, so the link opens the design rather than a browse tree.
 	banner func(urls []string, mountCount int)
@@ -260,6 +263,13 @@ const defaultDesignCache = 15
 
 // runViewer builds and runs the viewer server for both `serve` and `open`.
 func runViewer(cmd *cobra.Command, o viewerOpts) error {
+	// life ends when the server stops, and stops the work it started, such as the uploads sweep.
+	base := cmd.Context()
+	if base == nil {
+		base = context.Background()
+	}
+	life, stop := context.WithCancel(base)
+	defer stop()
 	if o.engine != "" && o.engine != engineServer && o.engine != engineWasm {
 		return fmt.Errorf("--engine %q: want %s or %s", o.engine, engineServer, engineWasm)
 	}
@@ -303,7 +313,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// named after itself, so `-v ~/boards:/workspace/boards` needs no --mount. Explicit --mount
 	// values win on a name collision (see mountset.Merge). Empty disables discovery, as a local
 	// `make serve` wants.
-	var discovered []mountset.Mount
+	var discovered []mounts.Mount
 	if mountRoot != "" {
 		if discovered, err = mountset.Discover(mountRoot); err != nil {
 			return err
@@ -315,17 +325,16 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if fixed, err = withUploadsMount(fixed, o.uploadsDir); err != nil {
 		return err
 	}
-	// The table serves the fixed mounts and, with --store and --uploads, the ones CreateMount made,
-	// read back from --store so they outlive a restart (agni issue 1735).
-	table := mountset.NewTable(fixed...)
-	var maker *mountMaker
-	if o.storeDir != "" && o.uploadsDir != "" {
-		if maker, err = newMountMaker(table, filepath.Join(o.storeDir, storeMountsDir), o.uploadsDir, o.githubAPI); err != nil {
-			return err
-		}
-		if err := maker.restore(cmd.ErrOrStderr()); err != nil {
-			return err
-		}
+	// The table serves the fixed mounts and, with --store and --uploads, the GitHub mounts
+	// CreateMount made, read back from --store so they outlive a restart (agni issues 1735, 1759).
+	cfg := mountset.Config{Fixed: fixed, UploadsMount: uploadsMount, GitHubAPI: o.githubAPI, GitHubRaw: o.githubRaw, Log: cmd.ErrOrStderr()}
+	runtime := o.storeDir != "" && o.uploadsDir != ""
+	if runtime {
+		cfg.Uploads, cfg.Records = o.uploadsDir, filepath.Join(o.storeDir, storeMountsDir)
+	}
+	table, err := mountset.Open(cfg)
+	if err != nil {
+		return err
 	}
 	// The datasheet knowledge base for the params panel (WS9-035), loaded once at startup.
 	// Absent --params leaves it nil, so the params RPC returns no joined specs and never an
@@ -428,25 +437,21 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	}
 	// A request that lists or reads a design warms its browser-engine seed (agni issue 1572).
 	workspace := service.NewWorkspaceService(osWorkspace(table)).WithDesignFiles(projectResolver, osFiles(table))
-	if maker != nil {
-		workspace.WithMountMaker(maker)
+	if runtime {
+		workspace.WithMountMaker(table)
 	}
 	seedCache := newSeeds(workspace, table, wasmengine.StoreVersion)
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	projectSvc, designSvc, packSvc, err := storeServices(table, o.storeDir, o.uploadsDir, projectStore, projectResolver, checkSvc, cmd.ErrOrStderr())
+	projectSvc, designSvc, packSvc, err := storeServices(life, table, o.storeDir, o.uploadsDir, projectStore, projectResolver, checkSvc, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}
-	if maker != nil {
+	if runtime {
 		// An artifact links to a mount, and a mount with artifacts linked to it isn't deleted under
 		// them (agni issue 1723).
-		raw := o.githubRaw
-		if raw == "" {
-			raw = defaultGitHubRaw
-		}
-		designSvc.WithLinks(newLinkReaders(table, maker, raw).reader, uploadsMount)
+		designSvc.WithLinks(table.Readers, uploadsMount)
 		workspace.WithLinkedArtifacts(designSvc.LinkedTo)
 	}
 	api := server.API{
@@ -594,30 +599,30 @@ const (
 // withUploadsMount adds --uploads' design views as the mount "uploads", creating the folder (agni
 // issue 1739). A mount already named "uploads" is refused, since the two would answer one name. An
 // empty dir adds nothing.
-func withUploadsMount(ms []mountset.Mount, dir string) ([]mountset.Mount, error) {
+func withUploadsMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
 	if dir == "" {
 		return ms, nil
 	}
 	for _, m := range ms {
 		if m.Name == uploadsMount {
-			return nil, fmt.Errorf("--uploads serves as the mount %q, and a mount of that name is already declared at %s", uploadsMount, m.Root)
+			return nil, fmt.Errorf("--uploads serves as the mount %q, and a mount of that name is already declared at %s", uploadsMount, m.Source)
 		}
 	}
 	views := projects.ViewsRoot(dir)
 	if err := os.MkdirAll(views, 0o750); err != nil {
 		return nil, fmt.Errorf("--uploads %q: %w", dir, err)
 	}
-	return append(ms, mountset.Mount{Name: uploadsMount, Root: views, Kind: mountset.KindUploads}), nil
+	return append(ms, mountset.Folder(uploadsMount, views)), nil
 }
 
 // projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is
 // all of the OS adapter for projects. Each mount gets one os.DirFS, which makes containment
 // structural, since an fs.FS has no parent to climb into. An archive in a mount reads as its folder,
 // so a design.yaml inside one declares its design (agni issue 1591).
-func projectTrees(ms []mountset.Mount) []projects.Tree {
+func projectTrees(ms []mounts.Mount) []projects.Tree {
 	out := make([]projects.Tree, 0, len(ms))
 	for _, m := range ms {
-		out = append(out, projects.Tree{Mount: m.Name, FS: archivefs.Expand(os.DirFS(m.Root))})
+		out = append(out, projects.Tree{Mount: m.Name, FS: archivefs.Expand(os.DirFS(m.Source))})
 	}
 	return out
 }
@@ -634,10 +639,14 @@ func liveTrees(t *mountset.Table) func() []projects.Tree {
 		out := make([]projects.Tree, 0, len(ms))
 		next := make(map[string]projects.Tree, len(ms))
 		for _, m := range ms {
-			key := m.Name + "\x00" + m.Root
+			root := t.Root(m)
+			if root == "" {
+				continue
+			}
+			key := m.Name + "\x00" + root
 			tr, ok := byRoot[key]
 			if !ok {
-				tr = projectTrees([]mountset.Mount{m})[0]
+				tr = projects.Tree{Mount: m.Name, FS: archivefs.Expand(os.DirFS(root))}
 			}
 			next[key] = tr
 			out = append(out, tr)

@@ -197,7 +197,7 @@ func TestParseRejectsAMalformedSource(t *testing.T) {
 		"name: p\nprofiles: [/etc/profiles]\n":            "not absolute",
 		"name: p\nprofiles: ['']\n":                       "empty path",
 		"name: p\nparams: [https://example.com/p.yaml]\n": "a source is a path relative to the descriptor or a mount:// URI",
-		"name: p\nlib: ['mount://shared/../../etc']\n":    "escapes its mount",
+		"name: p\nlib: ['mount://shared/../../etc']\n":    "leaves the mount",
 		"name: p\nprofiles: profiles\n":                   "cannot unmarshal",
 	} {
 		_, _, _, err := ParseProject(strings.NewReader(doc))

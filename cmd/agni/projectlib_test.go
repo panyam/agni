@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 const gatewayDesign = "../../examples/tutorial-project/designs/gateway"
@@ -170,7 +170,7 @@ func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
 		t.Errorf("agni review: P6 did not report PMIC_MAIN_12V0:\n%.2000s", cli)
 	}
 
-	ms := []mountset.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}
+	ms := []mounts.Mount{mountset.Folder("tut", "../../examples/tutorial-project")}
 	loader := &osLoader{mounts: tableOf(ms), loader: newLoader()}
 	svc := service.NewReviewService(loader, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{}, "", testProjectResolver(ms))
 	// The served side takes the checklist off the project's config, as a viewer does, with no read.

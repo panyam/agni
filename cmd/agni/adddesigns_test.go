@@ -14,6 +14,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // twoBoards is a folder holding two boards and no design.yaml: the Jetson cut's KiCad schematic and
@@ -55,7 +56,7 @@ func twoBoards(t *testing.T) string {
 func TestAddingAFolderKeepsOneDesignPerBoard(t *testing.T) {
 	ctx := context.Background()
 	lab := twoBoards(t)
-	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Mount{Name: "lab", Root: lab})
+	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Folder("lab", lab))
 	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
 	count := func() int {
 		t.Helper()
@@ -116,7 +117,7 @@ func TestAServerWithNoStoreListsNoDesigns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := []mountset.Mount{{Name: "tut", Root: root}}
+	ms := []mounts.Mount{mountset.Folder("tut", root)}
 	api := servedAPIFor(t, ms, ms)
 	list, err := api.Design.ListDesigns(ctx, &webapi.ListDesignsRequest{})
 	if err != nil || len(list.GetDesigns()) != 0 {
@@ -148,7 +149,7 @@ func TestTwoReleasesOfOneBoardGetTwoIDs(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(lab, "boards", "gw-b", "gateway.edn"), b, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Mount{Name: "lab", Root: lab})
+	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Folder("lab", lab))
 	out, err := runDesigns(t, srv.URL, "add", "lab/boards", "--yes", "--series", "lab")
 	if err != nil {
 		t.Fatalf("designs add --yes = %q, %v; want all three kept", out, err)
@@ -178,7 +179,7 @@ func TestTwoBoardsInOneFolderAreAddedByEntry(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Mount{Name: "lab", Root: lab})
+	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Folder("lab", lab))
 	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
 	proposed, err := webapiconnect.NewWorkspaceServiceClient(http.DefaultClient, srv.URL).ProposeDesigns(ctx, connect.NewRequest(&webapi.ProposeDesignsRequest{Uri: "mount://lab"}))
 	if err != nil || len(proposed.Msg.GetDesigns()) != 2 {

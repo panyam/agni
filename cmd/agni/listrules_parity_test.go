@@ -11,6 +11,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/wasmengine"
 	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // The viewer selects the rules ListRules calls available and runs those (agni issue 950). Suppose a
@@ -26,14 +27,14 @@ func TestListRulesAvailableIsWhatARunRuns(t *testing.T) {
 		{"rev", filepath.Join("testdata", "review")},
 		{"com", filepath.Join("..", "..", "examples", "common", "designs")},
 	}
-	var hostMounts []mountset.Mount
+	var hostMounts []mounts.Mount
 	var memMounts []fshost.Mount
 	for _, m := range ms {
 		root, err := filepath.Abs(m.dir)
 		if err != nil {
 			t.Fatal(err)
 		}
-		hostMounts = append(hostMounts, mountset.Mount{Name: m.name, Root: root})
+		hostMounts = append(hostMounts, mountset.Folder(m.name, root))
 		memMounts = append(memMounts, fshost.Mount{Name: m.name, FS: memCopy(t, root)})
 	}
 	eng, err := wasmengine.New(memMounts...)
