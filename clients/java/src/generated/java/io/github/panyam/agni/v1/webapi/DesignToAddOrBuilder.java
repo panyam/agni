@@ -81,4 +81,26 @@ public interface DesignToAddOrBuilder extends
    */
   com.google.protobuf.ByteString
       getSeriesBytes();
+
+  /**
+   * <pre>
+   * entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+   * and a sheet its root never reaches, and then entry names the one to add.
+   * </pre>
+   *
+   * <code>string entry = 5 [json_name = "entry"];</code>
+   * @return The entry.
+   */
+  java.lang.String getEntry();
+  /**
+   * <pre>
+   * entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+   * and a sheet its root never reaches, and then entry names the one to add.
+   * </pre>
+   *
+   * <code>string entry = 5 [json_name = "entry"];</code>
+   * @return The bytes for entry.
+   */
+  com.google.protobuf.ByteString
+      getEntryBytes();
 }

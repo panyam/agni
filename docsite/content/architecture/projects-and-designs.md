@@ -397,7 +397,9 @@ deletes none of them. `DesignService` creates, reads, changes and deletes design
 whatever `design.yaml` it holds. So a server with mounts and no `--store` lists no designs. Picture
 an engineer who mounts the team's boards folder. They pick the boards to keep, and each becomes a
 design. `AddDesigns`, and `agni designs add <mount>/<path>`, propose the folder's designs as
-`ProposeDesigns` does, one per board. The server keeps the ones named, copies their files by hash,
+`ProposeDesigns` does, one per board. A request names each board by its folder. One folder can hold
+two boards, such as a root schematic and a sheet the root never reaches, and then the request also
+names the board's entry. The server keeps the ones named, copies their files by hash,
 and records each artifact's `source`, the mount and folder its files came from. It writes nothing
 into the mount. A design's title, series and intent come from the proposal and the request, never
 from a `design.yaml`. `ListDesigns` with `source = "mount://<mount>/<path>"` lists the designs read

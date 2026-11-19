@@ -2,7 +2,9 @@
 // mounts a folder holding Jetson's two releases with no design.yaml, sees the designs page list none,
 // browses to the folder, ticks one release, adds it, and opens the design it made. It uses the
 // oracle corpus's Jetson board twice when `make samples-revisions` has not fetched the releases, so
-// the gate runs it without them. SCREENSHOT_DIR keeps a screenshot of each page it reaches.
+// the gate runs it without them. That copy holds two sheets its root never reaches, so each folder
+// proposes three boards, and the walk ticks the root by its entry. SCREENSHOT_DIR keeps a screenshot
+// of each page it reaches.
 
 import { afterAll, beforeAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
@@ -71,20 +73,25 @@ describe("adding a mounted folder's boards as designs", () => {
 
       await page.goto(`${server.base}/mounts/lab/jetson/`);
       const panel = page.getByTestId("folder-designs");
-      await panel.locator(`[data-proposal="jetson/${second}"]`).waitFor({ timeout: 60_000 });
-      expect(await panel.locator("[data-proposal]").count()).toBe(2);
+      const board = (rel: string) => panel.locator(`[data-proposal="jetson/${rel}"][data-entry*="/jetson-agx-thor-baseboard."]`);
+      await board(second).waitFor({ timeout: 60_000 });
+      expect(await board(first).count()).toBe(1);
+      expect(await panel.locator(`[data-proposal="jetson/${first}"]`).count()).toBe(await panel.locator(`[data-proposal="jetson/${second}"]`).count());
       await shot(page, "folder-before.png");
 
-      await panel.locator(`input[value="jetson/${second}"]`).check();
+      await board(second).locator("input").check();
       await panel.locator('input[name="series"]').fill("jetson");
       await page.getByTestId("add-designs").click();
-      await panel.locator(`[data-design="designs/${second}"]`).waitFor({ timeout: 120_000 });
-      expect(await panel.locator("[data-proposal]").count()).toBe(1);
-      expect(await panel.locator(`[data-proposal="jetson/${first}"]`).count()).toBe(1);
+      const made = panel.locator("[data-design]");
+      await made.first().waitFor({ timeout: 120_000 });
+      expect(await made.count()).toBe(1);
+      const name = (await made.getAttribute("data-design")) ?? "";
+      expect(await panel.locator(`[data-proposal="jetson/${second}"]`).count()).toBe(0);
+      expect(await board(first).count()).toBe(1);
       await shot(page, "folder-after.png");
 
-      await panel.locator(`[data-design="designs/${second}"] a`).click();
-      await page.waitForURL(`${server.base}/designs/${second}`);
+      await made.locator("a").click();
+      await page.waitForURL(`${server.base}/${name}`);
       await page.locator("tr[data-artifact]").first().waitFor({ timeout: 60_000 });
       const types = await page.locator("tr[data-artifact] td:nth-child(2)").allTextContents();
       expect(types.sort()).toEqual(["board", "schematic"]);

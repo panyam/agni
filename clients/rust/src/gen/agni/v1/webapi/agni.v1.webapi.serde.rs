@@ -5164,6 +5164,9 @@ impl serde::Serialize for DesignToAdd {
         if !self.series.is_empty() {
             len += 1;
         }
+        if !self.entry.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.DesignToAdd", len)?;
         if !self.folder.is_empty() {
             struct_ser.serialize_field("folder", &self.folder)?;
@@ -5176,6 +5179,9 @@ impl serde::Serialize for DesignToAdd {
         }
         if !self.series.is_empty() {
             struct_ser.serialize_field("series", &self.series)?;
+        }
+        if !self.entry.is_empty() {
+            struct_ser.serialize_field("entry", &self.entry)?;
         }
         struct_ser.end()
     }
@@ -5192,6 +5198,7 @@ impl<'de> serde::Deserialize<'de> for DesignToAdd {
             "designId",
             "title",
             "series",
+            "entry",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -5200,6 +5207,7 @@ impl<'de> serde::Deserialize<'de> for DesignToAdd {
             DesignId,
             Title,
             Series,
+            Entry,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -5225,6 +5233,7 @@ impl<'de> serde::Deserialize<'de> for DesignToAdd {
                             "designId" | "design_id" => Ok(GeneratedField::DesignId),
                             "title" => Ok(GeneratedField::Title),
                             "series" => Ok(GeneratedField::Series),
+                            "entry" => Ok(GeneratedField::Entry),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -5248,6 +5257,7 @@ impl<'de> serde::Deserialize<'de> for DesignToAdd {
                 let mut design_id__ = None;
                 let mut title__ = None;
                 let mut series__ = None;
+                let mut entry__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Folder => {
@@ -5274,6 +5284,12 @@ impl<'de> serde::Deserialize<'de> for DesignToAdd {
                             }
                             series__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::Entry => {
+                            if entry__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("entry"));
+                            }
+                            entry__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(DesignToAdd {
@@ -5281,6 +5297,7 @@ impl<'de> serde::Deserialize<'de> for DesignToAdd {
                     design_id: design_id__.unwrap_or_default(),
                     title: title__.unwrap_or_default(),
                     series: series__.unwrap_or_default(),
+                    entry: entry__.unwrap_or_default(),
                 })
             }
         }

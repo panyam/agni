@@ -202,16 +202,18 @@ class AddDesignsRequest(_message.Message):
     def __init__(self, uri: _Optional[str] = ..., designs: _Optional[_Iterable[_Union[DesignToAdd, _Mapping]]] = ..., validate_only: _Optional[bool] = ...) -> None: ...
 
 class DesignToAdd(_message.Message):
-    __slots__ = ("folder", "design_id", "title", "series")
+    __slots__ = ("folder", "design_id", "title", "series", "entry")
     FOLDER_FIELD_NUMBER: _ClassVar[int]
     DESIGN_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     SERIES_FIELD_NUMBER: _ClassVar[int]
+    ENTRY_FIELD_NUMBER: _ClassVar[int]
     folder: str
     design_id: str
     title: str
     series: str
-    def __init__(self, folder: _Optional[str] = ..., design_id: _Optional[str] = ..., title: _Optional[str] = ..., series: _Optional[str] = ...) -> None: ...
+    entry: str
+    def __init__(self, folder: _Optional[str] = ..., design_id: _Optional[str] = ..., title: _Optional[str] = ..., series: _Optional[str] = ..., entry: _Optional[str] = ...) -> None: ...
 
 class AddDesignsResponse(_message.Message):
     __slots__ = ("designs",)

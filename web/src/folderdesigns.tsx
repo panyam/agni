@@ -2,7 +2,7 @@
 // design until a person adds it. Choosing a folder lists the designs already read from it, and the
 // boards the server proposes there that no design holds yet, each with a box to tick. "Add as
 // designs" keeps the ticked ones (DesignService.AddDesigns), and the server names each for its
-// folder.
+// folder. A box stands for a proposal's entry, since one folder can propose several boards.
 
 import { createEffect, createSignal, For, Show, type Accessor } from "solid-js";
 import type { EventBus } from "@panyam/tsappkit";
@@ -60,7 +60,7 @@ async function load(t: FolderTarget): Promise<FolderData> {
 
 function FolderDesigns(props: { target: Accessor<FolderTarget | null> }) {
   const [data, setData] = createSignal<FolderData | null>(null);
-  const [picked, setPicked] = createSignal<string[]>([]);
+  const [picked, setPicked] = createSignal<ProposedDesign[]>([]);
   const [series, setSeries] = createSignal("");
   const [status, setStatus] = createSignal("");
   const [busy, setBusy] = createSignal(false);
@@ -84,7 +84,7 @@ function FolderDesigns(props: { target: Accessor<FolderTarget | null> }) {
     setBusy(true);
     setStatus("Adding…");
     try {
-      await designClient().addDesigns({ uri: artifactUri(t.mount, t.path), designs: picked().map((folder) => ({ folder, series: series() })) });
+      await designClient().addDesigns({ uri: artifactUri(t.mount, t.path), designs: picked().map((p) => ({ folder: p.folder, entry: p.design?.entryUri ?? "", series: series() })) });
       reload();
     } catch (err) {
       setStatus(explain(err));
@@ -92,7 +92,7 @@ function FolderDesigns(props: { target: Accessor<FolderTarget | null> }) {
       setBusy(false);
     }
   };
-  const toggle = (folder: string, on: boolean) => setPicked(on ? [...picked(), folder] : picked().filter((f) => f !== folder));
+  const toggle = (p: ProposedDesign, on: boolean) => setPicked(on ? [...picked(), p] : picked().filter((x) => x !== p));
   return (
     <Show when={props.target()}>
       {(t) => (
@@ -120,9 +120,9 @@ function FolderDesigns(props: { target: Accessor<FolderTarget | null> }) {
                   <ul class="br-folder-list">
                     <For each={d().proposals}>
                       {(p) => (
-                        <li data-proposal={p.folder}>
+                        <li data-proposal={p.folder} data-entry={p.design?.entryUri}>
                           <label>
-                            <input type="checkbox" name="proposal" value={p.folder} checked={picked().includes(p.folder)} onChange={(e) => toggle(p.folder, e.currentTarget.checked)} /> {folderShown(p.folder, t().path)} <span class="br-folder-note">{p.files.length} files</span>
+                            <input type="checkbox" name="proposal" value={p.design?.entryUri} checked={picked().includes(p)} onChange={(e) => toggle(p, e.currentTarget.checked)} /> {folderShown(p.folder, t().path)} <span class="br-folder-name">{p.design?.name}</span> <span class="br-folder-note">{p.files.length} files</span>
                           </label>
                           <Show when={p.note}>
                             <span class="br-folder-note"> {p.note}</span>

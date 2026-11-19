@@ -41,7 +41,8 @@ beforeEach(() => {
 });
 
 const src = (mount: string, path: string) => create(ArtifactSourceSchema, { mount, path });
-const proposal = (folder: string) => create(ProposedDesignSchema, { folder, files: ["a"] });
+const proposal = (folder: string, name = "board") =>
+  create(ProposedDesignSchema, { folder, files: ["a"], design: create(DesignSchema, { name, entryUri: `mount://lab/${folder}/${name}.kicad_sch` }) });
 
 describe("unclaimed", () => {
   it("keeps the proposals no kept design reads from", () => {
@@ -63,18 +64,18 @@ describe("the folder panel", () => {
   it("lists the folder's designs and its unclaimed boards, and adds the ticked ones", async () => {
     fake.designs = [create(DesignSchema, { name: "designs/a", title: "Board A" })];
     fake.artifacts = { "designs/a": [create(ArtifactSchema, { name: "designs/a/artifacts/schematic", source: src("lab", "boards/a") })] };
-    fake.proposals = [proposal("boards/a"), proposal("boards/b"), proposal("boards/c")];
+    fake.proposals = [proposal("boards/a"), proposal("boards/b"), proposal("boards/c"), proposal("boards/c", "usb")];
     const el = document.createElement("div");
     document.body.appendChild(el);
     const panel = folderDesignsIsland(el, null);
     panel.island.activate();
     panel.show({ mount: "lab", path: "boards" });
-    await vi.waitFor(() => expect(el.querySelectorAll("[data-proposal]").length).toBe(2));
+    await vi.waitFor(() => expect(el.querySelectorAll("[data-proposal]").length).toBe(3));
     expect(fake.filters).toEqual(['source = "mount://lab/boards"']);
     expect(el.querySelector('[data-design="designs/a"] a')?.getAttribute("href")).toBe("/designs/a");
     const add = el.querySelector('[data-testid="add-designs"]') as HTMLButtonElement;
     expect(add.disabled).toBe(true);
-    const box = el.querySelector('input[value="boards/c"]') as HTMLInputElement;
+    const box = el.querySelector('input[value="mount://lab/boards/c/usb.kicad_sch"]') as HTMLInputElement;
     box.checked = true;
     box.dispatchEvent(new Event("change"));
     const series = el.querySelector('input[name="series"]') as HTMLInputElement;
@@ -83,7 +84,7 @@ describe("the folder panel", () => {
     await vi.waitFor(() => expect(add.disabled).toBe(false));
     add.click();
     await vi.waitFor(() => expect(fake.added.length).toBe(1));
-    expect(fake.added[0]).toEqual({ uri: "mount://lab/boards", designs: [{ folder: "boards/c", series: "lab" }] });
+    expect(fake.added[0]).toEqual({ uri: "mount://lab/boards", designs: [{ folder: "boards/c", entry: "mount://lab/boards/c/usb.kicad_sch", series: "lab" }] });
     panel.show(null);
     expect(el.style.display).toBe("none");
   });

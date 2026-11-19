@@ -331,6 +331,9 @@ message DesignToAdd {
   // title and series are the new design's. An empty title takes the proposal's.
   string title = 3;
   string series = 4;
+  // entry is the proposal's design.entry_uri. A folder can hold several proposals, such as a board
+  // and a sheet its root never reaches, and then entry names the one to add.
+  string entry = 5;
 }
 
 message AddDesignsResponse {

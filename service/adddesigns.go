@@ -54,21 +54,15 @@ func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRe
 	if err != nil {
 		return nil, err
 	}
-	byFolder := map[string]*webapi.ProposedDesign{}
-	var folders []string
-	for _, p := range proposed.GetDesigns() {
-		byFolder[p.GetFolder()] = p
-		folders = append(folders, fmt.Sprintf("%q", p.GetFolder()))
-	}
 	var adds []addedDesign
 	ids := map[string]bool{}
 	for _, want := range req.GetDesigns() {
-		p, ok := byFolder[want.GetFolder()]
-		if !ok {
-			return nil, fmt.Errorf("%w: %s proposes no design at %q; it proposes %s", ErrInvalidArgument, req.GetUri(), want.GetFolder(), strings.Join(folders, ", "))
+		p, err := pickProposal(req.GetUri(), proposed.GetDesigns(), want)
+		if err != nil {
+			return nil, err
 		}
 		if want.GetDesignId() == "" {
-			want = &webapi.DesignToAdd{Folder: want.GetFolder(), DesignId: DefaultDesignID(p, proposed.GetDesigns()), Title: want.GetTitle(), Series: want.GetSeries()}
+			want = &webapi.DesignToAdd{Folder: want.GetFolder(), Entry: want.GetEntry(), DesignId: DefaultDesignID(p, proposed.GetDesigns()), Title: want.GetTitle(), Series: want.GetSeries()}
 		}
 		add, err := s.planAdd(ctx, u.Mount, p, want)
 		if err != nil {
@@ -113,6 +107,37 @@ func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRe
 		resp.Designs = append(resp.Designs, d)
 	}
 	return resp, nil
+}
+
+// pickProposal finds the proposal want names, by its folder and, when set, its entry. A folder holding
+// several proposals needs the entry, and a request naming only the folder is refused with each
+// entry listed, rather than adding whichever came last.
+func pickProposal(uri string, proposed []*webapi.ProposedDesign, want *webapi.DesignToAdd) (*webapi.ProposedDesign, error) {
+	var inFolder []*webapi.ProposedDesign
+	var folders []string
+	for _, p := range proposed {
+		folders = append(folders, fmt.Sprintf("%q", p.GetFolder()))
+		if p.GetFolder() == want.GetFolder() {
+			inFolder = append(inFolder, p)
+		}
+	}
+	if len(inFolder) == 0 {
+		return nil, fmt.Errorf("%w: %s proposes no design at %q; it proposes %s", ErrInvalidArgument, uri, want.GetFolder(), strings.Join(slices.Compact(folders), ", "))
+	}
+	var entries []string
+	for _, p := range inFolder {
+		if want.GetEntry() == p.GetDesign().GetEntryUri() {
+			return p, nil
+		}
+		entries = append(entries, fmt.Sprintf("%q", p.GetDesign().GetEntryUri()))
+	}
+	if want.GetEntry() == "" && len(inFolder) == 1 {
+		return inFolder[0], nil
+	}
+	if want.GetEntry() == "" {
+		return nil, fmt.Errorf("%w: %s proposes %d designs at %q; name one by its entry: %s", ErrInvalidArgument, uri, len(inFolder), want.GetFolder(), strings.Join(entries, ", "))
+	}
+	return nil, fmt.Errorf("%w: %s proposes no design at %q with entry %q; its entries there are %s", ErrInvalidArgument, uri, want.GetFolder(), want.GetEntry(), strings.Join(entries, ", "))
 }
 
 // planAdd reads one proposal's files from the mount and groups them into artifacts, each with its
