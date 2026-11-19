@@ -340,10 +340,13 @@ export function fileTreeIsland(
   const reveal = (mount: string, path: string): void => {
     setRevealTarget({ mount, path });
   };
-  const conns = connectionClient();
   const ctx: Ctx = {
     client: workspaceClient(),
-    connections: () => conns.listConnections({}).then((r) => r.connections),
+    // The client is made on first use, since only the /mounts/ page's add form lists connections.
+    connections: () =>
+      connectionClient()
+        .listConnections({})
+        .then((r) => r.connections),
     sheets,
     revealTarget,
     manage: options.manageMounts ?? false,
