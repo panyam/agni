@@ -146,4 +146,37 @@ public interface ArtifactOrBuilder extends
    * <code>.google.protobuf.Timestamp update_time = 5 [json_name = "updateTime"];</code>
    */
   com.google.protobuf.TimestampOrBuilder getUpdateTimeOrBuilder();
+
+  /**
+   * <pre>
+   * source is where the artifact's files came from, for an artifact added from a mounted folder
+   * (agni issue 1736). It is empty for an uploaded artifact. The server reads the files once, when
+   * the design is added, and keeps its own copy by hash. Output only.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+   * @return Whether the source field is set.
+   */
+  boolean hasSource();
+  /**
+   * <pre>
+   * source is where the artifact's files came from, for an artifact added from a mounted folder
+   * (agni issue 1736). It is empty for an uploaded artifact. The server reads the files once, when
+   * the design is added, and keeps its own copy by hash. Output only.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+   * @return The source.
+   */
+  io.github.panyam.agni.v1.webapi.ArtifactSource getSource();
+  /**
+   * <pre>
+   * source is where the artifact's files came from, for an artifact added from a mounted folder
+   * (agni issue 1736). It is empty for an uploaded artifact. The server reads the files once, when
+   * the design is added, and keeps its own copy by hash. Output only.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 6 [json_name = "source"];</code>
+   */
+  io.github.panyam.agni.v1.webapi.ArtifactSourceOrBuilder getSourceOrBuilder();
 }

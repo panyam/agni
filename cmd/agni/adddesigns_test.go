@@ -1,0 +1,164 @@
+package main
+
+import (
+	"context"
+	"net/http"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+
+	"connectrpc.com/connect"
+
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
+	"github.com/panyam/agni/mounts"
+)
+
+// twoBoards is a folder holding two boards and no design.yaml: the Jetson cut's KiCad schematic and
+// board, and the tutorial gateway's netlist and board.
+func twoBoards(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	for dir, files := range map[string]map[string]string{
+		"boards/cut": {
+			"../../examples/cross-probe-project/designs/jetson-cut/jetson-cut.kicad_sch":   "jetson-cut.kicad_sch",
+			"../../examples/cross-probe-project/designs/jetson-cut/power.kicad_sch":        "power.kicad_sch",
+			"../../examples/cross-probe-project/designs/jetson-cut/usb_debug_pd.kicad_sch": "usb_debug_pd.kicad_sch",
+			"../../examples/cross-probe-project/designs/jetson-cut/jetson-cut.kicad_pcb":   "jetson-cut.kicad_pcb",
+			"../../examples/cross-probe-project/designs/jetson-cut/jetson-cut.kicad_pro":   "jetson-cut.kicad_pro",
+		},
+		"boards/gw": {
+			gatewayRevA: "gateway.edn",
+		},
+	} {
+		if err := os.MkdirAll(filepath.Join(root, dir), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		for from, to := range files {
+			b, err := os.ReadFile(from)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, dir, to), b, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	return root
+}
+
+// Adding a folder that holds two boards keeps one design per board, each checking as its folder
+// does. Nothing is kept until the boards are named, each artifact records where it came from, and
+// the source filter finds a board by its folder (agni issue 1736).
+func TestAddingAFolderKeepsOneDesignPerBoard(t *testing.T) {
+	ctx := context.Background()
+	lab := twoBoards(t)
+	srv := designServer(t, t.TempDir(), t.TempDir(), mounts.Mount{Name: "lab", Root: lab})
+	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	count := func() int {
+		t.Helper()
+		list, err := designs.ListDesigns(ctx, connect.NewRequest(&webapi.ListDesignsRequest{}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(list.Msg.GetDesigns())
+	}
+
+	out, err := runDesigns(t, srv.URL, "add", "lab/boards")
+	if err != nil || strings.Count(out, "proposed\t") != 2 || count() != 0 {
+		t.Fatalf("designs add with no --yes = %q, %v, %d designs; want two proposals listed and none kept", out, err, count())
+	}
+	if _, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://lab/boards", Designs: []*webapi.DesignToAdd{{Folder: "boards/cut"}}, ValidateOnly: true})); err != nil || count() != 0 {
+		t.Fatalf("AddDesigns validate_only = %v, %d designs; want none kept", err, count())
+	}
+	if out, err := runDesigns(t, srv.URL, "add", "lab/boards", "--only", "boards/gw", "--series", "lab"); err != nil || count() != 1 {
+		t.Fatalf("designs add --only boards/gw = %q, %v, %d designs; want the gateway kept alone", out, err, count())
+	}
+	if out, err := runDesigns(t, srv.URL, "add", "lab/boards", "--yes"); err == nil {
+		t.Fatalf("designs add --yes over a kept gateway = %q; want ALREADY_EXISTS", out)
+	}
+	if out, err := runDesigns(t, srv.URL, "add", "lab/boards", "--only", "cut"); err != nil || count() != 2 {
+		t.Fatalf("designs add --only cut = %q, %v, %d designs; want both kept, each named for its folder", out, err, count())
+	}
+
+	for id, folder := range map[string]string{"gw": "boards/gw", "cut": "boards/cut"} {
+		arts, err := designs.ListArtifacts(ctx, connect.NewRequest(&webapi.ListArtifactsRequest{Parent: "designs/" + id}))
+		if err != nil || len(arts.Msg.GetArtifacts()) == 0 {
+			t.Fatalf("artifacts of %s = %v, %v; want some", id, arts, err)
+		}
+		for _, a := range arts.Msg.GetArtifacts() {
+			if src := a.GetSource(); src.GetMount() != "lab" || src.GetPath() != folder {
+				t.Errorf("%s's source = %v; want lab at %s", a.GetName(), src, folder)
+			}
+		}
+		stored := findingKeys(t, "check", "designs/"+id, "--remote", srv.URL)
+		local := findingKeys(t, "check", filepath.Join(lab, filepath.FromSlash(folder)))
+		if len(local) == 0 || !slices.Equal(stored, local) {
+			t.Errorf("check designs/%s = %d findings, check on its folder = %d; want the same set\nonly stored: %v\nonly on the folder: %v", id, len(stored), len(local), minus(stored, local), minus(local, stored))
+		}
+	}
+	found, err := designs.ListDesigns(ctx, connect.NewRequest(&webapi.ListDesignsRequest{Filter: `source = "mount://lab/boards/cut"`}))
+	if err != nil || len(found.Msg.GetDesigns()) != 1 || found.Msg.GetDesigns()[0].GetName() != "designs/cut" {
+		t.Errorf("designs from mount://lab/boards/cut = %v, %v; want cut alone", found, err)
+	}
+	if all, err := designs.ListDesigns(ctx, connect.NewRequest(&webapi.ListDesignsRequest{Filter: `source = "mount://lab"`})); err != nil || len(all.Msg.GetDesigns()) != 2 {
+		t.Errorf("designs from mount://lab = %v, %v; want both", all, err)
+	}
+}
+
+// A server with mounts and no --store lists no designs, however many design.yaml files its folders
+// hold, and refuses to add one (agni issue 1736).
+func TestAServerWithNoStoreListsNoDesigns(t *testing.T) {
+	ctx := context.Background()
+	root, err := filepath.Abs(filepath.Join("..", "..", "examples", "tutorial-project"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms := []mounts.Mount{{Name: "tut", Root: root}}
+	api := servedAPIFor(t, ms, ms)
+	list, err := api.Design.ListDesigns(ctx, &webapi.ListDesignsRequest{})
+	if err != nil || len(list.GetDesigns()) != 0 {
+		var names []string
+		for _, d := range list.GetDesigns() {
+			names = append(names, d.GetName())
+		}
+		t.Errorf("ListDesigns with mounts and no store = %v, %v; want none", names, err)
+	}
+	if _, err := api.Design.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/gateway"}); err == nil {
+		t.Error("GetDesign of a folder's design.yaml name answered; want NOT_FOUND")
+	}
+	if _, err := api.Design.AddDesigns(ctx, &webapi.AddDesignsRequest{Uri: "mount://tut/designs/gateway", Designs: []*webapi.DesignToAdd{{Folder: "designs/gateway"}}}); err == nil {
+		t.Error("AddDesigns with no store succeeded; want FAILED_PRECONDITION")
+	}
+}
+
+// Two releases of one board share an entry name in two folders, and --yes keeps both, each named for
+// its folder (agni issue 1736).
+func TestTwoReleasesOfOneBoardGetTwoIDs(t *testing.T) {
+	lab := twoBoards(t)
+	b, err := os.ReadFile(gatewayRevA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(lab, "boards", "gw-b"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lab, "boards", "gw-b", "gateway.edn"), b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	srv := designServer(t, t.TempDir(), t.TempDir(), mounts.Mount{Name: "lab", Root: lab})
+	out, err := runDesigns(t, srv.URL, "add", "lab/boards", "--yes", "--series", "lab")
+	if err != nil {
+		t.Fatalf("designs add --yes = %q, %v; want all three kept", out, err)
+	}
+	if n := strings.Count(out, "latest"); n != 1 {
+		t.Errorf("designs add --yes printed %q; want one design of the series marked latest, not %d", out, n)
+	}
+	for _, id := range []string{"designs/cut", "designs/gw", "designs/gw-b"} {
+		if !strings.Contains(out, id+"\t") {
+			t.Errorf("designs add --yes printed %q; want %s", out, id)
+		}
+	}
+}

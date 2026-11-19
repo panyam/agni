@@ -592,17 +592,32 @@ func (s *srv) listDesigns(ctx context.Context) (listed, error) {
 			out.Mounts = append(out.Mounts, m.GetName())
 		}
 	}
+	seen := map[string]bool{}
+	if s.o.Folders != nil {
+		// The designs the mounted folders declare, named by path (agni issue 1736). Each names the
+		// project it extends.
+		ds, err := s.o.Folders.Designs(ctx)
+		if err != nil {
+			return out, err
+		}
+		for _, d := range ds {
+			seen[d.GetUri()] = true
+			out.Designs = append(out.Designs, listedDesign{Design: bare(d.GetUri()), Title: d.GetTitle(), Project: d.GetConfig().GetExtends(), Series: d.GetSeries()})
+		}
+	}
 	if s.api.Design == nil {
 		return out, nil
 	}
-	// Every design the server holds, mounted or stored (agni issue 1694). A mounted design names the
-	// project it extends, and a stored one names none.
+	// Every design the server stores (agni issue 1694), named by the path of its current files.
 	for token := ""; ; {
 		ds, err := s.api.Design.ListDesigns(ctx, &webapi.ListDesignsRequest{PageToken: token})
 		if err != nil {
 			return out, err
 		}
 		for _, d := range ds.GetDesigns() {
+			if seen[d.GetUri()] {
+				continue
+			}
 			out.Designs = append(out.Designs, listedDesign{Design: bare(d.GetUri()), Title: d.GetTitle(), Project: d.GetConfig().GetExtends(), Series: d.GetSeries()})
 		}
 		if token = ds.GetNextPageToken(); token == "" {

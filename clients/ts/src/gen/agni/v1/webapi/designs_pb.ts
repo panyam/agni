@@ -18,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/designs.proto.
  */
 export const file_agni_v1_webapi_designs: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9kZXNpZ25zLnByb3RvEg5hZ25pLnYxLndlYmFwaSKNAgoGUmVwb3J0EgwKBG5hbWUYASABKAkSDQoFcGFja3MYAiADKAkSDwoHcHJvamVjdBgDIAEoCRITCgtkZXNpZ25faGFzaBgEIAEoCRITCgtwYWNrX2hhc2hlcxgFIAMoCRI0CgdyZXN1bHRzGAYgASgLMiMuYWduaS52MS53ZWJhcGkuQ2hlY2tEZXNpZ25SZXNwb25zZRIvCgtjcmVhdGVfdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFgoOZGVzaWduX2NoYW5nZWQYCCABKAgSFQoNcGFja3NfY2hhbmdlZBgJIAMoCRIVCg1maW5kaW5nX2NvdW50GAogASgFInEKE0NyZWF0ZVJlcG9ydFJlcXVlc3QSDgoGcGFyZW50GAEgASgJEhEKCXJlcG9ydF9pZBgCIAEoCRImCgZyZXBvcnQYAyABKAsyFi5hZ25pLnYxLndlYmFwaS5SZXBvcnQSDwoHcHJvamVjdBgEIAEoCSJKChBHZXRSZXBvcnRSZXF1ZXN0EgwKBG5hbWUYASABKAkSKAoEdmlldxgCIAEoDjIaLmFnbmkudjEud2ViYXBpLlJlcG9ydFZpZXcihQEKEkxpc3RSZXBvcnRzUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSEQoJcGFnZV9zaXplGAIgASgFEhIKCnBhZ2VfdG9rZW4YAyABKAkSDgoGZmlsdGVyGAQgASgJEigKBHZpZXcYBSABKA4yGi5hZ25pLnYxLndlYmFwaS5SZXBvcnRWaWV3IlcKE0xpc3RSZXBvcnRzUmVzcG9uc2USJwoHcmVwb3J0cxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLlJlcG9ydBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoTRGVsZXRlUmVwb3J0UmVxdWVzdBIMCgRuYW1lGAEgASgJIl0KE0NyZWF0ZURlc2lnblJlcXVlc3QSEQoJZGVzaWduX2lkGAEgASgJEiYKBmRlc2lnbhgDIAEoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbkoECAIQA1IFZmlsZXMiIAoQR2V0RGVzaWduUmVxdWVzdBIMCgRuYW1lGAEgASgJIksKEkxpc3REZXNpZ25zUmVxdWVzdBIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkibAoTTGlzdERlc2lnbnNSZXNwb25zZRInCgdkZXNpZ25zGAEgAygLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRITCgt1bnJlYWNoYWJsZRgDIAMoCSKHAQoTVXBkYXRlRGVzaWduUmVxdWVzdBImCgZkZXNpZ24YAyABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SLwoLdXBkYXRlX21hc2sYBCABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrSgQIARACSgQIAhADUgRuYW1lUgVmaWxlcyIjChNEZWxldGVEZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAkisQEKCEFydGlmYWN0EgwKBG5hbWUYASABKAkSKwoFZmlsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdEZpbGUSKgoEdHlwZRgDIAEoDjIcLmFnbmkudjEud2ViYXBpLkFydGlmYWN0VHlwZRINCgVlbnRyeRgEIAEoCRIvCgt1cGRhdGVfdGltZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiIgoSR2V0QXJ0aWZhY3RSZXF1ZXN0EgwKBG5hbWUYASABKAkiTQoUTGlzdEFydGlmYWN0c1JlcXVlc3QSDgoGcGFyZW50GAEgASgJEhEKCXBhZ2Vfc2l6ZRgCIAEoBRISCgpwYWdlX3Rva2VuGAMgASgJIl0KFUxpc3RBcnRpZmFjdHNSZXNwb25zZRIrCglhcnRpZmFjdHMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5BcnRpZmFjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiWgoVVXBkYXRlQXJ0aWZhY3RSZXF1ZXN0EioKCGFydGlmYWN0GAEgASgLMhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QSFQoNYWxsb3dfbWlzc2luZxgCIAEoCCJmChtCYXRjaFVwZGF0ZUFydGlmYWN0c1JlcXVlc3QSDgoGcGFyZW50GAEgASgJEjcKCHJlcXVlc3RzGAIgAygLMiUuYWduaS52MS53ZWJhcGkuVXBkYXRlQXJ0aWZhY3RSZXF1ZXN0IksKHEJhdGNoVXBkYXRlQXJ0aWZhY3RzUmVzcG9uc2USKwoJYXJ0aWZhY3RzGAEgAygLMhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QiJQoVRGVsZXRlQXJ0aWZhY3RSZXF1ZXN0EgwKBG5hbWUYASABKAkiVwoYSW1wb3J0RGVzaWduRmlsZXNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIrCgVmaWxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLlNuYXBzaG90RmlsZSJYChlJbXBvcnREZXNpZ25GaWxlc1Jlc3BvbnNlEisKCWFydGlmYWN0cxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0Eg4KBnVucmVhZBgCIAMoCSpWCgpSZXBvcnRWaWV3EhsKF1JFUE9SVF9WSUVXX1VOU1BFQ0lGSUVEEAASFQoRUkVQT1JUX1ZJRVdfQkFTSUMQARIUChBSRVBPUlRfVklFV19GVUxMEAIqlwEKDEFydGlmYWN0VHlwZRIdChlBUlRJRkFDVF9UWVBFX1VOU1BFQ0lGSUVEEAASGQoVQVJUSUZBQ1RfVFlQRV9ORVRMSVNUEAESGwoXQVJUSUZBQ1RfVFlQRV9TQ0hFTUFUSUMQAhIXChNBUlRJRkFDVF9UWVBFX0JPQVJEEAMSFwoTQVJUSUZBQ1RfVFlQRV9PVEhFUhAEMvoJCg1EZXNpZ25TZXJ2aWNlEksKDENyZWF0ZURlc2lnbhIjLmFnbmkudjEud2ViYXBpLkNyZWF0ZURlc2lnblJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SRQoJR2V0RGVzaWduEiAuYWduaS52MS53ZWJhcGkuR2V0RGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJWCgtMaXN0RGVzaWducxIiLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25zUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25zUmVzcG9uc2USSwoMVXBkYXRlRGVzaWduEiMuYWduaS52MS53ZWJhcGkuVXBkYXRlRGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJLCgxEZWxldGVEZXNpZ24SIy5hZ25pLnYxLndlYmFwaS5EZWxldGVEZXNpZ25SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EksKC0dldEFydGlmYWN0EiIuYWduaS52MS53ZWJhcGkuR2V0QXJ0aWZhY3RSZXF1ZXN0GhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QSXAoNTGlzdEFydGlmYWN0cxIkLmFnbmkudjEud2ViYXBpLkxpc3RBcnRpZmFjdHNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdEFydGlmYWN0c1Jlc3BvbnNlElEKDlVwZGF0ZUFydGlmYWN0EiUuYWduaS52MS53ZWJhcGkuVXBkYXRlQXJ0aWZhY3RSZXF1ZXN0GhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QScQoUQmF0Y2hVcGRhdGVBcnRpZmFjdHMSKy5hZ25pLnYxLndlYmFwaS5CYXRjaFVwZGF0ZUFydGlmYWN0c1JlcXVlc3QaLC5hZ25pLnYxLndlYmFwaS5CYXRjaFVwZGF0ZUFydGlmYWN0c1Jlc3BvbnNlEmgKEUltcG9ydERlc2lnbkZpbGVzEiguYWduaS52MS53ZWJhcGkuSW1wb3J0RGVzaWduRmlsZXNSZXF1ZXN0GikuYWduaS52MS53ZWJhcGkuSW1wb3J0RGVzaWduRmlsZXNSZXNwb25zZRJPCg5EZWxldGVBcnRpZmFjdBIlLmFnbmkudjEud2ViYXBpLkRlbGV0ZUFydGlmYWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJLCgxDcmVhdGVSZXBvcnQSIy5hZ25pLnYxLndlYmFwaS5DcmVhdGVSZXBvcnRSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmVwb3J0EkUKCUdldFJlcG9ydBIgLmFnbmkudjEud2ViYXBpLkdldFJlcG9ydFJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXBvcnQSVgoLTGlzdFJlcG9ydHMSIi5hZ25pLnYxLndlYmFwaS5MaXN0UmVwb3J0c1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5MaXN0UmVwb3J0c1Jlc3BvbnNlEksKDERlbGV0ZVJlcG9ydBIjLmFnbmkudjEud2ViYXBpLkRlbGV0ZVJlcG9ydFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_checks, file_agni_v1_webapi_project, file_agni_v1_webapi_snapshot, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp]);
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9kZXNpZ25zLnByb3RvEg5hZ25pLnYxLndlYmFwaSKNAgoGUmVwb3J0EgwKBG5hbWUYASABKAkSDQoFcGFja3MYAiADKAkSDwoHcHJvamVjdBgDIAEoCRITCgtkZXNpZ25faGFzaBgEIAEoCRITCgtwYWNrX2hhc2hlcxgFIAMoCRI0CgdyZXN1bHRzGAYgASgLMiMuYWduaS52MS53ZWJhcGkuQ2hlY2tEZXNpZ25SZXNwb25zZRIvCgtjcmVhdGVfdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFgoOZGVzaWduX2NoYW5nZWQYCCABKAgSFQoNcGFja3NfY2hhbmdlZBgJIAMoCRIVCg1maW5kaW5nX2NvdW50GAogASgFInEKE0NyZWF0ZVJlcG9ydFJlcXVlc3QSDgoGcGFyZW50GAEgASgJEhEKCXJlcG9ydF9pZBgCIAEoCRImCgZyZXBvcnQYAyABKAsyFi5hZ25pLnYxLndlYmFwaS5SZXBvcnQSDwoHcHJvamVjdBgEIAEoCSJKChBHZXRSZXBvcnRSZXF1ZXN0EgwKBG5hbWUYASABKAkSKAoEdmlldxgCIAEoDjIaLmFnbmkudjEud2ViYXBpLlJlcG9ydFZpZXcihQEKEkxpc3RSZXBvcnRzUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSEQoJcGFnZV9zaXplGAIgASgFEhIKCnBhZ2VfdG9rZW4YAyABKAkSDgoGZmlsdGVyGAQgASgJEigKBHZpZXcYBSABKA4yGi5hZ25pLnYxLndlYmFwaS5SZXBvcnRWaWV3IlcKE0xpc3RSZXBvcnRzUmVzcG9uc2USJwoHcmVwb3J0cxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLlJlcG9ydBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoTRGVsZXRlUmVwb3J0UmVxdWVzdBIMCgRuYW1lGAEgASgJIl0KE0NyZWF0ZURlc2lnblJlcXVlc3QSEQoJZGVzaWduX2lkGAEgASgJEiYKBmRlc2lnbhgDIAEoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbkoECAIQA1IFZmlsZXMiIAoQR2V0RGVzaWduUmVxdWVzdBIMCgRuYW1lGAEgASgJIksKEkxpc3REZXNpZ25zUmVxdWVzdBIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkibAoTTGlzdERlc2lnbnNSZXNwb25zZRInCgdkZXNpZ25zGAEgAygLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRITCgt1bnJlYWNoYWJsZRgDIAMoCSKHAQoTVXBkYXRlRGVzaWduUmVxdWVzdBImCgZkZXNpZ24YAyABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SLwoLdXBkYXRlX21hc2sYBCABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrSgQIARACSgQIAhADUgRuYW1lUgVmaWxlcyIjChNEZWxldGVEZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAki4QEKCEFydGlmYWN0EgwKBG5hbWUYASABKAkSKwoFZmlsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdEZpbGUSKgoEdHlwZRgDIAEoDjIcLmFnbmkudjEud2ViYXBpLkFydGlmYWN0VHlwZRINCgVlbnRyeRgEIAEoCRIvCgt1cGRhdGVfdGltZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoGc291cmNlGAYgASgLMh4uYWduaS52MS53ZWJhcGkuQXJ0aWZhY3RTb3VyY2UiOgoOQXJ0aWZhY3RTb3VyY2USDQoFbW91bnQYASABKAkSDAoEcGF0aBgCIAEoCRILCgNyZWYYAyABKAkiZQoRQWRkRGVzaWduc1JlcXVlc3QSCwoDdXJpGAEgASgJEiwKB2Rlc2lnbnMYAiADKAsyGy5hZ25pLnYxLndlYmFwaS5EZXNpZ25Ub0FkZBIVCg12YWxpZGF0ZV9vbmx5GAMgASgIIk8KC0Rlc2lnblRvQWRkEg4KBmZvbGRlchgBIAEoCRIRCglkZXNpZ25faWQYAiABKAkSDQoFdGl0bGUYAyABKAkSDgoGc2VyaWVzGAQgASgJIj0KEkFkZERlc2lnbnNSZXNwb25zZRInCgdkZXNpZ25zGAEgAygLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduIiIKEkdldEFydGlmYWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIk0KFExpc3RBcnRpZmFjdHNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCSJdChVMaXN0QXJ0aWZhY3RzUmVzcG9uc2USKwoJYXJ0aWZhY3RzGAEgAygLMhguYWduaS52MS53ZWJhcGkuQXJ0aWZhY3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIloKFVVwZGF0ZUFydGlmYWN0UmVxdWVzdBIqCghhcnRpZmFjdBgBIAEoCzIYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0EhUKDWFsbG93X21pc3NpbmcYAiABKAgiZgobQmF0Y2hVcGRhdGVBcnRpZmFjdHNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRI3CghyZXF1ZXN0cxgCIAMoCzIlLmFnbmkudjEud2ViYXBpLlVwZGF0ZUFydGlmYWN0UmVxdWVzdCJLChxCYXRjaFVwZGF0ZUFydGlmYWN0c1Jlc3BvbnNlEisKCWFydGlmYWN0cxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0IiUKFURlbGV0ZUFydGlmYWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIlcKGEltcG9ydERlc2lnbkZpbGVzUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSKwoFZmlsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdEZpbGUiWAoZSW1wb3J0RGVzaWduRmlsZXNSZXNwb25zZRIrCglhcnRpZmFjdHMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5BcnRpZmFjdBIOCgZ1bnJlYWQYAiADKAkqVgoKUmVwb3J0VmlldxIbChdSRVBPUlRfVklFV19VTlNQRUNJRklFRBAAEhUKEVJFUE9SVF9WSUVXX0JBU0lDEAESFAoQUkVQT1JUX1ZJRVdfRlVMTBACKpcBCgxBcnRpZmFjdFR5cGUSHQoZQVJUSUZBQ1RfVFlQRV9VTlNQRUNJRklFRBAAEhkKFUFSVElGQUNUX1RZUEVfTkVUTElTVBABEhsKF0FSVElGQUNUX1RZUEVfU0NIRU1BVElDEAISFwoTQVJUSUZBQ1RfVFlQRV9CT0FSRBADEhcKE0FSVElGQUNUX1RZUEVfT1RIRVIQBDLPCgoNRGVzaWduU2VydmljZRJLCgxDcmVhdGVEZXNpZ24SIy5hZ25pLnYxLndlYmFwaS5DcmVhdGVEZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduEkUKCUdldERlc2lnbhIgLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SVgoLTGlzdERlc2lnbnMSIi5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduc1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduc1Jlc3BvbnNlEksKDFVwZGF0ZURlc2lnbhIjLmFnbmkudjEud2ViYXBpLlVwZGF0ZURlc2lnblJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SSwoMRGVsZXRlRGVzaWduEiMuYWduaS52MS53ZWJhcGkuRGVsZXRlRGVzaWduUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJLCgtHZXRBcnRpZmFjdBIiLmFnbmkudjEud2ViYXBpLkdldEFydGlmYWN0UmVxdWVzdBoYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0ElwKDUxpc3RBcnRpZmFjdHMSJC5hZ25pLnYxLndlYmFwaS5MaXN0QXJ0aWZhY3RzUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RBcnRpZmFjdHNSZXNwb25zZRJRCg5VcGRhdGVBcnRpZmFjdBIlLmFnbmkudjEud2ViYXBpLlVwZGF0ZUFydGlmYWN0UmVxdWVzdBoYLmFnbmkudjEud2ViYXBpLkFydGlmYWN0EnEKFEJhdGNoVXBkYXRlQXJ0aWZhY3RzEisuYWduaS52MS53ZWJhcGkuQmF0Y2hVcGRhdGVBcnRpZmFjdHNSZXF1ZXN0GiwuYWduaS52MS53ZWJhcGkuQmF0Y2hVcGRhdGVBcnRpZmFjdHNSZXNwb25zZRJoChFJbXBvcnREZXNpZ25GaWxlcxIoLmFnbmkudjEud2ViYXBpLkltcG9ydERlc2lnbkZpbGVzUmVxdWVzdBopLmFnbmkudjEud2ViYXBpLkltcG9ydERlc2lnbkZpbGVzUmVzcG9uc2USUwoKQWRkRGVzaWducxIhLmFnbmkudjEud2ViYXBpLkFkZERlc2lnbnNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuQWRkRGVzaWduc1Jlc3BvbnNlEk8KDkRlbGV0ZUFydGlmYWN0EiUuYWduaS52MS53ZWJhcGkuRGVsZXRlQXJ0aWZhY3RSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EksKDENyZWF0ZVJlcG9ydBIjLmFnbmkudjEud2ViYXBpLkNyZWF0ZVJlcG9ydFJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXBvcnQSRQoJR2V0UmVwb3J0EiAuYWduaS52MS53ZWJhcGkuR2V0UmVwb3J0UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJlcG9ydBJWCgtMaXN0UmVwb3J0cxIiLmFnbmkudjEud2ViYXBpLkxpc3RSZXBvcnRzUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkxpc3RSZXBvcnRzUmVzcG9uc2USSwoMRGVsZXRlUmVwb3J0EiMuYWduaS52MS53ZWJhcGkuRGVsZXRlUmVwb3J0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_checks, file_agni_v1_webapi_project, file_agni_v1_webapi_snapshot, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp]);
 
 /**
  * Report is one check of a stored design against packs, kept under the design (agni issue 1704). It
@@ -482,6 +482,15 @@ export type Artifact = Message<"agni.v1.webapi.Artifact"> & {
    * @generated from field: google.protobuf.Timestamp update_time = 5;
    */
   updateTime?: Timestamp | undefined;
+
+  /**
+   * source is where the artifact's files came from, for an artifact added from a mounted folder
+   * (agni issue 1736). It is empty for an uploaded artifact. The server reads the files once, when
+   * the design is added, and keeps its own copy by hash. Output only.
+   *
+   * @generated from field: agni.v1.webapi.ArtifactSource source = 6;
+   */
+  source?: ArtifactSource | undefined;
 };
 
 /**
@@ -490,6 +499,133 @@ export type Artifact = Message<"agni.v1.webapi.Artifact"> & {
  */
 export const ArtifactSchema: GenMessage<Artifact> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_designs, 12);
+
+/**
+ * ArtifactSource names the place in a mount an artifact's files were read from.
+ *
+ * @generated from message agni.v1.webapi.ArtifactSource
+ */
+export type ArtifactSource = Message<"agni.v1.webapi.ArtifactSource"> & {
+  /**
+   * mount is the mount's name.
+   *
+   * @generated from field: string mount = 1;
+   */
+  mount: string;
+
+  /**
+   * path is the folder in the mount the artifact's file paths are relative to.
+   *
+   * @generated from field: string path = 2;
+   */
+  path: string;
+
+  /**
+   * ref is the version of the mount the files were read at, empty for a folder with no history.
+   *
+   * @generated from field: string ref = 3;
+   */
+  ref: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ArtifactSource.
+ * Use `create(ArtifactSourceSchema)` to create a new message.
+ */
+export const ArtifactSourceSchema: GenMessage<ArtifactSource> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 13);
+
+/**
+ * @generated from message agni.v1.webapi.AddDesignsRequest
+ */
+export type AddDesignsRequest = Message<"agni.v1.webapi.AddDesignsRequest"> & {
+  /**
+   * uri is the folder to propose designs in, "mount://<mount>/<dir>".
+   *
+   * @generated from field: string uri = 1;
+   */
+  uri: string;
+
+  /**
+   * designs are the proposals to add, each named by its folder.
+   *
+   * @generated from field: repeated agni.v1.webapi.DesignToAdd designs = 2;
+   */
+  designs: DesignToAdd[];
+
+  /**
+   * validate_only answers the designs the request would make, and writes nothing (AIP-163).
+   *
+   * @generated from field: bool validate_only = 3;
+   */
+  validateOnly: boolean;
+};
+
+/**
+ * Describes the message agni.v1.webapi.AddDesignsRequest.
+ * Use `create(AddDesignsRequestSchema)` to create a new message.
+ */
+export const AddDesignsRequestSchema: GenMessage<AddDesignsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 14);
+
+/**
+ * DesignToAdd picks one proposal and names the design it becomes.
+ *
+ * @generated from message agni.v1.webapi.DesignToAdd
+ */
+export type DesignToAdd = Message<"agni.v1.webapi.DesignToAdd"> & {
+  /**
+   * folder is the proposal's folder, mount-relative, as ProposedDesign.folder spells it.
+   *
+   * @generated from field: string folder = 1;
+   */
+  folder: string;
+
+  /**
+   * design_id is the new design's id. Empty takes the proposal's name, lowercased.
+   *
+   * @generated from field: string design_id = 2;
+   */
+  designId: string;
+
+  /**
+   * title and series are the new design's. An empty title takes the proposal's.
+   *
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string series = 4;
+   */
+  series: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.DesignToAdd.
+ * Use `create(DesignToAddSchema)` to create a new message.
+ */
+export const DesignToAddSchema: GenMessage<DesignToAdd> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 15);
+
+/**
+ * @generated from message agni.v1.webapi.AddDesignsResponse
+ */
+export type AddDesignsResponse = Message<"agni.v1.webapi.AddDesignsResponse"> & {
+  /**
+   * designs are the designs made, in the request's order.
+   *
+   * @generated from field: repeated agni.v1.webapi.Design designs = 1;
+   */
+  designs: Design[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.AddDesignsResponse.
+ * Use `create(AddDesignsResponseSchema)` to create a new message.
+ */
+export const AddDesignsResponseSchema: GenMessage<AddDesignsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_designs, 16);
 
 /**
  * @generated from message agni.v1.webapi.GetArtifactRequest
@@ -508,7 +644,7 @@ export type GetArtifactRequest = Message<"agni.v1.webapi.GetArtifactRequest"> & 
  * Use `create(GetArtifactRequestSchema)` to create a new message.
  */
 export const GetArtifactRequestSchema: GenMessage<GetArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 13);
+  messageDesc(file_agni_v1_webapi_designs, 17);
 
 /**
  * @generated from message agni.v1.webapi.ListArtifactsRequest
@@ -541,7 +677,7 @@ export type ListArtifactsRequest = Message<"agni.v1.webapi.ListArtifactsRequest"
  * Use `create(ListArtifactsRequestSchema)` to create a new message.
  */
 export const ListArtifactsRequestSchema: GenMessage<ListArtifactsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 14);
+  messageDesc(file_agni_v1_webapi_designs, 18);
 
 /**
  * @generated from message agni.v1.webapi.ListArtifactsResponse
@@ -565,7 +701,7 @@ export type ListArtifactsResponse = Message<"agni.v1.webapi.ListArtifactsRespons
  * Use `create(ListArtifactsResponseSchema)` to create a new message.
  */
 export const ListArtifactsResponseSchema: GenMessage<ListArtifactsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 15);
+  messageDesc(file_agni_v1_webapi_designs, 19);
 
 /**
  * @generated from message agni.v1.webapi.UpdateArtifactRequest
@@ -593,7 +729,7 @@ export type UpdateArtifactRequest = Message<"agni.v1.webapi.UpdateArtifactReques
  * Use `create(UpdateArtifactRequestSchema)` to create a new message.
  */
 export const UpdateArtifactRequestSchema: GenMessage<UpdateArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 16);
+  messageDesc(file_agni_v1_webapi_designs, 20);
 
 /**
  * @generated from message agni.v1.webapi.BatchUpdateArtifactsRequest
@@ -619,7 +755,7 @@ export type BatchUpdateArtifactsRequest = Message<"agni.v1.webapi.BatchUpdateArt
  * Use `create(BatchUpdateArtifactsRequestSchema)` to create a new message.
  */
 export const BatchUpdateArtifactsRequestSchema: GenMessage<BatchUpdateArtifactsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 17);
+  messageDesc(file_agni_v1_webapi_designs, 21);
 
 /**
  * @generated from message agni.v1.webapi.BatchUpdateArtifactsResponse
@@ -638,7 +774,7 @@ export type BatchUpdateArtifactsResponse = Message<"agni.v1.webapi.BatchUpdateAr
  * Use `create(BatchUpdateArtifactsResponseSchema)` to create a new message.
  */
 export const BatchUpdateArtifactsResponseSchema: GenMessage<BatchUpdateArtifactsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 18);
+  messageDesc(file_agni_v1_webapi_designs, 22);
 
 /**
  * @generated from message agni.v1.webapi.DeleteArtifactRequest
@@ -657,7 +793,7 @@ export type DeleteArtifactRequest = Message<"agni.v1.webapi.DeleteArtifactReques
  * Use `create(DeleteArtifactRequestSchema)` to create a new message.
  */
 export const DeleteArtifactRequestSchema: GenMessage<DeleteArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 19);
+  messageDesc(file_agni_v1_webapi_designs, 23);
 
 /**
  * @generated from message agni.v1.webapi.ImportDesignFilesRequest
@@ -683,7 +819,7 @@ export type ImportDesignFilesRequest = Message<"agni.v1.webapi.ImportDesignFiles
  * Use `create(ImportDesignFilesRequestSchema)` to create a new message.
  */
 export const ImportDesignFilesRequestSchema: GenMessage<ImportDesignFilesRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 20);
+  messageDesc(file_agni_v1_webapi_designs, 24);
 
 /**
  * @generated from message agni.v1.webapi.ImportDesignFilesResponse
@@ -709,7 +845,7 @@ export type ImportDesignFilesResponse = Message<"agni.v1.webapi.ImportDesignFile
  * Use `create(ImportDesignFilesResponseSchema)` to create a new message.
  */
 export const ImportDesignFilesResponseSchema: GenMessage<ImportDesignFilesResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_designs, 21);
+  messageDesc(file_agni_v1_webapi_designs, 25);
 
 /**
  * ReportView is how much of a report a read returns (AIP-157). A report keeps its whole run, every
@@ -929,6 +1065,24 @@ export const DesignService: GenService<{
     methodKind: "unary";
     input: typeof ImportDesignFilesRequestSchema;
     output: typeof ImportDesignFilesResponseSchema;
+  },
+  /**
+   * AddDesigns makes designs from boards in a mounted folder (agni issue 1736). The server proposes
+   * the folder's designs as WorkspaceService.ProposeDesigns does, and a person picks which to add.
+   * Each added design is a stored one: the server copies its files by hash, groups them into
+   * artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
+   * series and intent come from the proposal and the request, so the server writes nothing into the
+   * mount. A proposal the request does not name is not added. With validate_only the server answers
+   * the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
+   * design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
+   * FAILED_PRECONDITION.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.AddDesigns
+   */
+  addDesigns: {
+    methodKind: "unary";
+    input: typeof AddDesignsRequestSchema;
+    output: typeof AddDesignsResponseSchema;
   },
   /**
    * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the

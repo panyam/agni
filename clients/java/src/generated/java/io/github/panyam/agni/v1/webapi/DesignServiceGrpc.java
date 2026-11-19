@@ -332,6 +332,37 @@ public final class DesignServiceGrpc {
     return getImportDesignFilesMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.AddDesignsRequest,
+      io.github.panyam.agni.v1.webapi.AddDesignsResponse> getAddDesignsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AddDesigns",
+      requestType = io.github.panyam.agni.v1.webapi.AddDesignsRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.AddDesignsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.AddDesignsRequest,
+      io.github.panyam.agni.v1.webapi.AddDesignsResponse> getAddDesignsMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.AddDesignsRequest, io.github.panyam.agni.v1.webapi.AddDesignsResponse> getAddDesignsMethod;
+    if ((getAddDesignsMethod = DesignServiceGrpc.getAddDesignsMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getAddDesignsMethod = DesignServiceGrpc.getAddDesignsMethod) == null) {
+          DesignServiceGrpc.getAddDesignsMethod = getAddDesignsMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.AddDesignsRequest, io.github.panyam.agni.v1.webapi.AddDesignsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AddDesigns"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.AddDesignsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.AddDesignsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("AddDesigns"))
+              .build();
+        }
+      }
+    }
+    return getAddDesignsMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteArtifactRequest,
       com.google.protobuf.Empty> getDeleteArtifactMethod;
 
@@ -684,6 +715,24 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * AddDesigns makes designs from boards in a mounted folder (agni issue 1736). The server proposes
+     * the folder's designs as WorkspaceService.ProposeDesigns does, and a person picks which to add.
+     * Each added design is a stored one: the server copies its files by hash, groups them into
+     * artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
+     * series and intent come from the proposal and the request, so the server writes nothing into the
+     * mount. A proposal the request does not name is not added. With validate_only the server answers
+     * the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
+     * design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
+     * FAILED_PRECONDITION.
+     * </pre>
+     */
+    default void addDesigns(io.github.panyam.agni.v1.webapi.AddDesignsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.AddDesignsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAddDesignsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
      * design unable to be read until another is put.
      * </pre>
@@ -920,6 +969,25 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * AddDesigns makes designs from boards in a mounted folder (agni issue 1736). The server proposes
+     * the folder's designs as WorkspaceService.ProposeDesigns does, and a person picks which to add.
+     * Each added design is a stored one: the server copies its files by hash, groups them into
+     * artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
+     * series and intent come from the proposal and the request, so the server writes nothing into the
+     * mount. A proposal the request does not name is not added. With validate_only the server answers
+     * the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
+     * design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
+     * FAILED_PRECONDITION.
+     * </pre>
+     */
+    public void addDesigns(io.github.panyam.agni.v1.webapi.AddDesignsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.AddDesignsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAddDesignsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
      * design unable to be read until another is put.
      * </pre>
@@ -1130,6 +1198,24 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * AddDesigns makes designs from boards in a mounted folder (agni issue 1736). The server proposes
+     * the folder's designs as WorkspaceService.ProposeDesigns does, and a person picks which to add.
+     * Each added design is a stored one: the server copies its files by hash, groups them into
+     * artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
+     * series and intent come from the proposal and the request, so the server writes nothing into the
+     * mount. A proposal the request does not name is not added. With validate_only the server answers
+     * the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
+     * design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
+     * FAILED_PRECONDITION.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.AddDesignsResponse addDesigns(io.github.panyam.agni.v1.webapi.AddDesignsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAddDesignsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
      * design unable to be read until another is put.
      * </pre>
@@ -1331,6 +1417,24 @@ public final class DesignServiceGrpc {
     public io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse importDesignFiles(io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getImportDesignFilesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * AddDesigns makes designs from boards in a mounted folder (agni issue 1736). The server proposes
+     * the folder's designs as WorkspaceService.ProposeDesigns does, and a person picks which to add.
+     * Each added design is a stored one: the server copies its files by hash, groups them into
+     * artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
+     * series and intent come from the proposal and the request, so the server writes nothing into the
+     * mount. A proposal the request does not name is not added. With validate_only the server answers
+     * the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
+     * design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
+     * FAILED_PRECONDITION.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.AddDesignsResponse addDesigns(io.github.panyam.agni.v1.webapi.AddDesignsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAddDesignsMethod(), getCallOptions(), request);
     }
 
     /**
@@ -1550,6 +1654,25 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * AddDesigns makes designs from boards in a mounted folder (agni issue 1736). The server proposes
+     * the folder's designs as WorkspaceService.ProposeDesigns does, and a person picks which to add.
+     * Each added design is a stored one: the server copies its files by hash, groups them into
+     * artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
+     * series and intent come from the proposal and the request, so the server writes nothing into the
+     * mount. A proposal the request does not name is not added. With validate_only the server answers
+     * the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
+     * design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
+     * FAILED_PRECONDITION.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.AddDesignsResponse> addDesigns(
+        io.github.panyam.agni.v1.webapi.AddDesignsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAddDesignsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
      * design unable to be read until another is put.
      * </pre>
@@ -1620,11 +1743,12 @@ public final class DesignServiceGrpc {
   private static final int METHODID_UPDATE_ARTIFACT = 7;
   private static final int METHODID_BATCH_UPDATE_ARTIFACTS = 8;
   private static final int METHODID_IMPORT_DESIGN_FILES = 9;
-  private static final int METHODID_DELETE_ARTIFACT = 10;
-  private static final int METHODID_CREATE_REPORT = 11;
-  private static final int METHODID_GET_REPORT = 12;
-  private static final int METHODID_LIST_REPORTS = 13;
-  private static final int METHODID_DELETE_REPORT = 14;
+  private static final int METHODID_ADD_DESIGNS = 10;
+  private static final int METHODID_DELETE_ARTIFACT = 11;
+  private static final int METHODID_CREATE_REPORT = 12;
+  private static final int METHODID_GET_REPORT = 13;
+  private static final int METHODID_LIST_REPORTS = 14;
+  private static final int METHODID_DELETE_REPORT = 15;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1682,6 +1806,10 @@ public final class DesignServiceGrpc {
         case METHODID_IMPORT_DESIGN_FILES:
           serviceImpl.importDesignFiles((io.github.panyam.agni.v1.webapi.ImportDesignFilesRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse>) responseObserver);
+          break;
+        case METHODID_ADD_DESIGNS:
+          serviceImpl.addDesigns((io.github.panyam.agni.v1.webapi.AddDesignsRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.AddDesignsResponse>) responseObserver);
           break;
         case METHODID_DELETE_ARTIFACT:
           serviceImpl.deleteArtifact((io.github.panyam.agni.v1.webapi.DeleteArtifactRequest) request,
@@ -1792,6 +1920,13 @@ public final class DesignServiceGrpc {
               io.github.panyam.agni.v1.webapi.ImportDesignFilesResponse>(
                 service, METHODID_IMPORT_DESIGN_FILES)))
         .addMethod(
+          getAddDesignsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.AddDesignsRequest,
+              io.github.panyam.agni.v1.webapi.AddDesignsResponse>(
+                service, METHODID_ADD_DESIGNS)))
+        .addMethod(
           getDeleteArtifactMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -1884,6 +2019,7 @@ public final class DesignServiceGrpc {
               .addMethod(getUpdateArtifactMethod())
               .addMethod(getBatchUpdateArtifactsMethod())
               .addMethod(getImportDesignFilesMethod())
+              .addMethod(getAddDesignsMethod())
               .addMethod(getDeleteArtifactMethod())
               .addMethod(getCreateReportMethod())
               .addMethod(getGetReportMethod())

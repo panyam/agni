@@ -63,6 +63,9 @@ const (
 	// DesignServiceImportDesignFilesProcedure is the fully-qualified name of the DesignService's
 	// ImportDesignFiles RPC.
 	DesignServiceImportDesignFilesProcedure = "/agni.v1.webapi.DesignService/ImportDesignFiles"
+	// DesignServiceAddDesignsProcedure is the fully-qualified name of the DesignService's AddDesigns
+	// RPC.
+	DesignServiceAddDesignsProcedure = "/agni.v1.webapi.DesignService/AddDesigns"
 	// DesignServiceDeleteArtifactProcedure is the fully-qualified name of the DesignService's
 	// DeleteArtifact RPC.
 	DesignServiceDeleteArtifactProcedure = "/agni.v1.webapi.DesignService/DeleteArtifact"
@@ -124,6 +127,16 @@ type DesignServiceClient interface {
 	// design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
 	// are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
 	ImportDesignFiles(context.Context, *connect.Request[webapi.ImportDesignFilesRequest]) (*connect.Response[webapi.ImportDesignFilesResponse], error)
+	// AddDesigns makes designs from boards in a mounted folder (agni issue 1736). The server proposes
+	// the folder's designs as WorkspaceService.ProposeDesigns does, and a person picks which to add.
+	// Each added design is a stored one: the server copies its files by hash, groups them into
+	// artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
+	// series and intent come from the proposal and the request, so the server writes nothing into the
+	// mount. A proposal the request does not name is not added. With validate_only the server answers
+	// the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
+	// design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
+	// FAILED_PRECONDITION.
+	AddDesigns(context.Context, *connect.Request[webapi.AddDesignsRequest]) (*connect.Response[webapi.AddDesignsResponse], error)
 	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
 	// design unable to be read until another is put.
 	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
@@ -213,6 +226,12 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("ImportDesignFiles")),
 			connect.WithClientOptions(opts...),
 		),
+		addDesigns: connect.NewClient[webapi.AddDesignsRequest, webapi.AddDesignsResponse](
+			httpClient,
+			baseURL+DesignServiceAddDesignsProcedure,
+			connect.WithSchema(designServiceMethods.ByName("AddDesigns")),
+			connect.WithClientOptions(opts...),
+		),
 		deleteArtifact: connect.NewClient[webapi.DeleteArtifactRequest, emptypb.Empty](
 			httpClient,
 			baseURL+DesignServiceDeleteArtifactProcedure,
@@ -258,6 +277,7 @@ type designServiceClient struct {
 	updateArtifact       *connect.Client[webapi.UpdateArtifactRequest, webapi.Artifact]
 	batchUpdateArtifacts *connect.Client[webapi.BatchUpdateArtifactsRequest, webapi.BatchUpdateArtifactsResponse]
 	importDesignFiles    *connect.Client[webapi.ImportDesignFilesRequest, webapi.ImportDesignFilesResponse]
+	addDesigns           *connect.Client[webapi.AddDesignsRequest, webapi.AddDesignsResponse]
 	deleteArtifact       *connect.Client[webapi.DeleteArtifactRequest, emptypb.Empty]
 	createReport         *connect.Client[webapi.CreateReportRequest, webapi.Report]
 	getReport            *connect.Client[webapi.GetReportRequest, webapi.Report]
@@ -313,6 +333,11 @@ func (c *designServiceClient) BatchUpdateArtifacts(ctx context.Context, req *con
 // ImportDesignFiles calls agni.v1.webapi.DesignService.ImportDesignFiles.
 func (c *designServiceClient) ImportDesignFiles(ctx context.Context, req *connect.Request[webapi.ImportDesignFilesRequest]) (*connect.Response[webapi.ImportDesignFilesResponse], error) {
 	return c.importDesignFiles.CallUnary(ctx, req)
+}
+
+// AddDesigns calls agni.v1.webapi.DesignService.AddDesigns.
+func (c *designServiceClient) AddDesigns(ctx context.Context, req *connect.Request[webapi.AddDesignsRequest]) (*connect.Response[webapi.AddDesignsResponse], error) {
+	return c.addDesigns.CallUnary(ctx, req)
 }
 
 // DeleteArtifact calls agni.v1.webapi.DesignService.DeleteArtifact.
@@ -385,6 +410,16 @@ type DesignServiceHandler interface {
 	// design, or more than one, are INVALID_ARGUMENT naming what they make. Contents the server lacks
 	// are FAILED_PRECONDITION with a BlobsMissing detail, as UpdateArtifact reports them.
 	ImportDesignFiles(context.Context, *connect.Request[webapi.ImportDesignFilesRequest]) (*connect.Response[webapi.ImportDesignFilesResponse], error)
+	// AddDesigns makes designs from boards in a mounted folder (agni issue 1736). The server proposes
+	// the folder's designs as WorkspaceService.ProposeDesigns does, and a person picks which to add.
+	// Each added design is a stored one: the server copies its files by hash, groups them into
+	// artifacts as ImportDesignFiles does, and records each artifact's source in the mount. Its title,
+	// series and intent come from the proposal and the request, so the server writes nothing into the
+	// mount. A proposal the request does not name is not added. With validate_only the server answers
+	// the designs it would make and writes nothing. A folder outside every mount is NOT_FOUND, an id a
+	// design already holds is ALREADY_EXISTS, and a server with no --store or --uploads is
+	// FAILED_PRECONDITION.
+	AddDesigns(context.Context, *connect.Request[webapi.AddDesignsRequest]) (*connect.Response[webapi.AddDesignsResponse], error)
 	// DeleteArtifact removes one artifact. Removing the design's only netlist or schematic leaves the
 	// design unable to be read until another is put.
 	DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error)
@@ -470,6 +505,12 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("ImportDesignFiles")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceAddDesignsHandler := connect.NewUnaryHandler(
+		DesignServiceAddDesignsProcedure,
+		svc.AddDesigns,
+		connect.WithSchema(designServiceMethods.ByName("AddDesigns")),
+		connect.WithHandlerOptions(opts...),
+	)
 	designServiceDeleteArtifactHandler := connect.NewUnaryHandler(
 		DesignServiceDeleteArtifactProcedure,
 		svc.DeleteArtifact,
@@ -522,6 +563,8 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceBatchUpdateArtifactsHandler.ServeHTTP(w, r)
 		case DesignServiceImportDesignFilesProcedure:
 			designServiceImportDesignFilesHandler.ServeHTTP(w, r)
+		case DesignServiceAddDesignsProcedure:
+			designServiceAddDesignsHandler.ServeHTTP(w, r)
 		case DesignServiceDeleteArtifactProcedure:
 			designServiceDeleteArtifactHandler.ServeHTTP(w, r)
 		case DesignServiceCreateReportProcedure:
@@ -579,6 +622,10 @@ func (UnimplementedDesignServiceHandler) BatchUpdateArtifacts(context.Context, *
 
 func (UnimplementedDesignServiceHandler) ImportDesignFiles(context.Context, *connect.Request[webapi.ImportDesignFilesRequest]) (*connect.Response[webapi.ImportDesignFilesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.ImportDesignFiles is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) AddDesigns(context.Context, *connect.Request[webapi.AddDesignsRequest]) (*connect.Response[webapi.AddDesignsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.AddDesigns is not implemented"))
 }
 
 func (UnimplementedDesignServiceHandler) DeleteArtifact(context.Context, *connect.Request[webapi.DeleteArtifactRequest]) (*connect.Response[emptypb.Empty], error) {

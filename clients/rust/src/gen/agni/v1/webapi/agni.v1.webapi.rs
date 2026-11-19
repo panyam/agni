@@ -2644,6 +2644,57 @@ pub struct Artifact {
     /// update_time is when the artifact's files last changed. It is output only.
     #[prost(message, optional, tag="5")]
     pub update_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    /// source is where the artifact's files came from, for an artifact added from a mounted folder
+    /// (agni issue 1736). It is empty for an uploaded artifact. The server reads the files once, when
+    /// the design is added, and keeps its own copy by hash. Output only.
+    #[prost(message, optional, tag="6")]
+    pub source: ::core::option::Option<ArtifactSource>,
+}
+/// ArtifactSource names the place in a mount an artifact's files were read from.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ArtifactSource {
+    /// mount is the mount's name.
+    #[prost(string, tag="1")]
+    pub mount: ::prost::alloc::string::String,
+    /// path is the folder in the mount the artifact's file paths are relative to.
+    #[prost(string, tag="2")]
+    pub path: ::prost::alloc::string::String,
+    /// ref is the version of the mount the files were read at, empty for a folder with no history.
+    #[prost(string, tag="3")]
+    pub r#ref: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AddDesignsRequest {
+    /// uri is the folder to propose designs in, "mount://<mount>/<dir>".
+    #[prost(string, tag="1")]
+    pub uri: ::prost::alloc::string::String,
+    /// designs are the proposals to add, each named by its folder.
+    #[prost(message, repeated, tag="2")]
+    pub designs: ::prost::alloc::vec::Vec<DesignToAdd>,
+    /// validate_only answers the designs the request would make, and writes nothing (AIP-163).
+    #[prost(bool, tag="3")]
+    pub validate_only: bool,
+}
+/// DesignToAdd picks one proposal and names the design it becomes.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DesignToAdd {
+    /// folder is the proposal's folder, mount-relative, as ProposedDesign.folder spells it.
+    #[prost(string, tag="1")]
+    pub folder: ::prost::alloc::string::String,
+    /// design_id is the new design's id. Empty takes the proposal's name, lowercased.
+    #[prost(string, tag="2")]
+    pub design_id: ::prost::alloc::string::String,
+    /// title and series are the new design's. An empty title takes the proposal's.
+    #[prost(string, tag="3")]
+    pub title: ::prost::alloc::string::String,
+    #[prost(string, tag="4")]
+    pub series: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AddDesignsResponse {
+    /// designs are the designs made, in the request's order.
+    #[prost(message, repeated, tag="1")]
+    pub designs: ::prost::alloc::vec::Vec<Design>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetArtifactRequest {

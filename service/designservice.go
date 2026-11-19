@@ -28,9 +28,9 @@ type DesignService struct {
 	reports ReportStore
 	checks  *CheckService
 	packs   PackLookup
-	// mountedList and mountedRead hash a mounted design's files for a report (agni issue 1746).
-	mountedList DesignFileLister
-	mountedRead FileReader
+	// proposer and mountRead read mounted folders into designs (agni issue 1736).
+	proposer  DesignProposer
+	mountRead FileReader
 }
 
 // NewDesignService returns a DesignService over catalog, reading uploaded file contents from blobs.
@@ -403,21 +403,39 @@ func newer(a, b *webapi.Design) bool {
 	return a.GetName() > b.GetName()
 }
 
-var designFilterPattern = regexp.MustCompile(`^\s*(series|project)\s*=\s*"([^"]*)"\s*$`)
+var designFilterPattern = regexp.MustCompile(`^\s*(series|project|source)\s*=\s*"([^"]*)"\s*$`)
 
-// parseFilter reads the two supported AIP-160 filters, `series = "..."` and `project = "..."`. Any
-// other filter is an error rather than an ignored argument, as parseProjectFilter explains.
+// parseFilter reads the three supported AIP-160 filters, `series = "..."`, `project = "..."` and
+// `source = "mount://m/path"`. The last keeps the designs with an artifact read from that folder of
+// a mount, or from a folder under it (agni issue 1736). Any other filter is an error rather than an
+// ignored argument, as parseProjectFilter explains.
 func (s *DesignService) parseFilter(ctx context.Context, filter string) (func(*webapi.Design) bool, error) {
 	if strings.TrimSpace(filter) == "" {
 		return func(*webapi.Design) bool { return true }, nil
 	}
 	m := designFilterPattern.FindStringSubmatch(filter)
 	if m == nil {
-		return nil, fmt.Errorf(`%w: filter %q is not supported; the supported filters are series = "<series>" and project = "projects/<project>"`, ErrInvalidArgument, filter)
+		return nil, fmt.Errorf(`%w: filter %q is not supported; the supported filters are series = "<series>", project = "projects/<project>" and source = "mount://<mount>/<path>"`, ErrInvalidArgument, filter)
 	}
-	if m[1] == "series" {
+	switch m[1] {
+	case "series":
 		series := m[2]
 		return func(d *webapi.Design) bool { return d.GetSeries() == series }, nil
+	case "source":
+		u, err := ParseArtifactURI(m[2])
+		if err != nil {
+			return nil, err
+		}
+		return func(d *webapi.Design) bool {
+			arts, err := s.catalog.Artifacts(ctx, d.GetName())
+			if err != nil {
+				return false
+			}
+			return slices.ContainsFunc(arts, func(a *webapi.Artifact) bool {
+				src := a.GetSource()
+				return src.GetMount() == u.Mount && (u.Path == "" || src.GetPath() == u.Path || strings.HasPrefix(src.GetPath(), u.Path+"/"))
+			})
+		}, nil
 	}
 	if s.projects == nil {
 		return nil, fmt.Errorf("%w: no project %q", ErrNotFound, m[2])
