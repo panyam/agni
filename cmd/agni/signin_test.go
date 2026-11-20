@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -168,7 +169,8 @@ func TestAgniLoginSignsInFromATerminal(t *testing.T) {
 	}
 
 	p, _ := credentials.File()
-	if fi, err := os.Stat(p); err != nil || fi.Mode().Perm() != 0o600 {
+	// Windows has no Unix modes, and Go reports any writable file there as 0666.
+	if fi, err := os.Stat(p); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 		t.Errorf("the kept token at %s: %v, %v; want a file only its owner reads", p, fi, err)
 	}
 	ls, err := runCobra(t, connectionsCmd(), "ls", "--remote", server)
