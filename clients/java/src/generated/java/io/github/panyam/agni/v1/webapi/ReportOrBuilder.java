@@ -285,4 +285,68 @@ public interface ReportOrBuilder extends
    * @return The findingCount.
    */
   int getFindingCount();
+
+  /**
+   * <pre>
+   * source_versions maps each linked artifact's id to the source version the run read, a commit
+   * SHA on a github mount (agni issue 1725). An artifact read from a source with no history, or
+   * uploaded, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; source_versions = 11 [json_name = "sourceVersions"];</code>
+   */
+  int getSourceVersionsCount();
+  /**
+   * <pre>
+   * source_versions maps each linked artifact's id to the source version the run read, a commit
+   * SHA on a github mount (agni issue 1725). An artifact read from a source with no history, or
+   * uploaded, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; source_versions = 11 [json_name = "sourceVersions"];</code>
+   */
+  boolean containsSourceVersions(
+      java.lang.String key);
+  /**
+   * Use {@link #getSourceVersionsMap()} instead.
+   */
+  @java.lang.Deprecated
+  java.util.Map<java.lang.String, java.lang.String>
+  getSourceVersions();
+  /**
+   * <pre>
+   * source_versions maps each linked artifact's id to the source version the run read, a commit
+   * SHA on a github mount (agni issue 1725). An artifact read from a source with no history, or
+   * uploaded, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; source_versions = 11 [json_name = "sourceVersions"];</code>
+   */
+  java.util.Map<java.lang.String, java.lang.String>
+  getSourceVersionsMap();
+  /**
+   * <pre>
+   * source_versions maps each linked artifact's id to the source version the run read, a commit
+   * SHA on a github mount (agni issue 1725). An artifact read from a source with no history, or
+   * uploaded, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; source_versions = 11 [json_name = "sourceVersions"];</code>
+   */
+  /* nullable */
+java.lang.String getSourceVersionsOrDefault(
+      java.lang.String key,
+      /* nullable */
+java.lang.String defaultValue);
+  /**
+   * <pre>
+   * source_versions maps each linked artifact's id to the source version the run read, a commit
+   * SHA on a github mount (agni issue 1725). An artifact read from a source with no history, or
+   * uploaded, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; source_versions = 11 [json_name = "sourceVersions"];</code>
+   */
+  java.lang.String getSourceVersionsOrThrow(
+      java.lang.String key);
 }

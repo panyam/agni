@@ -363,7 +363,11 @@ func (s *DirStore) DeleteDesign(_ context.Context, id string) error {
 	if _, err := s.load(id); err != nil {
 		return err
 	}
-	return os.Remove(s.recordPath(id))
+	if err := os.Remove(s.recordPath(id)); err != nil {
+		return err
+	}
+	// Its revisions go with it, and the next sweep removes their views and files.
+	return os.RemoveAll(s.revisionsOf(id))
 }
 
 // Artifacts reads a design's artifacts from its record, ordered by id.
@@ -407,19 +411,42 @@ func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []servi
 	if err != nil {
 		return nil, err
 	}
+	next, written, err := s.apply(ctx, id, rec, writes, blobs)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.commit(id, &next); err != nil {
+		return nil, err
+	}
+	// A link or a sync read a source, so the files it read are kept as a revision (agni issue 1725).
+	if slices.ContainsFunc(writes, func(w service.ArtifactWrite) bool { return w.Source.GetReadHash() != "" }) && next.Rev != "" {
+		if _, err := s.keepRevision(id, next, ""); err != nil {
+			return nil, err
+		}
+	}
+	out := make([]*webapi.Artifact, 0, len(writes))
+	for _, w := range writes {
+		out = append(out, s.artifactOf(id, written[w.ID]))
+	}
+	return out, nil
+}
+
+// apply returns rec with writes applied, and the artifacts it wrote by id. It stores each write's
+// files as blobs and changes nothing on disk else.
+func (s *DirStore) apply(ctx context.Context, id string, rec recordYAML, writes []service.ArtifactWrite, blobs service.BlobSource) (recordYAML, map[string]artifactRecord, error) {
 	written := map[string]artifactRecord{}
 	var missing []string
 	now := s.clock()
 	for _, w := range writes {
 		if !idPattern.MatchString(w.ID) || w.ID == DesignDescriptor || w.ID == draftDescriptor {
-			return nil, fmt.Errorf("%w: artifact id %q must be lowercase letters, digits, '.', '_' or '-', and not a descriptor's name", service.ErrInvalidArgument, w.ID)
+			return recordYAML{}, nil, fmt.Errorf("%w: artifact id %q must be lowercase letters, digits, '.', '_' or '-', and not a descriptor's name", service.ErrInvalidArgument, w.ID)
 		}
 		if !w.AllowMissing && !slices.ContainsFunc(rec.Artifacts, func(a artifactRecord) bool { return a.ID == w.ID }) {
-			return nil, fmt.Errorf("%w: no artifact %s", service.ErrNotFound, service.ArtifactName(id, w.ID))
+			return recordYAML{}, nil, fmt.Errorf("%w: no artifact %s", service.ErrNotFound, service.ArtifactName(id, w.ID))
 		}
 		files, lacking, err := s.contents(ctx, w, blobs)
 		if err != nil {
-			return nil, err
+			return recordYAML{}, nil, err
 		}
 		missing = append(missing, lacking...)
 		if len(lacking) > 0 {
@@ -427,14 +454,14 @@ func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []servi
 		}
 		a, err := s.keep(w.ID, files, now)
 		if err != nil {
-			return nil, err
+			return recordYAML{}, nil, err
 		}
 		a.Source = sourceRecordOf(w.Source)
 		written[w.ID] = a
 	}
 	if len(missing) > 0 {
 		slices.Sort(missing)
-		return nil, &service.BlobsMissingError{Hashes: slices.Compact(missing)}
+		return recordYAML{}, nil, &service.BlobsMissingError{Hashes: slices.Compact(missing)}
 	}
 	next := rec
 	next.Artifacts = nil
@@ -447,14 +474,7 @@ func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []servi
 		next.Artifacts = append(next.Artifacts, a)
 	}
 	slices.SortFunc(next.Artifacts, func(a, b artifactRecord) int { return strings.Compare(a.ID, b.ID) })
-	if err := s.commit(id, &next); err != nil {
-		return nil, err
-	}
-	out := make([]*webapi.Artifact, 0, len(writes))
-	for _, w := range writes {
-		out = append(out, s.artifactOf(id, written[w.ID]))
-	}
-	return out, nil
+	return next, written, nil
 }
 
 // keep stores an artifact's files as blobs and classifies them into its record.
@@ -622,6 +642,11 @@ func (s *DirStore) Sweep(keep map[string]bool, grace time.Duration, more ...blob
 			}
 		}
 	}
+	// A kept revision keeps its view and its files (agni issue 1725).
+	kept, err := s.revisionRefs(ids, refs)
+	if err != nil {
+		return 0, 0, err
+	}
 	cutoff := time.Now().Add(-grace)
 	designs, err := os.ReadDir(s.views)
 	if err != nil {
@@ -640,7 +665,7 @@ func (s *DirStore) Sweep(keep map[string]bool, grace time.Duration, more ...blob
 		}
 		left := len(revs)
 		for _, r := range revs {
-			if r.Name() == current[d.Name()] {
+			if r.Name() == current[d.Name()] || kept[d.Name()][r.Name()] {
 				continue
 			}
 			fi, err := r.Info()

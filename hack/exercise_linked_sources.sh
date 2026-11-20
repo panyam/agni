@@ -5,8 +5,9 @@
 # compares the count with agni check on the same files from the samples. Then it moves both links to
 # 1.1.3, checks again, and counts the files the move downloaded against the files that differ. A sync
 # of the pinned links must fetch nothing, and the mount must refuse removal while the links point in.
-# Last, it restarts the server over the same folders and reads everything again. It kills only the
-# server it started.
+# Then it restarts the server over the same folders and reads everything again. Last, it diffs
+# designs/bb@1.1.2 against designs/bb@1.1.3 and compares the counts with agni diff on the two folders
+# (agni issue 1725). It kills only the server it started.
 #
 # It reads GitHub, so it is run by hand and not in the gate. The Go tests in
 # cmd/agni/linkreaders_test.go run the same steps against a fake GitHub.
@@ -55,6 +56,8 @@ trap stop EXIT
 
 step() { printf '\n== %s\n' "$*"; }
 findings() { python3 -c 'import json,sys; print(len(json.load(sys.stdin)["findings"]))'; }
+# changes sums a diff's components added, removed and changed, and its nets, from its JSON.
+changes() { python3 -c 'import json,sys; r=json.load(sys.stdin).get("report",{}); print(" ".join(str(len(r.get(k,[]))) for k in ("componentsAdded","componentsRemoved","componentsChanged","nets")))'; }
 # Each samples revision is copied without the design.yaml agni-samples adds, so the copy holds what
 # the repo holds at that commit.
 for r in 1.1.2 1.1.3; do
@@ -141,6 +144,27 @@ else
   fail=1
 fi
 check 1.1.3
+
+step "diff designs/bb@1.1.2 against designs/bb@1.1.3"
+# Each revision is the design as of one commit (agni issue 1725). Both were read above, so the diff
+# downloads nothing.
+before=$(downloaded)
+stored=$("$agni" diff "designs/bb@$v112" "designs/bb@$v113" --remote "$url" --format json | changes)
+local_=$("$agni" diff "$out/folder-1.1.2" "$out/folder-1.1.3" --format json 2>/dev/null | changes)
+echo "designs/bb@1.1.2 -> @1.1.3: added removed changed nets = $stored; the folders: $local_"
+if [ -n "$stored" ] && [ "$stored" != "0 0 0 0" ] && [ "$stored" = "$local_" ] && [ "$(downloaded)" = "$before" ]; then
+  echo "PASS: the diff of the two revisions matches the folders', and downloaded nothing"
+else
+  echo "FAIL: the diff of the two revisions differs from the folders', or downloaded files" >&2
+  fail=1
+fi
+"$agni" designs revisions bb --remote "$url" | tee "$out/revisions.txt"
+if grep -q "refs $v112" "$out/revisions.txt" && grep -q "refs $v113" "$out/revisions.txt"; then
+  echo "PASS: both commits name a revision"
+else
+  echo "FAIL: designs revisions bb doesn't name both commits; see $out/revisions.txt" >&2
+  fail=1
+fi
 
 # A private repo, read through a token connection (agni issue 1724). It runs when GITHUB_TOKEN and
 # PRIVATE_REPO=owner/repo are set, and is skipped otherwise, since the public repo above needs none.

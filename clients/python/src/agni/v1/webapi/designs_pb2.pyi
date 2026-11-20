@@ -15,6 +15,12 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class DesignRevisionSource(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    DESIGN_REVISION_SOURCE_UNSPECIFIED: _ClassVar[DesignRevisionSource]
+    DESIGN_REVISION_SOURCE_TAGS: _ClassVar[DesignRevisionSource]
+    DESIGN_REVISION_SOURCE_COMMITS: _ClassVar[DesignRevisionSource]
+
 class ReportView(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     REPORT_VIEW_UNSPECIFIED: _ClassVar[ReportView]
@@ -29,6 +35,9 @@ class ArtifactType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ARTIFACT_TYPE_BOARD: _ClassVar[ArtifactType]
     ARTIFACT_TYPE_OTHER: _ClassVar[ArtifactType]
     ARTIFACT_TYPE_SYMBOLS: _ClassVar[ArtifactType]
+DESIGN_REVISION_SOURCE_UNSPECIFIED: DesignRevisionSource
+DESIGN_REVISION_SOURCE_TAGS: DesignRevisionSource
+DESIGN_REVISION_SOURCE_COMMITS: DesignRevisionSource
 REPORT_VIEW_UNSPECIFIED: ReportView
 REPORT_VIEW_BASIC: ReportView
 REPORT_VIEW_FULL: ReportView
@@ -40,7 +49,14 @@ ARTIFACT_TYPE_OTHER: ArtifactType
 ARTIFACT_TYPE_SYMBOLS: ArtifactType
 
 class Report(_message.Message):
-    __slots__ = ("name", "packs", "project", "design_hash", "pack_hashes", "results", "create_time", "design_changed", "packs_changed", "finding_count")
+    __slots__ = ("name", "packs", "project", "design_hash", "pack_hashes", "results", "create_time", "design_changed", "packs_changed", "finding_count", "source_versions")
+    class SourceVersionsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     NAME_FIELD_NUMBER: _ClassVar[int]
     PACKS_FIELD_NUMBER: _ClassVar[int]
     PROJECT_FIELD_NUMBER: _ClassVar[int]
@@ -51,6 +67,7 @@ class Report(_message.Message):
     DESIGN_CHANGED_FIELD_NUMBER: _ClassVar[int]
     PACKS_CHANGED_FIELD_NUMBER: _ClassVar[int]
     FINDING_COUNT_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_VERSIONS_FIELD_NUMBER: _ClassVar[int]
     name: str
     packs: _containers.RepeatedScalarFieldContainer[str]
     project: str
@@ -61,7 +78,57 @@ class Report(_message.Message):
     design_changed: bool
     packs_changed: _containers.RepeatedScalarFieldContainer[str]
     finding_count: int
-    def __init__(self, name: _Optional[str] = ..., packs: _Optional[_Iterable[str]] = ..., project: _Optional[str] = ..., design_hash: _Optional[str] = ..., pack_hashes: _Optional[_Iterable[str]] = ..., results: _Optional[_Union[_checks_pb2.CheckDesignResponse, _Mapping]] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., design_changed: _Optional[bool] = ..., packs_changed: _Optional[_Iterable[str]] = ..., finding_count: _Optional[int] = ...) -> None: ...
+    source_versions: _containers.ScalarMap[str, str]
+    def __init__(self, name: _Optional[str] = ..., packs: _Optional[_Iterable[str]] = ..., project: _Optional[str] = ..., design_hash: _Optional[str] = ..., pack_hashes: _Optional[_Iterable[str]] = ..., results: _Optional[_Union[_checks_pb2.CheckDesignResponse, _Mapping]] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., design_changed: _Optional[bool] = ..., packs_changed: _Optional[_Iterable[str]] = ..., finding_count: _Optional[int] = ..., source_versions: _Optional[_Mapping[str, str]] = ...) -> None: ...
+
+class DesignRevision(_message.Message):
+    __slots__ = ("name", "revision_id", "refs", "source_versions", "create_time", "current", "commit_time", "message")
+    class SourceVersionsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    REVISION_ID_FIELD_NUMBER: _ClassVar[int]
+    REFS_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_VERSIONS_FIELD_NUMBER: _ClassVar[int]
+    CREATE_TIME_FIELD_NUMBER: _ClassVar[int]
+    CURRENT_FIELD_NUMBER: _ClassVar[int]
+    COMMIT_TIME_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    revision_id: str
+    refs: _containers.RepeatedScalarFieldContainer[str]
+    source_versions: _containers.ScalarMap[str, str]
+    create_time: _timestamp_pb2.Timestamp
+    current: bool
+    commit_time: _timestamp_pb2.Timestamp
+    message: str
+    def __init__(self, name: _Optional[str] = ..., revision_id: _Optional[str] = ..., refs: _Optional[_Iterable[str]] = ..., source_versions: _Optional[_Mapping[str, str]] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., current: _Optional[bool] = ..., commit_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., message: _Optional[str] = ...) -> None: ...
+
+class ListDesignRevisionsRequest(_message.Message):
+    __slots__ = ("parent", "page_size", "page_token", "source", "branch")
+    PARENT_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    BRANCH_FIELD_NUMBER: _ClassVar[int]
+    parent: str
+    page_size: int
+    page_token: str
+    source: DesignRevisionSource
+    branch: str
+    def __init__(self, parent: _Optional[str] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ..., source: _Optional[_Union[DesignRevisionSource, str]] = ..., branch: _Optional[str] = ...) -> None: ...
+
+class ListDesignRevisionsResponse(_message.Message):
+    __slots__ = ("revisions", "next_page_token")
+    REVISIONS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    revisions: _containers.RepeatedCompositeFieldContainer[DesignRevision]
+    next_page_token: str
+    def __init__(self, revisions: _Optional[_Iterable[_Union[DesignRevision, _Mapping]]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class CreateReportRequest(_message.Message):
     __slots__ = ("parent", "report_id", "report", "project")

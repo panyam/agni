@@ -5,9 +5,9 @@ go 1.26.9
 require (
 	connectrpc.com/connect v1.21.1
 	github.com/panyam/agni v0.0.0
-	github.com/panyam/goapplib v0.7.15
-	github.com/panyam/goapplib/storage v0.7.15
-	github.com/panyam/oneauth v0.3.9
+	github.com/panyam/goapplib v0.7.16
+	github.com/panyam/goapplib/storage v0.7.16
+	github.com/panyam/oneauth v0.3.10
 	github.com/panyam/servicekit v0.2.3
 	github.com/spf13/cobra v1.10.2
 	google.golang.org/protobuf v1.36.12

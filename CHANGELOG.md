@@ -12,6 +12,23 @@ GitHub Release body carries.
 
 ### Added
 
+- A linked design reads at any ref of its source as `designs/<id>@<ref>`, for check, diff and query
+  (PR pending, issue 1725). `agni diff designs/bb@1.1.2 designs/bb@1.1.3 --remote`
+  compares two releases with no second design. The server downloads only the files it lacks and
+  leaves the design as it is. `agni designs revisions` and `DesignService.ListDesignRevisions` list
+  the revisions read, and a report names the commit each artifact was read at
+  (`Report.source_versions`).
+- `agni designs revisions --tags` and `--commits` list the linked repo's tags and a branch's commits
+  as revisions, read or not (issue 1725). Listing tags needs the mount to read through a connection.
+
+### Changed
+
+- goapplib and goapplib storage v0.7.16, and oneauth v0.3.10 (issue 1775). A folder mount now names
+  a version from its files' sizes and modification times, so a sync of an unchanged folder reads no
+  file.
+
+### Added
+
 - A design linked from a private repo opens only for a caller whose own GitHub connection reads the
   repo, on a server with `--auth tokens` (PR 1771, issue 1728). A person keeps their connection
   with `agni connections add <id> --mine --github-token env:NAME`, and the server seals the token

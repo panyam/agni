@@ -151,6 +151,9 @@ type DesignCatalog struct {
 	// guard hides a design read from a private source from a caller who can't read the source
 	// (agni issue 1728). Nil shows every design.
 	guard *AccessGuard
+	// revise reads a stored design at a revision (agni issue 1725). The DesignService over this
+	// catalog sets it, since it holds the mounts a revision reads from.
+	revise func(ctx context.Context, name, rev string) (*webapi.Design, error)
 }
 
 // NewDesignCatalog returns a catalog writing through store, which may be nil, and reading through
@@ -165,7 +168,8 @@ func (c *DesignCatalog) WithGuard(g *AccessGuard) *DesignCatalog {
 	c.guard = g
 	if g != nil {
 		g.design = func(ctx context.Context, name string) error {
-			_, _, err := c.find(ctx, name)
+			base, _ := SplitRevision(name)
+			_, _, err := c.find(ctx, base)
 			return err
 		}
 	}
@@ -197,10 +201,21 @@ func (c *DesignCatalog) readers() []DesignReader {
 	return append([]DesignReader{c.store}, c.mounted...)
 }
 
-// Design returns one design by resource name, "designs/{design}".
+// Design returns one design by resource name, "designs/{design}", or a stored design at a revision,
+// "designs/{design}@{rev}" (agni issue 1725).
 func (c *DesignCatalog) Design(ctx context.Context, name string) (*webapi.Design, error) {
-	d, _, err := c.find(ctx, name)
-	return d, err
+	base, rev := SplitRevision(name)
+	d, stored, err := c.holder(ctx, base)
+	if err != nil || rev == "" && !strings.Contains(name, "@") {
+		return d, err
+	}
+	if !stored {
+		return nil, fmt.Errorf("%w: %s is declared in a mounted folder, which keeps no revisions", ErrFailedPrecondition, base)
+	}
+	if c.revise == nil {
+		return nil, fmt.Errorf("%w: this host reads no revisions of %s", ErrFailedPrecondition, base)
+	}
+	return c.revise(ctx, base, rev)
 }
 
 // Designs returns every design in every store the caller may read, ordered by name. Names held
