@@ -21,7 +21,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -99,22 +98,24 @@ func main() {
 	log.Fatal(srv.Serve(l))
 }
 
-// read returns every file under dir by its slash path relative to dir.
+// read returns every file under dir by its slash path relative to dir. It reads through an os.Root,
+// so a link inside dir can't reach a file outside it.
 func read(dir string) (map[string]string, error) {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
 	files := map[string]string{}
-	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(root.FS(), ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		b, err := os.ReadFile(p) // #nosec G304 -- a fixture folder the spec names
+		b, err := root.ReadFile(p)
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(dir, p)
-		if err != nil {
-			return err
-		}
-		files[filepath.ToSlash(rel)] = string(b)
+		files[p] = string(b)
 		return nil
 	})
 	return files, err
