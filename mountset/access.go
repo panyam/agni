@@ -59,13 +59,14 @@ func (t *Table) CanRead(ctx context.Context, source string) error {
 
 var _ service.SourceAccess = (*Table)(nil)
 
-// SaveUserToken seals token as owner's own connection id, for service.UserTokenKeeper. The server
-// needs --connections-key to seal it.
+// SaveUserToken seals token as owner's own connection id, for service.UserTokenKeeper. The person
+// pasted it, so it is kept as pasted, and a disconnect deletes it without asking GitHub to revoke
+// it. The server needs --connections-key to seal it.
 func (t *Table) SaveUserToken(ctx context.Context, id, owner, token string) error {
 	if t.svc == nil || t.users == nil {
 		return fmt.Errorf("%w: this server keeps no person's token; start it with --connections-key env:NAME", service.ErrFailedPrecondition)
 	}
-	return service.ConnectionErr(t.svc.SaveUserToken(connections.WithViewer(ctx, owner), id, &oauth2.Token{AccessToken: token, TokenType: "bearer"}))
+	return service.ConnectionErr(t.svc.SavePastedToken(connections.WithViewer(ctx, owner), id, &oauth2.Token{AccessToken: token, TokenType: "bearer"}))
 }
 
 // ForgetUserToken deletes owner's sealed token for connection id, for service.UserTokenKeeper. It
