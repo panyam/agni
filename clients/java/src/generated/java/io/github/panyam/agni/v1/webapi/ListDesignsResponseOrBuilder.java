@@ -56,7 +56,8 @@ public interface ListDesignsResponseOrBuilder extends
 
   /**
    * <pre>
-   * unreachable names the designs left out because two mounted folders declare the same id (AIP-217).
+   * unreachable names the designs left out because two mounted folders declare the same id (AIP-217),
+   * and those whose private source couldn't say whether the caller may read them (agni issue 1728).
    * Each entry is "designs/{design}". The rest of the listing is complete.
    * </pre>
    *
@@ -67,7 +68,8 @@ public interface ListDesignsResponseOrBuilder extends
       getUnreachableList();
   /**
    * <pre>
-   * unreachable names the designs left out because two mounted folders declare the same id (AIP-217).
+   * unreachable names the designs left out because two mounted folders declare the same id (AIP-217),
+   * and those whose private source couldn't say whether the caller may read them (agni issue 1728).
    * Each entry is "designs/{design}". The rest of the listing is complete.
    * </pre>
    *
@@ -77,7 +79,8 @@ public interface ListDesignsResponseOrBuilder extends
   int getUnreachableCount();
   /**
    * <pre>
-   * unreachable names the designs left out because two mounted folders declare the same id (AIP-217).
+   * unreachable names the designs left out because two mounted folders declare the same id (AIP-217),
+   * and those whose private source couldn't say whether the caller may read them (agni issue 1728).
    * Each entry is "designs/{design}". The rest of the listing is complete.
    * </pre>
    *
@@ -88,7 +91,8 @@ public interface ListDesignsResponseOrBuilder extends
   java.lang.String getUnreachable(int index);
   /**
    * <pre>
-   * unreachable names the designs left out because two mounted folders declare the same id (AIP-217).
+   * unreachable names the designs left out because two mounted folders declare the same id (AIP-217),
+   * and those whose private source couldn't say whether the caller may read them (agni issue 1728).
    * Each entry is "designs/{design}". The rest of the listing is complete.
    * </pre>
    *

@@ -25,10 +25,21 @@ import (
 type osLoader struct {
 	mounts *mountset.Table
 	loader *formats.Loader
+	// guard refuses a read of a private source the caller can't read (agni issue 1728). Nil reads
+	// everything, as the CLI and a server without --auth do.
+	guard *service.AccessGuard
+}
+
+// resolve is the mount table's Resolve, after the guard lets the caller read uri.
+func (l *osLoader) resolve(ctx context.Context, uri mounts.URI) (string, error) {
+	if err := l.guard.URI(ctx, uri); err != nil {
+		return "", err
+	}
+	return l.mounts.Resolve(uri)
 }
 
 func (l *osLoader) Design(ctx context.Context, uri mounts.URI, opts ...service.ReadOption) (*ir.Design, error) {
-	abs, err := l.mounts.Resolve(uri)
+	abs, err := l.resolve(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +47,7 @@ func (l *osLoader) Design(ctx context.Context, uri mounts.URI, opts ...service.R
 }
 
 func (l *osLoader) Geometry(ctx context.Context, uri mounts.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
-	abs, err := l.mounts.Resolve(uri)
+	abs, err := l.resolve(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +64,7 @@ func (l *osLoader) Geometry(ctx context.Context, uri mounts.URI, layout string, 
 }
 
 func (l *osLoader) Report(ctx context.Context, uri mounts.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
-	abs, err := l.mounts.Resolve(uri)
+	abs, err := l.resolve(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +74,7 @@ func (l *osLoader) Report(ctx context.Context, uri mounts.URI, faithfulSymbols b
 // Expectations loads the design's `<path>.expect.yaml` sidecar. No sidecar is the normal case, so a
 // missing file returns (nil, nil). Only a bad URI or a malformed sidecar is an error.
 func (l *osLoader) Expectations(ctx context.Context, uri mounts.URI) (*expect.Expectations, error) {
-	abs, err := l.mounts.Resolve(uri)
+	abs, err := l.resolve(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +91,7 @@ func symbolsFor(faithful bool) string { return formats.SymbolsFor(faithful) }
 // Board resolves the physical board sidecar (WS1-006) through the formats registry. A format
 // without one yields (nil, nil), and the service then lists no board sheet.
 func (l *osLoader) Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeometry, error) {
-	abs, err := l.mounts.Resolve(uri)
+	abs, err := l.resolve(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +101,7 @@ func (l *osLoader) Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeomet
 // BoardMeshes reads model meshes by the keys in a board's model_instances, and resolves each as the
 // board read resolved its model (agni issue 1652).
 func (l *osLoader) BoardMeshes(ctx context.Context, uri mounts.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
-	abs, err := l.mounts.Resolve(uri)
+	abs, err := l.resolve(ctx, uri)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,7 +113,7 @@ func (l *osLoader) BoardMeshes(ctx context.Context, uri mounts.URI, keys []strin
 // Expectations, a manifest is a required input, so an absent or malformed file is an error rather
 // than a review over no items reporting a hollow pass.
 func (l *osLoader) Manifest(ctx context.Context, uri mounts.URI) (review.Manifest, error) {
-	abs, err := l.mounts.Resolve(uri)
+	abs, err := l.resolve(ctx, uri)
 	if err != nil {
 		return review.Manifest{}, err
 	}
@@ -117,8 +128,8 @@ func (l *osLoader) Manifest(ctx context.Context, uri mounts.URI) (review.Manifes
 // Convention resolves and parses a naming-convention config (YAML) under the mount (WS9-128). Like a
 // review manifest it is a required input once named, so an absent or malformed file is an error
 // rather than silently falling back to the server's vocabulary.
-func (l *osLoader) Convention(_ context.Context, uri mounts.URI) (*configpb.NamingConvention, error) {
-	abs, err := l.mounts.Resolve(uri)
+func (l *osLoader) Convention(ctx context.Context, uri mounts.URI) (*configpb.NamingConvention, error) {
+	abs, err := l.resolve(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -128,8 +139,8 @@ func (l *osLoader) Convention(_ context.Context, uri mounts.URI) (*configpb.Nami
 // DesignHash hashes a mounted design's entry file for a stored run's provenance (WS9-053). A URI
 // escaping its mount is an error, since containment is a security boundary. An unreadable file
 // inside the mount yields "", as hashSource documents.
-func (l *osLoader) DesignHash(_ context.Context, uri mounts.URI) (string, error) {
-	abs, err := l.mounts.Resolve(uri)
+func (l *osLoader) DesignHash(ctx context.Context, uri mounts.URI) (string, error) {
+	abs, err := l.resolve(ctx, uri)
 	if err != nil {
 		return "", err
 	}

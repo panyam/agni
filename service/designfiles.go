@@ -61,6 +61,9 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 	if err != nil {
 		return nil, err
 	}
+	if err := s.guard.URI(ctx, u); err != nil {
+		return nil, err
+	}
 	var dirs, singles []string
 	isDir, err := s.isDir(ctx, u)
 	if err != nil {

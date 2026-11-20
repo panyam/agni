@@ -23,6 +23,59 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ConnectionScope int32
+
+const (
+	ConnectionScope_CONNECTION_SCOPE_UNSPECIFIED ConnectionScope = 0
+	// CONNECTION_SCOPE_SERVER signs in as the server. Every caller the server lets in reads a mount
+	// through it.
+	ConnectionScope_CONNECTION_SCOPE_SERVER ConnectionScope = 1
+	// CONNECTION_SCOPE_PERSON signs in as the caller who made it, and only their requests use it. It
+	// decides which linked designs they may open.
+	ConnectionScope_CONNECTION_SCOPE_PERSON ConnectionScope = 2
+)
+
+// Enum value maps for ConnectionScope.
+var (
+	ConnectionScope_name = map[int32]string{
+		0: "CONNECTION_SCOPE_UNSPECIFIED",
+		1: "CONNECTION_SCOPE_SERVER",
+		2: "CONNECTION_SCOPE_PERSON",
+	}
+	ConnectionScope_value = map[string]int32{
+		"CONNECTION_SCOPE_UNSPECIFIED": 0,
+		"CONNECTION_SCOPE_SERVER":      1,
+		"CONNECTION_SCOPE_PERSON":      2,
+	}
+)
+
+func (x ConnectionScope) Enum() *ConnectionScope {
+	p := new(ConnectionScope)
+	*p = x
+	return p
+}
+
+func (x ConnectionScope) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ConnectionScope) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_connections_proto_enumTypes[0].Descriptor()
+}
+
+func (ConnectionScope) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_connections_proto_enumTypes[0]
+}
+
+func (x ConnectionScope) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ConnectionScope.Descriptor instead.
+func (ConnectionScope) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{0}
+}
+
 type ConnectionKind int32
 
 const (
@@ -32,6 +85,9 @@ const (
 	ConnectionKind_CONNECTION_KIND_GITHUB_APP ConnectionKind = 1
 	// CONNECTION_KIND_GITHUB_TOKEN sends a token, such as a fine-grained personal access token.
 	ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN ConnectionKind = 2
+	// CONNECTION_KIND_GITHUB_USER signs in as one person with their own GitHub token. It is always
+	// CONNECTION_SCOPE_PERSON, and the server keeps the token sealed rather than naming where it is.
+	ConnectionKind_CONNECTION_KIND_GITHUB_USER ConnectionKind = 3
 )
 
 // Enum value maps for ConnectionKind.
@@ -40,11 +96,13 @@ var (
 		0: "CONNECTION_KIND_UNSPECIFIED",
 		1: "CONNECTION_KIND_GITHUB_APP",
 		2: "CONNECTION_KIND_GITHUB_TOKEN",
+		3: "CONNECTION_KIND_GITHUB_USER",
 	}
 	ConnectionKind_value = map[string]int32{
 		"CONNECTION_KIND_UNSPECIFIED":  0,
 		"CONNECTION_KIND_GITHUB_APP":   1,
 		"CONNECTION_KIND_GITHUB_TOKEN": 2,
+		"CONNECTION_KIND_GITHUB_USER":  3,
 	}
 )
 
@@ -59,11 +117,11 @@ func (x ConnectionKind) String() string {
 }
 
 func (ConnectionKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_connections_proto_enumTypes[0].Descriptor()
+	return file_agni_v1_webapi_connections_proto_enumTypes[1].Descriptor()
 }
 
 func (ConnectionKind) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_connections_proto_enumTypes[0]
+	return &file_agni_v1_webapi_connections_proto_enumTypes[1]
 }
 
 func (x ConnectionKind) Number() protoreflect.EnumNumber {
@@ -72,7 +130,7 @@ func (x ConnectionKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConnectionKind.Descriptor instead.
 func (ConnectionKind) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{1}
 }
 
 type ConnectionStatus int32
@@ -109,11 +167,11 @@ func (x ConnectionStatus) String() string {
 }
 
 func (ConnectionStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_connections_proto_enumTypes[1].Descriptor()
+	return file_agni_v1_webapi_connections_proto_enumTypes[2].Descriptor()
 }
 
 func (ConnectionStatus) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_connections_proto_enumTypes[1]
+	return &file_agni_v1_webapi_connections_proto_enumTypes[2]
 }
 
 func (x ConnectionStatus) Number() protoreflect.EnumNumber {
@@ -122,7 +180,7 @@ func (x ConnectionStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConnectionStatus.Descriptor instead.
 func (ConnectionStatus) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{2}
 }
 
 // Connection is one sign-in the server reads a source through, named "connections/{connection}".
@@ -149,8 +207,14 @@ type Connection struct {
 	Status    ConnectionStatus `protobuf:"varint,9,opt,name=status,proto3,enum=agni.v1.webapi.ConnectionStatus" json:"status,omitempty"`
 	LastError string           `protobuf:"bytes,10,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
 	// create_time and last_use_time are output only. last_use_time moves at most once an hour.
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	LastUseTime   *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=last_use_time,json=lastUseTime,proto3" json:"last_use_time,omitempty"`
+	CreateTime  *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	LastUseTime *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=last_use_time,json=lastUseTime,proto3" json:"last_use_time,omitempty"`
+	// scope says whether the connection signs in as the server or as one person. Unspecified on a
+	// create is CONNECTION_SCOPE_SERVER.
+	Scope ConnectionScope `protobuf:"varint,13,opt,name=scope,proto3,enum=agni.v1.webapi.ConnectionScope" json:"scope,omitempty"`
+	// owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+	// who made it. It is empty for a server connection. Output only.
+	Owner         string `protobuf:"bytes,14,opt,name=owner,proto3" json:"owner,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -269,12 +333,30 @@ func (x *Connection) GetLastUseTime() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Connection) GetScope() ConnectionScope {
+	if x != nil {
+		return x.Scope
+	}
+	return ConnectionScope_CONNECTION_SCOPE_UNSPECIFIED
+}
+
+func (x *Connection) GetOwner() string {
+	if x != nil {
+		return x.Owner
+	}
+	return ""
+}
+
 type CreateConnectionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// connection_id is the new connection's id: a-z and 0-9 first, then also '-', '_' and '.'.
 	ConnectionId string `protobuf:"bytes,1,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
 	// connection holds the kind and its fields. Its name and output fields are ignored.
-	Connection    *Connection `protobuf:"bytes,2,opt,name=connection,proto3" json:"connection,omitempty"`
+	Connection *Connection `protobuf:"bytes,2,opt,name=connection,proto3" json:"connection,omitempty"`
+	// user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+	// under --connections-key and never sends it back. A token kind of person connection takes no
+	// token_source, since a reference would let a caller name a secret of the server's.
+	UserToken     string `protobuf:"bytes,3,opt,name=user_token,json=userToken,proto3" json:"user_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -321,6 +403,13 @@ func (x *CreateConnectionRequest) GetConnection() *Connection {
 		return x.Connection
 	}
 	return nil
+}
+
+func (x *CreateConnectionRequest) GetUserToken() string {
+	if x != nil {
+		return x.UserToken
+	}
+	return ""
 }
 
 type GetConnectionRequest struct {
@@ -495,7 +584,7 @@ var File_agni_v1_webapi_connections_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	"\n" +
-	" agni/v1/webapi/connections.proto\x12\x0eagni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xea\x03\n" +
+	" agni/v1/webapi/connections.proto\x12\x0eagni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb7\x04\n" +
 	"\n" +
 	"Connection\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x122\n" +
@@ -513,23 +602,32 @@ const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	" \x01(\tR\tlastError\x12;\n" +
 	"\vcreate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12>\n" +
-	"\rlast_use_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vlastUseTime\"z\n" +
+	"\rlast_use_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vlastUseTime\x125\n" +
+	"\x05scope\x18\r \x01(\x0e2\x1f.agni.v1.webapi.ConnectionScopeR\x05scope\x12\x14\n" +
+	"\x05owner\x18\x0e \x01(\tR\x05owner\"\x99\x01\n" +
 	"\x17CreateConnectionRequest\x12#\n" +
 	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\x12:\n" +
 	"\n" +
 	"connection\x18\x02 \x01(\v2\x1a.agni.v1.webapi.ConnectionR\n" +
-	"connection\"*\n" +
+	"connection\x12\x1d\n" +
+	"\n" +
+	"user_token\x18\x03 \x01(\tR\tuserToken\"*\n" +
 	"\x14GetConnectionRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x18\n" +
 	"\x16ListConnectionsRequest\"W\n" +
 	"\x17ListConnectionsResponse\x12<\n" +
 	"\vconnections\x18\x01 \x03(\v2\x1a.agni.v1.webapi.ConnectionR\vconnections\"-\n" +
 	"\x17DeleteConnectionRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name*s\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name*m\n" +
+	"\x0fConnectionScope\x12 \n" +
+	"\x1cCONNECTION_SCOPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17CONNECTION_SCOPE_SERVER\x10\x01\x12\x1b\n" +
+	"\x17CONNECTION_SCOPE_PERSON\x10\x02*\x94\x01\n" +
 	"\x0eConnectionKind\x12\x1f\n" +
 	"\x1bCONNECTION_KIND_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aCONNECTION_KIND_GITHUB_APP\x10\x01\x12 \n" +
-	"\x1cCONNECTION_KIND_GITHUB_TOKEN\x10\x02*m\n" +
+	"\x1cCONNECTION_KIND_GITHUB_TOKEN\x10\x02\x12\x1f\n" +
+	"\x1bCONNECTION_KIND_GITHUB_USER\x10\x03*m\n" +
 	"\x10ConnectionStatus\x12!\n" +
 	"\x1dCONNECTION_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14CONNECTION_STATUS_OK\x10\x01\x12\x1c\n" +
@@ -552,40 +650,42 @@ func file_agni_v1_webapi_connections_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_connections_proto_rawDescData
 }
 
-var file_agni_v1_webapi_connections_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agni_v1_webapi_connections_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_agni_v1_webapi_connections_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_agni_v1_webapi_connections_proto_goTypes = []any{
-	(ConnectionKind)(0),             // 0: agni.v1.webapi.ConnectionKind
-	(ConnectionStatus)(0),           // 1: agni.v1.webapi.ConnectionStatus
-	(*Connection)(nil),              // 2: agni.v1.webapi.Connection
-	(*CreateConnectionRequest)(nil), // 3: agni.v1.webapi.CreateConnectionRequest
-	(*GetConnectionRequest)(nil),    // 4: agni.v1.webapi.GetConnectionRequest
-	(*ListConnectionsRequest)(nil),  // 5: agni.v1.webapi.ListConnectionsRequest
-	(*ListConnectionsResponse)(nil), // 6: agni.v1.webapi.ListConnectionsResponse
-	(*DeleteConnectionRequest)(nil), // 7: agni.v1.webapi.DeleteConnectionRequest
-	(*timestamppb.Timestamp)(nil),   // 8: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),           // 9: google.protobuf.Empty
+	(ConnectionScope)(0),            // 0: agni.v1.webapi.ConnectionScope
+	(ConnectionKind)(0),             // 1: agni.v1.webapi.ConnectionKind
+	(ConnectionStatus)(0),           // 2: agni.v1.webapi.ConnectionStatus
+	(*Connection)(nil),              // 3: agni.v1.webapi.Connection
+	(*CreateConnectionRequest)(nil), // 4: agni.v1.webapi.CreateConnectionRequest
+	(*GetConnectionRequest)(nil),    // 5: agni.v1.webapi.GetConnectionRequest
+	(*ListConnectionsRequest)(nil),  // 6: agni.v1.webapi.ListConnectionsRequest
+	(*ListConnectionsResponse)(nil), // 7: agni.v1.webapi.ListConnectionsResponse
+	(*DeleteConnectionRequest)(nil), // 8: agni.v1.webapi.DeleteConnectionRequest
+	(*timestamppb.Timestamp)(nil),   // 9: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),           // 10: google.protobuf.Empty
 }
 var file_agni_v1_webapi_connections_proto_depIdxs = []int32{
-	0,  // 0: agni.v1.webapi.Connection.kind:type_name -> agni.v1.webapi.ConnectionKind
-	1,  // 1: agni.v1.webapi.Connection.status:type_name -> agni.v1.webapi.ConnectionStatus
-	8,  // 2: agni.v1.webapi.Connection.create_time:type_name -> google.protobuf.Timestamp
-	8,  // 3: agni.v1.webapi.Connection.last_use_time:type_name -> google.protobuf.Timestamp
-	2,  // 4: agni.v1.webapi.CreateConnectionRequest.connection:type_name -> agni.v1.webapi.Connection
-	2,  // 5: agni.v1.webapi.ListConnectionsResponse.connections:type_name -> agni.v1.webapi.Connection
-	3,  // 6: agni.v1.webapi.ConnectionService.CreateConnection:input_type -> agni.v1.webapi.CreateConnectionRequest
-	4,  // 7: agni.v1.webapi.ConnectionService.GetConnection:input_type -> agni.v1.webapi.GetConnectionRequest
-	5,  // 8: agni.v1.webapi.ConnectionService.ListConnections:input_type -> agni.v1.webapi.ListConnectionsRequest
-	7,  // 9: agni.v1.webapi.ConnectionService.DeleteConnection:input_type -> agni.v1.webapi.DeleteConnectionRequest
-	2,  // 10: agni.v1.webapi.ConnectionService.CreateConnection:output_type -> agni.v1.webapi.Connection
-	2,  // 11: agni.v1.webapi.ConnectionService.GetConnection:output_type -> agni.v1.webapi.Connection
-	6,  // 12: agni.v1.webapi.ConnectionService.ListConnections:output_type -> agni.v1.webapi.ListConnectionsResponse
-	9,  // 13: agni.v1.webapi.ConnectionService.DeleteConnection:output_type -> google.protobuf.Empty
-	10, // [10:14] is the sub-list for method output_type
-	6,  // [6:10] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	1,  // 0: agni.v1.webapi.Connection.kind:type_name -> agni.v1.webapi.ConnectionKind
+	2,  // 1: agni.v1.webapi.Connection.status:type_name -> agni.v1.webapi.ConnectionStatus
+	9,  // 2: agni.v1.webapi.Connection.create_time:type_name -> google.protobuf.Timestamp
+	9,  // 3: agni.v1.webapi.Connection.last_use_time:type_name -> google.protobuf.Timestamp
+	0,  // 4: agni.v1.webapi.Connection.scope:type_name -> agni.v1.webapi.ConnectionScope
+	3,  // 5: agni.v1.webapi.CreateConnectionRequest.connection:type_name -> agni.v1.webapi.Connection
+	3,  // 6: agni.v1.webapi.ListConnectionsResponse.connections:type_name -> agni.v1.webapi.Connection
+	4,  // 7: agni.v1.webapi.ConnectionService.CreateConnection:input_type -> agni.v1.webapi.CreateConnectionRequest
+	5,  // 8: agni.v1.webapi.ConnectionService.GetConnection:input_type -> agni.v1.webapi.GetConnectionRequest
+	6,  // 9: agni.v1.webapi.ConnectionService.ListConnections:input_type -> agni.v1.webapi.ListConnectionsRequest
+	8,  // 10: agni.v1.webapi.ConnectionService.DeleteConnection:input_type -> agni.v1.webapi.DeleteConnectionRequest
+	3,  // 11: agni.v1.webapi.ConnectionService.CreateConnection:output_type -> agni.v1.webapi.Connection
+	3,  // 12: agni.v1.webapi.ConnectionService.GetConnection:output_type -> agni.v1.webapi.Connection
+	7,  // 13: agni.v1.webapi.ConnectionService.ListConnections:output_type -> agni.v1.webapi.ListConnectionsResponse
+	10, // 14: agni.v1.webapi.ConnectionService.DeleteConnection:output_type -> google.protobuf.Empty
+	11, // [11:15] is the sub-list for method output_type
+	7,  // [7:11] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_connections_proto_init() }
@@ -598,7 +698,7 @@ func file_agni_v1_webapi_connections_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_connections_proto_rawDesc), len(file_agni_v1_webapi_connections_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,

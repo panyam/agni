@@ -7,19 +7,24 @@ import (
 
 	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/mountset"
+	"github.com/panyam/agni/service"
 )
 
 // rawFileHandler serves one file inside a mount at /raw/<mount>/<path>, for a page that analyses a
 // design in the browser and fetches the files ListDesignFiles named (agni issue 853). It answers
 // files only. A directory, an unknown mount and a path escaping its mount are all not found, since
 // the listing is the only index a client gets.
-func rawFileHandler(ms *mountset.Table) http.Handler {
+func rawFileHandler(ms *mountset.Table, guard *service.AccessGuard) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rest := strings.TrimPrefix(r.URL.Path, "/raw/")
 		mount, p, _ := strings.Cut(rest, "/")
 		u, err := mounts.NewURI(mount, p)
 		if err != nil || p == "" {
 			http.NotFound(w, r)
+			return
+		}
+		if err := guard.URI(r.Context(), u); err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
 		abs, err := ms.Resolve(u)

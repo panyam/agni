@@ -247,7 +247,8 @@ message ListDesignsResponse {
   repeated Design designs = 1;
   // next_page_token is empty when the last page has been reached.
   string next_page_token = 2;
-  // unreachable names the designs left out because two mounted folders declare the same id (AIP-217).
+  // unreachable names the designs left out because two mounted folders declare the same id (AIP-217),
+  // and those whose private source couldn't say whether the caller may read them (agni issue 1728).
   // Each entry is "designs/{design}". The rest of the listing is complete.
   repeated string unreachable = 3;
 }
@@ -317,6 +318,11 @@ message ArtifactSource {
   // in path order, "sha256:<hex>". A mount with no history has no version, so a sync compares this
   // instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
   string read_hash = 7;
+  // access_source is the private source the files were read from, such as "github://acme/board",
+  // recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+  // the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+  // read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+  string access_source = 8;
 }
 
 message AddDesignsRequest {

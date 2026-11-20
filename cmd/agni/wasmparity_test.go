@@ -84,7 +84,7 @@ func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, _, err := storeServices(t.Context(), tableOf(ms), "", "", resolver.Store, resolver, nil, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(t.Context(), tableOf(ms), "", "", resolver.Store, resolver, nil, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

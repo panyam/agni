@@ -180,6 +180,11 @@ message Design {
   // copy of the project's symbol folders, profiles and conventions. UpdateDesign changes them with
   // update_mask "packs". A design in a mounted folder has none.
   repeated string packs = 15;
+  // access_sources name the private sources that decide who may open this design, such as
+  // "github://acme/board", one per source its artifacts were read from through a connection (agni
+  // issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+  // them gets the design. Empty means every caller the server lets in may open it. Output only.
+  repeated string access_sources = 16;
 
   // intent_uri, which moved into config and is now config.intent. revisions, whose versions became
   // designs of their own named by series (agni issue 1692).

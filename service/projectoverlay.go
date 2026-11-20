@@ -52,6 +52,9 @@ type ProjectResolver struct {
 	// issue 1704). A PackService satisfies it. Nil means this host keeps no packs, and an ingest naming
 	// one is refused.
 	Packs PackLookup
+	// Guard refuses a snapshot whose design or files come from a private source the caller can't
+	// read, however the caller names it (agni issue 1728). Nil lets every caller read every snapshot.
+	Guard *AccessGuard
 
 	snapMu sync.Mutex
 	snaps  *snapshotRegistry

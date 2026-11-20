@@ -114,6 +114,16 @@ type WorkspaceService struct {
 	hideRoots bool
 	// linked names the artifacts linked to a mount, and is set by WithLinkedArtifacts.
 	linked func(ctx context.Context, mount string) ([]string, error)
+	// guard refuses a read of a private source the caller can't read, and is set by WithGuard.
+	guard *AccessGuard
+}
+
+// WithGuard refuses a read under a mount or design g refuses (agni issue 1728), and returns s. A
+// refused read is ErrPermissionDenied rather than ErrNotFound, so a caller learns to add a
+// connection.
+func (s *WorkspaceService) WithGuard(g *AccessGuard) *WorkspaceService {
+	s.guard = g
+	return s
 }
 
 // MountMaker is the port that makes and deletes runtime mounts (agni issue 1735). The server's
@@ -363,6 +373,9 @@ func (s *WorkspaceService) hasOpenableFile(ctx context.Context, u mounts.URI, op
 func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirRequest) (*webapi.ListDirResponse, error) {
 	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
+		return nil, err
+	}
+	if err := s.guard.URI(ctx, u); err != nil {
 		return nil, err
 	}
 	entries, err := s.ws.ListDir(ctx, u)

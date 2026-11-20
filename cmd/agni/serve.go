@@ -85,7 +85,7 @@ func serveCmd() *cobra.Command {
 	var uploadMaxBytes int64
 	var mcp bool
 	var viewerRooms bool
-	var auth, tlsCert, tlsKey string
+	var auth, tlsCert, tlsKey, connectionsKey string
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -113,8 +113,11 @@ func serveCmd() *cobra.Command {
 			if err := authgate.CheckFlags(auth, storeDir, tlsCert, tlsKey, addr); err != nil {
 				return err
 			}
+			if connectionsKey != "" && (storeDir == "" || uploadsDir == "") {
+				return fmt.Errorf("--connections-key seals people's tokens in --store, so it needs --store and --uploads")
+			}
 			return runViewer(cmd, viewerOpts{
-				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey,
+				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, connectionsKey: connectionsKey,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
@@ -166,6 +169,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&githubRaw, "github-raw", "", "the host a linked github:// artifact's files are downloaded from; a test names its own")
 	_ = c.Flags().MarkHidden("github-raw")
 	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` makes in --store, and refuses a call without one (agni issue 1627). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost. Empty asks nobody")
+	c.Flags().StringVar(&connectionsKey, "connections-key", "", "where the key that seals people's own GitHub tokens is, as env:NAME or file:/abs/path holding 64 hex characters (agni issue 1728). With it, a caller keeps their own connection with agni connections add --mine, and a design linked from a private repo opens for them when their token can read the repo. Needs --store and --uploads")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with, HTTP/2 included, so gRPC clients reach the server over TLS; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
 	return c
@@ -252,6 +256,8 @@ type viewerOpts struct {
 	// tlsCert and tlsKey are --tls-cert and --tls-key, the files the server speaks HTTPS with. Both
 	// empty serves cleartext.
 	tlsCert, tlsKey string
+	// connectionsKey is --connections-key, where the key sealing people's own tokens is.
+	connectionsKey string
 }
 
 const (
@@ -347,6 +353,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if runtime {
 		cfg.Uploads, cfg.Records = o.uploadsDir, filepath.Join(o.storeDir, storeMountsDir)
 		cfg.Connections = filepath.Join(o.storeDir, storeConnectionsDir)
+		cfg.UserTokens, cfg.ConnectionsKey = filepath.Join(o.storeDir, mountset.UserTokensDir), o.connectionsKey
 	}
 	table, err := mountset.Open(cfg)
 	if err != nil {
@@ -381,7 +388,13 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// (/agni.v1.webapi.WorkspaceService/). Static assets live under /static/, and the goapplib
 	// page catches the rest at "/". The services are the transport-neutral service package
 	// implementations, which internal/server wraps for Connect (C13).
-	loader := service.NewCachingLoader(&osLoader{mounts: table, loader: newLoader()}, service.NewDesignCache(o.designCache))
+	// With --auth, a design or file read through a connection opens only for a caller whose own
+	// connection can read its source (agni issue 1728). Without it, every caller reads everything.
+	var guard *service.AccessGuard
+	if o.auth != "" {
+		guard = service.NewAccessGuard(table, uploadsMount)
+	}
+	loader := service.NewCachingLoader(&osLoader{mounts: table, loader: newLoader(), guard: guard}, service.NewDesignCache(o.designCache)).WithGuard(guard)
 	// Tier-1 fallback, as in resolveWebDir. The flag wins OUTRIGHT. If an operator names renderers
 	// with it, those are the whole set, and agni.yaml cannot widen it.
 	if len(nativeTools) == 0 {
@@ -391,7 +404,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	for _, t := range nativeTools {
 		enabledNative[t] = true
 	}
-	nativeR := &osNative{mounts: table, enabled: enabledNative, cache: native.NewCache()}
+	nativeR := &osNative{mounts: table, enabled: enabledNative, cache: native.NewCache(), guard: guard}
 	// ProjectService (agni issue 170) resolves the project/design descriptors in the mounts and
 	// needs no flag. A mount with no descriptors resolves to nothing, so one project's config never
 	// reaches another project's design.
@@ -402,7 +415,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	projectStore := projects.NewFSStoreFunc(liveTrees(table))
 	// One resolver for every rule-running surface. Per-design config reaches a run through this,
 	// and the startup flags below are only the DEFAULT for a design with no project (agni issue 173).
-	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: table}}
+	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: table}, Guard: guard}
 	if o.uploadMaxBytes > 0 {
 		projectResolver.Uploads, projectResolver.UploadMaxBytes = uploadedHost, o.uploadMaxBytes
 	}
@@ -452,7 +465,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		budget.Log("note: no query budget is enforced; queries costing more than %d work units are logged with a suggested cap. Pass --query-budget N to enforce one.", budget.Warn)
 	}
 	// A request that lists or reads a design warms its browser-engine seed (agni issue 1572).
-	workspace := service.NewWorkspaceService(osWorkspace(table)).WithDesignFiles(projectResolver, osFiles(table))
+	workspace := service.NewWorkspaceService(osWorkspace(table)).WithDesignFiles(projectResolver, osFiles(table)).WithGuard(guard)
 	if runtime {
 		workspace.WithMountMaker(table)
 	}
@@ -466,7 +479,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	projectSvc, designSvc, packSvc, err := storeServices(life, table, o.storeDir, o.uploadsDir, projectStore, projectResolver, checkSvc, cmd.ErrOrStderr())
+	projectSvc, designSvc, packSvc, err := storeServices(life, table, o.storeDir, o.uploadsDir, projectStore, projectResolver, checkSvc, guard, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}
@@ -482,7 +495,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Design:    designSvc,
 		Pack:      packSvc,
 		// A private source is read through a connection the server keeps (agni issue 1724).
-		Connection: service.NewConnectionService(table.Connections(), table.MountsUsing),
+		Connection: service.NewConnectionService(table.Connections(), table.MountsUsing).WithUserTokens(table),
 		Snapshot:   checkSvc.Snapshots(),
 		DesignView: service.NewDesignViewService(loader, nativeR, style, projectResolver),
 		Check:      checkSvc,
@@ -559,7 +572,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// A design's files, read-only, for a page analysing it in the browser (agni issue 853). The
 	// API already serves everything in a mount through its answers, so this exposes no file a client
 	// could not reach before; ListDesignFiles says which ones a design needs.
-	mux.Handle("GET /raw/", rawFileHandler(table))
+	mux.Handle("GET /raw/", rawFileHandler(table, guard))
 	// A design's store as a browser worker would write it, so a first visit restores the parsed
 	// board rather than parsing it in the page (agni issue 1525).
 	mux.Handle("GET /seed/", seedCache)

@@ -429,9 +429,9 @@ Several mounts can read through one connection. `agni mounts ls` names a mount's
 its source, and `agni connections ls` lists each connection with where its secret is and whether its
 last token request worked. A connection a mount reads through can't be removed until the mount is.
 The `/mounts/` page's "Add a GitHub mount" form offers the server's connections. The records live in
-`connections/` under `--store`, and goapplib storage's connections package reads them. A connection
-owned by one person, signed in through GitHub, waits on the server knowing who is asking (agni issue
-1728).
+`connections/` under `--store`, and goapplib storage's connections package reads them. A person can
+also keep a connection of their own, and on a shared server it decides which linked designs they
+may open. The next section says how.
 
 ## Keeping review runs
 
@@ -578,6 +578,43 @@ with `--params-url` pointing at an `agnids` that asks for tokens sends the one i
 A team whose certificate comes from its own CA hands each client the CA's file. The TypeScript client
 on Node takes it as `ca`, Rust as `connect_with_ca`, Java as `AgniClient.create`'s `caFile`, and C++
 as `agni::Client`'s `ca_file`. Each client's README says more.
+
+### Who can open a design linked from a private repo
+
+Say alice and bob share a server, and the server reads the team's private board repo through a
+connection. Alice can see the repo on GitHub and bob can't. With `--auth tokens`, alice opens the
+design and bob is refused, as GitHub would refuse him the repo (agni issue 1728).
+
+The server decides it with each person's own GitHub connection, never with its own. Its own
+connection reads the repo for everyone, so it can't tell alice from bob. A person keeps their
+connection with `--mine`. The CLI reads their token from the reference on their own machine and
+sends it once, and the server seals it under `--connections-key`:
+
+```bash
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth tokens \
+  --connections-key env:AGNI_CONNECTIONS_KEY --tls-cert /etc/agni/cert.pem --tls-key /etc/agni/key.pem
+AGNI_TOKEN=... agni connections add alice-gh --mine --github-token env:GITHUB_TOKEN --remote https://agni.example
+```
+
+- `--connections-key` names where a key of 64 hex characters is, as `env:NAME` or `file:/abs/path`.
+  The sealed tokens live in `usertokens/` under `--store`, and they are useless without the key.
+- A design is private when an artifact of it came through a mount that reads with a connection.
+  `agni designs get` then says "opens for who can read github://acme/board". The server asks GitHub
+  `GET /repos/acme/board` with the caller's own token, and keeps the answer for a minute.
+- A design from a public repo, a folder on the server, or an upload opens for every caller.
+- Each artifact records the private repo its files came from. The record stays when the artifact
+  is unlinked or the mount is deleted, so the files stay private to that repo's readers.
+- Bob is refused as `permission_denied`, naming the repo, whether he asks for the design by name,
+  checks it, opens a snapshot of it, or fetches one of its files. `agni designs list` leaves it out.
+  When GitHub can't answer, the read is `unavailable`, and a listing names the design unreachable.
+- Linking an artifact from a private mount needs the same access, so a person can't copy files
+  from a repo they can't see into a design of their own.
+- Only alice sees her connection. `agni connections rm alice-gh` deletes it and its sealed token.
+  A person's connection on GitHub Enterprise passes `--base-url`.
+- `agnids` with `--auth` can't check anyone's connection, since it reads `--store` without
+  writing it. It serves no mount that reads through a connection.
+
+A server without `--auth` checks nothing, since it doesn't know who is asking.
 
 ## Analysing in the visitor's browser
 

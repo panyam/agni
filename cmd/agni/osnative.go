@@ -17,6 +17,8 @@ type osNative struct {
 	mounts  *mountset.Table
 	enabled map[string]bool
 	cache   *native.Cache
+	// guard refuses a render of a private source the caller can't read (agni issue 1728).
+	guard *service.AccessGuard
 }
 
 // Available reports whether a NATIVE render can be offered for the file (a tool exists for the
@@ -32,6 +34,9 @@ func (n *osNative) Available(uri mounts.URI) bool {
 // Render shells out to the native tool for the 1-based page, mapping the cmd gate errors to the
 // service's ErrNative* sentinels.
 func (n *osNative) Render(ctx context.Context, uri mounts.URI, page int) (string, error) {
+	if err := n.guard.URI(ctx, uri); err != nil {
+		return "", err
+	}
 	abs, err := n.mounts.Resolve(uri)
 	if err != nil {
 		return "", err

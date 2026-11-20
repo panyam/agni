@@ -35,6 +35,9 @@ func (s *WorkspaceService) DeclareCompanion(ctx context.Context, req *webapi.Dec
 	if err != nil {
 		return nil, err
 	}
+	if err := s.guard.URI(ctx, design); err != nil {
+		return nil, err
+	}
 	if companion.Mount != design.Mount {
 		return nil, fmt.Errorf("%w: %s is in another mount from the design, so its design.yaml cannot name it", ErrInvalidArgument, companion)
 	}

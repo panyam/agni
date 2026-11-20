@@ -76,6 +76,8 @@ func ConnectError(err error) *connect.Error {
 		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --store <url>", err))
 	case errors.Is(err, service.ErrFailedPrecondition):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
+	case errors.Is(err, service.ErrPermissionDenied):
+		return connect.NewError(connect.CodePermissionDenied, err)
 	case errors.Is(err, service.ErrUnavailable):
 		return connect.NewError(connect.CodeUnavailable, err)
 	case errors.Is(err, service.ErrInternal):

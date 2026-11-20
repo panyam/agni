@@ -10,6 +10,10 @@
 #
 # It reads GitHub, so it is run by hand and not in the gate. The Go tests in
 # cmd/agni/linkreaders_test.go run the same steps against a fake GitHub.
+#
+# The repo is public, so any caller may open the design. A private repo opens only for a caller whose
+# own connection reads it (agni issue 1728). Checking that needs two GitHub accounts, so
+# TestALinkedDesignOpensOnlyForWhoCanReadItsRepo in cmd/agni/access_test.go runs it against a fake.
 set -euo pipefail
 
 agni=${AGNI:-bin/agni}

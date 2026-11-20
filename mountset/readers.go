@@ -29,12 +29,12 @@ type reader struct {
 }
 
 func (r reader) Resolve(ctx context.Context, ref string) (string, bool, error) {
-	v, moves, err := r.reg.ResolveAt(ctx, r.name, ref)
+	v, moves, err := r.reg.ResolveAt(viewing(ctx), r.name, ref)
 	return v, moves, Err(err)
 }
 
 func (r reader) List(ctx context.Context, version, under string) ([]service.MountFile, error) {
-	files, err := r.reg.ListAt(ctx, r.name, version, under)
+	files, err := r.reg.ListAt(viewing(ctx), r.name, version, under)
 	if err != nil {
 		return nil, Err(err)
 	}
@@ -46,6 +46,6 @@ func (r reader) List(ctx context.Context, version, under string) ([]service.Moun
 }
 
 func (r reader) Fetch(ctx context.Context, version string, f service.MountFile) (string, bool, error) {
-	h, fetched, err := r.reg.FetchAt(ctx, r.name, version, mounts.File{Path: f.Path, ID: f.ID, Size: f.Size})
+	h, fetched, err := r.reg.FetchAt(viewing(ctx), r.name, version, mounts.File{Path: f.Path, ID: f.ID, Size: f.Size})
 	return string(h), fetched, Err(err)
 }

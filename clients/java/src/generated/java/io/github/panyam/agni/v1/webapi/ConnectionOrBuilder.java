@@ -227,4 +227,47 @@ public interface ConnectionOrBuilder extends
    * <code>.google.protobuf.Timestamp last_use_time = 12 [json_name = "lastUseTime"];</code>
    */
   com.google.protobuf.TimestampOrBuilder getLastUseTimeOrBuilder();
+
+  /**
+   * <pre>
+   * scope says whether the connection signs in as the server or as one person. Unspecified on a
+   * create is CONNECTION_SCOPE_SERVER.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ConnectionScope scope = 13 [json_name = "scope"];</code>
+   * @return The enum numeric value on the wire for scope.
+   */
+  int getScopeValue();
+  /**
+   * <pre>
+   * scope says whether the connection signs in as the server or as one person. Unspecified on a
+   * create is CONNECTION_SCOPE_SERVER.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ConnectionScope scope = 13 [json_name = "scope"];</code>
+   * @return The scope.
+   */
+  io.github.panyam.agni.v1.webapi.ConnectionScope getScope();
+
+  /**
+   * <pre>
+   * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+   * who made it. It is empty for a server connection. Output only.
+   * </pre>
+   *
+   * <code>string owner = 14 [json_name = "owner"];</code>
+   * @return The owner.
+   */
+  java.lang.String getOwner();
+  /**
+   * <pre>
+   * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+   * who made it. It is empty for a server connection. Output only.
+   * </pre>
+   *
+   * <code>string owner = 14 [json_name = "owner"];</code>
+   * @return The bytes for owner.
+   */
+  com.google.protobuf.ByteString
+      getOwnerBytes();
 }

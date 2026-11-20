@@ -41,6 +41,8 @@ private static final long serialVersionUID = 0L;
     tokenSource_ = "";
     status_ = 0;
     lastError_ = "";
+    scope_ = 0;
+    owner_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -510,6 +512,83 @@ private static final long serialVersionUID = 0L;
     return lastUseTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : lastUseTime_;
   }
 
+  public static final int SCOPE_FIELD_NUMBER = 13;
+  private int scope_ = 0;
+  /**
+   * <pre>
+   * scope says whether the connection signs in as the server or as one person. Unspecified on a
+   * create is CONNECTION_SCOPE_SERVER.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ConnectionScope scope = 13 [json_name = "scope"];</code>
+   * @return The enum numeric value on the wire for scope.
+   */
+  @java.lang.Override public int getScopeValue() {
+    return scope_;
+  }
+  /**
+   * <pre>
+   * scope says whether the connection signs in as the server or as one person. Unspecified on a
+   * create is CONNECTION_SCOPE_SERVER.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ConnectionScope scope = 13 [json_name = "scope"];</code>
+   * @return The scope.
+   */
+  @java.lang.Override public io.github.panyam.agni.v1.webapi.ConnectionScope getScope() {
+    io.github.panyam.agni.v1.webapi.ConnectionScope result = io.github.panyam.agni.v1.webapi.ConnectionScope.forNumber(scope_);
+    return result == null ? io.github.panyam.agni.v1.webapi.ConnectionScope.UNRECOGNIZED : result;
+  }
+
+  public static final int OWNER_FIELD_NUMBER = 14;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object owner_ = "";
+  /**
+   * <pre>
+   * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+   * who made it. It is empty for a server connection. Output only.
+   * </pre>
+   *
+   * <code>string owner = 14 [json_name = "owner"];</code>
+   * @return The owner.
+   */
+  @java.lang.Override
+  public java.lang.String getOwner() {
+    java.lang.Object ref = owner_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      owner_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+   * who made it. It is empty for a server connection. Output only.
+   * </pre>
+   *
+   * <code>string owner = 14 [json_name = "owner"];</code>
+   * @return The bytes for owner.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getOwnerBytes() {
+    java.lang.Object ref = owner_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      owner_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -560,6 +639,12 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(12, getLastUseTime());
     }
+    if (scope_ != io.github.panyam.agni.v1.webapi.ConnectionScope.CONNECTION_SCOPE_UNSPECIFIED.getNumber()) {
+      output.writeEnum(13, scope_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(owner_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 14, owner_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -604,6 +689,13 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(12, getLastUseTime());
+    }
+    if (scope_ != io.github.panyam.agni.v1.webapi.ConnectionScope.CONNECTION_SCOPE_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(13, scope_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(owner_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(14, owner_);
     }
     return size;
   }
@@ -657,6 +749,9 @@ private static final long serialVersionUID = 0L;
       if (!getLastUseTime()
           .equals(other.getLastUseTime())) return false;
     }
+    if (scope_ != other.scope_) return false;
+    if (!getOwner()
+        .equals(other.getOwner())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -697,6 +792,10 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + LAST_USE_TIME_FIELD_NUMBER;
       hash = (53 * hash) + getLastUseTime().hashCode();
     }
+    hash = (37 * hash) + SCOPE_FIELD_NUMBER;
+    hash = (53 * hash) + scope_;
+    hash = (37 * hash) + OWNER_FIELD_NUMBER;
+    hash = (53 * hash) + getOwner().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -859,6 +958,8 @@ private static final long serialVersionUID = 0L;
         lastUseTimeBuilder_.dispose();
         lastUseTimeBuilder_ = null;
       }
+      scope_ = 0;
+      owner_ = "";
       return this;
     }
 
@@ -935,6 +1036,12 @@ private static final long serialVersionUID = 0L;
             : lastUseTimeBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.scope_ = scope_;
+      }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.owner_ = owner_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -999,6 +1106,14 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasLastUseTime()) {
         mergeLastUseTime(other.getLastUseTime());
+      }
+      if (other.scope_ != 0) {
+        setScopeValue(other.getScopeValue());
+      }
+      if (!other.getOwner().isEmpty()) {
+        owner_ = other.owner_;
+        bitField0_ |= 0x00002000;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1088,6 +1203,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000800;
               break;
             } // case 98
+            case 104: {
+              scope_ = input.readEnum();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 104
+            case 114: {
+              owner_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 114
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2177,6 +2302,180 @@ private static final long serialVersionUID = 0L;
         lastUseTime_ = null;
       }
       return lastUseTimeBuilder_;
+    }
+
+    private int scope_ = 0;
+    /**
+     * <pre>
+     * scope says whether the connection signs in as the server or as one person. Unspecified on a
+     * create is CONNECTION_SCOPE_SERVER.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ConnectionScope scope = 13 [json_name = "scope"];</code>
+     * @return The enum numeric value on the wire for scope.
+     */
+    @java.lang.Override public int getScopeValue() {
+      return scope_;
+    }
+    /**
+     * <pre>
+     * scope says whether the connection signs in as the server or as one person. Unspecified on a
+     * create is CONNECTION_SCOPE_SERVER.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ConnectionScope scope = 13 [json_name = "scope"];</code>
+     * @param value The enum numeric value on the wire for scope to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScopeValue(int value) {
+      scope_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * scope says whether the connection signs in as the server or as one person. Unspecified on a
+     * create is CONNECTION_SCOPE_SERVER.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ConnectionScope scope = 13 [json_name = "scope"];</code>
+     * @return The scope.
+     */
+    @java.lang.Override
+    public io.github.panyam.agni.v1.webapi.ConnectionScope getScope() {
+      io.github.panyam.agni.v1.webapi.ConnectionScope result = io.github.panyam.agni.v1.webapi.ConnectionScope.forNumber(scope_);
+      return result == null ? io.github.panyam.agni.v1.webapi.ConnectionScope.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * scope says whether the connection signs in as the server or as one person. Unspecified on a
+     * create is CONNECTION_SCOPE_SERVER.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ConnectionScope scope = 13 [json_name = "scope"];</code>
+     * @param value The scope to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setScope(io.github.panyam.agni.v1.webapi.ConnectionScope value) {
+      java.util.Objects.requireNonNull(value);
+      bitField0_ |= 0x00001000;
+      scope_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * scope says whether the connection signs in as the server or as one person. Unspecified on a
+     * create is CONNECTION_SCOPE_SERVER.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.ConnectionScope scope = 13 [json_name = "scope"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearScope() {
+      bitField0_ = (bitField0_ & ~0x00001000);
+      scope_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object owner_ = "";
+    /**
+     * <pre>
+     * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+     * who made it. It is empty for a server connection. Output only.
+     * </pre>
+     *
+     * <code>string owner = 14 [json_name = "owner"];</code>
+     * @return The owner.
+     */
+    public java.lang.String getOwner() {
+      java.lang.Object ref = owner_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        owner_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+     * who made it. It is empty for a server connection. Output only.
+     * </pre>
+     *
+     * <code>string owner = 14 [json_name = "owner"];</code>
+     * @return The bytes for owner.
+     */
+    public com.google.protobuf.ByteString
+        getOwnerBytes() {
+      java.lang.Object ref = owner_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        owner_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+     * who made it. It is empty for a server connection. Output only.
+     * </pre>
+     *
+     * <code>string owner = 14 [json_name = "owner"];</code>
+     * @param value The owner to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOwner(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      owner_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+     * who made it. It is empty for a server connection. Output only.
+     * </pre>
+     *
+     * <code>string owner = 14 [json_name = "owner"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOwner() {
+      owner_ = getDefaultInstance().getOwner();
+      bitField0_ = (bitField0_ & ~0x00002000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+     * who made it. It is empty for a server connection. Output only.
+     * </pre>
+     *
+     * <code>string owner = 14 [json_name = "owner"];</code>
+     * @param value The bytes for owner to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOwnerBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      owner_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.Connection)

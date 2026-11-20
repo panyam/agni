@@ -754,7 +754,8 @@ type ListDesignsResponse struct {
 	Designs []*Design              `protobuf:"bytes,1,rep,name=designs,proto3" json:"designs,omitempty"`
 	// next_page_token is empty when the last page has been reached.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	// unreachable names the designs left out because two mounted folders declare the same id (AIP-217).
+	// unreachable names the designs left out because two mounted folders declare the same id (AIP-217),
+	// and those whose private source couldn't say whether the caller may read them (agni issue 1728).
 	// Each entry is "designs/{design}". The rest of the listing is complete.
 	Unreachable   []string `protobuf:"bytes,3,rep,name=unreachable,proto3" json:"unreachable,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1037,7 +1038,12 @@ type ArtifactSource struct {
 	// read_hash is the SHA-256 of the files as a link last read them, each path and its contents' hash
 	// in path order, "sha256:<hex>". A mount with no history has no version, so a sync compares this
 	// instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
-	ReadHash      string `protobuf:"bytes,7,opt,name=read_hash,json=readHash,proto3" json:"read_hash,omitempty"`
+	ReadHash string `protobuf:"bytes,7,opt,name=read_hash,json=readHash,proto3" json:"read_hash,omitempty"`
+	// access_source is the private source the files were read from, such as "github://acme/board",
+	// recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+	// the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+	// read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+	AccessSource  string `protobuf:"bytes,8,opt,name=access_source,json=accessSource,proto3" json:"access_source,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1117,6 +1123,13 @@ func (x *ArtifactSource) GetReadTime() *timestamppb.Timestamp {
 func (x *ArtifactSource) GetReadHash() string {
 	if x != nil {
 		return x.ReadHash
+	}
+	return ""
+}
+
+func (x *ArtifactSource) GetAccessSource() string {
+	if x != nil {
+		return x.AccessSource
 	}
 	return ""
 }
@@ -2169,7 +2182,7 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x05entry\x18\x04 \x01(\tR\x05entry\x12;\n" +
 	"\vupdate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"updateTime\x126\n" +
-	"\x06source\x18\x06 \x01(\v2\x1e.agni.v1.webapi.ArtifactSourceR\x06source\"\xd4\x01\n" +
+	"\x06source\x18\x06 \x01(\v2\x1e.agni.v1.webapi.ArtifactSourceR\x06source\"\xf9\x01\n" +
 	"\x0eArtifactSource\x12\x14\n" +
 	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x10\n" +
@@ -2177,7 +2190,8 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x06follow\x18\x04 \x01(\bR\x06follow\x12\x18\n" +
 	"\aversion\x18\x05 \x01(\tR\aversion\x127\n" +
 	"\tread_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\breadTime\x12\x1b\n" +
-	"\tread_hash\x18\a \x01(\tR\breadHash\"\xa7\x01\n" +
+	"\tread_hash\x18\a \x01(\tR\breadHash\x12#\n" +
+	"\raccess_source\x18\b \x01(\tR\faccessSource\"\xa7\x01\n" +
 	"\x11AddDesignsRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\x125\n" +
 	"\adesigns\x18\x02 \x03(\v2\x1b.agni.v1.webapi.DesignToAddR\adesigns\x12#\n" +

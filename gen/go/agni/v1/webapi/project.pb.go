@@ -211,7 +211,12 @@ type Design struct {
 	// from the project the design's folder extends, so every design added from one project reads one
 	// copy of the project's symbol folders, profiles and conventions. UpdateDesign changes them with
 	// update_mask "packs". A design in a mounted folder has none.
-	Packs         []string `protobuf:"bytes,15,rep,name=packs,proto3" json:"packs,omitempty"`
+	Packs []string `protobuf:"bytes,15,rep,name=packs,proto3" json:"packs,omitempty"`
+	// access_sources name the private sources that decide who may open this design, such as
+	// "github://acme/board", one per source its artifacts were read from through a connection (agni
+	// issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+	// them gets the design. Empty means every caller the server lets in may open it. Output only.
+	AccessSources []string `protobuf:"bytes,16,rep,name=access_sources,json=accessSources,proto3" json:"access_sources,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -333,6 +338,13 @@ func (x *Design) GetReadOnly() bool {
 func (x *Design) GetPacks() []string {
 	if x != nil {
 		return x.Packs
+	}
+	return nil
+}
+
+func (x *Design) GetAccessSources() []string {
+	if x != nil {
+		return x.AccessSources
 	}
 	return nil
 }
@@ -781,7 +793,7 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12\x18\n" +
 	"\adesigns\x18\n" +
 	" \x03(\tR\adesigns\x12#\n" +
-	"\rdefault_packs\x18\v \x03(\tR\fdefaultPacksJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xcf\x03\n" +
+	"\rdefault_packs\x18\v \x03(\tR\fdefaultPacksJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xf6\x03\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
@@ -797,7 +809,8 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\rseries_latest\x18\f \x01(\bR\fseriesLatest\x12\x1c\n" +
 	"\tartifacts\x18\r \x03(\tR\tartifacts\x12\x1b\n" +
 	"\tread_only\x18\x0e \x01(\bR\breadOnly\x12\x14\n" +
-	"\x05packs\x18\x0f \x03(\tR\x05packsJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
+	"\x05packs\x18\x0f \x03(\tR\x05packs\x12%\n" +
+	"\x0eaccess_sources\x18\x10 \x03(\tR\raccessSourcesJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
 	"\x11GetProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"i\n" +
 	"\x13ListProjectsRequest\x12\x1b\n" +

@@ -146,13 +146,15 @@ type sourceRecord struct {
 	Version  string    `yaml:"version,omitempty"`
 	ReadTime time.Time `yaml:"read_time,omitempty"`
 	ReadHash string    `yaml:"read_hash,omitempty"`
+	// AccessSource is the private repo the files came from, kept after an unlink (agni issue 1728).
+	AccessSource string `yaml:"access_source,omitempty"`
 }
 
 func sourceRecordOf(src *webapi.ArtifactSource) *sourceRecord {
 	if src == nil {
 		return nil
 	}
-	out := &sourceRecord{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: src.GetFollow(), Version: src.GetVersion(), ReadHash: src.GetReadHash()}
+	out := &sourceRecord{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: src.GetFollow(), Version: src.GetVersion(), ReadHash: src.GetReadHash(), AccessSource: src.GetAccessSource()}
 	if src.GetReadTime() != nil {
 		out.ReadTime = src.GetReadTime().AsTime().UTC()
 	}
@@ -160,7 +162,7 @@ func sourceRecordOf(src *webapi.ArtifactSource) *sourceRecord {
 }
 
 func (r *sourceRecord) proto() *webapi.ArtifactSource {
-	out := &webapi.ArtifactSource{Mount: r.Mount, Path: r.Path, Ref: r.Ref, Follow: r.Follow, Version: r.Version, ReadHash: r.ReadHash}
+	out := &webapi.ArtifactSource{Mount: r.Mount, Path: r.Path, Ref: r.Ref, Follow: r.Follow, Version: r.Version, ReadHash: r.ReadHash, AccessSource: r.AccessSource}
 	if !r.ReadTime.IsZero() {
 		out.ReadTime = timestamppb.New(r.ReadTime)
 	}

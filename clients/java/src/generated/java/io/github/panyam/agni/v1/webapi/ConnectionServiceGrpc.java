@@ -8,9 +8,13 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
  * with that connection's token. Several mounts can share one, such as one GitHub App installation
  * over many repos. The records come from goapplib storage's connections package.
- * A connection never holds a secret. Its key_source and token_source name where the secret is,
- * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
- * secret is written to --store or sent back over this API.
+ * A server connection never holds a secret. Its key_source and token_source name where the secret
+ * is, "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So
+ * no secret is written to --store or sent back over this API.
+ * A person's connection belongs to the caller who made it (agni issue 1728). It holds that
+ * person's own GitHub token, sealed in --store under the server's --connections-key, and nobody
+ * else's request can use it. A design linked from a private repo opens only for a caller whose own
+ * connection can read the repo.
  * </pre>
  */
 @io.grpc.stub.annotations.GrpcGenerated
@@ -210,9 +214,13 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_source and token_source name where the secret is,
-   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
-   * secret is written to --store or sent back over this API.
+   * A server connection never holds a secret. Its key_source and token_source name where the secret
+   * is, "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So
+   * no secret is written to --store or sent back over this API.
+   * A person's connection belongs to the caller who made it (agni issue 1728). It holds that
+   * person's own GitHub token, sealed in --store under the server's --connections-key, and nobody
+   * else's request can use it. A design linked from a private repo opens only for a caller whose own
+   * connection can read the repo.
    * </pre>
    */
   public interface AsyncService {
@@ -221,7 +229,8 @@ public final class ConnectionServiceGrpc {
      * <pre>
      * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
      * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION.
+     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
+     * connection needs a signed-in caller, and a server started with --connections-key.
      * </pre>
      */
     default void createConnection(io.github.panyam.agni.v1.webapi.CreateConnectionRequest request,
@@ -231,7 +240,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name.
+     * GetConnection returns one connection by resource name. Another person's connection is
+     * NOT_FOUND.
      * </pre>
      */
     default void getConnection(io.github.panyam.agni.v1.webapi.GetConnectionRequest request,
@@ -241,7 +251,7 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * ListConnections returns the server's connections, ordered by name.
+     * ListConnections returns the server's connections and the caller's own, ordered by name.
      * </pre>
      */
     default void listConnections(io.github.panyam.agni.v1.webapi.ListConnectionsRequest request,
@@ -252,7 +262,8 @@ public final class ConnectionServiceGrpc {
     /**
      * <pre>
      * DeleteConnection forgets a connection. One a mount still reads through is FAILED_PRECONDITION,
-     * naming the mounts, until they are deleted.
+     * naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
+     * token too. Another person's connection is NOT_FOUND.
      * </pre>
      */
     default void deleteConnection(io.github.panyam.agni.v1.webapi.DeleteConnectionRequest request,
@@ -268,9 +279,13 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_source and token_source name where the secret is,
-   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
-   * secret is written to --store or sent back over this API.
+   * A server connection never holds a secret. Its key_source and token_source name where the secret
+   * is, "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So
+   * no secret is written to --store or sent back over this API.
+   * A person's connection belongs to the caller who made it (agni issue 1728). It holds that
+   * person's own GitHub token, sealed in --store under the server's --connections-key, and nobody
+   * else's request can use it. A design linked from a private repo opens only for a caller whose own
+   * connection can read the repo.
    * </pre>
    */
   public static abstract class ConnectionServiceImplBase
@@ -288,9 +303,13 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_source and token_source name where the secret is,
-   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
-   * secret is written to --store or sent back over this API.
+   * A server connection never holds a secret. Its key_source and token_source name where the secret
+   * is, "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So
+   * no secret is written to --store or sent back over this API.
+   * A person's connection belongs to the caller who made it (agni issue 1728). It holds that
+   * person's own GitHub token, sealed in --store under the server's --connections-key, and nobody
+   * else's request can use it. A design linked from a private repo opens only for a caller whose own
+   * connection can read the repo.
    * </pre>
    */
   public static final class ConnectionServiceStub
@@ -310,7 +329,8 @@ public final class ConnectionServiceGrpc {
      * <pre>
      * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
      * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION.
+     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
+     * connection needs a signed-in caller, and a server started with --connections-key.
      * </pre>
      */
     public void createConnection(io.github.panyam.agni.v1.webapi.CreateConnectionRequest request,
@@ -321,7 +341,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name.
+     * GetConnection returns one connection by resource name. Another person's connection is
+     * NOT_FOUND.
      * </pre>
      */
     public void getConnection(io.github.panyam.agni.v1.webapi.GetConnectionRequest request,
@@ -332,7 +353,7 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * ListConnections returns the server's connections, ordered by name.
+     * ListConnections returns the server's connections and the caller's own, ordered by name.
      * </pre>
      */
     public void listConnections(io.github.panyam.agni.v1.webapi.ListConnectionsRequest request,
@@ -344,7 +365,8 @@ public final class ConnectionServiceGrpc {
     /**
      * <pre>
      * DeleteConnection forgets a connection. One a mount still reads through is FAILED_PRECONDITION,
-     * naming the mounts, until they are deleted.
+     * naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
+     * token too. Another person's connection is NOT_FOUND.
      * </pre>
      */
     public void deleteConnection(io.github.panyam.agni.v1.webapi.DeleteConnectionRequest request,
@@ -361,9 +383,13 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_source and token_source name where the secret is,
-   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
-   * secret is written to --store or sent back over this API.
+   * A server connection never holds a secret. Its key_source and token_source name where the secret
+   * is, "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So
+   * no secret is written to --store or sent back over this API.
+   * A person's connection belongs to the caller who made it (agni issue 1728). It holds that
+   * person's own GitHub token, sealed in --store under the server's --connections-key, and nobody
+   * else's request can use it. A design linked from a private repo opens only for a caller whose own
+   * connection can read the repo.
    * </pre>
    */
   public static final class ConnectionServiceBlockingV2Stub
@@ -383,7 +409,8 @@ public final class ConnectionServiceGrpc {
      * <pre>
      * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
      * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION.
+     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
+     * connection needs a signed-in caller, and a server started with --connections-key.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Connection createConnection(io.github.panyam.agni.v1.webapi.CreateConnectionRequest request) throws io.grpc.StatusException {
@@ -393,7 +420,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name.
+     * GetConnection returns one connection by resource name. Another person's connection is
+     * NOT_FOUND.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Connection getConnection(io.github.panyam.agni.v1.webapi.GetConnectionRequest request) throws io.grpc.StatusException {
@@ -403,7 +431,7 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * ListConnections returns the server's connections, ordered by name.
+     * ListConnections returns the server's connections and the caller's own, ordered by name.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.ListConnectionsResponse listConnections(io.github.panyam.agni.v1.webapi.ListConnectionsRequest request) throws io.grpc.StatusException {
@@ -414,7 +442,8 @@ public final class ConnectionServiceGrpc {
     /**
      * <pre>
      * DeleteConnection forgets a connection. One a mount still reads through is FAILED_PRECONDITION,
-     * naming the mounts, until they are deleted.
+     * naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
+     * token too. Another person's connection is NOT_FOUND.
      * </pre>
      */
     public com.google.protobuf.Empty deleteConnection(io.github.panyam.agni.v1.webapi.DeleteConnectionRequest request) throws io.grpc.StatusException {
@@ -430,9 +459,13 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_source and token_source name where the secret is,
-   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
-   * secret is written to --store or sent back over this API.
+   * A server connection never holds a secret. Its key_source and token_source name where the secret
+   * is, "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So
+   * no secret is written to --store or sent back over this API.
+   * A person's connection belongs to the caller who made it (agni issue 1728). It holds that
+   * person's own GitHub token, sealed in --store under the server's --connections-key, and nobody
+   * else's request can use it. A design linked from a private repo opens only for a caller whose own
+   * connection can read the repo.
    * </pre>
    */
   public static final class ConnectionServiceBlockingStub
@@ -452,7 +485,8 @@ public final class ConnectionServiceGrpc {
      * <pre>
      * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
      * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION.
+     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
+     * connection needs a signed-in caller, and a server started with --connections-key.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Connection createConnection(io.github.panyam.agni.v1.webapi.CreateConnectionRequest request) {
@@ -462,7 +496,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name.
+     * GetConnection returns one connection by resource name. Another person's connection is
+     * NOT_FOUND.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Connection getConnection(io.github.panyam.agni.v1.webapi.GetConnectionRequest request) {
@@ -472,7 +507,7 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * ListConnections returns the server's connections, ordered by name.
+     * ListConnections returns the server's connections and the caller's own, ordered by name.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.ListConnectionsResponse listConnections(io.github.panyam.agni.v1.webapi.ListConnectionsRequest request) {
@@ -483,7 +518,8 @@ public final class ConnectionServiceGrpc {
     /**
      * <pre>
      * DeleteConnection forgets a connection. One a mount still reads through is FAILED_PRECONDITION,
-     * naming the mounts, until they are deleted.
+     * naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
+     * token too. Another person's connection is NOT_FOUND.
      * </pre>
      */
     public com.google.protobuf.Empty deleteConnection(io.github.panyam.agni.v1.webapi.DeleteConnectionRequest request) {
@@ -499,9 +535,13 @@ public final class ConnectionServiceGrpc {
    * through (agni issue 1724). A mount names a connection, and the server reads the mount's source
    * with that connection's token. Several mounts can share one, such as one GitHub App installation
    * over many repos. The records come from goapplib storage's connections package.
-   * A connection never holds a secret. Its key_source and token_source name where the secret is,
-   * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
-   * secret is written to --store or sent back over this API.
+   * A server connection never holds a secret. Its key_source and token_source name where the secret
+   * is, "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So
+   * no secret is written to --store or sent back over this API.
+   * A person's connection belongs to the caller who made it (agni issue 1728). It holds that
+   * person's own GitHub token, sealed in --store under the server's --connections-key, and nobody
+   * else's request can use it. A design linked from a private repo opens only for a caller whose own
+   * connection can read the repo.
    * </pre>
    */
   public static final class ConnectionServiceFutureStub
@@ -521,7 +561,8 @@ public final class ConnectionServiceGrpc {
      * <pre>
      * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
      * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION.
+     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
+     * connection needs a signed-in caller, and a server started with --connections-key.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Connection> createConnection(
@@ -532,7 +573,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name.
+     * GetConnection returns one connection by resource name. Another person's connection is
+     * NOT_FOUND.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Connection> getConnection(
@@ -543,7 +585,7 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * ListConnections returns the server's connections, ordered by name.
+     * ListConnections returns the server's connections and the caller's own, ordered by name.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.ListConnectionsResponse> listConnections(
@@ -555,7 +597,8 @@ public final class ConnectionServiceGrpc {
     /**
      * <pre>
      * DeleteConnection forgets a connection. One a mount still reads through is FAILED_PRECONDITION,
-     * naming the mounts, until they are deleted.
+     * naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
+     * token too. Another person's connection is NOT_FOUND.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> deleteConnection(
