@@ -4473,6 +4473,11 @@ pub struct Mount {
     /// empty for a public or local source (agni issue 1724).
     #[prost(string, tag="10")]
     pub connection: ::prost::alloc::string::String,
+    /// source_hidden says the caller can't read the mount's private source, so root, source, ref and
+    /// commit are left out. The name and kind stay, so the caller can tell the mount is there (agni
+    /// issue 1772).
+    #[prost(bool, tag="11")]
+    pub source_hidden: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateMountRequest {

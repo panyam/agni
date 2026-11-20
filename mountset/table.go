@@ -69,6 +69,10 @@ type Config struct {
 	// ConnectionsKey is where the key that seals people's tokens is, as a secret reference such as
 	// env:NAME. It holds 64 hex characters. Empty keeps no person's token.
 	ConnectionsKey string
+	// GitHubApp is the GitHub App's OAuth client the server signs people in through (agni issue
+	// 1772). goapplib refreshes a signed-in person's token through it, and revokes it on a
+	// disconnect. Nil keeps pasted tokens alone, which need neither.
+	GitHubApp *oauth2.Config
 	// HidePrivate leaves out every mount that reads through a connection, from List and from
 	// Resolve, for a server that asks who its callers are but can't check their connections. agnids
 	// with --auth is one (agni issue 1728).
@@ -95,6 +99,8 @@ type Table struct {
 	hidePrivate bool
 	// gh is the GitHub driver, nil without Uploads. MountsOf asks it whether two sources match.
 	gh *github.Driver
+	// githubAPI is Config.GitHubAPI, the API a signed-in person's connection reads through.
+	githubAPI string
 }
 
 // NewTable returns a table serving fixed and nothing else, for the CLI and for a server with no
@@ -167,12 +173,17 @@ func Open(cfg Config) (*Table, error) {
 		}
 		if cfg.ConnectionsKey != "" && cfg.UserTokens != "" {
 			t.users = fs.NewFSUserTokenStore(cfg.UserTokens)
-			copts = append(copts, connections.WithUserTokens(t.users, cfg.ConnectionsKey, &oauth2.Config{Endpoint: ghendpoint.Endpoint}))
+			app := &oauth2.Config{Endpoint: ghendpoint.Endpoint}
+			if cfg.GitHubApp != nil {
+				app = cfg.GitHubApp
+			}
+			copts = append(copts, connections.WithUserTokens(t.users, cfg.ConnectionsKey, app))
 		}
 		t.svc = connections.NewService(cs, copts...)
 		opts = append(opts, mounts.WithCredentials(t.svc.TokenSource))
 	}
 	t.gh = gh
+	t.githubAPI = cfg.GitHubAPI
 	t.reg = mounts.NewRegistry(store, drivers, opts...)
 	if store != nil {
 		all, err := t.reg.List(context.Background())

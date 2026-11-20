@@ -29,7 +29,7 @@ FILE_KIND_DESIGN: FileKind
 FILE_KIND_DATASHEET: FileKind
 
 class Mount(_message.Message):
-    __slots__ = ("name", "root", "uri", "kind", "source", "ref", "commit", "fixed", "writable", "connection")
+    __slots__ = ("name", "root", "uri", "kind", "source", "ref", "commit", "fixed", "writable", "connection", "source_hidden")
     NAME_FIELD_NUMBER: _ClassVar[int]
     ROOT_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
@@ -40,6 +40,7 @@ class Mount(_message.Message):
     FIXED_FIELD_NUMBER: _ClassVar[int]
     WRITABLE_FIELD_NUMBER: _ClassVar[int]
     CONNECTION_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_HIDDEN_FIELD_NUMBER: _ClassVar[int]
     name: str
     root: str
     uri: str
@@ -50,7 +51,8 @@ class Mount(_message.Message):
     fixed: bool
     writable: bool
     connection: str
-    def __init__(self, name: _Optional[str] = ..., root: _Optional[str] = ..., uri: _Optional[str] = ..., kind: _Optional[_Union[MountKind, str]] = ..., source: _Optional[str] = ..., ref: _Optional[str] = ..., commit: _Optional[str] = ..., fixed: _Optional[bool] = ..., writable: _Optional[bool] = ..., connection: _Optional[str] = ...) -> None: ...
+    source_hidden: bool
+    def __init__(self, name: _Optional[str] = ..., root: _Optional[str] = ..., uri: _Optional[str] = ..., kind: _Optional[_Union[MountKind, str]] = ..., source: _Optional[str] = ..., ref: _Optional[str] = ..., commit: _Optional[str] = ..., fixed: _Optional[bool] = ..., writable: _Optional[bool] = ..., connection: _Optional[str] = ..., source_hidden: _Optional[bool] = ...) -> None: ...
 
 class CreateMountRequest(_message.Message):
     __slots__ = ("name", "source", "ref", "connection")

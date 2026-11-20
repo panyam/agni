@@ -6,6 +6,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/panyam/goapplib/storage/connections"
 	"github.com/panyam/goapplib/storage/connections/fsstore"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -14,6 +15,7 @@ import (
 
 // fakeKeeper is a service.UserTokenKeeper holding tokens in memory, by connection and owner.
 type fakeKeeper struct {
+	store  connections.Store
 	tokens map[string]string
 	fail   error
 }
@@ -26,9 +28,13 @@ func (k *fakeKeeper) SaveUserToken(_ context.Context, id, owner, token string) e
 	return nil
 }
 
-func (k *fakeKeeper) ForgetUserToken(_ context.Context, id, owner string) error {
-	delete(k.tokens, id+"/"+owner)
-	return nil
+func (k *fakeKeeper) Disconnect(ctx context.Context, id string) error {
+	c, err := k.store.GetConnection(ctx, id)
+	if err != nil {
+		return err
+	}
+	delete(k.tokens, id+"/"+c.Owner)
+	return k.store.DeleteConnection(ctx, id)
 }
 
 func connectionIDs(resp *webapi.ListConnectionsResponse) []string {
@@ -46,8 +52,8 @@ func TestAPersonsConnectionIsTheirsAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	keeper := &fakeKeeper{tokens: map[string]string{}}
-	svc := service.NewConnectionService(store, nil).WithUserTokens(keeper)
+	keeper := &fakeKeeper{store: store, tokens: map[string]string{}}
+	svc := service.NewConnectionService(store, nil).WithUserTokens(keeper).WithBaseURL("https://ghe.example.com/api/v3")
 	alice, bob := as("alice"), as("bob")
 	mine := func(ctx context.Context, id, token string) (*webapi.Connection, error) {
 		return svc.CreateConnection(ctx, &webapi.CreateConnectionRequest{ConnectionId: id, UserToken: token,
@@ -60,6 +66,9 @@ func TestAPersonsConnectionIsTheirsAlone(t *testing.T) {
 	}
 	if c.GetOwner() != "alice" || c.GetScope() != webapi.ConnectionScope_CONNECTION_SCOPE_PERSON || c.GetTokenSource() != "" {
 		t.Errorf("alice's connection = %v; want hers, a person's, naming no secret", c)
+	}
+	if c.GetBaseUrl() != "https://ghe.example.com/api/v3" {
+		t.Errorf("alice's connection reads through %q; want the server's GitHub API, since she named none", c.GetBaseUrl())
 	}
 	if keeper.tokens["alice-gh/alice"] != "ghp_alice" {
 		t.Errorf("sealed tokens = %v; want alice's under alice-gh", keeper.tokens)

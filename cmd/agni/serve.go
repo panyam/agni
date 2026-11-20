@@ -21,6 +21,7 @@ import (
 	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/wasmengine"
 	"github.com/panyam/goapplib/storage/mounts"
+	"golang.org/x/oauth2"
 
 	"connectrpc.com/connect"
 	skhttp "github.com/panyam/servicekit/http"
@@ -87,6 +88,8 @@ func serveCmd() *cobra.Command {
 	var viewerRooms bool
 	var auth, tlsCert, tlsKey, connectionsKey string
 	var webhookSecretRef string
+	var githubClientID, githubSecretRef, publicURL string
+	var githubAllow []string
 	var pollEvery time.Duration
 	c := &cobra.Command{
 		Use:   "serve",
@@ -126,13 +129,30 @@ func serveCmd() *cobra.Command {
 			}
 			var hookSecret []byte
 			if webhookSecretRef != "" {
-				if hookSecret, err = webhookSecret(webhookSecretRef); err != nil {
+				if hookSecret, err = secretFlag("--github-webhook-secret", webhookSecretRef); err != nil {
 					return err
 				}
 			}
+			var signIn *githubSignIn
+			if githubClientID != "" || githubSecretRef != "" || len(githubAllow) > 0 {
+				if githubClientID == "" || githubSecretRef == "" {
+					return fmt.Errorf("signing in with GitHub needs both --github-client-id and --github-client-secret, the GitHub App's OAuth client")
+				}
+				if auth != authgate.Tokens || connectionsKey == "" {
+					return fmt.Errorf("signing in with GitHub mints a token and keeps the person's GitHub token, so it needs --auth %s and --connections-key", authgate.Tokens)
+				}
+				if len(githubAllow) == 0 {
+					return fmt.Errorf("signing in with GitHub needs --github-allow, such as org:acme, or anyone with a GitHub account could sign in")
+				}
+				secret, err := secretFlag("--github-client-secret", githubSecretRef)
+				if err != nil {
+					return err
+				}
+				signIn = &githubSignIn{clientID: githubClientID, clientSecret: string(secret), allow: githubAllow}
+			}
 			return runViewer(cmd, viewerOpts{
 				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, connectionsKey: connectionsKey,
-				webhookSecret: hookSecret, poll: pollEvery,
+				webhookSecret: hookSecret, poll: pollEvery, githubSignIn: signIn, publicURL: publicURL,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
@@ -186,10 +206,20 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` makes in --store, and refuses a call without one (agni issue 1627). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost. Empty asks nobody")
 	c.Flags().StringVar(&connectionsKey, "connections-key", "", "where the key that seals people's own GitHub tokens is, as env:NAME or file:/abs/path holding 64 hex characters (agni issue 1728). With it, a caller keeps their own connection with agni connections add --mine, and a design linked from a private repo opens for them when their token can read the repo. Needs --store and --uploads")
 	c.Flags().StringVar(&webhookSecretRef, "github-webhook-secret", "", "where the secret GitHub signs push webhooks with is, as env:NAME or file:/abs/path (agni issue 1726). With it, the server takes deliveries at "+githubHookPath+", and a push to a branch a linked design follows syncs the design, or marks it when the design is set to mark. Give every repo's webhook this one secret. It proves a delivery came from GitHub and grants no access to any repo. Needs --store and --uploads")
+	c.Flags().StringVar(&githubClientID, "github-client-id", "", "the client id of the GitHub App people sign in through (agni issue 1772). With --github-client-secret and --github-allow, /signin offers Sign in with GitHub and agni login signs in from a terminal. Either one keeps the person's GitHub token as their own connection. Needs --auth tokens and --connections-key")
+	c.Flags().StringVar(&githubSecretRef, "github-client-secret", "", "where the GitHub App's client secret is, as env:NAME or file:/abs/path; with --github-client-id")
+	c.Flags().StringSliceVar(&githubAllow, "github-allow", nil, "who may sign in with GitHub, as org:<org> for an org's members or user:<login>, comma-separated or repeated; with --github-client-id")
+	c.Flags().StringVar(&publicURL, "public-url", "", "the server's URL as a browser reaches it, such as https://agni.example.com. GitHub sends a signed-in browser back to <public-url>/signin/github/callback/, which the GitHub App must list. Empty takes the address the server listens on, which works on localhost only")
 	c.Flags().DurationVar(&pollEvery, "poll", 0, "ask every source a linked design follows whether it moved, this often, such as 5m (agni issue 1726). It resolves each branch or folder once per pass, one request to GitHub for a repo, and syncs or marks the designs behind it. 0 polls nothing. Needs --store and --uploads")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with, HTTP/2 included, so gRPC clients reach the server over TLS; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
 	return c
+}
+
+// githubSignIn is the GitHub App a server signs people in through (agni issue 1772).
+type githubSignIn struct {
+	clientID, clientSecret string
+	allow                  []string
 }
 
 // viewerOpts is everything the viewer server is built from, so `serve` and `open` compose the same
@@ -275,6 +305,11 @@ type viewerOpts struct {
 	tlsCert, tlsKey string
 	// connectionsKey is --connections-key, where the key sealing people's own tokens is.
 	connectionsKey string
+	// githubSignIn is the GitHub App people sign in through, nil for none (agni issue 1772).
+	githubSignIn *githubSignIn
+	// publicURL is --public-url, the server's URL as a browser reaches it. Empty takes the address it
+	// listens on.
+	publicURL string
 	// webhookSecret is --github-webhook-secret resolved. Empty serves no webhook (agni issue 1726).
 	webhookSecret []byte
 	// poll is --poll, how often the server asks followed sources whether they moved. 0 never asks.
@@ -377,6 +412,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		cfg.Uploads, cfg.Records = o.uploadsDir, filepath.Join(o.storeDir, storeMountsDir)
 		cfg.Connections = filepath.Join(o.storeDir, storeConnectionsDir)
 		cfg.UserTokens, cfg.ConnectionsKey = filepath.Join(o.storeDir, mountset.UserTokensDir), o.connectionsKey
+		if o.githubSignIn != nil {
+			cfg.GitHubApp = &oauth2.Config{ClientID: o.githubSignIn.clientID, ClientSecret: o.githubSignIn.clientSecret, Endpoint: authgate.GitHubEndpoint(o.githubAPI)}
+		}
 	}
 	table, err := mountset.Open(cfg)
 	if err != nil {
@@ -530,7 +568,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Design:    designSvc,
 		Pack:      packSvc,
 		// A private source is read through a connection the server keeps (agni issue 1724).
-		Connection: service.NewConnectionService(table.Connections(), table.MountsUsing).WithUserTokens(table),
+		Connection: service.NewConnectionService(table.Connections(), table.MountsUsing).WithUserTokens(table).WithBaseURL(o.githubAPI),
 		Snapshot:   checkSvc.Snapshots(),
 		DesignView: service.NewDesignViewService(loader, nativeR, style, projectResolver),
 		Check:      checkSvc,
@@ -551,6 +589,10 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		if ln != nil {
 			o.listener, addr = ln, ln.Addr().String()
 		}
+	}
+	if o.listener != nil {
+		// A listener handed in, as a test does, is where the server is.
+		addr = o.listener.Addr().String()
 	}
 	urls := serveURLs(addr, lanIPs)
 	if o.tlsCert != "" {
@@ -621,7 +663,24 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 
 	var handler http.Handler = mux
 	if o.auth != "" {
-		handler = authgate.New(authgate.Store(o.storeDir), o.tlsCert != "").Wrap(mux)
+		gate := authgate.New(authgate.Store(o.storeDir), o.tlsCert != "")
+		if gs := o.githubSignIn; gs != nil {
+			pub := o.publicURL
+			if pub == "" {
+				pub = strings.TrimSuffix(urls[0], "/")
+			}
+			gate, err = gate.WithGitHub(authgate.GitHub{
+				ClientID: gs.clientID, ClientSecret: gs.clientSecret, API: o.githubAPI, PublicURL: pub, Allow: gs.allow,
+				Save: func(ctx context.Context, subject, login string, tok *oauth2.Token) error {
+					_, err := table.SaveSignedIn(ctx, subject, login, tok)
+					return err
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+		handler = gate.Wrap(mux)
 	}
 	srv := newHTTPServer(addr, requestQoS(handler))
 	if o.banner != nil {

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/panyam/goapplib/storage/connections"
 	"github.com/panyam/goapplib/storage/mounts"
-	"github.com/panyam/oneauth/outbound"
 	"golang.org/x/oauth2"
 
 	"github.com/panyam/agni/service"
@@ -69,14 +70,45 @@ func (t *Table) SaveUserToken(ctx context.Context, id, owner, token string) erro
 	return service.ConnectionErr(t.svc.SavePastedToken(connections.WithViewer(ctx, owner), id, &oauth2.Token{AccessToken: token, TokenType: "bearer"}))
 }
 
-// ForgetUserToken deletes owner's sealed token for connection id, for service.UserTokenKeeper. It
-// doesn't revoke the token at GitHub, since the person made it there and revokes it there.
-func (t *Table) ForgetUserToken(ctx context.Context, id, owner string) error {
-	if t.users == nil {
-		return nil
+// Disconnect removes connection id and its owner's sealed token, for service.UserTokenKeeper,
+// through goapplib's Service.Disconnect (agni issue 1776). A pasted token is deleted with no call to
+// GitHub, since the person made it there and revokes it there.
+func (t *Table) Disconnect(ctx context.Context, id string) error {
+	if t.svc == nil {
+		return fmt.Errorf("%w: this server keeps no connections", service.ErrFailedPrecondition)
 	}
-	_, err := t.users.DeleteUserToken(ctx, &outbound.DeleteUserTokenRequest{Provider: connections.UserTokenProvider(id), Subject: owner})
-	return err
+	return t.svc.Disconnect(ctx, id)
+}
+
+// SignedInConnection is the id of the connection SaveSignedIn keeps for a GitHub login.
+func SignedInConnection(login string) string {
+	return "github-" + strings.ToLower(login)
+}
+
+// SaveSignedIn keeps the token GitHub issued when owner signed in as login, as owner's own
+// connection SignedInConnection(login), and returns its id (agni issue 1772). It makes the
+// connection the first time and replaces its token after that. goapplib refreshes the token through
+// Config.GitHubApp, and a disconnect revokes it at GitHub. Another person's connection with that id
+// is ErrFailedPrecondition, and so is a server with no --connections-key.
+func (t *Table) SaveSignedIn(ctx context.Context, owner, login string, tok *oauth2.Token) (string, error) {
+	if t.svc == nil || t.users == nil || t.conns == nil {
+		return "", fmt.Errorf("%w: this server keeps no person's token; start it with --connections-key env:NAME", service.ErrFailedPrecondition)
+	}
+	id := SignedInConnection(login)
+	c, err := t.conns.GetConnection(ctx, id)
+	switch {
+	case err == nil && (c.Owner != owner || c.Kind != connections.KindGitHubUser):
+		return "", fmt.Errorf("%w: the connection %s belongs to someone else", service.ErrFailedPrecondition, id)
+	case errors.Is(err, connections.ErrNotFound):
+		c = connections.Connection{ID: id, Name: "GitHub sign-in as " + login, Kind: connections.KindGitHubUser, Scope: connections.ScopePerson,
+			Owner: owner, BaseURL: t.githubAPI, Status: connections.StatusOK, Created: time.Now().UTC()}
+		if err := t.conns.PutConnection(ctx, c); err != nil {
+			return "", service.ConnectionErr(err)
+		}
+	case err != nil:
+		return "", service.ConnectionErr(err)
+	}
+	return id, service.ConnectionErr(t.svc.SaveUserToken(connections.WithViewer(ctx, owner), id, tok))
 }
 
 var _ service.UserTokenKeeper = (*Table)(nil)

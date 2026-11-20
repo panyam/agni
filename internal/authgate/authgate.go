@@ -53,6 +53,8 @@ type Gate struct {
 	store  core.APIKeyStore
 	mw     *apiauth.APIMiddleware
 	secure bool // the server speaks TLS, so the session cookie is marked Secure
+	// github signs people in through a GitHub App, and is set by WithGitHub (agni issue 1772).
+	github *githubSignIns
 }
 
 // New checks tokens against store. secure says the server speaks TLS.
@@ -78,6 +80,9 @@ func (g *Gate) Wrap(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(service.WithCaller(r.Context(), caller)))
 	}))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if g.github != nil && g.github.serve(g, w, r) {
+			return
+		}
 		switch {
 		case r.URL.Path == "/signin":
 			g.signIn(w, r)
@@ -111,11 +116,13 @@ body { font: 15px/1.5 system-ui, sans-serif; max-width: 26rem; margin: 4rem auto
 input { width: 100%; box-sizing: border-box; padding: .5rem; font: inherit; }
 button { margin-top: .75rem; padding: .5rem 1rem; font: inherit; }
 .error { color: #c0392b; }
+a.github { display: inline-block; padding: .5rem 1rem; border: 1px solid currentColor; border-radius: 6px; text-decoration: none; }
 </style></head>
 <body>
 <h1>Sign in to agni</h1>
-<p>This server asks who you are. Paste the token its operator gave you, made with <code>agni token create</code>.</p>
+<p>This server asks who you are.{{if .GitHub}} Sign in with GitHub, or paste{{else}} Paste{{end}} the token its operator gave you, made with <code>agni token create</code>.</p>
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+{{if .GitHub}}<p><a class="github" href="/signin/github?next={{.Next}}">Sign in with GitHub</a></p>{{end}}
 <form method="post" action="/signin">
 <input type="hidden" name="next" value="{{.Next}}">
 <label for="token">Token</label>
@@ -125,10 +132,19 @@ button { margin-top: .75rem; padding: .5rem 1rem; font: inherit; }
 </body></html>
 `))
 
+// signInView is what the sign-in page shows. GitHub offers the GitHub button.
+type signInView struct {
+	Next, Error string
+	GitHub      bool
+}
+
 // signIn shows the sign-in form, and on a post checks the token and keeps it in a session cookie.
 func (g *Gate) signIn(w http.ResponseWriter, r *http.Request) {
 	next := safeNext(r.FormValue("next"))
-	page := struct{ Next, Error string }{Next: next}
+	page := signInView{Next: next, GitHub: g.github != nil}
+	if r.URL.Query().Get("github") == "failed" {
+		page.Error = "Signing in with GitHub didn't work. Try again, or paste a token."
+	}
 	switch r.Method {
 	case http.MethodGet:
 	case http.MethodPost:

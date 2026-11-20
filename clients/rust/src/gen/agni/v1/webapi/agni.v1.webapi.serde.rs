@@ -19226,6 +19226,9 @@ impl serde::Serialize for Mount {
         if !self.connection.is_empty() {
             len += 1;
         }
+        if self.source_hidden {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Mount", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -19259,6 +19262,9 @@ impl serde::Serialize for Mount {
         if !self.connection.is_empty() {
             struct_ser.serialize_field("connection", &self.connection)?;
         }
+        if self.source_hidden {
+            struct_ser.serialize_field("sourceHidden", &self.source_hidden)?;
+        }
         struct_ser.end()
     }
 }
@@ -19279,6 +19285,8 @@ impl<'de> serde::Deserialize<'de> for Mount {
             "fixed",
             "writable",
             "connection",
+            "source_hidden",
+            "sourceHidden",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -19293,6 +19301,7 @@ impl<'de> serde::Deserialize<'de> for Mount {
             Fixed,
             Writable,
             Connection,
+            SourceHidden,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -19324,6 +19333,7 @@ impl<'de> serde::Deserialize<'de> for Mount {
                             "fixed" => Ok(GeneratedField::Fixed),
                             "writable" => Ok(GeneratedField::Writable),
                             "connection" => Ok(GeneratedField::Connection),
+                            "sourceHidden" | "source_hidden" => Ok(GeneratedField::SourceHidden),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -19353,6 +19363,7 @@ impl<'de> serde::Deserialize<'de> for Mount {
                 let mut fixed__ = None;
                 let mut writable__ = None;
                 let mut connection__ = None;
+                let mut source_hidden__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -19415,6 +19426,12 @@ impl<'de> serde::Deserialize<'de> for Mount {
                             }
                             connection__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::SourceHidden => {
+                            if source_hidden__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("sourceHidden"));
+                            }
+                            source_hidden__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Mount {
@@ -19428,6 +19445,7 @@ impl<'de> serde::Deserialize<'de> for Mount {
                     fixed: fixed__.unwrap_or_default(),
                     writable: writable__.unwrap_or_default(),
                     connection: connection__.unwrap_or_default(),
+                    source_hidden: source_hidden__.unwrap_or_default(),
                 })
             }
         }

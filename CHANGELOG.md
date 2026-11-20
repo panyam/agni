@@ -28,8 +28,22 @@ GitHub Release body carries.
   makes the repo's push webhook through the mount's connection (`CreateMountWebhook`), and a
   design's page in the viewer names each artifact's source, with a Sync button beside a newer
   version.
+- People sign in with GitHub, through a GitHub App (issue 1772). `agni serve --github-client-id`,
+  `--github-client-secret` and `--github-allow org:acme` add "Sign in with GitHub" to `/signin`,
+  and `agni login --remote` signs in from a terminal through GitHub's device flow. The server mints
+  the person a token for `github:<login>` and keeps their GitHub token as their own connection, so a
+  design linked from a private repo they can read opens for them. `--public-url` names where GitHub
+  sends the browser back.
 
 ### Changed
+
+- `ListMounts` and `GetMount` leave out a private mount's root, source, ref and commit for a caller
+  who can't read its repo, and set `Mount.source_hidden` (issue 1772). A person's connection reads
+  through the server's `--github-api` when it names no `--base-url`.
+- Deleting a person's connection goes through goapplib's `Disconnect`, which revokes a token the
+  server got by signing the person in and deletes a pasted one (issue 1776).
+- goapplib and goapplib storage v0.7.20, and oneauth v0.3.12 (issues 1772, 1776). A person checked
+  before they add their connection is no longer refused for a minute after.
 
 - goapplib and goapplib storage v0.7.18, and oneauth and oneauth grpc v0.3.11 (issues 1775, 1726).
   A token a person pastes with `agni connections add --mine` is kept as pasted, so a later

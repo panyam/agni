@@ -3,52 +3,29 @@ package mountset_test
 import (
 	"context"
 	"errors"
-	"net/http"
-	"net/http/httptest"
-	"net/http/httputil"
-	"net/url"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/panyam/goapplib/storage/connections"
 	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
+	"golang.org/x/oauth2"
 
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
 
-// noAccess answers 404 to a request for repo carrying token, as GitHub answers a token whose owner
-// can't see a private repo, and passes everything else to the fake behind it. goapplib's fake
-// GitHub lets every accepted token read every repo.
-func noAccess(t *testing.T, gh *githubtest.Server, token, repo string) string {
-	t.Helper()
-	target, err := url.Parse(gh.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/repos/"+repo) && strings.HasSuffix(r.Header.Get("Authorization"), " "+token) {
-			http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
-			return
-		}
-		proxy.ServeHTTP(w, r)
-	}))
-	t.Cleanup(srv.Close)
-	return srv.URL
-}
-
 // The table answers whether a caller can read a mount's private repo by asking GitHub with the
 // caller's own connection, never the server's (agni issue 1728).
 func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 	gh := githubtest.New(t)
-	gh.AddRepo("acme", "board", true, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
+	board := gh.AddRepo("acme", "board", true, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
 	gh.AddRepo("acme", "open", false, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
-	for _, tok := range []string{"ghp_server", "ghp_alice", "ghp_bob"} {
-		gh.AddToken(tok)
-	}
-	api := noAccess(t, gh, "ghp_bob", "acme/board")
+	gh.AddToken("ghp_bob")
+	// Bob can't see the private repo, so GitHub answers his token 404 for it.
+	board.Grant("ghp_server", "ghp_alice")
+	api := gh.URL
 	t.Setenv("AGNI_TEST_SERVER_TOKEN", "ghp_server")
 	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("ab", 32))
 	dir := t.TempDir()
@@ -112,8 +89,25 @@ func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 			t.Error("the server's own token answered whether a person can read the repo")
 		}
 	}
-	if err := table.ForgetUserToken(ctx, "alice-gh", "alice"); err != nil {
+	sealed := func() int {
+		t.Helper()
+		files, err := filepath.Glob(filepath.Join(dir, "store", mountset.UserTokensDir, "user_tokens", "*.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(files)
+	}
+	if n := sealed(); n != 2 {
+		t.Fatalf("the server holds %d sealed tokens; want alice's and bob's", n)
+	}
+	if err := table.Disconnect(ctx, "alice-gh"); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := conns.GetConnection(ctx, "alice-gh"); !errors.Is(err, connections.ErrNotFound) {
+		t.Errorf("alice's connection after Disconnect: %v; want it gone", err)
+	}
+	if n := sealed(); n != 1 {
+		t.Errorf("after alice disconnects, the server holds %d sealed tokens; want bob's alone", n)
 	}
 
 	// agnids reads the same records and can't check anyone's connection, so under --auth it hides
@@ -134,5 +128,45 @@ func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 	}
 	if _, err := reader.Resolve(uri(t, "mount://open/hw/bb.kicad_sch")); err != nil {
 		t.Errorf("a reader hiding private mounts resolves open: %v", err)
+	}
+}
+
+// A GitHub sign-in keeps the person's token as their own connection, named for the login, and a
+// second sign-in replaces the token rather than making another. Another person can't take over that
+// connection by signing in under its login (agni issue 1772).
+func TestASignInKeepsTheTokenAsThePersonsOwnConnection(t *testing.T) {
+	gh := githubtest.New(t)
+	board := gh.AddRepo("acme", "board", true, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
+	board.Grant("ghp_alice_signin")
+	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("ab", 32))
+	dir := t.TempDir()
+	table, err := mountset.Open(mountset.Config{
+		Uploads: filepath.Join(dir, "uploads"), Records: filepath.Join(dir, "store", "mounts"), Connections: filepath.Join(dir, "store", "connections"),
+		UserTokens: filepath.Join(dir, "store", mountset.UserTokensDir), ConnectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY",
+		GitHubAPI: gh.URL, GitHubRaw: gh.RawURL(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	id, err := table.SaveSignedIn(ctx, "github:alice", "Alice", &oauth2.Token{AccessToken: "ghp_alice_signin"})
+	if err != nil || id != "github-alice" {
+		t.Fatalf("SaveSignedIn for alice = %q, %v; want github-alice", id, err)
+	}
+	c, err := table.Connections().GetConnection(ctx, id)
+	if err != nil || c.Owner != "github:alice" || c.Kind != connections.KindGitHubUser || c.Pasted || c.BaseURL != gh.URL {
+		t.Errorf("alice's signed-in connection = %+v, %v; want hers, issued by the app, reading through the server's GitHub API", c, err)
+	}
+	if err := table.CanRead(service.WithCaller(ctx, service.Caller{Subject: "github:alice"}), "github://acme/board"); err != nil {
+		t.Errorf("alice reading github://acme/board through her sign-in: %v", err)
+	}
+	if _, err := table.SaveSignedIn(ctx, "github:alice", "alice", &oauth2.Token{AccessToken: "ghp_alice_again"}); err != nil {
+		t.Errorf("alice signing in again: %v", err)
+	}
+	if all, _ := table.Connections().ListConnections(ctx, "github:alice"); len(all) != 1 {
+		t.Errorf("after two sign-ins alice has connections %+v; want one", all)
+	}
+	if _, err := table.SaveSignedIn(ctx, "mallory", "alice", &oauth2.Token{AccessToken: "ghp_mallory"}); !errors.Is(err, service.ErrFailedPrecondition) || !strings.Contains(fmt.Sprint(err), "belongs to someone else") {
+		t.Errorf("mallory saving a token under alice's login: %v; want failed precondition, saying it's someone else's", err)
 	}
 }

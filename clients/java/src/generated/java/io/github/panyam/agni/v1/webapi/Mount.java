@@ -457,6 +457,23 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SOURCE_HIDDEN_FIELD_NUMBER = 11;
+  private boolean sourceHidden_ = false;
+  /**
+   * <pre>
+   * source_hidden says the caller can't read the mount's private source, so root, source, ref and
+   * commit are left out. The name and kind stay, so the caller can tell the mount is there (agni
+   * issue 1772).
+   * </pre>
+   *
+   * <code>bool source_hidden = 11 [json_name = "sourceHidden"];</code>
+   * @return The sourceHidden.
+   */
+  @java.lang.Override
+  public boolean getSourceHidden() {
+    return sourceHidden_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -501,6 +518,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(connection_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 10, connection_);
     }
+    if (sourceHidden_ != false) {
+      output.writeBool(11, sourceHidden_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -537,6 +557,10 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(connection_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(10, connection_);
+    }
+    if (sourceHidden_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(11, sourceHidden_);
     }
     return size;
   }
@@ -581,6 +605,8 @@ private static final long serialVersionUID = 0L;
         != other.getWritable()) return false;
     if (!getConnection()
         .equals(other.getConnection())) return false;
+    if (getSourceHidden()
+        != other.getSourceHidden()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -614,6 +640,9 @@ private static final long serialVersionUID = 0L;
         getWritable());
     hash = (37 * hash) + CONNECTION_FIELD_NUMBER;
     hash = (53 * hash) + getConnection().hashCode();
+    hash = (37 * hash) + SOURCE_HIDDEN_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getSourceHidden());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -760,6 +789,7 @@ private static final long serialVersionUID = 0L;
       fixed_ = false;
       writable_ = false;
       connection_ = "";
+      sourceHidden_ = false;
       return this;
     }
 
@@ -823,6 +853,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000200) != 0)) {
         result.connection_ = connection_;
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.sourceHidden_ = sourceHidden_;
+      }
     }
 
     @java.lang.Override
@@ -880,6 +913,9 @@ private static final long serialVersionUID = 0L;
         connection_ = other.connection_;
         bitField0_ |= 0x00000200;
         onChanged();
+      }
+      if (other.getSourceHidden() != false) {
+        setSourceHidden(other.getSourceHidden());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -955,6 +991,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 88: {
+              sourceHidden_ = input.readBool();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 88
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1800,6 +1841,56 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       connection_ = value;
       bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private boolean sourceHidden_ ;
+    /**
+     * <pre>
+     * source_hidden says the caller can't read the mount's private source, so root, source, ref and
+     * commit are left out. The name and kind stay, so the caller can tell the mount is there (agni
+     * issue 1772).
+     * </pre>
+     *
+     * <code>bool source_hidden = 11 [json_name = "sourceHidden"];</code>
+     * @return The sourceHidden.
+     */
+    @java.lang.Override
+    public boolean getSourceHidden() {
+      return sourceHidden_;
+    }
+    /**
+     * <pre>
+     * source_hidden says the caller can't read the mount's private source, so root, source, ref and
+     * commit are left out. The name and kind stay, so the caller can tell the mount is there (agni
+     * issue 1772).
+     * </pre>
+     *
+     * <code>bool source_hidden = 11 [json_name = "sourceHidden"];</code>
+     * @param value The sourceHidden to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSourceHidden(boolean value) {
+
+      sourceHidden_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * source_hidden says the caller can't read the mount's private source, so root, source, ref and
+     * commit are left out. The name and kind stay, so the caller can tell the mount is there (agni
+     * issue 1772).
+     * </pre>
+     *
+     * <code>bool source_hidden = 11 [json_name = "sourceHidden"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSourceHidden() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      sourceHidden_ = false;
       onChanged();
       return this;
     }

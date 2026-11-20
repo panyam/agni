@@ -168,7 +168,11 @@ type Mount struct {
 	Writable bool `protobuf:"varint,9,opt,name=writable,proto3" json:"writable,omitempty"`
 	// connection is the connection the server reads the mount through, "connections/{connection}",
 	// empty for a public or local source (agni issue 1724).
-	Connection    string `protobuf:"bytes,10,opt,name=connection,proto3" json:"connection,omitempty"`
+	Connection string `protobuf:"bytes,10,opt,name=connection,proto3" json:"connection,omitempty"`
+	// source_hidden says the caller can't read the mount's private source, so root, source, ref and
+	// commit are left out. The name and kind stay, so the caller can tell the mount is there (agni
+	// issue 1772).
+	SourceHidden  bool `protobuf:"varint,11,opt,name=source_hidden,json=sourceHidden,proto3" json:"source_hidden,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -271,6 +275,13 @@ func (x *Mount) GetConnection() string {
 		return x.Connection
 	}
 	return ""
+}
+
+func (x *Mount) GetSourceHidden() bool {
+	if x != nil {
+		return x.SourceHidden
+	}
+	return false
 }
 
 type CreateMountRequest struct {
@@ -1539,7 +1550,7 @@ var File_agni_v1_webapi_workspace_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\n" +
-	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\x1a\x1cagni/v1/webapi/project.proto\"\x84\x02\n" +
+	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\x1a\x1cagni/v1/webapi/project.proto\"\xa9\x02\n" +
 	"\x05Mount\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n" +
@@ -1553,7 +1564,8 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\n" +
 	"connection\x18\n" +
 	" \x01(\tR\n" +
-	"connection\"r\n" +
+	"connection\x12#\n" +
+	"\rsource_hidden\x18\v \x01(\bR\fsourceHidden\"r\n" +
 	"\x12CreateMountRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12\x10\n" +

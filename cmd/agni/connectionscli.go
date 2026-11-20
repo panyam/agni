@@ -120,7 +120,7 @@ private repo opens only for a caller whose own connection can read the repo (agn
 	add.Flags().Int64Var(&installation, "installation", 0, "the GitHub App installation's id, with --github-app")
 	add.Flags().StringVar(&key, "key", "", "where the GitHub App's private key is, env:NAME or file:/abs/path, with --github-app")
 	add.Flags().StringVar(&title, "title", "", "what a page shows for the connection; the id when empty")
-	add.Flags().StringVar(&baseURL, "base-url", "", "the GitHub API root, for GitHub Enterprise; api.github.com when empty")
+	add.Flags().StringVar(&baseURL, "base-url", "", "the GitHub API root, for GitHub Enterprise; the server's --github-api, or api.github.com, when empty")
 
 	rm := &cobra.Command{
 		Use:   "rm <id>",

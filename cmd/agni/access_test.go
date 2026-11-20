@@ -58,7 +58,7 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	must(runMounts(t, "add", "board", "github://acme/board", "--connection", "acme", "--remote", url))
 
 	as("alice")
-	if out := must(runCobra(t, connectionsCmd(), "add", "alice-gh", "--mine", "--github-token", "env:AGNI_TEST_ALICE_GITHUB", "--base-url", gh.URL, "--remote", url)); out != "alice-gh\tgithub-user\tsealed, for alice\tok\n" {
+	if out := must(runCobra(t, connectionsCmd(), "add", "alice-gh", "--mine", "--github-token", "env:AGNI_TEST_ALICE_GITHUB", "--remote", url)); out != "alice-gh\tgithub-user\tsealed, for alice\tok\n" {
 		t.Errorf("connections add --mine = %q", out)
 	}
 	must(runDesigns(t, url, "create", "bb"))
@@ -95,8 +95,14 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", url)); strings.Contains(out, "alice-gh") {
 		t.Errorf("bob's connections ls = %q; want alice's left out", out)
 	}
+	if out := must(runMounts(t, "ls", "--remote", url)); strings.Contains(out, "acme/board") || !strings.Contains(out, "board\tgithub\ta private source you can't read") {
+		t.Errorf("bob's mounts ls = %q; want board listed without its repo", out)
+	}
 
 	as("alice")
+	if out := must(runMounts(t, "ls", "--remote", url)); !strings.Contains(out, "board\tgithub\tgithub://acme/board@") {
+		t.Errorf("alice's mounts ls = %q; want board's repo, since she can read it", out)
+	}
 	req.Header.Set("Authorization", "Bearer "+tokens["alice"])
 	if resp, err := http.DefaultClient.Do(req); err != nil || resp.StatusCode != http.StatusOK {
 		t.Errorf("alice GET /raw/uploads/%s = %v, %v; want 200", read[1], resp, err)

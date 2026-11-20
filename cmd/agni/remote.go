@@ -56,9 +56,9 @@ func dialRemote(ctx context.Context, raw string) (*remoteServer, error) {
 		return nil, fmt.Errorf("--remote %q: want a URL like http://localhost:8080", raw)
 	}
 	r := &remoteServer{url: strings.TrimRight(raw, "/"), http: http.DefaultClient}
-	// A shared server asks every call for a token (agni issue 1627), which `agni token create` made
-	// on the server and the caller passes in AGNI_TOKEN.
-	if token := os.Getenv(envToken); token != "" {
+	// A shared server asks every call for a token (agni issue 1627). `agni token create` made it on
+	// the server and the caller passes it in AGNI_TOKEN, or `agni login` kept it (agni issue 1772).
+	if token := remoteToken(r.url); token != "" {
 		r.http = &http.Client{Transport: bearerTransport{token: token, next: http.DefaultTransport}}
 	}
 	ctx, cancel := context.WithTimeout(ctx, remoteMountTimeout)

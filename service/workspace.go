@@ -228,6 +228,21 @@ func (s *WorkspaceService) mountProto(m MountInfo) (*webapi.Mount, error) {
 	return mountProto(m)
 }
 
+// visibleMount is m as the caller may see it. A caller the guard doesn't let read the mount's
+// private source gets the mount without its root, source, ref or commit, since those name the repo
+// (agni issue 1772). A source that can't answer now hides them too, rather than failing the list.
+func (s *WorkspaceService) visibleMount(ctx context.Context, m MountInfo) (*webapi.Mount, error) {
+	if s.guard.Mount(ctx, m.Name) == nil {
+		return s.mountProto(m)
+	}
+	m.Root, m.Source, m.Ref, m.Commit = "", "", "", ""
+	mp, err := mountProto(m)
+	if mp != nil {
+		mp.SourceHidden = true
+	}
+	return mp, err
+}
+
 func mountProto(m MountInfo) (*webapi.Mount, error) {
 	uri, err := mounts.NewURI(m.Name, "")
 	if err != nil {
@@ -270,7 +285,7 @@ func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMount
 	opens := opensSet(req.GetOpens())
 	pruneBudget := pruneMaxDirs
 	for _, m := range s.ws.Mounts() {
-		mp, err := s.mountProto(m)
+		mp, err := s.visibleMount(ctx, m)
 		if err != nil {
 			return nil, err
 		}
@@ -286,12 +301,12 @@ func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMount
 
 // GetMount returns the mount named req.Name, as ListMounts would list it with no pruning. A name
 // the server does not serve, the empty name included, is ErrNotFound.
-func (s *WorkspaceService) GetMount(_ context.Context, req *webapi.GetMountRequest) (*webapi.Mount, error) {
+func (s *WorkspaceService) GetMount(ctx context.Context, req *webapi.GetMountRequest) (*webapi.Mount, error) {
 	for _, m := range s.ws.Mounts() {
 		if m.Name != req.GetName() {
 			continue
 		}
-		return s.mountProto(m)
+		return s.visibleMount(ctx, m)
 	}
 	return nil, fmt.Errorf("%w: no mount named %q", ErrNotFound, req.GetName())
 }
