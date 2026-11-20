@@ -9,14 +9,14 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-20, at `306e5f25`.
+Last pruned 2026-11-20, at `b4cd9d6e`.
 
 ## At a glance
 
-**#1722** (link a design to where the team keeps it, and follow its history) is active, at 13 of 19.
-Its exercise is `make exercise-linked-sources`. PR #1779 merged on 2026-11-20. It added sign-in with
-GitHub, from the browser and from `agni login`, and keeps each person's GitHub token as their own
-connection. The exercise passes at `306e5f25`. #1727 (the link form on `/designs`) is next, and builds on that sign-in.
+**#1722** (link a design to where the team keeps it, and follow its history) is active, at 14 of 20.
+Its exercise is `make exercise-linked-sources`, which now ends with a browser walk of the designs
+page's link form, so it needs `make ui`. PR #1782 merged on 2026-11-20 and closed #1727. The
+exercise passes at `b4cd9d6e`. What remains is leftovers (#1774, #1778, #1781) and two P3 sources.
 
 - **#1611 `mission_markup`** is filed and not active. #1612 and #1613 come first.
 - **Four missions filed on 2026-11-17, none active.** Each one's first ticket writes its exercise.
@@ -26,12 +26,11 @@ connection. The exercise passes at `306e5f25`. #1727 (the link form on `/designs
 
 ## Open, ranked
 
-1. **#1727**, in a worktree of the `~/projects/Agni/main` clone. It also picks up the viewer's
-   access text and a `/mounts/` form.
-2. **The rest of #1722.** #1774 and #1778 hold the leftovers from PRs #1773 and #1779. #1729
-   (SharePoint) and #1730 (S3 and GCS) are P3.
-3. **#1780** (CI uses the runner's Chrome) is P2 and serves no mission.
-4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
+1. **The leftovers of #1722**, in a worktree of the `~/projects/Agni/main` clone. #1774 (from PR
+   #1773), #1778 (from PR #1779) and #1781 (from PR #1782). #1729 (SharePoint) and #1730 (S3 and
+   GCS) are P3.
+2. **#1780** (CI uses the runner's Chrome) is P2 and serves no mission.
+3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
