@@ -145,6 +145,14 @@ func (a *Workspace) DeleteMount(ctx context.Context, req *connect.Request[webapi
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Workspace) CreateMountWebhook(ctx context.Context, req *connect.Request[webapi.CreateMountWebhookRequest]) (*connect.Response[webapi.MountWebhook], error) {
+	resp, err := a.svc.CreateMountWebhook(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Workspace) ListDir(ctx context.Context, req *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {
 	resp, err := a.svc.ListDir(ctx, req.Msg)
 	if err != nil {

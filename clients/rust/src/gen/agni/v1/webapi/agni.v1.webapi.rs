@@ -4501,6 +4501,40 @@ pub struct DeleteMountRequest {
 pub struct DeleteMountResponse {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CreateMountWebhookRequest {
+    /// name is the mount's handle.
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
+    /// "<https://agni.example.com/hooks/github".> The server can't tell its own public address, so the
+    /// caller names it.
+    #[prost(string, tag="2")]
+    pub url: ::prost::alloc::string::String,
+}
+/// MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct MountWebhook {
+    /// mount is the mount's handle.
+    #[prost(string, tag="1")]
+    pub mount: ::prost::alloc::string::String,
+    /// source is the repo the hook is on, such as "github://acme/board".
+    #[prost(string, tag="2")]
+    pub source: ::prost::alloc::string::String,
+    /// id is GitHub's id for the hook.
+    #[prost(int64, tag="3")]
+    pub id: i64,
+    /// url is where the hook sends its deliveries.
+    #[prost(string, tag="4")]
+    pub url: ::prost::alloc::string::String,
+    /// events are the events it sends, \["push"\].
+    #[prost(string, repeated, tag="5")]
+    pub events: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// created is true when the call made the hook, and false when a hook sending to url was there and
+    /// was updated.
+    #[prost(bool, tag="6")]
+    pub created: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetMountRequest {
     /// name is the mount's handle, as Mount.name gives it.
     #[prost(string, tag="1")]

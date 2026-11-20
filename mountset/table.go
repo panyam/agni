@@ -95,6 +95,8 @@ type Table struct {
 	hidePrivate bool
 	// gh is the GitHub driver, nil without Uploads. MountsOf asks it whether two sources match.
 	gh *github.Driver
+	// githubAPI is the GitHub REST API CreateWebhook calls, Config.GitHubAPI or GitHub's own.
+	githubAPI string
 }
 
 // NewTable returns a table serving fixed and nothing else, for the CLI and for a server with no
@@ -173,6 +175,10 @@ func Open(cfg Config) (*Table, error) {
 		opts = append(opts, mounts.WithCredentials(t.svc.TokenSource))
 	}
 	t.gh = gh
+	t.githubAPI = cfg.GitHubAPI
+	if t.githubAPI == "" {
+		t.githubAPI = "https://api.github.com"
+	}
 	t.reg = mounts.NewRegistry(store, drivers, opts...)
 	if store != nil {
 		all, err := t.reg.List(context.Background())

@@ -100,7 +100,39 @@ connections).`,
 		},
 	}
 
-	cmd.AddCommand(ls, add, rm)
+	var hookURL string
+	webhook := &cobra.Command{
+		Use:   "webhook <name> --url https://<server>/hooks/github",
+		Short: "Ask GitHub to send a mounted repo's pushes to this server",
+		Long: `webhook makes the push webhook on a github mount's repo, so a push to a branch a linked design
+follows syncs the design (agni issue 1726). GitHub signs each delivery with the server's
+--github-webhook-secret. --url is the server's /hooks/github as GitHub reaches it, since the server
+can't tell its own public address. The mount's connection needs a token allowed to manage the repo's
+webhooks. Running it again updates the hook rather than making a second one.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if hookURL == "" {
+				return fmt.Errorf("--url names where GitHub sends the pushes, such as https://agni.example.com/hooks/github")
+			}
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			h, err := unary(cmd.Context(), c.CreateMountWebhook, &webapi.CreateMountWebhookRequest{Name: args[0], Url: hookURL})
+			if err != nil {
+				return err
+			}
+			did := "updated"
+			if h.GetCreated() {
+				did = "made"
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s webhook %d on %s, sending %s to %s\n", h.GetMount(), did, h.GetId(), h.GetSource(), strings.Join(h.GetEvents(), ", "), h.GetUrl())
+			return nil
+		},
+	}
+	webhook.Flags().StringVar(&hookURL, "url", "", "where GitHub sends the pushes: this server's /hooks/github as GitHub reaches it")
+
+	cmd.AddCommand(ls, add, rm, webhook)
 	return cmd
 }
 

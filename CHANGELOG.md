@@ -24,7 +24,10 @@ GitHub Release body carries.
   issue 1726). GitHub's push webhook arrives at `/hooks/github`, signed with the secret
   `agni serve --github-webhook-secret` names, and `--poll 5m` asks each followed branch or folder on a
   timer instead. `agni designs update --on-source-change mark` keeps a design at its files and notes
-  the newer commit as `ArtifactSource.newer_version` until a person syncs.
+  the newer commit as `ArtifactSource.newer_version` until a person syncs. `agni mounts webhook`
+  makes the repo's push webhook through the mount's connection (`CreateMountWebhook`), and a
+  design's page in the viewer names each artifact's source, with a Sync button beside a newer
+  version.
 
 ### Changed
 

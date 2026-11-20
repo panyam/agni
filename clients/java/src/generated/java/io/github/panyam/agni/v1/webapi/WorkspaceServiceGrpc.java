@@ -143,6 +143,37 @@ public final class WorkspaceServiceGrpc {
     return getDeleteMountMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest,
+      io.github.panyam.agni.v1.webapi.MountWebhook> getCreateMountWebhookMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreateMountWebhook",
+      requestType = io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.MountWebhook.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest,
+      io.github.panyam.agni.v1.webapi.MountWebhook> getCreateMountWebhookMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest, io.github.panyam.agni.v1.webapi.MountWebhook> getCreateMountWebhookMethod;
+    if ((getCreateMountWebhookMethod = WorkspaceServiceGrpc.getCreateMountWebhookMethod) == null) {
+      synchronized (WorkspaceServiceGrpc.class) {
+        if ((getCreateMountWebhookMethod = WorkspaceServiceGrpc.getCreateMountWebhookMethod) == null) {
+          WorkspaceServiceGrpc.getCreateMountWebhookMethod = getCreateMountWebhookMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest, io.github.panyam.agni.v1.webapi.MountWebhook>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateMountWebhook"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.MountWebhook.getDefaultInstance()))
+              .setSchemaDescriptor(new WorkspaceServiceMethodDescriptorSupplier("CreateMountWebhook"))
+              .build();
+        }
+      }
+    }
+    return getCreateMountWebhookMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListDirRequest,
       io.github.panyam.agni.v1.webapi.ListDirResponse> getListDirMethod;
 
@@ -389,6 +420,21 @@ public final class WorkspaceServiceGrpc {
 
     /**
      * <pre>
+     * CreateMountWebhook asks GitHub to send the pushes of a github mount's repo to url, signed with
+     * the server's --github-webhook-secret (agni issue 1726). It goes through the mount's connection,
+     * whose token must be allowed to manage the repo's webhooks. A hook already sending to url gets the
+     * server's secret and the push event again, so a second call changes nothing else. A server with
+     * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
+     * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * </pre>
+     */
+    default void createMountWebhook(io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.MountWebhook> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateMountWebhookMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
      * file is labeled with the reader that would open it. The client addresses a location by an
      * artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -544,6 +590,22 @@ public final class WorkspaceServiceGrpc {
 
     /**
      * <pre>
+     * CreateMountWebhook asks GitHub to send the pushes of a github mount's repo to url, signed with
+     * the server's --github-webhook-secret (agni issue 1726). It goes through the mount's connection,
+     * whose token must be allowed to manage the repo's webhooks. A hook already sending to url gets the
+     * server's secret and the push event again, so a second call changes nothing else. A server with
+     * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
+     * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * </pre>
+     */
+    public void createMountWebhook(io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.MountWebhook> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreateMountWebhookMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
      * file is labeled with the reader that would open it. The client addresses a location by an
      * artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -681,6 +743,21 @@ public final class WorkspaceServiceGrpc {
 
     /**
      * <pre>
+     * CreateMountWebhook asks GitHub to send the pushes of a github mount's repo to url, signed with
+     * the server's --github-webhook-secret (agni issue 1726). It goes through the mount's connection,
+     * whose token must be allowed to manage the repo's webhooks. A hook already sending to url gets the
+     * server's secret and the push event again, so a second call changes nothing else. A server with
+     * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
+     * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.MountWebhook createMountWebhook(io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCreateMountWebhookMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
      * file is labeled with the reader that would open it. The client addresses a location by an
      * artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -810,6 +887,21 @@ public final class WorkspaceServiceGrpc {
     public io.github.panyam.agni.v1.webapi.DeleteMountResponse deleteMount(io.github.panyam.agni.v1.webapi.DeleteMountRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getDeleteMountMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * CreateMountWebhook asks GitHub to send the pushes of a github mount's repo to url, signed with
+     * the server's --github-webhook-secret (agni issue 1726). It goes through the mount's connection,
+     * whose token must be allowed to manage the repo's webhooks. A hook already sending to url gets the
+     * server's secret and the push event again, so a second call changes nothing else. A server with
+     * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
+     * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.MountWebhook createMountWebhook(io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreateMountWebhookMethod(), getCallOptions(), request);
     }
 
     /**
@@ -951,6 +1043,22 @@ public final class WorkspaceServiceGrpc {
 
     /**
      * <pre>
+     * CreateMountWebhook asks GitHub to send the pushes of a github mount's repo to url, signed with
+     * the server's --github-webhook-secret (agni issue 1726). It goes through the mount's connection,
+     * whose token must be allowed to manage the repo's webhooks. A hook already sending to url gets the
+     * server's secret and the push event again, so a second call changes nothing else. A server with
+     * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
+     * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.MountWebhook> createMountWebhook(
+        io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreateMountWebhookMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
      * file is labeled with the reader that would open it. The client addresses a location by an
      * artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -1017,10 +1125,11 @@ public final class WorkspaceServiceGrpc {
   private static final int METHODID_GET_MOUNT = 1;
   private static final int METHODID_CREATE_MOUNT = 2;
   private static final int METHODID_DELETE_MOUNT = 3;
-  private static final int METHODID_LIST_DIR = 4;
-  private static final int METHODID_LIST_DESIGN_FILES = 5;
-  private static final int METHODID_PROPOSE_DESIGNS = 6;
-  private static final int METHODID_DECLARE_COMPANION = 7;
+  private static final int METHODID_CREATE_MOUNT_WEBHOOK = 4;
+  private static final int METHODID_LIST_DIR = 5;
+  private static final int METHODID_LIST_DESIGN_FILES = 6;
+  private static final int METHODID_PROPOSE_DESIGNS = 7;
+  private static final int METHODID_DECLARE_COMPANION = 8;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1054,6 +1163,10 @@ public final class WorkspaceServiceGrpc {
         case METHODID_DELETE_MOUNT:
           serviceImpl.deleteMount((io.github.panyam.agni.v1.webapi.DeleteMountRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.DeleteMountResponse>) responseObserver);
+          break;
+        case METHODID_CREATE_MOUNT_WEBHOOK:
+          serviceImpl.createMountWebhook((io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.MountWebhook>) responseObserver);
           break;
         case METHODID_LIST_DIR:
           serviceImpl.listDir((io.github.panyam.agni.v1.webapi.ListDirRequest) request,
@@ -1117,6 +1230,13 @@ public final class WorkspaceServiceGrpc {
               io.github.panyam.agni.v1.webapi.DeleteMountRequest,
               io.github.panyam.agni.v1.webapi.DeleteMountResponse>(
                 service, METHODID_DELETE_MOUNT)))
+        .addMethod(
+          getCreateMountWebhookMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest,
+              io.github.panyam.agni.v1.webapi.MountWebhook>(
+                service, METHODID_CREATE_MOUNT_WEBHOOK)))
         .addMethod(
           getListDirMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -1197,6 +1317,7 @@ public final class WorkspaceServiceGrpc {
               .addMethod(getGetMountMethod())
               .addMethod(getCreateMountMethod())
               .addMethod(getDeleteMountMethod())
+              .addMethod(getCreateMountWebhookMethod())
               .addMethod(getListDirMethod())
               .addMethod(getListDesignFilesMethod())
               .addMethod(getProposeDesignsMethod())

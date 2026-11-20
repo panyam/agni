@@ -515,6 +515,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		f := &follower{designs: designSvc, life: life, log: cmd.ErrOrStderr()}
 		if len(o.webhookSecret) > 0 {
 			mux.Handle("POST "+githubHookPath, f.githubHook(o.webhookSecret))
+			workspace.WithWebhooks(table, o.webhookSecret)
 		}
 		if o.poll > 0 {
 			f.poll(o.poll)

@@ -74,6 +74,30 @@ class DeleteMountResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
+class CreateMountWebhookRequest(_message.Message):
+    __slots__ = ("name", "url")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    URL_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    url: str
+    def __init__(self, name: _Optional[str] = ..., url: _Optional[str] = ...) -> None: ...
+
+class MountWebhook(_message.Message):
+    __slots__ = ("mount", "source", "id", "url", "events", "created")
+    MOUNT_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    URL_FIELD_NUMBER: _ClassVar[int]
+    EVENTS_FIELD_NUMBER: _ClassVar[int]
+    CREATED_FIELD_NUMBER: _ClassVar[int]
+    mount: str
+    source: str
+    id: int
+    url: str
+    events: _containers.RepeatedScalarFieldContainer[str]
+    created: bool
+    def __init__(self, mount: _Optional[str] = ..., source: _Optional[str] = ..., id: _Optional[int] = ..., url: _Optional[str] = ..., events: _Optional[_Iterable[str]] = ..., created: _Optional[bool] = ...) -> None: ...
+
 class GetMountRequest(_message.Message):
     __slots__ = ("name",)
     NAME_FIELD_NUMBER: _ClassVar[int]

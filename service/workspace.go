@@ -116,6 +116,9 @@ type WorkspaceService struct {
 	linked func(ctx context.Context, mount string) ([]string, error)
 	// guard refuses a read of a private source the caller can't read, and is set by WithGuard.
 	guard *AccessGuard
+	// hooks makes a mount's GitHub webhook with hookSecret, and both are set by WithWebhooks.
+	hooks      WebhookMaker
+	hookSecret []byte
 }
 
 // WithGuard refuses a read under a mount or design g refuses (agni issue 1728), and returns s. A

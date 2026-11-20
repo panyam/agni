@@ -15,6 +15,7 @@ const fake = vi.hoisted(() => ({
   reports: [] as unknown[],
   packs: [] as unknown[],
   created: [] as unknown[],
+  synced: [] as unknown[],
 }));
 vi.mock("./api.js", () => ({
   designClient: () => ({
@@ -23,6 +24,10 @@ vi.mock("./api.js", () => ({
       return { designs: fake.designs, unreachable: [], nextPageToken: "" };
     },
     getDesign: async () => fake.design,
+    syncDesign: async (req: unknown) => {
+      fake.synced.push(req);
+      return { artifacts: [] };
+    },
     listArtifacts: async () => ({ artifacts: fake.artifacts, nextPageToken: "" }),
     listReports: async () => ({ reports: (fake.reports as { results?: unknown }[]).map((r) => ({ ...r, results: undefined })), nextPageToken: "" }),
     getReport: async (req: { name: string }) => (fake.reports as { name: string }[]).find((r) => r.name === req.name),
@@ -54,6 +59,7 @@ beforeEach(() => {
   fake.reports = [];
   fake.packs = [];
   fake.created = [];
+  fake.synced = [];
 });
 
 describe("the library list", () => {
@@ -96,6 +102,28 @@ describe("a design's page", () => {
       ["schematic", "schematic", "bb.kicad_sch", "2"],
     ]);
     expect(el.querySelector(".lb-title")?.textContent).toBe("Baseboard");
+  });
+
+  it("names each artifact's source, and offers a sync when a newer version waits at it", async () => {
+    fake.design = create(DesignSchema, { name: "designs/bb", artifacts: ["designs/bb/artifacts/notes", "designs/bb/artifacts/schematic"] });
+    fake.artifacts = [
+      create(ArtifactSchema, { name: "designs/bb/artifacts/notes", type: ArtifactType.OTHER, files: [{ path: "notes.md" }], source: { mount: "uploads" } }),
+      create(ArtifactSchema, {
+        name: "designs/bb/artifacts/schematic",
+        type: ArtifactType.SCHEMATIC,
+        entry: "bb.kicad_sch",
+        files: [{ path: "bb.kicad_sch" }],
+        source: { mount: "board", path: "hw/bb.kicad_sch", ref: "main", follow: true, version: "3411086e6d6ad2384d0609c53cd6b96323f97c24", readHash: "sha256:ab", newerVersion: "8e087f4f946a925041380699dcde51ae8519f621" },
+      }),
+    ];
+    const el = mount((e) => designIsland(e, null, "bb"));
+    await vi.waitFor(() => expect(el.querySelectorAll("tr[data-artifact]").length).toBe(2));
+    const source = (id: string) => el.querySelector(`tr[data-artifact="${id}"] .lb-source`)?.textContent;
+    expect(source("notes")).toBe("uploaded");
+    expect(source("schematic")).toBe("board/hw/bb.kicad_sch@main at 3411086e6d6a, followed newer at the source: 8e087f4f946a Sync");
+    expect(el.querySelector('[data-testid="sync-notes"]')).toBeNull();
+    (el.querySelector('[data-testid="sync-schematic"]') as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(fake.synced).toEqual([{ name: "designs/bb", artifacts: ["schematic"] }]));
   });
 
   it("shows a mounted design as read-only", async () => {

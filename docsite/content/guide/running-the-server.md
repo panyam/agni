@@ -455,14 +455,21 @@ Nobody should have to run `agni designs sync` for the design to catch up (agni i
 server can learn of the push in two ways. GitHub can send it a push webhook, or the server can ask
 each source on a timer.
 
-For the webhook, start the server with a secret, and give the repo a webhook in GitHub's settings.
-Its payload URL is `https://<server>/hooks/github`, its content type `application/json`, its secret
-the same value, and its event `push`:
+For the webhook, start the server with a secret, then ask GitHub to send the repo's pushes to it:
 
 ```bash
 export AGNI_WEBHOOK_SECRET=$(openssl rand -hex 32)
 agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --github-webhook-secret env:AGNI_WEBHOOK_SECRET
+agni mounts webhook jetson --url https://agni.example.com/hooks/github --remote http://localhost:8080
 ```
+
+`--url` is the server's `/hooks/github` as GitHub reaches it, since the server can't tell its own
+public address. The server makes the hook through the mount's connection, so the mount needs one,
+and its token needs admin rights on the repo or a fine-grained token's webhooks permission. A token
+that can only read the repo gets `permission_denied`. Running the command again updates the hook
+rather than making a second one. Without a connection that may manage hooks, make the webhook in
+the repo's settings by hand. Its payload URL is the same, its content type `application/json`, its
+secret the server's, and its event `push`.
 
 GitHub signs each delivery with the secret, and the server refuses one whose signature doesn't
 match with 401. Every repo's webhook takes the same secret. It proves a delivery came from GitHub,
@@ -494,9 +501,12 @@ agni designs artifacts bb --remote http://localhost:8080
 A design that marks keeps its files, and `agni designs artifacts` ends each moved artifact's line
 with `newer at the source: <commit>`. The design stays at what someone reviewed until a person runs
 `agni designs sync`, which clears the mark. A link through a connection that is one person's own
-can't be read when no one is viewing, so it is marked too, and the server's log says why. A report
+can't be read when no one is viewing, so it is marked too, and the server's log says why. A
+design's page in the viewer shows each artifact's source, and a Sync button beside a newer version.
+A report
 from before a sync says `run on earlier design files`, with the commit it ran on. The calls are
-`Design.on_source_change` through `UpdateDesign`, and `ArtifactSource.newer_version`.
+`Design.on_source_change` through `UpdateDesign`, `ArtifactSource.newer_version`, and
+`WorkspaceService.CreateMountWebhook`.
 
 ## Connections
 
