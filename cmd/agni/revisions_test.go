@@ -70,4 +70,43 @@ func TestADiffOfTwoRevisionsMatchesADiffOfTheirFiles(t *testing.T) {
 	if got := must(runReports(t, url, "create", "bb")); !strings.Contains(got, "schematic at "+c2[:12]) {
 		t.Errorf("reports create bb = %q; want it to name the commit it ran on", got)
 	}
+
+	// GitHub lists tags only to a request with a token, so a mount with no connection can't.
+	repo.Tag("v1", c1, false)
+	repo.Tag("v2", c2, true)
+	repo.Tag("v0", c1, false)
+	if out, err := runDesigns(t, url, "revisions", "bb", "--tags"); err == nil || !strings.Contains(err.Error(), "failed_precondition") || !strings.Contains(err.Error(), "connection") {
+		t.Errorf("designs revisions bb --tags over a mount with no connection = %q, %v; want failed_precondition naming the connection", out, err)
+	}
+
+	// Through a connection, the repo's tags list as revisions, read or not. A tag whose commit the
+	// server has read carries that revision, whatever name the read used.
+	gh.AddToken(secretToken)
+	t.Setenv("AGNI_TEST_GITHUB_TOKEN", secretToken)
+	must(runCobra(t, connectionsCmd(), "add", "acme", "--github-token", "env:AGNI_TEST_GITHUB_TOKEN", "--remote", url))
+	must(runMounts(t, "add", "tagged", repo.Source(), "--connection", "acme", "--remote", url))
+	must(runDesigns(t, url, "create", "bt"))
+	must(runDesigns(t, url, "link", "bt", "schematic", "tagged/hw/bb.kicad_sch@main"))
+	line := func(out, name string) string {
+		for _, l := range strings.Split(out, "\n") {
+			if strings.HasPrefix(l, name+"\t") {
+				return l
+			}
+		}
+		return ""
+	}
+	tags := must(runDesigns(t, url, "revisions", "bt", "--tags"))
+	if l := line(tags, "designs/bt@v1"); !strings.Contains(l, "not read yet") || !strings.Contains(l, "schematic at "+c1) {
+		t.Errorf("designs revisions bt --tags =\n%s\nwant v1 at c1, not read yet", tags)
+	}
+	if l := line(tags, "designs/bt@v2"); !strings.Contains(l, "current") || !strings.Contains(l, "schematic at "+c2) {
+		t.Errorf("designs revisions bt --tags =\n%s\nwant v2 at c2, the commit the design holds", tags)
+	}
+	must(runDesigns(t, url, "get", "bt@"+c1))
+	tags = must(runDesigns(t, url, "revisions", "bt", "--tags"))
+	for _, tag := range []string{"designs/bt@v1", "designs/bt@v0"} {
+		if l := line(tags, tag); !strings.Contains(l, "; read ") || strings.Contains(l, "not read yet") {
+			t.Errorf("after reading bt at c1, designs revisions bt --tags =\n%s\nwant %s read, since it names c1", tags, tag)
+		}
+	}
 }

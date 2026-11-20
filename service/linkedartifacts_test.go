@@ -25,6 +25,10 @@ type fakeMount struct {
 	files    map[string]map[string]string // version -> path -> contents
 	resolves int
 	fetches  []string
+	// tags are the refs ListRefs lists, newest first, and branchAsked the branch it last listed
+	// commits on.
+	tags        []service.SourceRef
+	branchAsked string
 }
 
 func (m *fakeMount) Resolve(_ context.Context, ref string) (string, bool, error) {

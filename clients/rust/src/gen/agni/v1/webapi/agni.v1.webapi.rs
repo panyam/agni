@@ -2724,17 +2724,31 @@ pub struct DesignRevision {
     /// current is true on the revision the design holds now.
     #[prost(bool, tag="6")]
     pub current: bool,
+    /// commit_time is the commit's date, and message the first line of its message, for a revision
+    /// listed from the source's tags or commits.
+    #[prost(message, optional, tag="7")]
+    pub commit_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    #[prost(string, tag="8")]
+    pub message: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListDesignRevisionsRequest {
     /// "designs/{design}"
     #[prost(string, tag="1")]
     pub parent: ::prost::alloc::string::String,
-    /// page_size caps the page, 50 when 0, and at most 200.
+    /// page_size caps the page, 50 when 0, and at most 200. A source's own listing may cap it lower.
     #[prost(int32, tag="2")]
     pub page_size: i32,
     #[prost(string, tag="3")]
     pub page_token: ::prost::alloc::string::String,
+    /// source lists the repo's tags or commits instead of the revisions the server has read. It lists
+    /// one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+    #[prost(enumeration="DesignRevisionSource", tag="4")]
+    pub source: i32,
+    /// branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+    /// the design's linked artifacts follow, else the repo's default.
+    #[prost(string, tag="5")]
+    pub branch: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListDesignRevisionsResponse {
@@ -3117,6 +3131,40 @@ pub struct ImportDesignFilesResponse {
     /// unread names the files no reader opens, such as a README. They are not stored.
     #[prost(string, repeated, tag="2")]
     pub unread: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// DesignRevisionSource says what ListDesignRevisions lists.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum DesignRevisionSource {
+    /// DESIGN_REVISION_SOURCE_UNSPECIFIED lists the revisions the server has read.
+    Unspecified = 0,
+    /// DESIGN_REVISION_SOURCE_TAGS lists the linked repo's tags, newest commit first. A tag the server
+    /// hasn't read has no revision_id.
+    Tags = 1,
+    /// DESIGN_REVISION_SOURCE_COMMITS lists the commits on a branch of the linked repo, newest first.
+    Commits = 2,
+}
+impl DesignRevisionSource {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "DESIGN_REVISION_SOURCE_UNSPECIFIED",
+            Self::Tags => "DESIGN_REVISION_SOURCE_TAGS",
+            Self::Commits => "DESIGN_REVISION_SOURCE_COMMITS",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "DESIGN_REVISION_SOURCE_UNSPECIFIED" => Some(Self::Unspecified),
+            "DESIGN_REVISION_SOURCE_TAGS" => Some(Self::Tags),
+            "DESIGN_REVISION_SOURCE_COMMITS" => Some(Self::Commits),
+            _ => None,
+        }
+    }
 }
 /// ReportView is how much of a report a read returns (AIP-157). A report keeps its whole run, every
 /// verdict included, which runs to megabytes on a large board, so a listing leaves the run out.

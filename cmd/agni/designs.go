@@ -145,22 +145,36 @@ to find its type, and reads the design from its netlist, else its schematic, els
 		},
 	}
 
+	var revTags, revCommits bool
+	var revBranch string
 	revisions := &cobra.Command{
 		Use:   "revisions <id>",
-		Short: "List the revisions of a design the server has read, newest first",
+		Short: "List a design's revisions, newest first: the ones read, or its repo's tags or commits",
 		Long: `revisions lists the design as of each version of its linked sources the server has read (agni
 issue 1725). A link or a sync keeps one, and so does reading the design at a ref, designs/<id>@<ref>.
 Each line gives the revision's name, when the server first read it, the tags and commits that name it,
 and each linked artifact's source version. Any of them reads the design at that revision:
 
-  agni diff designs/bb@1.1.2 designs/bb@1.1.3 --remote http://localhost:8080`,
+  agni diff designs/bb@1.1.2 designs/bb@1.1.3 --remote http://localhost:8080
+
+--tags lists the linked repo's tags instead, newest commit first, and --commits a branch's commits,
+whether the server has read them or not. A tag it hasn't read says "not read yet".`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if revTags && revCommits {
+				return fmt.Errorf("--tags and --commits list different refs; pass one")
+			}
 			c, err := client(cmd)
 			if err != nil {
 				return err
 			}
-			req := &webapi.ListDesignRevisionsRequest{Parent: designName(args[0])}
+			req := &webapi.ListDesignRevisionsRequest{Parent: designName(args[0]), Branch: revBranch}
+			switch {
+			case revTags:
+				req.Source = webapi.DesignRevisionSource_DESIGN_REVISION_SOURCE_TAGS
+			case revCommits:
+				req.Source = webapi.DesignRevisionSource_DESIGN_REVISION_SOURCE_COMMITS
+			}
 			for {
 				resp, err := unary(cmd.Context(), c.designs.ListDesignRevisions, req)
 				if err != nil {
@@ -435,6 +449,9 @@ is listed and never moved. --dry-run says what a sync would change and writes no
 	}
 	sync.Flags().BoolVar(&dryRun, "dry-run", false, "report what a sync would change, and write nothing")
 
+	revisions.Flags().BoolVar(&revTags, "tags", false, "list the linked repo's tags, read or not")
+	revisions.Flags().BoolVar(&revCommits, "commits", false, "list the commits on a branch of the linked repo, read or not")
+	revisions.Flags().StringVar(&revBranch, "branch", "", "the branch --commits lists; the one the design follows when empty")
 	cmd.AddCommand(create, list, get, artifacts, put, rm, push, add, link, unlink, sync, revisions)
 	return cmd
 }
@@ -522,7 +539,15 @@ func printDesign(w io.Writer, d *webapi.Design) {
 // printRevision writes one revision as a tab-separated line: its name, when the server first read
 // it, the refs that name it, and each artifact's source version, the current one marked.
 func printRevision(w io.Writer, r *webapi.DesignRevision) {
-	notes := []string{"read " + r.GetCreateTime().AsTime().UTC().Format("2006-01-02 15:04:05")}
+	var notes []string
+	if t := r.GetCommitTime(); t != nil {
+		notes = append(notes, "committed "+t.AsTime().UTC().Format("2006-01-02 15:04:05"))
+	}
+	if r.GetRevisionId() == "" {
+		notes = append(notes, "not read yet")
+	} else {
+		notes = append(notes, "read "+r.GetCreateTime().AsTime().UTC().Format("2006-01-02 15:04:05"))
+	}
 	if r.GetCurrent() {
 		notes = append(notes, "current")
 	}
@@ -532,6 +557,9 @@ func printRevision(w io.Writer, r *webapi.DesignRevision) {
 	ids := slices.Sorted(maps.Keys(r.GetSourceVersions()))
 	for _, id := range ids {
 		notes = append(notes, id+" at "+r.GetSourceVersions()[id])
+	}
+	if m := r.GetMessage(); m != "" {
+		notes = append(notes, fmt.Sprintf("%q", m))
 	}
 	fmt.Fprintf(w, "%s\t%s\n", r.GetName(), strings.Join(notes, "; "))
 }

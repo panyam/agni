@@ -914,10 +914,12 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
-     * issue 1725). A revision is the design's files as of one version of each linked source. One is
-     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
-     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * ListDesignRevisions returns a design's revisions, newest first (agni issue 1725). A revision is
+     * the design's files as of one version of each linked source. By default it lists the ones the
+     * server has read: one is kept each time a link or a sync reads a source, and each time a read
+     * names the design at a ref, "designs/{design}&#64;{ref}". With source set it lists the tags, or a
+     * branch's commits, of the repo the design links instead, read or not. A design with no linked
+     * artifact has none.
      * </pre>
      */
     default void listDesignRevisions(io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest request,
@@ -1232,10 +1234,12 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
-     * issue 1725). A revision is the design's files as of one version of each linked source. One is
-     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
-     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * ListDesignRevisions returns a design's revisions, newest first (agni issue 1725). A revision is
+     * the design's files as of one version of each linked source. By default it lists the ones the
+     * server has read: one is kept each time a link or a sync reads a source, and each time a read
+     * names the design at a ref, "designs/{design}&#64;{ref}". With source set it lists the tags, or a
+     * branch's commits, of the repo the design links instead, read or not. A design with no linked
+     * artifact has none.
      * </pre>
      */
     public void listDesignRevisions(io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest request,
@@ -1519,10 +1523,12 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
-     * issue 1725). A revision is the design's files as of one version of each linked source. One is
-     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
-     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * ListDesignRevisions returns a design's revisions, newest first (agni issue 1725). A revision is
+     * the design's files as of one version of each linked source. By default it lists the ones the
+     * server has read: one is kept each time a link or a sync reads a source, and each time a read
+     * names the design at a ref, "designs/{design}&#64;{ref}". With source set it lists the tags, or a
+     * branch's commits, of the repo the design links instead, read or not. A design with no linked
+     * artifact has none.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse listDesignRevisions(io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest request) throws io.grpc.StatusException {
@@ -1801,10 +1807,12 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
-     * issue 1725). A revision is the design's files as of one version of each linked source. One is
-     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
-     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * ListDesignRevisions returns a design's revisions, newest first (agni issue 1725). A revision is
+     * the design's files as of one version of each linked source. By default it lists the ones the
+     * server has read: one is kept each time a link or a sync reads a source, and each time a read
+     * names the design at a ref, "designs/{design}&#64;{ref}". With source set it lists the tags, or a
+     * branch's commits, of the repo the design links instead, read or not. A design with no linked
+     * artifact has none.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse listDesignRevisions(io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest request) {
@@ -2098,10 +2106,12 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
-     * issue 1725). A revision is the design's files as of one version of each linked source. One is
-     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
-     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * ListDesignRevisions returns a design's revisions, newest first (agni issue 1725). A revision is
+     * the design's files as of one version of each linked source. By default it lists the ones the
+     * server has read: one is kept each time a link or a sync reads a source, and each time a read
+     * names the design at a ref, "designs/{design}&#64;{ref}". With source set it lists the tags, or a
+     * branch's commits, of the repo the design links instead, read or not. A design with no linked
+     * artifact has none.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse> listDesignRevisions(

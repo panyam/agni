@@ -175,10 +175,12 @@ type DesignServiceClient interface {
 	// artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
 	// validate_only it reports what a sync would change and writes nothing.
 	SyncDesign(context.Context, *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error)
-	// ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
-	// issue 1725). A revision is the design's files as of one version of each linked source. One is
-	// kept each time a link or a sync reads a source, and each time a read names the design at a ref,
-	// "designs/{design}@{ref}". A design with no linked artifact has none.
+	// ListDesignRevisions returns a design's revisions, newest first (agni issue 1725). A revision is
+	// the design's files as of one version of each linked source. By default it lists the ones the
+	// server has read: one is kept each time a link or a sync reads a source, and each time a read
+	// names the design at a ref, "designs/{design}@{ref}". With source set it lists the tags, or a
+	// branch's commits, of the repo the design links instead, read or not. A design with no linked
+	// artifact has none.
 	ListDesignRevisions(context.Context, *connect.Request[webapi.ListDesignRevisionsRequest]) (*connect.Response[webapi.ListDesignRevisionsResponse], error)
 	// CreateReport checks a stored design against packs and keeps the run as
 	// "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
@@ -534,10 +536,12 @@ type DesignServiceHandler interface {
 	// artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
 	// validate_only it reports what a sync would change and writes nothing.
 	SyncDesign(context.Context, *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error)
-	// ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
-	// issue 1725). A revision is the design's files as of one version of each linked source. One is
-	// kept each time a link or a sync reads a source, and each time a read names the design at a ref,
-	// "designs/{design}@{ref}". A design with no linked artifact has none.
+	// ListDesignRevisions returns a design's revisions, newest first (agni issue 1725). A revision is
+	// the design's files as of one version of each linked source. By default it lists the ones the
+	// server has read: one is kept each time a link or a sync reads a source, and each time a read
+	// names the design at a ref, "designs/{design}@{ref}". With source set it lists the tags, or a
+	// branch's commits, of the repo the design links instead, read or not. A design with no linked
+	// artifact has none.
 	ListDesignRevisions(context.Context, *connect.Request[webapi.ListDesignRevisionsRequest]) (*connect.Response[webapi.ListDesignRevisionsResponse], error)
 	// CreateReport checks a stored design against packs and keeps the run as
 	// "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's

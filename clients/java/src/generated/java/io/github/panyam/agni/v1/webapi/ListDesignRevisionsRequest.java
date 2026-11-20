@@ -30,6 +30,8 @@ private static final long serialVersionUID = 0L;
   private ListDesignRevisionsRequest() {
     parent_ = "";
     pageToken_ = "";
+    source_ = 0;
+    branch_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -101,7 +103,7 @@ private static final long serialVersionUID = 0L;
   private int pageSize_ = 0;
   /**
    * <pre>
-   * page_size caps the page, 50 when 0, and at most 200.
+   * page_size caps the page, 50 when 0, and at most 200. A source's own listing may cap it lower.
    * </pre>
    *
    * <code>int32 page_size = 2 [json_name = "pageSize"];</code>
@@ -151,6 +153,83 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SOURCE_FIELD_NUMBER = 4;
+  private int source_ = 0;
+  /**
+   * <pre>
+   * source lists the repo's tags or commits instead of the revisions the server has read. It lists
+   * one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.DesignRevisionSource source = 4 [json_name = "source"];</code>
+   * @return The enum numeric value on the wire for source.
+   */
+  @java.lang.Override public int getSourceValue() {
+    return source_;
+  }
+  /**
+   * <pre>
+   * source lists the repo's tags or commits instead of the revisions the server has read. It lists
+   * one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.DesignRevisionSource source = 4 [json_name = "source"];</code>
+   * @return The source.
+   */
+  @java.lang.Override public io.github.panyam.agni.v1.webapi.DesignRevisionSource getSource() {
+    io.github.panyam.agni.v1.webapi.DesignRevisionSource result = io.github.panyam.agni.v1.webapi.DesignRevisionSource.forNumber(source_);
+    return result == null ? io.github.panyam.agni.v1.webapi.DesignRevisionSource.UNRECOGNIZED : result;
+  }
+
+  public static final int BRANCH_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object branch_ = "";
+  /**
+   * <pre>
+   * branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+   * the design's linked artifacts follow, else the repo's default.
+   * </pre>
+   *
+   * <code>string branch = 5 [json_name = "branch"];</code>
+   * @return The branch.
+   */
+  @java.lang.Override
+  public java.lang.String getBranch() {
+    java.lang.Object ref = branch_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      branch_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+   * the design's linked artifacts follow, else the repo's default.
+   * </pre>
+   *
+   * <code>string branch = 5 [json_name = "branch"];</code>
+   * @return The bytes for branch.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getBranchBytes() {
+    java.lang.Object ref = branch_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      branch_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -174,6 +253,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(pageToken_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 3, pageToken_);
     }
+    if (source_ != io.github.panyam.agni.v1.webapi.DesignRevisionSource.DESIGN_REVISION_SOURCE_UNSPECIFIED.getNumber()) {
+      output.writeEnum(4, source_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(branch_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, branch_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -187,6 +272,13 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(pageToken_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(3, pageToken_);
+    }
+    if (source_ != io.github.panyam.agni.v1.webapi.DesignRevisionSource.DESIGN_REVISION_SOURCE_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(4, source_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(branch_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, branch_);
     }
     return size;
   }
@@ -218,6 +310,9 @@ private static final long serialVersionUID = 0L;
         != other.getPageSize()) return false;
     if (!getPageToken()
         .equals(other.getPageToken())) return false;
+    if (source_ != other.source_) return false;
+    if (!getBranch()
+        .equals(other.getBranch())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -235,6 +330,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getPageSize();
     hash = (37 * hash) + PAGE_TOKEN_FIELD_NUMBER;
     hash = (53 * hash) + getPageToken().hashCode();
+    hash = (37 * hash) + SOURCE_FIELD_NUMBER;
+    hash = (53 * hash) + source_;
+    hash = (37 * hash) + BRANCH_FIELD_NUMBER;
+    hash = (53 * hash) + getBranch().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -369,6 +468,8 @@ private static final long serialVersionUID = 0L;
       parent_ = "";
       pageSize_ = 0;
       pageToken_ = "";
+      source_ = 0;
+      branch_ = "";
       return this;
     }
 
@@ -411,6 +512,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.pageToken_ = pageToken_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.source_ = source_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.branch_ = branch_;
+      }
     }
 
     @java.lang.Override
@@ -436,6 +543,14 @@ private static final long serialVersionUID = 0L;
       if (!other.getPageToken().isEmpty()) {
         pageToken_ = other.pageToken_;
         bitField0_ |= 0x00000004;
+        onChanged();
+      }
+      if (other.source_ != 0) {
+        setSourceValue(other.getSourceValue());
+      }
+      if (!other.getBranch().isEmpty()) {
+        branch_ = other.branch_;
+        bitField0_ |= 0x00000010;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -477,6 +592,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 32: {
+              source_ = input.readEnum();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
+            case 42: {
+              branch_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -589,7 +714,7 @@ private static final long serialVersionUID = 0L;
     private int pageSize_ ;
     /**
      * <pre>
-     * page_size caps the page, 50 when 0, and at most 200.
+     * page_size caps the page, 50 when 0, and at most 200. A source's own listing may cap it lower.
      * </pre>
      *
      * <code>int32 page_size = 2 [json_name = "pageSize"];</code>
@@ -601,7 +726,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * page_size caps the page, 50 when 0, and at most 200.
+     * page_size caps the page, 50 when 0, and at most 200. A source's own listing may cap it lower.
      * </pre>
      *
      * <code>int32 page_size = 2 [json_name = "pageSize"];</code>
@@ -617,7 +742,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * page_size caps the page, 50 when 0, and at most 200.
+     * page_size caps the page, 50 when 0, and at most 200. A source's own listing may cap it lower.
      * </pre>
      *
      * <code>int32 page_size = 2 [json_name = "pageSize"];</code>
@@ -698,6 +823,180 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       pageToken_ = value;
       bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private int source_ = 0;
+    /**
+     * <pre>
+     * source lists the repo's tags or commits instead of the revisions the server has read. It lists
+     * one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.DesignRevisionSource source = 4 [json_name = "source"];</code>
+     * @return The enum numeric value on the wire for source.
+     */
+    @java.lang.Override public int getSourceValue() {
+      return source_;
+    }
+    /**
+     * <pre>
+     * source lists the repo's tags or commits instead of the revisions the server has read. It lists
+     * one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.DesignRevisionSource source = 4 [json_name = "source"];</code>
+     * @param value The enum numeric value on the wire for source to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSourceValue(int value) {
+      source_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * source lists the repo's tags or commits instead of the revisions the server has read. It lists
+     * one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.DesignRevisionSource source = 4 [json_name = "source"];</code>
+     * @return The source.
+     */
+    @java.lang.Override
+    public io.github.panyam.agni.v1.webapi.DesignRevisionSource getSource() {
+      io.github.panyam.agni.v1.webapi.DesignRevisionSource result = io.github.panyam.agni.v1.webapi.DesignRevisionSource.forNumber(source_);
+      return result == null ? io.github.panyam.agni.v1.webapi.DesignRevisionSource.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * source lists the repo's tags or commits instead of the revisions the server has read. It lists
+     * one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.DesignRevisionSource source = 4 [json_name = "source"];</code>
+     * @param value The source to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setSource(io.github.panyam.agni.v1.webapi.DesignRevisionSource value) {
+      java.util.Objects.requireNonNull(value);
+      bitField0_ |= 0x00000008;
+      source_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * source lists the repo's tags or commits instead of the revisions the server has read. It lists
+     * one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.DesignRevisionSource source = 4 [json_name = "source"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSource() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      source_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object branch_ = "";
+    /**
+     * <pre>
+     * branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+     * the design's linked artifacts follow, else the repo's default.
+     * </pre>
+     *
+     * <code>string branch = 5 [json_name = "branch"];</code>
+     * @return The branch.
+     */
+    public java.lang.String getBranch() {
+      java.lang.Object ref = branch_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        branch_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+     * the design's linked artifacts follow, else the repo's default.
+     * </pre>
+     *
+     * <code>string branch = 5 [json_name = "branch"];</code>
+     * @return The bytes for branch.
+     */
+    public com.google.protobuf.ByteString
+        getBranchBytes() {
+      java.lang.Object ref = branch_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        branch_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+     * the design's linked artifacts follow, else the repo's default.
+     * </pre>
+     *
+     * <code>string branch = 5 [json_name = "branch"];</code>
+     * @param value The branch to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBranch(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      branch_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+     * the design's linked artifacts follow, else the repo's default.
+     * </pre>
+     *
+     * <code>string branch = 5 [json_name = "branch"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBranch() {
+      branch_ = getDefaultInstance().getBranch();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+     * the design's linked artifacts follow, else the repo's default.
+     * </pre>
+     *
+     * <code>string branch = 5 [json_name = "branch"];</code>
+     * @param value The bytes for branch to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBranchBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      branch_ = value;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }

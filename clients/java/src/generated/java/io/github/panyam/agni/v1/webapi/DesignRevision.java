@@ -37,6 +37,7 @@ private static final long serialVersionUID = 0L;
     revisionId_ = "";
     refs_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    message_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -379,6 +380,86 @@ java.lang.String defaultValue) {
     return current_;
   }
 
+  public static final int COMMIT_TIME_FIELD_NUMBER = 7;
+  private com.google.protobuf.Timestamp commitTime_;
+  /**
+   * <pre>
+   * commit_time is the commit's date, and message the first line of its message, for a revision
+   * listed from the source's tags or commits.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+   * @return Whether the commitTime field is set.
+   */
+  @java.lang.Override
+  public boolean hasCommitTime() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * commit_time is the commit's date, and message the first line of its message, for a revision
+   * listed from the source's tags or commits.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+   * @return The commitTime.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getCommitTime() {
+    return commitTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : commitTime_;
+  }
+  /**
+   * <pre>
+   * commit_time is the commit's date, and message the first line of its message, for a revision
+   * listed from the source's tags or commits.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getCommitTimeOrBuilder() {
+    return commitTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : commitTime_;
+  }
+
+  public static final int MESSAGE_FIELD_NUMBER = 8;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object message_ = "";
+  /**
+   * <code>string message = 8 [json_name = "message"];</code>
+   * @return The message.
+   */
+  @java.lang.Override
+  public java.lang.String getMessage() {
+    java.lang.Object ref = message_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      message_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string message = 8 [json_name = "message"];</code>
+   * @return The bytes for message.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getMessageBytes() {
+    java.lang.Object ref = message_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      message_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -413,6 +494,12 @@ java.lang.String defaultValue) {
     }
     if (current_ != false) {
       output.writeBool(6, current_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeMessage(7, getCommitTime());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(message_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 8, message_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -449,6 +536,13 @@ java.lang.String defaultValue) {
     if (current_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(6, current_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(7, getCommitTime());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(message_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(8, message_);
     }
     return size;
   }
@@ -489,6 +583,13 @@ java.lang.String defaultValue) {
     }
     if (getCurrent()
         != other.getCurrent()) return false;
+    if (hasCommitTime() != other.hasCommitTime()) return false;
+    if (hasCommitTime()) {
+      if (!getCommitTime()
+          .equals(other.getCommitTime())) return false;
+    }
+    if (!getMessage()
+        .equals(other.getMessage())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -519,6 +620,12 @@ java.lang.String defaultValue) {
     hash = (37 * hash) + CURRENT_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getCurrent());
+    if (hasCommitTime()) {
+      hash = (37 * hash) + COMMIT_TIME_FIELD_NUMBER;
+      hash = (53 * hash) + getCommitTime().hashCode();
+    }
+    hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
+    hash = (53 * hash) + getMessage().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -677,6 +784,7 @@ java.lang.String defaultValue) {
       if (com.google.protobuf.GeneratedMessage
               .alwaysUseFieldBuilders) {
         internalGetCreateTimeFieldBuilder();
+        internalGetCommitTimeFieldBuilder();
       }
     }
     @java.lang.Override
@@ -694,6 +802,12 @@ java.lang.String defaultValue) {
         createTimeBuilder_ = null;
       }
       current_ = false;
+      commitTime_ = null;
+      if (commitTimeBuilder_ != null) {
+        commitTimeBuilder_.dispose();
+        commitTimeBuilder_ = null;
+      }
+      message_ = "";
       return this;
     }
 
@@ -751,6 +865,15 @@ java.lang.String defaultValue) {
       if (((from_bitField0_ & 0x00000020) != 0)) {
         result.current_ = current_;
       }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.commitTime_ = commitTimeBuilder_ == null
+            ? commitTime_
+            : commitTimeBuilder_.build();
+        to_bitField0_ |= 0x00000002;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.message_ = message_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -794,6 +917,14 @@ java.lang.String defaultValue) {
       }
       if (other.getCurrent() != false) {
         setCurrent(other.getCurrent());
+      }
+      if (other.hasCommitTime()) {
+        mergeCommitTime(other.getCommitTime());
+      }
+      if (!other.getMessage().isEmpty()) {
+        message_ = other.message_;
+        bitField0_ |= 0x00000080;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -855,6 +986,18 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000020;
               break;
             } // case 48
+            case 58: {
+              input.readMessage(
+                  internalGetCommitTimeFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 58
+            case 66: {
+              message_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 66
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1583,6 +1726,242 @@ java.lang.String defaultValue) {
     public Builder clearCurrent() {
       bitField0_ = (bitField0_ & ~0x00000020);
       current_ = false;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp commitTime_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> commitTimeBuilder_;
+    /**
+     * <pre>
+     * commit_time is the commit's date, and message the first line of its message, for a revision
+     * listed from the source's tags or commits.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+     * @return Whether the commitTime field is set.
+     */
+    public boolean hasCommitTime() {
+      return ((bitField0_ & 0x00000040) != 0);
+    }
+    /**
+     * <pre>
+     * commit_time is the commit's date, and message the first line of its message, for a revision
+     * listed from the source's tags or commits.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+     * @return The commitTime.
+     */
+    public com.google.protobuf.Timestamp getCommitTime() {
+      if (commitTimeBuilder_ == null) {
+        return commitTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : commitTime_;
+      } else {
+        return commitTimeBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * commit_time is the commit's date, and message the first line of its message, for a revision
+     * listed from the source's tags or commits.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+     */
+    public Builder setCommitTime(com.google.protobuf.Timestamp value) {
+      if (commitTimeBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        commitTime_ = value;
+      } else {
+        commitTimeBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * commit_time is the commit's date, and message the first line of its message, for a revision
+     * listed from the source's tags or commits.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+     */
+    public Builder setCommitTime(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (commitTimeBuilder_ == null) {
+        commitTime_ = builderForValue.build();
+      } else {
+        commitTimeBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * commit_time is the commit's date, and message the first line of its message, for a revision
+     * listed from the source's tags or commits.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+     */
+    public Builder mergeCommitTime(com.google.protobuf.Timestamp value) {
+      if (commitTimeBuilder_ == null) {
+        if (((bitField0_ & 0x00000040) != 0) &&
+          commitTime_ != null &&
+          commitTime_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getCommitTimeBuilder().mergeFrom(value);
+        } else {
+          commitTime_ = value;
+        }
+      } else {
+        commitTimeBuilder_.mergeFrom(value);
+      }
+      if (commitTime_ != null) {
+        bitField0_ |= 0x00000040;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * commit_time is the commit's date, and message the first line of its message, for a revision
+     * listed from the source's tags or commits.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+     */
+    public Builder clearCommitTime() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      commitTime_ = null;
+      if (commitTimeBuilder_ != null) {
+        commitTimeBuilder_.dispose();
+        commitTimeBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * commit_time is the commit's date, and message the first line of its message, for a revision
+     * listed from the source's tags or commits.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getCommitTimeBuilder() {
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return internalGetCommitTimeFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * commit_time is the commit's date, and message the first line of its message, for a revision
+     * listed from the source's tags or commits.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getCommitTimeOrBuilder() {
+      if (commitTimeBuilder_ != null) {
+        return commitTimeBuilder_.getMessageOrBuilder();
+      } else {
+        return commitTime_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : commitTime_;
+      }
+    }
+    /**
+     * <pre>
+     * commit_time is the commit's date, and message the first line of its message, for a revision
+     * listed from the source's tags or commits.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        internalGetCommitTimeFieldBuilder() {
+      if (commitTimeBuilder_ == null) {
+        commitTimeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getCommitTime(),
+                getParentForChildren(),
+                isClean());
+        commitTime_ = null;
+      }
+      return commitTimeBuilder_;
+    }
+
+    private java.lang.Object message_ = "";
+    /**
+     * <code>string message = 8 [json_name = "message"];</code>
+     * @return The message.
+     */
+    public java.lang.String getMessage() {
+      java.lang.Object ref = message_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        message_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string message = 8 [json_name = "message"];</code>
+     * @return The bytes for message.
+     */
+    public com.google.protobuf.ByteString
+        getMessageBytes() {
+      java.lang.Object ref = message_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        message_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string message = 8 [json_name = "message"];</code>
+     * @param value The message to set.
+     * @return This builder for chaining.
+     */
+    public Builder setMessage(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      message_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string message = 8 [json_name = "message"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearMessage() {
+      message_ = getDefaultInstance().getMessage();
+      bitField0_ = (bitField0_ & ~0x00000080);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string message = 8 [json_name = "message"];</code>
+     * @param value The bytes for message to set.
+     * @return This builder for chaining.
+     */
+    public Builder setMessageBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      message_ = value;
+      bitField0_ |= 0x00000080;
       onChanged();
       return this;
     }

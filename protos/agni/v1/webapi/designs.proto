@@ -115,10 +115,12 @@ service DesignService {
   // validate_only it reports what a sync would change and writes nothing.
   rpc SyncDesign(SyncDesignRequest) returns (SyncDesignResponse);
 
-  // ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
-  // issue 1725). A revision is the design's files as of one version of each linked source. One is
-  // kept each time a link or a sync reads a source, and each time a read names the design at a ref,
-  // "designs/{design}@{ref}". A design with no linked artifact has none.
+  // ListDesignRevisions returns a design's revisions, newest first (agni issue 1725). A revision is
+  // the design's files as of one version of each linked source. By default it lists the ones the
+  // server has read: one is kept each time a link or a sync reads a source, and each time a read
+  // names the design at a ref, "designs/{design}@{ref}". With source set it lists the tags, or a
+  // branch's commits, of the repo the design links instead, read or not. A design with no linked
+  // artifact has none.
   rpc ListDesignRevisions(ListDesignRevisionsRequest) returns (ListDesignRevisionsResponse);
 
   // CreateReport checks a stored design against packs and keeps the run as
@@ -194,13 +196,34 @@ message DesignRevision {
   google.protobuf.Timestamp create_time = 5;
   // current is true on the revision the design holds now.
   bool current = 6;
+  // commit_time is the commit's date, and message the first line of its message, for a revision
+  // listed from the source's tags or commits.
+  google.protobuf.Timestamp commit_time = 7;
+  string message = 8;
+}
+
+// DesignRevisionSource says what ListDesignRevisions lists.
+enum DesignRevisionSource {
+  // DESIGN_REVISION_SOURCE_UNSPECIFIED lists the revisions the server has read.
+  DESIGN_REVISION_SOURCE_UNSPECIFIED = 0;
+  // DESIGN_REVISION_SOURCE_TAGS lists the linked repo's tags, newest commit first. A tag the server
+  // hasn't read has no revision_id.
+  DESIGN_REVISION_SOURCE_TAGS = 1;
+  // DESIGN_REVISION_SOURCE_COMMITS lists the commits on a branch of the linked repo, newest first.
+  DESIGN_REVISION_SOURCE_COMMITS = 2;
 }
 
 message ListDesignRevisionsRequest {
   string parent = 1; // "designs/{design}"
-  // page_size caps the page, 50 when 0, and at most 200.
+  // page_size caps the page, 50 when 0, and at most 200. A source's own listing may cap it lower.
   int32 page_size = 2;
   string page_token = 3;
+  // source lists the repo's tags or commits instead of the revisions the server has read. It lists
+  // one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+  DesignRevisionSource source = 4;
+  // branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+  // the design's linked artifacts follow, else the repo's default.
+  string branch = 5;
 }
 
 message ListDesignRevisionsResponse {

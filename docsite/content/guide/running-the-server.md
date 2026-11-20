@@ -435,6 +435,14 @@ Each link wrote a revision, so linking the schematic before the board gave one w
 alone, and moving them one at a time gave one with the two at different commits. A sync moves every
 artifact from one repo together, so it never leaves one half moved.
 
+`agni designs revisions bb --tags` lists the linked repo's tags instead, newest commit first, whether
+the server has read them or not. `--commits` lists a branch's commits, the branch the design follows
+unless `--branch` names another. A tag the server has read, by its name or by its commit, carries the
+revision it gave; one it hasn't read says "not read yet". GitHub lists tags only to a request with a
+token, so the mount has to read through a connection. A mount without one answers
+`failed_precondition`, and its revisions are still listed without `--tags`. A design whose artifacts
+link two repos lists the refs of neither, since a tag names a commit in one repo.
+
 A revision keeps its files on the server until the design is deleted. A report names the commit each
 artifact was read at, such as `schematic at 8e087f4f946a`, so it still says what it ran on after a
 sync moves the design. The calls are `DesignService.ListDesignRevisions`, a snapshot naming

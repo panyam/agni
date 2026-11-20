@@ -32,7 +32,7 @@ public interface ListDesignRevisionsRequestOrBuilder extends
 
   /**
    * <pre>
-   * page_size caps the page, 50 when 0, and at most 200.
+   * page_size caps the page, 50 when 0, and at most 200. A source's own listing may cap it lower.
    * </pre>
    *
    * <code>int32 page_size = 2 [json_name = "pageSize"];</code>
@@ -51,4 +51,47 @@ public interface ListDesignRevisionsRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getPageTokenBytes();
+
+  /**
+   * <pre>
+   * source lists the repo's tags or commits instead of the revisions the server has read. It lists
+   * one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.DesignRevisionSource source = 4 [json_name = "source"];</code>
+   * @return The enum numeric value on the wire for source.
+   */
+  int getSourceValue();
+  /**
+   * <pre>
+   * source lists the repo's tags or commits instead of the revisions the server has read. It lists
+   * one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.DesignRevisionSource source = 4 [json_name = "source"];</code>
+   * @return The source.
+   */
+  io.github.panyam.agni.v1.webapi.DesignRevisionSource getSource();
+
+  /**
+   * <pre>
+   * branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+   * the design's linked artifacts follow, else the repo's default.
+   * </pre>
+   *
+   * <code>string branch = 5 [json_name = "branch"];</code>
+   * @return The branch.
+   */
+  java.lang.String getBranch();
+  /**
+   * <pre>
+   * branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+   * the design's linked artifacts follow, else the repo's default.
+   * </pre>
+   *
+   * <code>string branch = 5 [json_name = "branch"];</code>
+   * @return The bytes for branch.
+   */
+  com.google.protobuf.ByteString
+      getBranchBytes();
 }

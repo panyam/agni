@@ -196,4 +196,46 @@ java.lang.String defaultValue);
    * @return The current.
    */
   boolean getCurrent();
+
+  /**
+   * <pre>
+   * commit_time is the commit's date, and message the first line of its message, for a revision
+   * listed from the source's tags or commits.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+   * @return Whether the commitTime field is set.
+   */
+  boolean hasCommitTime();
+  /**
+   * <pre>
+   * commit_time is the commit's date, and message the first line of its message, for a revision
+   * listed from the source's tags or commits.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+   * @return The commitTime.
+   */
+  com.google.protobuf.Timestamp getCommitTime();
+  /**
+   * <pre>
+   * commit_time is the commit's date, and message the first line of its message, for a revision
+   * listed from the source's tags or commits.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp commit_time = 7 [json_name = "commitTime"];</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getCommitTimeOrBuilder();
+
+  /**
+   * <code>string message = 8 [json_name = "message"];</code>
+   * @return The message.
+   */
+  java.lang.String getMessage();
+  /**
+   * <code>string message = 8 [json_name = "message"];</code>
+   * @return The bytes for message.
+   */
+  com.google.protobuf.ByteString
+      getMessageBytes();
 }

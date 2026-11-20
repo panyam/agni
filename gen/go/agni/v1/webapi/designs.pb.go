@@ -24,6 +24,60 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// DesignRevisionSource says what ListDesignRevisions lists.
+type DesignRevisionSource int32
+
+const (
+	// DESIGN_REVISION_SOURCE_UNSPECIFIED lists the revisions the server has read.
+	DesignRevisionSource_DESIGN_REVISION_SOURCE_UNSPECIFIED DesignRevisionSource = 0
+	// DESIGN_REVISION_SOURCE_TAGS lists the linked repo's tags, newest commit first. A tag the server
+	// hasn't read has no revision_id.
+	DesignRevisionSource_DESIGN_REVISION_SOURCE_TAGS DesignRevisionSource = 1
+	// DESIGN_REVISION_SOURCE_COMMITS lists the commits on a branch of the linked repo, newest first.
+	DesignRevisionSource_DESIGN_REVISION_SOURCE_COMMITS DesignRevisionSource = 2
+)
+
+// Enum value maps for DesignRevisionSource.
+var (
+	DesignRevisionSource_name = map[int32]string{
+		0: "DESIGN_REVISION_SOURCE_UNSPECIFIED",
+		1: "DESIGN_REVISION_SOURCE_TAGS",
+		2: "DESIGN_REVISION_SOURCE_COMMITS",
+	}
+	DesignRevisionSource_value = map[string]int32{
+		"DESIGN_REVISION_SOURCE_UNSPECIFIED": 0,
+		"DESIGN_REVISION_SOURCE_TAGS":        1,
+		"DESIGN_REVISION_SOURCE_COMMITS":     2,
+	}
+)
+
+func (x DesignRevisionSource) Enum() *DesignRevisionSource {
+	p := new(DesignRevisionSource)
+	*p = x
+	return p
+}
+
+func (x DesignRevisionSource) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DesignRevisionSource) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_designs_proto_enumTypes[0].Descriptor()
+}
+
+func (DesignRevisionSource) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_designs_proto_enumTypes[0]
+}
+
+func (x DesignRevisionSource) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DesignRevisionSource.Descriptor instead.
+func (DesignRevisionSource) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{0}
+}
+
 // ReportView is how much of a report a read returns (AIP-157). A report keeps its whole run, every
 // verdict included, which runs to megabytes on a large board, so a listing leaves the run out.
 type ReportView int32
@@ -62,11 +116,11 @@ func (x ReportView) String() string {
 }
 
 func (ReportView) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_designs_proto_enumTypes[0].Descriptor()
+	return file_agni_v1_webapi_designs_proto_enumTypes[1].Descriptor()
 }
 
 func (ReportView) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_designs_proto_enumTypes[0]
+	return &file_agni_v1_webapi_designs_proto_enumTypes[1]
 }
 
 func (x ReportView) Number() protoreflect.EnumNumber {
@@ -75,7 +129,7 @@ func (x ReportView) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ReportView.Descriptor instead.
 func (ReportView) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{1}
 }
 
 // ArtifactType is what an artifact holds, found from its entry's format.
@@ -129,11 +183,11 @@ func (x ArtifactType) String() string {
 }
 
 func (ArtifactType) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_designs_proto_enumTypes[1].Descriptor()
+	return file_agni_v1_webapi_designs_proto_enumTypes[2].Descriptor()
 }
 
 func (ArtifactType) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_designs_proto_enumTypes[1]
+	return &file_agni_v1_webapi_designs_proto_enumTypes[2]
 }
 
 func (x ArtifactType) Number() protoreflect.EnumNumber {
@@ -142,7 +196,7 @@ func (x ArtifactType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ArtifactType.Descriptor instead.
 func (ArtifactType) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_designs_proto_rawDescGZIP(), []int{2}
 }
 
 // Report is one check of a stored design against packs, kept under the design (agni issue 1704). It
@@ -310,7 +364,11 @@ type DesignRevision struct {
 	// create_time is when the server first read this revision.
 	CreateTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	// current is true on the revision the design holds now.
-	Current       bool `protobuf:"varint,6,opt,name=current,proto3" json:"current,omitempty"`
+	Current bool `protobuf:"varint,6,opt,name=current,proto3" json:"current,omitempty"`
+	// commit_time is the commit's date, and message the first line of its message, for a revision
+	// listed from the source's tags or commits.
+	CommitTime    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=commit_time,json=commitTime,proto3" json:"commit_time,omitempty"`
+	Message       string                 `protobuf:"bytes,8,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -387,12 +445,32 @@ func (x *DesignRevision) GetCurrent() bool {
 	return false
 }
 
+func (x *DesignRevision) GetCommitTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CommitTime
+	}
+	return nil
+}
+
+func (x *DesignRevision) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 type ListDesignRevisionsRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Parent string                 `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"` // "designs/{design}"
-	// page_size caps the page, 50 when 0, and at most 200.
-	PageSize      int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// page_size caps the page, 50 when 0, and at most 200. A source's own listing may cap it lower.
+	PageSize  int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// source lists the repo's tags or commits instead of the revisions the server has read. It lists
+	// one repo, so a design whose artifacts link two repos with history is INVALID_ARGUMENT.
+	Source DesignRevisionSource `protobuf:"varint,4,opt,name=source,proto3,enum=agni.v1.webapi.DesignRevisionSource" json:"source,omitempty"`
+	// branch names the branch whose commits DESIGN_REVISION_SOURCE_COMMITS lists. Empty takes the branch
+	// the design's linked artifacts follow, else the repo's default.
+	Branch        string `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -444,6 +522,20 @@ func (x *ListDesignRevisionsRequest) GetPageSize() int32 {
 func (x *ListDesignRevisionsRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDesignRevisionsRequest) GetSource() DesignRevisionSource {
+	if x != nil {
+		return x.Source
+	}
+	return DesignRevisionSource_DESIGN_REVISION_SOURCE_UNSPECIFIED
+}
+
+func (x *ListDesignRevisionsRequest) GetBranch() string {
+	if x != nil {
+		return x.Branch
 	}
 	return ""
 }
@@ -2358,7 +2450,7 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x0fsource_versions\x18\v \x03(\v2*.agni.v1.webapi.Report.SourceVersionsEntryR\x0esourceVersions\x1aA\n" +
 	"\x13SourceVersionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd0\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa7\x03\n" +
 	"\x0eDesignRevision\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vrevision_id\x18\x02 \x01(\tR\n" +
@@ -2367,15 +2459,20 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x0fsource_versions\x18\x04 \x03(\v22.agni.v1.webapi.DesignRevision.SourceVersionsEntryR\x0esourceVersions\x12;\n" +
 	"\vcreate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12\x18\n" +
-	"\acurrent\x18\x06 \x01(\bR\acurrent\x1aA\n" +
+	"\acurrent\x18\x06 \x01(\bR\acurrent\x12;\n" +
+	"\vcommit_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"commitTime\x12\x18\n" +
+	"\amessage\x18\b \x01(\tR\amessage\x1aA\n" +
 	"\x13SourceVersionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"p\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc6\x01\n" +
 	"\x1aListDesignRevisionsRequest\x12\x16\n" +
 	"\x06parent\x18\x01 \x01(\tR\x06parent\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"\x83\x01\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\x12<\n" +
+	"\x06source\x18\x04 \x01(\x0e2$.agni.v1.webapi.DesignRevisionSourceR\x06source\x12\x16\n" +
+	"\x06branch\x18\x05 \x01(\tR\x06branch\"\x83\x01\n" +
 	"\x1bListDesignRevisionsResponse\x12<\n" +
 	"\trevisions\x18\x01 \x03(\v2\x1e.agni.v1.webapi.DesignRevisionR\trevisions\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x94\x01\n" +
@@ -2495,7 +2592,11 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x05files\x18\x02 \x03(\v2\x1c.agni.v1.webapi.SnapshotFileR\x05files\"k\n" +
 	"\x19ImportDesignFilesResponse\x126\n" +
 	"\tartifacts\x18\x01 \x03(\v2\x18.agni.v1.webapi.ArtifactR\tartifacts\x12\x16\n" +
-	"\x06unread\x18\x02 \x03(\tR\x06unread*V\n" +
+	"\x06unread\x18\x02 \x03(\tR\x06unread*\x83\x01\n" +
+	"\x14DesignRevisionSource\x12&\n" +
+	"\"DESIGN_REVISION_SOURCE_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bDESIGN_REVISION_SOURCE_TAGS\x10\x01\x12\"\n" +
+	"\x1eDESIGN_REVISION_SOURCE_COMMITS\x10\x02*V\n" +
 	"\n" +
 	"ReportView\x12\x1b\n" +
 	"\x17REPORT_VIEW_UNSPECIFIED\x10\x00\x12\x15\n" +
@@ -2544,129 +2645,132 @@ func file_agni_v1_webapi_designs_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_designs_proto_rawDescData
 }
 
-var file_agni_v1_webapi_designs_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agni_v1_webapi_designs_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_agni_v1_webapi_designs_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_agni_v1_webapi_designs_proto_goTypes = []any{
-	(ReportView)(0),                      // 0: agni.v1.webapi.ReportView
-	(ArtifactType)(0),                    // 1: agni.v1.webapi.ArtifactType
-	(*Report)(nil),                       // 2: agni.v1.webapi.Report
-	(*DesignRevision)(nil),               // 3: agni.v1.webapi.DesignRevision
-	(*ListDesignRevisionsRequest)(nil),   // 4: agni.v1.webapi.ListDesignRevisionsRequest
-	(*ListDesignRevisionsResponse)(nil),  // 5: agni.v1.webapi.ListDesignRevisionsResponse
-	(*CreateReportRequest)(nil),          // 6: agni.v1.webapi.CreateReportRequest
-	(*GetReportRequest)(nil),             // 7: agni.v1.webapi.GetReportRequest
-	(*ListReportsRequest)(nil),           // 8: agni.v1.webapi.ListReportsRequest
-	(*ListReportsResponse)(nil),          // 9: agni.v1.webapi.ListReportsResponse
-	(*DeleteReportRequest)(nil),          // 10: agni.v1.webapi.DeleteReportRequest
-	(*CreateDesignRequest)(nil),          // 11: agni.v1.webapi.CreateDesignRequest
-	(*GetDesignRequest)(nil),             // 12: agni.v1.webapi.GetDesignRequest
-	(*ListDesignsRequest)(nil),           // 13: agni.v1.webapi.ListDesignsRequest
-	(*ListDesignsResponse)(nil),          // 14: agni.v1.webapi.ListDesignsResponse
-	(*UpdateDesignRequest)(nil),          // 15: agni.v1.webapi.UpdateDesignRequest
-	(*DeleteDesignRequest)(nil),          // 16: agni.v1.webapi.DeleteDesignRequest
-	(*Artifact)(nil),                     // 17: agni.v1.webapi.Artifact
-	(*ArtifactSource)(nil),               // 18: agni.v1.webapi.ArtifactSource
-	(*AddDesignsRequest)(nil),            // 19: agni.v1.webapi.AddDesignsRequest
-	(*DesignToAdd)(nil),                  // 20: agni.v1.webapi.DesignToAdd
-	(*AddDesignsResponse)(nil),           // 21: agni.v1.webapi.AddDesignsResponse
-	(*GetArtifactRequest)(nil),           // 22: agni.v1.webapi.GetArtifactRequest
-	(*ListArtifactsRequest)(nil),         // 23: agni.v1.webapi.ListArtifactsRequest
-	(*ListArtifactsResponse)(nil),        // 24: agni.v1.webapi.ListArtifactsResponse
-	(*UpdateArtifactRequest)(nil),        // 25: agni.v1.webapi.UpdateArtifactRequest
-	(*BatchUpdateArtifactsRequest)(nil),  // 26: agni.v1.webapi.BatchUpdateArtifactsRequest
-	(*BatchUpdateArtifactsResponse)(nil), // 27: agni.v1.webapi.BatchUpdateArtifactsResponse
-	(*DeleteArtifactRequest)(nil),        // 28: agni.v1.webapi.DeleteArtifactRequest
-	(*LinkArtifactRequest)(nil),          // 29: agni.v1.webapi.LinkArtifactRequest
-	(*UnlinkArtifactRequest)(nil),        // 30: agni.v1.webapi.UnlinkArtifactRequest
-	(*SyncDesignRequest)(nil),            // 31: agni.v1.webapi.SyncDesignRequest
-	(*SyncDesignResponse)(nil),           // 32: agni.v1.webapi.SyncDesignResponse
-	(*ArtifactSync)(nil),                 // 33: agni.v1.webapi.ArtifactSync
-	(*ImportDesignFilesRequest)(nil),     // 34: agni.v1.webapi.ImportDesignFilesRequest
-	(*ImportDesignFilesResponse)(nil),    // 35: agni.v1.webapi.ImportDesignFilesResponse
-	nil,                                  // 36: agni.v1.webapi.Report.SourceVersionsEntry
-	nil,                                  // 37: agni.v1.webapi.DesignRevision.SourceVersionsEntry
-	(*CheckDesignResponse)(nil),          // 38: agni.v1.webapi.CheckDesignResponse
-	(*timestamppb.Timestamp)(nil),        // 39: google.protobuf.Timestamp
-	(*Design)(nil),                       // 40: agni.v1.webapi.Design
-	(*fieldmaskpb.FieldMask)(nil),        // 41: google.protobuf.FieldMask
-	(*SnapshotFile)(nil),                 // 42: agni.v1.webapi.SnapshotFile
-	(*emptypb.Empty)(nil),                // 43: google.protobuf.Empty
+	(DesignRevisionSource)(0),            // 0: agni.v1.webapi.DesignRevisionSource
+	(ReportView)(0),                      // 1: agni.v1.webapi.ReportView
+	(ArtifactType)(0),                    // 2: agni.v1.webapi.ArtifactType
+	(*Report)(nil),                       // 3: agni.v1.webapi.Report
+	(*DesignRevision)(nil),               // 4: agni.v1.webapi.DesignRevision
+	(*ListDesignRevisionsRequest)(nil),   // 5: agni.v1.webapi.ListDesignRevisionsRequest
+	(*ListDesignRevisionsResponse)(nil),  // 6: agni.v1.webapi.ListDesignRevisionsResponse
+	(*CreateReportRequest)(nil),          // 7: agni.v1.webapi.CreateReportRequest
+	(*GetReportRequest)(nil),             // 8: agni.v1.webapi.GetReportRequest
+	(*ListReportsRequest)(nil),           // 9: agni.v1.webapi.ListReportsRequest
+	(*ListReportsResponse)(nil),          // 10: agni.v1.webapi.ListReportsResponse
+	(*DeleteReportRequest)(nil),          // 11: agni.v1.webapi.DeleteReportRequest
+	(*CreateDesignRequest)(nil),          // 12: agni.v1.webapi.CreateDesignRequest
+	(*GetDesignRequest)(nil),             // 13: agni.v1.webapi.GetDesignRequest
+	(*ListDesignsRequest)(nil),           // 14: agni.v1.webapi.ListDesignsRequest
+	(*ListDesignsResponse)(nil),          // 15: agni.v1.webapi.ListDesignsResponse
+	(*UpdateDesignRequest)(nil),          // 16: agni.v1.webapi.UpdateDesignRequest
+	(*DeleteDesignRequest)(nil),          // 17: agni.v1.webapi.DeleteDesignRequest
+	(*Artifact)(nil),                     // 18: agni.v1.webapi.Artifact
+	(*ArtifactSource)(nil),               // 19: agni.v1.webapi.ArtifactSource
+	(*AddDesignsRequest)(nil),            // 20: agni.v1.webapi.AddDesignsRequest
+	(*DesignToAdd)(nil),                  // 21: agni.v1.webapi.DesignToAdd
+	(*AddDesignsResponse)(nil),           // 22: agni.v1.webapi.AddDesignsResponse
+	(*GetArtifactRequest)(nil),           // 23: agni.v1.webapi.GetArtifactRequest
+	(*ListArtifactsRequest)(nil),         // 24: agni.v1.webapi.ListArtifactsRequest
+	(*ListArtifactsResponse)(nil),        // 25: agni.v1.webapi.ListArtifactsResponse
+	(*UpdateArtifactRequest)(nil),        // 26: agni.v1.webapi.UpdateArtifactRequest
+	(*BatchUpdateArtifactsRequest)(nil),  // 27: agni.v1.webapi.BatchUpdateArtifactsRequest
+	(*BatchUpdateArtifactsResponse)(nil), // 28: agni.v1.webapi.BatchUpdateArtifactsResponse
+	(*DeleteArtifactRequest)(nil),        // 29: agni.v1.webapi.DeleteArtifactRequest
+	(*LinkArtifactRequest)(nil),          // 30: agni.v1.webapi.LinkArtifactRequest
+	(*UnlinkArtifactRequest)(nil),        // 31: agni.v1.webapi.UnlinkArtifactRequest
+	(*SyncDesignRequest)(nil),            // 32: agni.v1.webapi.SyncDesignRequest
+	(*SyncDesignResponse)(nil),           // 33: agni.v1.webapi.SyncDesignResponse
+	(*ArtifactSync)(nil),                 // 34: agni.v1.webapi.ArtifactSync
+	(*ImportDesignFilesRequest)(nil),     // 35: agni.v1.webapi.ImportDesignFilesRequest
+	(*ImportDesignFilesResponse)(nil),    // 36: agni.v1.webapi.ImportDesignFilesResponse
+	nil,                                  // 37: agni.v1.webapi.Report.SourceVersionsEntry
+	nil,                                  // 38: agni.v1.webapi.DesignRevision.SourceVersionsEntry
+	(*CheckDesignResponse)(nil),          // 39: agni.v1.webapi.CheckDesignResponse
+	(*timestamppb.Timestamp)(nil),        // 40: google.protobuf.Timestamp
+	(*Design)(nil),                       // 41: agni.v1.webapi.Design
+	(*fieldmaskpb.FieldMask)(nil),        // 42: google.protobuf.FieldMask
+	(*SnapshotFile)(nil),                 // 43: agni.v1.webapi.SnapshotFile
+	(*emptypb.Empty)(nil),                // 44: google.protobuf.Empty
 }
 var file_agni_v1_webapi_designs_proto_depIdxs = []int32{
-	38, // 0: agni.v1.webapi.Report.results:type_name -> agni.v1.webapi.CheckDesignResponse
-	39, // 1: agni.v1.webapi.Report.create_time:type_name -> google.protobuf.Timestamp
-	36, // 2: agni.v1.webapi.Report.source_versions:type_name -> agni.v1.webapi.Report.SourceVersionsEntry
-	37, // 3: agni.v1.webapi.DesignRevision.source_versions:type_name -> agni.v1.webapi.DesignRevision.SourceVersionsEntry
-	39, // 4: agni.v1.webapi.DesignRevision.create_time:type_name -> google.protobuf.Timestamp
-	3,  // 5: agni.v1.webapi.ListDesignRevisionsResponse.revisions:type_name -> agni.v1.webapi.DesignRevision
-	2,  // 6: agni.v1.webapi.CreateReportRequest.report:type_name -> agni.v1.webapi.Report
-	0,  // 7: agni.v1.webapi.GetReportRequest.view:type_name -> agni.v1.webapi.ReportView
-	0,  // 8: agni.v1.webapi.ListReportsRequest.view:type_name -> agni.v1.webapi.ReportView
-	2,  // 9: agni.v1.webapi.ListReportsResponse.reports:type_name -> agni.v1.webapi.Report
-	40, // 10: agni.v1.webapi.CreateDesignRequest.design:type_name -> agni.v1.webapi.Design
-	40, // 11: agni.v1.webapi.ListDesignsResponse.designs:type_name -> agni.v1.webapi.Design
-	40, // 12: agni.v1.webapi.UpdateDesignRequest.design:type_name -> agni.v1.webapi.Design
-	41, // 13: agni.v1.webapi.UpdateDesignRequest.update_mask:type_name -> google.protobuf.FieldMask
-	42, // 14: agni.v1.webapi.Artifact.files:type_name -> agni.v1.webapi.SnapshotFile
-	1,  // 15: agni.v1.webapi.Artifact.type:type_name -> agni.v1.webapi.ArtifactType
-	39, // 16: agni.v1.webapi.Artifact.update_time:type_name -> google.protobuf.Timestamp
-	18, // 17: agni.v1.webapi.Artifact.source:type_name -> agni.v1.webapi.ArtifactSource
-	39, // 18: agni.v1.webapi.ArtifactSource.read_time:type_name -> google.protobuf.Timestamp
-	20, // 19: agni.v1.webapi.AddDesignsRequest.designs:type_name -> agni.v1.webapi.DesignToAdd
-	40, // 20: agni.v1.webapi.AddDesignsResponse.designs:type_name -> agni.v1.webapi.Design
-	17, // 21: agni.v1.webapi.ListArtifactsResponse.artifacts:type_name -> agni.v1.webapi.Artifact
-	17, // 22: agni.v1.webapi.UpdateArtifactRequest.artifact:type_name -> agni.v1.webapi.Artifact
-	25, // 23: agni.v1.webapi.BatchUpdateArtifactsRequest.requests:type_name -> agni.v1.webapi.UpdateArtifactRequest
-	17, // 24: agni.v1.webapi.BatchUpdateArtifactsResponse.artifacts:type_name -> agni.v1.webapi.Artifact
-	18, // 25: agni.v1.webapi.LinkArtifactRequest.source:type_name -> agni.v1.webapi.ArtifactSource
-	33, // 26: agni.v1.webapi.SyncDesignResponse.artifacts:type_name -> agni.v1.webapi.ArtifactSync
-	42, // 27: agni.v1.webapi.ImportDesignFilesRequest.files:type_name -> agni.v1.webapi.SnapshotFile
-	17, // 28: agni.v1.webapi.ImportDesignFilesResponse.artifacts:type_name -> agni.v1.webapi.Artifact
-	11, // 29: agni.v1.webapi.DesignService.CreateDesign:input_type -> agni.v1.webapi.CreateDesignRequest
-	12, // 30: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	13, // 31: agni.v1.webapi.DesignService.ListDesigns:input_type -> agni.v1.webapi.ListDesignsRequest
-	15, // 32: agni.v1.webapi.DesignService.UpdateDesign:input_type -> agni.v1.webapi.UpdateDesignRequest
-	16, // 33: agni.v1.webapi.DesignService.DeleteDesign:input_type -> agni.v1.webapi.DeleteDesignRequest
-	22, // 34: agni.v1.webapi.DesignService.GetArtifact:input_type -> agni.v1.webapi.GetArtifactRequest
-	23, // 35: agni.v1.webapi.DesignService.ListArtifacts:input_type -> agni.v1.webapi.ListArtifactsRequest
-	25, // 36: agni.v1.webapi.DesignService.UpdateArtifact:input_type -> agni.v1.webapi.UpdateArtifactRequest
-	26, // 37: agni.v1.webapi.DesignService.BatchUpdateArtifacts:input_type -> agni.v1.webapi.BatchUpdateArtifactsRequest
-	34, // 38: agni.v1.webapi.DesignService.ImportDesignFiles:input_type -> agni.v1.webapi.ImportDesignFilesRequest
-	19, // 39: agni.v1.webapi.DesignService.AddDesigns:input_type -> agni.v1.webapi.AddDesignsRequest
-	28, // 40: agni.v1.webapi.DesignService.DeleteArtifact:input_type -> agni.v1.webapi.DeleteArtifactRequest
-	29, // 41: agni.v1.webapi.DesignService.LinkArtifact:input_type -> agni.v1.webapi.LinkArtifactRequest
-	30, // 42: agni.v1.webapi.DesignService.UnlinkArtifact:input_type -> agni.v1.webapi.UnlinkArtifactRequest
-	31, // 43: agni.v1.webapi.DesignService.SyncDesign:input_type -> agni.v1.webapi.SyncDesignRequest
-	4,  // 44: agni.v1.webapi.DesignService.ListDesignRevisions:input_type -> agni.v1.webapi.ListDesignRevisionsRequest
-	6,  // 45: agni.v1.webapi.DesignService.CreateReport:input_type -> agni.v1.webapi.CreateReportRequest
-	7,  // 46: agni.v1.webapi.DesignService.GetReport:input_type -> agni.v1.webapi.GetReportRequest
-	8,  // 47: agni.v1.webapi.DesignService.ListReports:input_type -> agni.v1.webapi.ListReportsRequest
-	10, // 48: agni.v1.webapi.DesignService.DeleteReport:input_type -> agni.v1.webapi.DeleteReportRequest
-	40, // 49: agni.v1.webapi.DesignService.CreateDesign:output_type -> agni.v1.webapi.Design
-	40, // 50: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.Design
-	14, // 51: agni.v1.webapi.DesignService.ListDesigns:output_type -> agni.v1.webapi.ListDesignsResponse
-	40, // 52: agni.v1.webapi.DesignService.UpdateDesign:output_type -> agni.v1.webapi.Design
-	43, // 53: agni.v1.webapi.DesignService.DeleteDesign:output_type -> google.protobuf.Empty
-	17, // 54: agni.v1.webapi.DesignService.GetArtifact:output_type -> agni.v1.webapi.Artifact
-	24, // 55: agni.v1.webapi.DesignService.ListArtifacts:output_type -> agni.v1.webapi.ListArtifactsResponse
-	17, // 56: agni.v1.webapi.DesignService.UpdateArtifact:output_type -> agni.v1.webapi.Artifact
-	27, // 57: agni.v1.webapi.DesignService.BatchUpdateArtifacts:output_type -> agni.v1.webapi.BatchUpdateArtifactsResponse
-	35, // 58: agni.v1.webapi.DesignService.ImportDesignFiles:output_type -> agni.v1.webapi.ImportDesignFilesResponse
-	21, // 59: agni.v1.webapi.DesignService.AddDesigns:output_type -> agni.v1.webapi.AddDesignsResponse
-	43, // 60: agni.v1.webapi.DesignService.DeleteArtifact:output_type -> google.protobuf.Empty
-	17, // 61: agni.v1.webapi.DesignService.LinkArtifact:output_type -> agni.v1.webapi.Artifact
-	17, // 62: agni.v1.webapi.DesignService.UnlinkArtifact:output_type -> agni.v1.webapi.Artifact
-	32, // 63: agni.v1.webapi.DesignService.SyncDesign:output_type -> agni.v1.webapi.SyncDesignResponse
-	5,  // 64: agni.v1.webapi.DesignService.ListDesignRevisions:output_type -> agni.v1.webapi.ListDesignRevisionsResponse
-	2,  // 65: agni.v1.webapi.DesignService.CreateReport:output_type -> agni.v1.webapi.Report
-	2,  // 66: agni.v1.webapi.DesignService.GetReport:output_type -> agni.v1.webapi.Report
-	9,  // 67: agni.v1.webapi.DesignService.ListReports:output_type -> agni.v1.webapi.ListReportsResponse
-	43, // 68: agni.v1.webapi.DesignService.DeleteReport:output_type -> google.protobuf.Empty
-	49, // [49:69] is the sub-list for method output_type
-	29, // [29:49] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	39, // 0: agni.v1.webapi.Report.results:type_name -> agni.v1.webapi.CheckDesignResponse
+	40, // 1: agni.v1.webapi.Report.create_time:type_name -> google.protobuf.Timestamp
+	37, // 2: agni.v1.webapi.Report.source_versions:type_name -> agni.v1.webapi.Report.SourceVersionsEntry
+	38, // 3: agni.v1.webapi.DesignRevision.source_versions:type_name -> agni.v1.webapi.DesignRevision.SourceVersionsEntry
+	40, // 4: agni.v1.webapi.DesignRevision.create_time:type_name -> google.protobuf.Timestamp
+	40, // 5: agni.v1.webapi.DesignRevision.commit_time:type_name -> google.protobuf.Timestamp
+	0,  // 6: agni.v1.webapi.ListDesignRevisionsRequest.source:type_name -> agni.v1.webapi.DesignRevisionSource
+	4,  // 7: agni.v1.webapi.ListDesignRevisionsResponse.revisions:type_name -> agni.v1.webapi.DesignRevision
+	3,  // 8: agni.v1.webapi.CreateReportRequest.report:type_name -> agni.v1.webapi.Report
+	1,  // 9: agni.v1.webapi.GetReportRequest.view:type_name -> agni.v1.webapi.ReportView
+	1,  // 10: agni.v1.webapi.ListReportsRequest.view:type_name -> agni.v1.webapi.ReportView
+	3,  // 11: agni.v1.webapi.ListReportsResponse.reports:type_name -> agni.v1.webapi.Report
+	41, // 12: agni.v1.webapi.CreateDesignRequest.design:type_name -> agni.v1.webapi.Design
+	41, // 13: agni.v1.webapi.ListDesignsResponse.designs:type_name -> agni.v1.webapi.Design
+	41, // 14: agni.v1.webapi.UpdateDesignRequest.design:type_name -> agni.v1.webapi.Design
+	42, // 15: agni.v1.webapi.UpdateDesignRequest.update_mask:type_name -> google.protobuf.FieldMask
+	43, // 16: agni.v1.webapi.Artifact.files:type_name -> agni.v1.webapi.SnapshotFile
+	2,  // 17: agni.v1.webapi.Artifact.type:type_name -> agni.v1.webapi.ArtifactType
+	40, // 18: agni.v1.webapi.Artifact.update_time:type_name -> google.protobuf.Timestamp
+	19, // 19: agni.v1.webapi.Artifact.source:type_name -> agni.v1.webapi.ArtifactSource
+	40, // 20: agni.v1.webapi.ArtifactSource.read_time:type_name -> google.protobuf.Timestamp
+	21, // 21: agni.v1.webapi.AddDesignsRequest.designs:type_name -> agni.v1.webapi.DesignToAdd
+	41, // 22: agni.v1.webapi.AddDesignsResponse.designs:type_name -> agni.v1.webapi.Design
+	18, // 23: agni.v1.webapi.ListArtifactsResponse.artifacts:type_name -> agni.v1.webapi.Artifact
+	18, // 24: agni.v1.webapi.UpdateArtifactRequest.artifact:type_name -> agni.v1.webapi.Artifact
+	26, // 25: agni.v1.webapi.BatchUpdateArtifactsRequest.requests:type_name -> agni.v1.webapi.UpdateArtifactRequest
+	18, // 26: agni.v1.webapi.BatchUpdateArtifactsResponse.artifacts:type_name -> agni.v1.webapi.Artifact
+	19, // 27: agni.v1.webapi.LinkArtifactRequest.source:type_name -> agni.v1.webapi.ArtifactSource
+	34, // 28: agni.v1.webapi.SyncDesignResponse.artifacts:type_name -> agni.v1.webapi.ArtifactSync
+	43, // 29: agni.v1.webapi.ImportDesignFilesRequest.files:type_name -> agni.v1.webapi.SnapshotFile
+	18, // 30: agni.v1.webapi.ImportDesignFilesResponse.artifacts:type_name -> agni.v1.webapi.Artifact
+	12, // 31: agni.v1.webapi.DesignService.CreateDesign:input_type -> agni.v1.webapi.CreateDesignRequest
+	13, // 32: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	14, // 33: agni.v1.webapi.DesignService.ListDesigns:input_type -> agni.v1.webapi.ListDesignsRequest
+	16, // 34: agni.v1.webapi.DesignService.UpdateDesign:input_type -> agni.v1.webapi.UpdateDesignRequest
+	17, // 35: agni.v1.webapi.DesignService.DeleteDesign:input_type -> agni.v1.webapi.DeleteDesignRequest
+	23, // 36: agni.v1.webapi.DesignService.GetArtifact:input_type -> agni.v1.webapi.GetArtifactRequest
+	24, // 37: agni.v1.webapi.DesignService.ListArtifacts:input_type -> agni.v1.webapi.ListArtifactsRequest
+	26, // 38: agni.v1.webapi.DesignService.UpdateArtifact:input_type -> agni.v1.webapi.UpdateArtifactRequest
+	27, // 39: agni.v1.webapi.DesignService.BatchUpdateArtifacts:input_type -> agni.v1.webapi.BatchUpdateArtifactsRequest
+	35, // 40: agni.v1.webapi.DesignService.ImportDesignFiles:input_type -> agni.v1.webapi.ImportDesignFilesRequest
+	20, // 41: agni.v1.webapi.DesignService.AddDesigns:input_type -> agni.v1.webapi.AddDesignsRequest
+	29, // 42: agni.v1.webapi.DesignService.DeleteArtifact:input_type -> agni.v1.webapi.DeleteArtifactRequest
+	30, // 43: agni.v1.webapi.DesignService.LinkArtifact:input_type -> agni.v1.webapi.LinkArtifactRequest
+	31, // 44: agni.v1.webapi.DesignService.UnlinkArtifact:input_type -> agni.v1.webapi.UnlinkArtifactRequest
+	32, // 45: agni.v1.webapi.DesignService.SyncDesign:input_type -> agni.v1.webapi.SyncDesignRequest
+	5,  // 46: agni.v1.webapi.DesignService.ListDesignRevisions:input_type -> agni.v1.webapi.ListDesignRevisionsRequest
+	7,  // 47: agni.v1.webapi.DesignService.CreateReport:input_type -> agni.v1.webapi.CreateReportRequest
+	8,  // 48: agni.v1.webapi.DesignService.GetReport:input_type -> agni.v1.webapi.GetReportRequest
+	9,  // 49: agni.v1.webapi.DesignService.ListReports:input_type -> agni.v1.webapi.ListReportsRequest
+	11, // 50: agni.v1.webapi.DesignService.DeleteReport:input_type -> agni.v1.webapi.DeleteReportRequest
+	41, // 51: agni.v1.webapi.DesignService.CreateDesign:output_type -> agni.v1.webapi.Design
+	41, // 52: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.Design
+	15, // 53: agni.v1.webapi.DesignService.ListDesigns:output_type -> agni.v1.webapi.ListDesignsResponse
+	41, // 54: agni.v1.webapi.DesignService.UpdateDesign:output_type -> agni.v1.webapi.Design
+	44, // 55: agni.v1.webapi.DesignService.DeleteDesign:output_type -> google.protobuf.Empty
+	18, // 56: agni.v1.webapi.DesignService.GetArtifact:output_type -> agni.v1.webapi.Artifact
+	25, // 57: agni.v1.webapi.DesignService.ListArtifacts:output_type -> agni.v1.webapi.ListArtifactsResponse
+	18, // 58: agni.v1.webapi.DesignService.UpdateArtifact:output_type -> agni.v1.webapi.Artifact
+	28, // 59: agni.v1.webapi.DesignService.BatchUpdateArtifacts:output_type -> agni.v1.webapi.BatchUpdateArtifactsResponse
+	36, // 60: agni.v1.webapi.DesignService.ImportDesignFiles:output_type -> agni.v1.webapi.ImportDesignFilesResponse
+	22, // 61: agni.v1.webapi.DesignService.AddDesigns:output_type -> agni.v1.webapi.AddDesignsResponse
+	44, // 62: agni.v1.webapi.DesignService.DeleteArtifact:output_type -> google.protobuf.Empty
+	18, // 63: agni.v1.webapi.DesignService.LinkArtifact:output_type -> agni.v1.webapi.Artifact
+	18, // 64: agni.v1.webapi.DesignService.UnlinkArtifact:output_type -> agni.v1.webapi.Artifact
+	33, // 65: agni.v1.webapi.DesignService.SyncDesign:output_type -> agni.v1.webapi.SyncDesignResponse
+	6,  // 66: agni.v1.webapi.DesignService.ListDesignRevisions:output_type -> agni.v1.webapi.ListDesignRevisionsResponse
+	3,  // 67: agni.v1.webapi.DesignService.CreateReport:output_type -> agni.v1.webapi.Report
+	3,  // 68: agni.v1.webapi.DesignService.GetReport:output_type -> agni.v1.webapi.Report
+	10, // 69: agni.v1.webapi.DesignService.ListReports:output_type -> agni.v1.webapi.ListReportsResponse
+	44, // 70: agni.v1.webapi.DesignService.DeleteReport:output_type -> google.protobuf.Empty
+	51, // [51:71] is the sub-list for method output_type
+	31, // [31:51] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_designs_proto_init() }
@@ -2682,7 +2786,7 @@ func file_agni_v1_webapi_designs_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_designs_proto_rawDesc), len(file_agni_v1_webapi_designs_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   1,
