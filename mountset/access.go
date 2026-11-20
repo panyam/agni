@@ -7,7 +7,6 @@ import (
 
 	"github.com/panyam/goapplib/storage/connections"
 	"github.com/panyam/goapplib/storage/mounts"
-	"github.com/panyam/oneauth/outbound"
 	"golang.org/x/oauth2"
 
 	"github.com/panyam/agni/service"
@@ -69,14 +68,14 @@ func (t *Table) SaveUserToken(ctx context.Context, id, owner, token string) erro
 	return service.ConnectionErr(t.svc.SavePastedToken(connections.WithViewer(ctx, owner), id, &oauth2.Token{AccessToken: token, TokenType: "bearer"}))
 }
 
-// ForgetUserToken deletes owner's sealed token for connection id, for service.UserTokenKeeper. It
-// doesn't revoke the token at GitHub, since the person made it there and revokes it there.
-func (t *Table) ForgetUserToken(ctx context.Context, id, owner string) error {
-	if t.users == nil {
-		return nil
+// Disconnect removes connection id and its owner's sealed token, for service.UserTokenKeeper,
+// through goapplib's Service.Disconnect (agni issue 1776). A pasted token is deleted with no call to
+// GitHub, since the person made it there and revokes it there.
+func (t *Table) Disconnect(ctx context.Context, id string) error {
+	if t.svc == nil {
+		return fmt.Errorf("%w: this server keeps no connections", service.ErrFailedPrecondition)
 	}
-	_, err := t.users.DeleteUserToken(ctx, &outbound.DeleteUserTokenRequest{Provider: connections.UserTokenProvider(id), Subject: owner})
-	return err
+	return t.svc.Disconnect(ctx, id)
 }
 
 var _ service.UserTokenKeeper = (*Table)(nil)

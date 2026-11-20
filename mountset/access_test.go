@@ -3,10 +3,6 @@ package mountset_test
 import (
 	"context"
 	"errors"
-	"net/http"
-	"net/http/httptest"
-	"net/http/httputil"
-	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -18,37 +14,16 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// noAccess answers 404 to a request for repo carrying token, as GitHub answers a token whose owner
-// can't see a private repo, and passes everything else to the fake behind it. goapplib's fake
-// GitHub lets every accepted token read every repo.
-func noAccess(t *testing.T, gh *githubtest.Server, token, repo string) string {
-	t.Helper()
-	target, err := url.Parse(gh.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/repos/"+repo) && strings.HasSuffix(r.Header.Get("Authorization"), " "+token) {
-			http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
-			return
-		}
-		proxy.ServeHTTP(w, r)
-	}))
-	t.Cleanup(srv.Close)
-	return srv.URL
-}
-
 // The table answers whether a caller can read a mount's private repo by asking GitHub with the
 // caller's own connection, never the server's (agni issue 1728).
 func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 	gh := githubtest.New(t)
-	gh.AddRepo("acme", "board", true, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
+	board := gh.AddRepo("acme", "board", true, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
 	gh.AddRepo("acme", "open", false, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
-	for _, tok := range []string{"ghp_server", "ghp_alice", "ghp_bob"} {
-		gh.AddToken(tok)
-	}
-	api := noAccess(t, gh, "ghp_bob", "acme/board")
+	gh.AddToken("ghp_bob")
+	// Bob can't see the private repo, so GitHub answers his token 404 for it.
+	board.Grant("ghp_server", "ghp_alice")
+	api := gh.URL
 	t.Setenv("AGNI_TEST_SERVER_TOKEN", "ghp_server")
 	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("ab", 32))
 	dir := t.TempDir()
@@ -112,8 +87,25 @@ func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 			t.Error("the server's own token answered whether a person can read the repo")
 		}
 	}
-	if err := table.ForgetUserToken(ctx, "alice-gh", "alice"); err != nil {
+	sealed := func() int {
+		t.Helper()
+		files, err := filepath.Glob(filepath.Join(dir, "store", mountset.UserTokensDir, "user_tokens", "*.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(files)
+	}
+	if n := sealed(); n != 2 {
+		t.Fatalf("the server holds %d sealed tokens; want alice's and bob's", n)
+	}
+	if err := table.Disconnect(ctx, "alice-gh"); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := conns.GetConnection(ctx, "alice-gh"); !errors.Is(err, connections.ErrNotFound) {
+		t.Errorf("alice's connection after Disconnect: %v; want it gone", err)
+	}
+	if n := sealed(); n != 1 {
+		t.Errorf("after alice disconnects, the server holds %d sealed tokens; want bob's alone", n)
 	}
 
 	// agnids reads the same records and can't check anyone's connection, so under --auth it hides

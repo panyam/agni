@@ -44,9 +44,10 @@ type UserTokenKeeper interface {
 	// SaveUserToken seals token as owner's token for connection id. A server that can't seal one
 	// returns ErrFailedPrecondition.
 	SaveUserToken(ctx context.Context, id, owner, token string) error
-	// ForgetUserToken deletes owner's sealed token for connection id. A token that isn't there is
-	// not an error.
-	ForgetUserToken(ctx context.Context, id, owner string) error
+	// Disconnect removes connection id and its owner's sealed token. A token the person pasted is
+	// deleted, and one the server got by signing the person in is revoked at GitHub first. A
+	// connection that isn't there is not an error.
+	Disconnect(ctx context.Context, id string) error
 }
 
 // WithUserTokens lets people keep their own connections, sealing each token through k, and returns
@@ -193,9 +194,7 @@ func (s *ConnectionService) DeleteConnection(ctx context.Context, req *webapi.De
 		}
 	}
 	if c.Kind == connections.KindGitHubUser && s.users != nil {
-		if err := s.users.ForgetUserToken(ctx, id, c.Owner); err != nil {
-			return err
-		}
+		return ConnectionErr(s.users.Disconnect(ctx, id))
 	}
 	return ConnectionErr(s.store.DeleteConnection(ctx, id))
 }
