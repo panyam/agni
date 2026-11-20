@@ -204,6 +204,10 @@ message ListMountsResponse {
   // can_create_mounts says whether CreateMount can succeed on this server, which needs --store and
   // --uploads (agni issue 1749). A client offers to add a mount only when it is set.
   bool can_create_mounts = 3;
+  // sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+  // offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+  // person's own links there, so they can add a private repo through their own GitHub account.
+  string sign_in_url = 4;
 }
 
 // FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names

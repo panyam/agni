@@ -9,6 +9,7 @@ import { type SheetNode as SheetTreeNode, sheetForest } from "./sheettree.js";
 import { connectionClient, workspaceClient } from "./api.js";
 import type { Connection } from "@panyam/agni-client/gen/agni/v1/webapi/connections_pb";
 import { hiddenNote } from "@agni/web-shared/treeprune.js";
+import { AddMountForm } from "./mountform.js";
 import type { SheetsState, SheetsView } from "./sheets.js";
 
 // DESIGN_OPENS is what this tree passes as `opens`, one constant so the request and the view filter
@@ -201,70 +202,11 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   );
 }
 
-// AddMountForm makes a runtime mount over a GitHub repo. The server downloads the repo at the ref
-// before it answers, so the form says it is working and stays disabled until then. A refusal shows
-// the server's own message, such as a ref GitHub does not know.
-function AddMountForm(props: { client: WsClient; connections: () => Promise<Connection[]>; onAdded: (name: string) => void }) {
-  const [busy, setBusy] = createSignal(false);
-  const [msg, setMsg] = createSignal("");
-  // The server's connections, for a private repo (agni issue 1724). With none, the picker stays
-  // hidden and every mount is a public one.
-  const [conns, setConns] = createSignal<Connection[]>([]);
-  void props
-    .connections()
-    .then(setConns)
-    .catch(() => setConns([]));
-  const submit = async (e: SubmitEvent): Promise<void> => {
-    e.preventDefault();
-    const form = e.currentTarget as HTMLFormElement;
-    const field = (n: string) => ((form.elements.namedItem(n) as HTMLInputElement | null)?.value ?? "").trim();
-    const name = field("name");
-    const repo = field("repo")
-      .replace(/^https?:\/\/github\.com\//, "")
-      .replace(/^github:\/\//, "")
-      .replace(/\.git$/, "");
-    setBusy(true);
-    setMsg(`Downloading ${repo}…`);
-    try {
-      const connection = field("connection");
-      await props.client.createMount({ name, source: `github://${repo}`, ref: field("ref"), ...(connection ? { connection } : {}) });
-      setMsg("");
-      form.reset();
-      props.onAdded(name);
-    } catch (err) {
-      setMsg(errorText(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <li class="mount-add">
-      <details>
-        <summary>Add a GitHub mount</summary>
-        <form onSubmit={(e) => void submit(e)}>
-          <input name="name" placeholder="name" required aria-label="Mount name" />
-          <input name="repo" placeholder="owner/repo" required aria-label="GitHub repo" />
-          <input name="ref" placeholder="ref (default branch)" aria-label="Tag, branch or commit" />
-          <Show when={conns().length > 0}>
-            <select name="connection" aria-label="Connection for a private repo">
-              <option value="">public repo, no connection</option>
-              <For each={conns()}>{(c) => <option value={c.name}>{c.displayName || c.name.replace(/^connections\//, "")}</option>}</For>
-            </select>
-          </Show>
-          <button type="submit" disabled={busy()}>
-            Add
-          </button>
-        </form>
-        <Show when={msg()}>{(m) => <div class="mount-add-msg">{m()}</div>}</Show>
-      </details>
-    </li>
-  );
-}
-
 function FileTree(props: { ctx: Ctx }) {
   const [mounts, setMounts] = createSignal<Mount[]>([]);
   const [pruned, setPruned] = createSignal(0);
   const [canCreate, setCanCreate] = createSignal(false);
+  const [signInUrl, setSignInUrl] = createSignal("");
   const [error, setError] = createSignal<string | null>(null);
   // The same declaration applies to the roots, since a mount serving only datasheets or only
   // library files is one this tree can never show anything in. The datasheets tree roots on the
@@ -276,6 +218,7 @@ function FileTree(props: { ctx: Ctx }) {
         setMounts(r.mounts);
         setPruned(r.prunedMounts);
         setCanCreate(r.canCreateMounts);
+        setSignInUrl(r.signInUrl);
         setError(null);
       })
       .catch((e) => {
@@ -313,13 +256,16 @@ function FileTree(props: { ctx: Ctx }) {
         <li class="note">{hiddenNote(pruned(), mounts().length, "designs")}</li>
       </Show>
       <Show when={props.ctx.manage && canCreate()}>
-        <AddMountForm
-          client={props.ctx.client}
-          connections={props.ctx.connections}
-          onAdded={(name) => {
-            void load().then(() => props.ctx.reveal(name, ""));
-          }}
-        />
+        <li>
+          <AddMountForm
+            client={props.ctx.client}
+            connections={props.ctx.connections}
+            signInUrl={signInUrl()}
+            onAdded={(name) => {
+              void load().then(() => props.ctx.reveal(name, ""));
+            }}
+          />
+        </li>
       </Show>
     </ul>
   );

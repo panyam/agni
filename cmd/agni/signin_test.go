@@ -15,7 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
+
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 
 	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/credentials"
@@ -113,6 +117,12 @@ func TestSignInWithGitHubKeepsThePersonsConnection(t *testing.T) {
 	t.Setenv("AGNI_TEST_GITHUB_TOKEN", secretToken)
 	must(runCobra(t, connectionsCmd(), "add", "acme", "--github-token", "env:AGNI_TEST_GITHUB_TOKEN", "--remote", server))
 	must(runMounts(t, "add", "board", "github://acme/board", "--connection", "acme", "--remote", server))
+
+	// The viewer's mount form links a person to sign in when they have no connection (agni issue 1727).
+	ws := webapiconnect.NewWorkspaceServiceClient(http.DefaultClient, server, bearer(session))
+	if listed, err := ws.ListMounts(context.Background(), connect.NewRequest(&webapi.ListMountsRequest{})); err != nil || listed.Msg.GetSignInUrl() != authgate.SignInPath {
+		t.Errorf("ListMounts on a server with GitHub sign-in = %v, %v; want sign_in_url %s", listed, err, authgate.SignInPath)
+	}
 
 	t.Setenv(envToken, session)
 	if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", server)); !strings.Contains(out, "github-alice\tgithub-user\tsealed, for github:alice\tok") {

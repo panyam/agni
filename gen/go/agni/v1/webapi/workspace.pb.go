@@ -695,8 +695,12 @@ type ListMountsResponse struct {
 	// can_create_mounts says whether CreateMount can succeed on this server, which needs --store and
 	// --uploads (agni issue 1749). A client offers to add a mount only when it is set.
 	CanCreateMounts bool `protobuf:"varint,3,opt,name=can_create_mounts,json=canCreateMounts,proto3" json:"can_create_mounts,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+	// offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+	// person's own links there, so they can add a private repo through their own GitHub account.
+	SignInUrl     string `protobuf:"bytes,4,opt,name=sign_in_url,json=signInUrl,proto3" json:"sign_in_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListMountsResponse) Reset() {
@@ -748,6 +752,13 @@ func (x *ListMountsResponse) GetCanCreateMounts() bool {
 		return x.CanCreateMounts
 	}
 	return false
+}
+
+func (x *ListMountsResponse) GetSignInUrl() string {
+	if x != nil {
+		return x.SignInUrl
+	}
+	return ""
 }
 
 // DirEntry is one item in a directory listing: a subdirectory or a supported design file.
@@ -1589,11 +1600,12 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x0fGetMountRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"I\n" +
 	"\x11ListMountsRequest\x12.\n" +
-	"\x05opens\x18\x02 \x03(\x0e2\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\b\x01\x10\x02\"\x94\x01\n" +
+	"\x05opens\x18\x02 \x03(\x0e2\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\b\x01\x10\x02\"\xb4\x01\n" +
 	"\x12ListMountsResponse\x12-\n" +
 	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\x12#\n" +
 	"\rpruned_mounts\x18\x02 \x01(\x05R\fprunedMounts\x12*\n" +
-	"\x11can_create_mounts\x18\x03 \x01(\bR\x0fcanCreateMounts\"\xaa\x01\n" +
+	"\x11can_create_mounts\x18\x03 \x01(\bR\x0fcanCreateMounts\x12\x1e\n" +
+	"\vsign_in_url\x18\x04 \x01(\tR\tsignInUrl\"\xaa\x01\n" +
 	"\bDirEntry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n" +
 	"\x06is_dir\x18\x02 \x01(\bR\x05isDir\x12\x16\n" +

@@ -43,9 +43,12 @@ type GitHub struct {
 	HTTPClient *http.Client
 }
 
-// Paths of the sign-in routes the gate serves when it has a GitHub.
+// SignInPath is where a browser signs in with GitHub, on a gate that has one (agni issue 1772). A
+// page links here with ?next= naming where to land after.
+const SignInPath = "/signin/github"
+
+// Paths of the other sign-in routes the gate serves when it has a GitHub.
 const (
-	githubSignIn      = "/signin/github"
 	githubDevice      = "/signin/github/device"
 	githubDeviceToken = "/signin/github/device/token" // #nosec G101 -- a URL path, not a credential
 	nextCookie        = "agni_signin_next"
@@ -114,7 +117,7 @@ func (g *Gate) WithGitHub(cfg GitHub) (*Gate, error) {
 	if s.api == "" {
 		s.api = "https://api.github.com"
 	}
-	callback := strings.TrimSuffix(cfg.PublicURL, "/") + githubSignIn + "/callback/"
+	callback := strings.TrimSuffix(cfg.PublicURL, "/") + SignInPath + "/callback/"
 	s.web = oagithub.NewGithubOAuth2(cfg.ClientID, cfg.ClientSecret, callback, s.signedIn)
 	s.web.AuthFailureUrl = "/signin?github=failed"
 	// A GitHub App's user token gets its access from the App's permissions, not from scopes.
@@ -167,14 +170,14 @@ func (s *githubSignIns) serve(g *Gate, w http.ResponseWriter, r *http.Request) b
 		s.deviceStart(w, r)
 	case r.URL.Path == githubDeviceToken:
 		s.deviceToken(w, r)
-	case r.URL.Path == githubSignIn:
+	case r.URL.Path == SignInPath:
 		// Where to go after GitHub sends the browser back, kept across the round trip.
-		http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: safeNext(r.URL.Query().Get("next")), Path: githubSignIn, MaxAge: 600, HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteLaxMode}) // #nosec G124 -- Secure follows TLS, as in signIn
+		http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: safeNext(r.URL.Query().Get("next")), Path: SignInPath, MaxAge: 600, HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteLaxMode}) // #nosec G124 -- Secure follows TLS, as in signIn
 		r2 := r.Clone(r.Context())
 		r2.URL.Path = "/"
 		s.web.Handler().ServeHTTP(w, r2)
-	case strings.HasPrefix(r.URL.Path, githubSignIn+"/callback/"):
-		http.StripPrefix(githubSignIn, s.web.Handler()).ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), gateKey{}, g)))
+	case strings.HasPrefix(r.URL.Path, SignInPath+"/callback/"):
+		http.StripPrefix(SignInPath, s.web.Handler()).ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), gateKey{}, g)))
 	default:
 		return false
 	}
@@ -204,7 +207,7 @@ func (s *githubSignIns) signedIn(_, _ string, tok *oauth2.Token, info map[string
 	if c, err := r.Cookie(nextCookie); err == nil {
 		next = safeNext(c.Value)
 	}
-	http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: "", Path: githubSignIn, MaxAge: -1, HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteLaxMode}) // #nosec G124 -- as above
+	http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: "", Path: SignInPath, MaxAge: -1, HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteLaxMode}) // #nosec G124 -- as above
 	http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: full, Path: "/", HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteLaxMode})                 // #nosec G124 -- as above
 	http.Redirect(w, r, next, http.StatusSeeOther)                                                                                                                 // #nosec G710 -- next came through safeNext
 }

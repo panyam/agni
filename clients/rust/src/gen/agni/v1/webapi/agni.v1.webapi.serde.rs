@@ -16751,6 +16751,9 @@ impl serde::Serialize for ListMountsResponse {
         if self.can_create_mounts {
             len += 1;
         }
+        if !self.sign_in_url.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.ListMountsResponse", len)?;
         if !self.mounts.is_empty() {
             struct_ser.serialize_field("mounts", &self.mounts)?;
@@ -16760,6 +16763,9 @@ impl serde::Serialize for ListMountsResponse {
         }
         if self.can_create_mounts {
             struct_ser.serialize_field("canCreateMounts", &self.can_create_mounts)?;
+        }
+        if !self.sign_in_url.is_empty() {
+            struct_ser.serialize_field("signInUrl", &self.sign_in_url)?;
         }
         struct_ser.end()
     }
@@ -16776,6 +16782,8 @@ impl<'de> serde::Deserialize<'de> for ListMountsResponse {
             "prunedMounts",
             "can_create_mounts",
             "canCreateMounts",
+            "sign_in_url",
+            "signInUrl",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -16783,6 +16791,7 @@ impl<'de> serde::Deserialize<'de> for ListMountsResponse {
             Mounts,
             PrunedMounts,
             CanCreateMounts,
+            SignInUrl,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -16807,6 +16816,7 @@ impl<'de> serde::Deserialize<'de> for ListMountsResponse {
                             "mounts" => Ok(GeneratedField::Mounts),
                             "prunedMounts" | "pruned_mounts" => Ok(GeneratedField::PrunedMounts),
                             "canCreateMounts" | "can_create_mounts" => Ok(GeneratedField::CanCreateMounts),
+                            "signInUrl" | "sign_in_url" => Ok(GeneratedField::SignInUrl),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -16829,6 +16839,7 @@ impl<'de> serde::Deserialize<'de> for ListMountsResponse {
                 let mut mounts__ = None;
                 let mut pruned_mounts__ = None;
                 let mut can_create_mounts__ = None;
+                let mut sign_in_url__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Mounts => {
@@ -16851,12 +16862,19 @@ impl<'de> serde::Deserialize<'de> for ListMountsResponse {
                             }
                             can_create_mounts__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::SignInUrl => {
+                            if sign_in_url__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("signInUrl"));
+                            }
+                            sign_in_url__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(ListMountsResponse {
                     mounts: mounts__.unwrap_or_default(),
                     pruned_mounts: pruned_mounts__.unwrap_or_default(),
                     can_create_mounts: can_create_mounts__.unwrap_or_default(),
+                    sign_in_url: sign_in_url__.unwrap_or_default(),
                 })
             }
         }

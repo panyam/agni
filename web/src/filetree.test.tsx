@@ -16,6 +16,7 @@ const fake = vi.hoisted(() => ({
   mountOpens: [] as (FileKind[] | undefined)[],
   dirs: {} as Record<string, unknown[]>,
   canCreateMounts: false,
+  signInUrl: "",
   created: [] as { name: string; source: string; ref: string; connection?: string }[],
   connections: [] as { name: string; displayName: string }[],
   deleted: [] as string[],
@@ -28,7 +29,7 @@ vi.mock("./api.js", () => ({
   workspaceClient: () => ({
     listMounts: async ({ opens }: { opens?: FileKind[] } = {}) => {
       fake.mountOpens.push(opens);
-      return { mounts: fake.mounts, prunedMounts: fake.prunedMounts, canCreateMounts: fake.canCreateMounts };
+      return { mounts: fake.mounts, prunedMounts: fake.prunedMounts, canCreateMounts: fake.canCreateMounts, signInUrl: fake.signInUrl };
     },
     createMount: async (req: { name: string; source: string; ref: string; connection?: string }) => {
       if (fake.createError) throw fake.createError;
@@ -103,6 +104,7 @@ beforeEach(() => {
   fake.prunedMounts = 0;
   fake.mounts = [{ name: "m", root: "/m", fixed: true }];
   fake.canCreateMounts = false;
+  fake.signInUrl = "";
   fake.created = [];
   fake.deleted = [];
   fake.createError = null;
@@ -269,6 +271,23 @@ describe("managing mounts", () => {
     const { el } = mountTree({ manageMounts: true });
     await vi.waitFor(() => expect(el.querySelector(".mount-add form")).not.toBeNull());
     expect(el.querySelector(".mount-add select[name=connection]")).toBeNull();
+  });
+
+  it("links a person with no connection to sign in with GitHub, and back to this page", async () => {
+    fake.canCreateMounts = true;
+    const off = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(off.el.querySelector(".mount-add form")).not.toBeNull());
+    expect(off.el.querySelector(".mount-add-signin")).toBeNull();
+
+    fake.signInUrl = "/signin/github";
+    const on = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(on.el.querySelector(".mount-add-signin a")).not.toBeNull());
+    expect(on.el.querySelector(".mount-add-signin a")?.getAttribute("href")).toBe(`/signin/github?next=${encodeURIComponent(window.location.pathname)}`);
+
+    fake.connections = [{ name: "connections/github-alice", displayName: "alice on GitHub" }];
+    const signedIn = mountTree({ manageMounts: true });
+    await vi.waitFor(() => expect(signedIn.el.querySelector(".mount-add select[name=connection]")).not.toBeNull());
+    expect(signedIn.el.querySelector(".mount-add-signin")).toBeNull();
   });
 
   it("shows the server's own message when it refuses a mount", async () => {

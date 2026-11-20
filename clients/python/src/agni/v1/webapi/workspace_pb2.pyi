@@ -113,14 +113,16 @@ class ListMountsRequest(_message.Message):
     def __init__(self, opens: _Optional[_Iterable[_Union[FileKind, str]]] = ...) -> None: ...
 
 class ListMountsResponse(_message.Message):
-    __slots__ = ("mounts", "pruned_mounts", "can_create_mounts")
+    __slots__ = ("mounts", "pruned_mounts", "can_create_mounts", "sign_in_url")
     MOUNTS_FIELD_NUMBER: _ClassVar[int]
     PRUNED_MOUNTS_FIELD_NUMBER: _ClassVar[int]
     CAN_CREATE_MOUNTS_FIELD_NUMBER: _ClassVar[int]
+    SIGN_IN_URL_FIELD_NUMBER: _ClassVar[int]
     mounts: _containers.RepeatedCompositeFieldContainer[Mount]
     pruned_mounts: int
     can_create_mounts: bool
-    def __init__(self, mounts: _Optional[_Iterable[_Union[Mount, _Mapping]]] = ..., pruned_mounts: _Optional[int] = ..., can_create_mounts: _Optional[bool] = ...) -> None: ...
+    sign_in_url: str
+    def __init__(self, mounts: _Optional[_Iterable[_Union[Mount, _Mapping]]] = ..., pruned_mounts: _Optional[int] = ..., can_create_mounts: _Optional[bool] = ..., sign_in_url: _Optional[str] = ...) -> None: ...
 
 class DirEntry(_message.Message):
     __slots__ = ("name", "is_dir", "format", "uri", "kind", "board_uri")

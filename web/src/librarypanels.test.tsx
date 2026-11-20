@@ -3,9 +3,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { DesignSchema } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
-import { ArtifactSchema, ArtifactType, ReportSchema } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
+import { ArtifactSchema, ArtifactType, DesignRevisionSchema, ReportSchema } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
+import { FileKind, MountKind, MountSchema } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
+import { artifactUri } from "@agni/web-shared/uri.js";
+import { artifactFor } from "./linkform.jsx";
 import { PackSchema } from "@panyam/agni-client/gen/agni/v1/webapi/packs_pb";
-import { createAndUpload, designIsland, explain, findingsByRule, libraryIsland } from "./librarypanels.jsx";
+import { createAndLink, createAndUpload, designIsland, explain, findingsByRule, libraryIsland } from "./librarypanels.jsx";
 
 const fake = vi.hoisted(() => ({
   designs: [] as unknown[],
@@ -16,6 +19,14 @@ const fake = vi.hoisted(() => ({
   packs: [] as unknown[],
   created: [] as unknown[],
   synced: [] as unknown[],
+  linked: [] as unknown[],
+  unlinked: [] as unknown[],
+  madeDesigns: [] as unknown[],
+  deletedDesigns: [] as unknown[],
+  linkError: undefined as unknown,
+  revisions: [] as unknown[],
+  mounts: [] as unknown[],
+  dirs: {} as Record<string, unknown[]>,
 }));
 vi.mock("./api.js", () => ({
   designClient: () => ({
@@ -29,6 +40,24 @@ vi.mock("./api.js", () => ({
       return { artifacts: [] };
     },
     listArtifacts: async () => ({ artifacts: fake.artifacts, nextPageToken: "" }),
+    listDesignRevisions: async () => ({ revisions: fake.revisions, nextPageToken: "" }),
+    createDesign: async (req: { designId: string }) => {
+      fake.madeDesigns.push(req);
+      return create(DesignSchema, { name: `designs/${req.designId}` });
+    },
+    deleteDesign: async (req: unknown) => {
+      fake.deletedDesigns.push(req);
+      return {};
+    },
+    linkArtifact: async (req: { name: string; source: { mount: string; path: string; ref: string }; allowMissing: boolean }) => {
+      if (fake.linkError) throw fake.linkError;
+      fake.linked.push({ name: req.name, mount: req.source.mount, path: req.source.path, ref: req.source.ref, allowMissing: req.allowMissing });
+      return create(ArtifactSchema, { name: req.name });
+    },
+    unlinkArtifact: async (req: unknown) => {
+      fake.unlinked.push(req);
+      return create(ArtifactSchema, {});
+    },
     listReports: async () => ({ reports: (fake.reports as { results?: unknown }[]).map((r) => ({ ...r, results: undefined })), nextPageToken: "" }),
     getReport: async (req: { name: string }) => (fake.reports as { name: string }[]).find((r) => r.name === req.name),
     createReport: async (req: unknown) => {
@@ -41,6 +70,11 @@ vi.mock("./api.js", () => ({
   packClient: () => ({ listPacks: async () => ({ packs: fake.packs, nextPageToken: "" }) }),
   projectClient: () => ({ listProjects: async () => ({ projects: [], nextPageToken: "" }) }),
   uploadsClient: () => ({}),
+  workspaceClient: () => ({
+    listMounts: async () => ({ mounts: fake.mounts, prunedMounts: 0, canCreateMounts: false, signInUrl: "" }),
+    listDir: async (req: { uri: string }) => ({ entries: fake.dirs[req.uri] ?? [] }),
+  }),
+  connectionClient: () => ({ listConnections: async () => ({ connections: [] }) }),
 }));
 
 function mount(island: (el: HTMLElement) => { activate: () => void }) {
@@ -60,6 +94,14 @@ beforeEach(() => {
   fake.packs = [];
   fake.created = [];
   fake.synced = [];
+  fake.linked = [];
+  fake.unlinked = [];
+  fake.madeDesigns = [];
+  fake.deletedDesigns = [];
+  fake.linkError = undefined;
+  fake.revisions = [];
+  fake.mounts = [];
+  fake.dirs = {};
 });
 
 describe("the library list", () => {
@@ -120,7 +162,7 @@ describe("a design's page", () => {
     await vi.waitFor(() => expect(el.querySelectorAll("tr[data-artifact]").length).toBe(2));
     const source = (id: string) => el.querySelector(`tr[data-artifact="${id}"] .lb-source`)?.textContent;
     expect(source("notes")).toBe("uploaded");
-    expect(source("schematic")).toBe("board/hw/bb.kicad_sch@main at 3411086e6d6a, followed newer at the source: 8e087f4f946a Sync");
+    expect(source("schematic")).toBe("board/hw/bb.kicad_sch@main at 3411086e6d6a, followed newer at the source: 8e087f4f946a Sync Move Unlink");
     expect(el.querySelector('[data-testid="sync-notes"]')).toBeNull();
     (el.querySelector('[data-testid="sync-schematic"]') as HTMLButtonElement).click();
     await vi.waitFor(() => expect(fake.synced).toEqual([{ name: "designs/bb", artifacts: ["schematic"] }]));
@@ -132,6 +174,112 @@ describe("a design's page", () => {
     await vi.waitFor(() => expect(el.textContent).toMatch(/declared in a mounted folder/));
     expect(el.querySelector('[data-testid="artifacts"]')).toBeNull();
     expect(el.querySelector('[data-testid="import-files"]')).toBeNull();
+  });
+});
+
+// set changes a control as a person would, and tells Solid.
+function set(el: Element | null, value: string, event = "input") {
+  const c = el as HTMLInputElement | HTMLSelectElement;
+  c.value = value;
+  c.dispatchEvent(new Event(event, { bubbles: true }));
+}
+
+describe("linking a design to a mount (agni issue 1727)", () => {
+  const linkedSchematic = (source: Record<string, unknown>) =>
+    create(ArtifactSchema, { name: "designs/bb/artifacts/schematic", type: ArtifactType.SCHEMATIC, entry: "bb.kicad_sch", files: [{ path: "bb.kicad_sch" }], source: { mount: "board", path: "hw/bb.kicad_sch", readHash: "sha256:ab", ...source } });
+
+  it("moves a pinned artifact to another ref, unlinks it, and says who it opens for", async () => {
+    fake.design = create(DesignSchema, { name: "designs/bb" });
+    fake.artifacts = [linkedSchematic({ ref: "1.1.2", version: "3411086e6d6ad2384d0609c53cd6b96323f97c24", accessSource: "github://acme/board" })];
+    const el = mount((e) => designIsland(e, null, "bb"));
+    await vi.waitFor(() => expect(el.querySelector('[data-testid="move-schematic"]')).not.toBeNull());
+    expect(el.querySelector('tr[data-artifact="schematic"] .lb-access')?.textContent).toBe(" · opens for who can read github://acme/board");
+    // A pinned artifact with nothing newer has nothing to sync.
+    expect(el.querySelector('[data-testid="sync-schematic"]')).toBeNull();
+    const move = el.querySelector('[data-testid="move-schematic"]') as HTMLButtonElement;
+    expect(move.disabled).toBe(true);
+    set(el.querySelector('[data-testid="ref-schematic"]'), " 1.1.3 ");
+    await vi.waitFor(() => expect(move.disabled).toBe(false));
+    move.click();
+    await vi.waitFor(() => expect(fake.linked).toEqual([{ name: "designs/bb/artifacts/schematic", mount: "board", path: "hw/bb.kicad_sch", ref: "1.1.3", allowMissing: false }]));
+    (el.querySelector('[data-testid="unlink-schematic"]') as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(fake.unlinked).toEqual([{ name: "designs/bb/artifacts/schematic" }]));
+  });
+
+  it("offers a sync on a followed artifact, and no link controls on an uploaded one", async () => {
+    fake.design = create(DesignSchema, { name: "designs/bb" });
+    fake.artifacts = [create(ArtifactSchema, { name: "designs/bb/artifacts/notes", files: [{ path: "notes.md" }], source: { mount: "uploads" } }), linkedSchematic({ ref: "main", follow: true })];
+    const el = mount((e) => designIsland(e, null, "bb"));
+    await vi.waitFor(() => expect(el.querySelector('[data-testid="sync-schematic"]')).not.toBeNull());
+    expect(el.querySelector('tr[data-artifact="notes"] .lb-link-controls')).toBeNull();
+    expect(el.querySelector('tr[data-artifact="schematic"] .lb-access')).toBeNull();
+    (el.querySelector('[data-testid="sync-schematic"]') as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(fake.synced).toEqual([{ name: "designs/bb", artifacts: ["schematic"] }]));
+  });
+
+  it("lists the design's revisions, each opening in the viewer", async () => {
+    fake.design = create(DesignSchema, { name: "designs/bb" });
+    fake.revisions = [
+      create(DesignRevisionSchema, { name: "designs/bb@8e087f4f946a", revisionId: "8e087f4f946a", refs: ["1.1.3"], current: true }),
+      create(DesignRevisionSchema, { name: "designs/bb@3411086e6d6a", revisionId: "3411086e6d6a", refs: [] }),
+    ];
+    const el = mount((e) => designIsland(e, null, "bb"));
+    await vi.waitFor(() => expect(el.querySelectorAll("tr[data-revision]").length).toBe(2));
+    const rows = [...el.querySelectorAll("tr[data-revision]")].map((r) => [(r as HTMLElement).dataset.revision, r.querySelector("td")?.textContent, r.querySelector("a")?.getAttribute("href")]);
+    expect(rows).toEqual([
+      ["1.1.3", "1.1.3", "/designs/bb%401.1.3/view"],
+      ["3411086e6d6a", "3411086e6d6a", "/designs/bb%403411086e6d6a/view"],
+    ]);
+    expect(el.querySelector('tr[data-revision="1.1.3"]')?.textContent).toMatch(/current/);
+  });
+
+  it("makes a design by linking a file it walks to in a mount, at the mount's ref", async () => {
+    fake.mounts = [create(MountSchema, { name: "uploads", kind: MountKind.UPLOADS }), create(MountSchema, { name: "board", kind: MountKind.GITHUB, source: "github://acme/board", ref: "1.1.2" })];
+    fake.dirs = {
+      [artifactUri("board", "")]: [{ name: "hw", isDir: true }, { name: "README.md", isDir: false, kind: FileKind.UNSPECIFIED }],
+      [artifactUri("board", "hw")]: [{ name: "bb.kicad_sch", isDir: false, kind: FileKind.DESIGN }],
+    };
+    const el = mount((e) => libraryIsland(e, null));
+    const form = () => el.querySelector('[data-testid="new-design"]') as HTMLElement;
+    await vi.waitFor(() => expect(form()).not.toBeNull());
+    set(form().querySelector('input[name="id"]'), "bb");
+    const link = form().querySelector('input[name="from"][value="link"]') as HTMLInputElement;
+    link.checked = true;
+    link.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => expect(form().querySelectorAll('select[name="mount"] option').length).toBe(2));
+    // The uploads mount holds uploads, not sources, so it isn't offered.
+    expect([...form().querySelectorAll('select[name="mount"] option')].map((o) => o.textContent)).toEqual(["choose a mount", "board (acme/board)"]);
+    set(form().querySelector('select[name="mount"]'), "board", "change");
+    await vi.waitFor(() => expect(form().querySelector('button[data-path="hw"]')).not.toBeNull());
+    expect(form().querySelector('button[data-path="README.md"]')).toBeNull();
+    expect((form().querySelector('input[name="ref"]') as HTMLInputElement).value).toBe("1.1.2");
+    const submit = form().querySelector("button.lb-submit") as HTMLButtonElement;
+    expect(submit.textContent).toBe("Create and link");
+    expect(submit.disabled).toBe(true);
+    (form().querySelector('button[data-path="hw"]') as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(form().querySelector('button[data-path="hw/bb.kicad_sch"]')).not.toBeNull());
+    (form().querySelector('button[data-path="hw/bb.kicad_sch"]') as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(submit.disabled).toBe(false));
+    expect((form().querySelector('input[name="artifact"]') as HTMLInputElement).value).toBe("schematic");
+    expect(form().querySelector('[data-testid="link-picked"]')?.textContent).toBe("Links hw/bb.kicad_sch@1.1.2");
+    submit.click();
+    await vi.waitFor(() => expect(fake.linked).toHaveLength(1));
+    expect(fake.madeDesigns).toEqual([{ designId: "bb", design: { title: "", series: "" } }]);
+    expect(fake.linked).toEqual([{ name: "designs/bb/artifacts/schematic", mount: "board", path: "hw/bb.kicad_sch", ref: "1.1.2", allowMissing: true }]);
+  });
+
+  it("deletes a design it made when the link fails, and passes the error on", async () => {
+    fake.linkError = new ConnectError("GitHub has no ref 9.9", Code.NotFound);
+    const c = (await import("./api.js")).designClient() as unknown as Parameters<typeof createAndLink>[0];
+    await expect(createAndLink(c, { id: "bb", title: "", series: "" }, { artifact: "schematic", mount: "board", path: "hw/bb.kicad_sch", ref: "9.9" })).rejects.toThrow(/no ref 9.9/);
+    expect(fake.deletedDesigns).toEqual([{ name: "designs/bb" }]);
+  });
+
+  it("names a picked file's artifact by its kind", () => {
+    expect(artifactFor("hw/bb.kicad_sch")).toBe("schematic");
+    expect(artifactFor("hw/bb.kicad_pcb")).toBe("board");
+    expect(artifactFor("out/bb.NET")).toBe("netlist");
+    expect(artifactFor("docs/Bill Of Materials.csv")).toBe("bill-of-materials");
   });
 });
 
