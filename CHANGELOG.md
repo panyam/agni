@@ -12,6 +12,11 @@ GitHub Release body carries.
 
 ### Added
 
+- The designs page links a design from a mount (issue 1727). The new-design form offers "Link from a
+  mount", which picks or adds a GitHub mount, walks it to a file and takes a ref. A linked artifact's
+  row has Sync, Move to another ref, and Unlink, and says who it opens for. The design's page lists
+  its revisions, each opening in the viewer. `ListMounts` names `sign_in_url`, and the add-mount
+  form links a person with no connection there.
 - A linked design reads at any ref of its source as `designs/<id>@<ref>`, for check, diff and query
   (PR 1773, issue 1725). `agni diff designs/bb@1.1.2 designs/bb@1.1.3 --remote`
   compares two releases with no second design. The server downloads only the files it lacks and
@@ -37,6 +42,7 @@ GitHub Release body carries.
 
 ### Changed
 
+- goapplib moves to v0.7.21, oneauth to v0.3.13 and servicekit to v0.2.4 (issue 1727).
 - `ListMounts` and `GetMount` leave out a private mount's root, source, ref and commit for a caller
   who can't read its repo, and set `Mount.source_hidden` (issue 1772). A person's connection reads
   through the server's `--github-api` when it names no `--base-url`.

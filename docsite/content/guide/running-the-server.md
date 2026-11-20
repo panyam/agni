@@ -402,6 +402,16 @@ they are unlinked or deleted. The calls are `DesignService.LinkArtifact`, `Unlin
 it to 1.1.3, syncs, and reads it all back after a restart. A private repo links and syncs the same
 way, through the connection its mount names.
 
+The designs page does the same from a browser (agni issue 1727). The new-design form offers "Upload
+files" or "Link from a mount". Linking picks a mount, or adds one over a GitHub repo in place. Then
+it walks the mount's folders to a file, takes a ref, and names the artifact by the file's kind, such
+as `schematic`. The design's page links more artifacts the same way. Each linked artifact has three
+controls on its row. Sync shows when the artifact follows a branch. Move reads the same path at
+another ref, and Unlink keeps the files. The page also lists the design's revisions, and each opens
+in the viewer as `/designs/<id>@<ref>/view`. `make exercise-linked-sources` ends by doing this in a
+browser on the Jetson repo, and `web/browser/linkdesign.spec.ts` does it in the gate against a fake
+GitHub.
+
 ### Reading a design at another commit
 
 Say the team wants to see what changed between two releases of the board, without making a design
@@ -762,6 +772,8 @@ agni login --remote https://agni.example.com
   linked from a private repo they can read opens for them. The next sign-in replaces the token.
   goapplib refreshes it through the App, since a GitHub App's user token lasts eight hours, and
   `agni connections rm github-alice` revokes it at GitHub.
+- The add-mount form on `/mounts/` and on the designs page links a person with no connection to
+  sign in, and back to the page they were on. `ListMounts` names the address as `sign_in_url`.
 - On localhost `--public-url` can be left out, and the server uses the address it listens on.
 
 ## Analysing in the visitor's browser

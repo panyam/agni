@@ -11,6 +11,7 @@
 # mounted folder, copies 1.1.3 over it, and waits for a poll to read the new files (agni issue 1726).
 # Last, it links a design to the repo's main branch and sends the server a signed push naming 1.1.2.
 # The server must refuse a bad signature, and must leave the design alone, since main isn't at 1.1.2.
+# Then a browser does the link and the move through the designs page's forms (agni issue 1727).
 # It kills only the server it started.
 #
 # It reads GitHub, so it is run by hand and not in the gate. The Go tests in
@@ -41,6 +42,7 @@ mkdir -p "$out"
 out=$(cd "$out" && pwd)
 revs=$(cd "$revs" && pwd)
 agni=$(cd "$(dirname "$agni")" && pwd)/$(basename "$agni")
+root=$(cd "$(dirname "$0")/.." && pwd)
 store=$out/store
 uploads=$out/uploads
 pid=
@@ -221,6 +223,21 @@ if [ "$bad" = 401 ] && [ "$good" = 202 ] && grep -q "@main at [0-9a-f]\{40\}, fo
   echo "PASS: the server refused the bad signature, took the push, and left designs/head at main's head"
 else
   echo "FAIL: bad signature $bad, good signature $good; see $out/head.txt and $out/serve.log" >&2
+  fail=1
+fi
+
+# The designs page does the same through its forms (agni issue 1727). A browser makes a design by
+# linking the repo's schematic at 1.1.2, moves it to 1.1.3 on the design's page, and opens both
+# revisions in the viewer. The server serves this checkout's pages, which `make ui` built.
+step "the designs page links the repo at 1.1.2, moves it to 1.1.3, and opens both revisions"
+stop
+serve --web-dir "$root/web"
+if (cd "$root/web" && LINK_WALK_SERVER="$url" LINK_WALK_REPO="${source#github://}" LINK_WALK_FILE="$board.kicad_sch" \
+  LINK_WALK_OLD="$v112" LINK_WALK_NEW="$v113" LINK_WALK_DESIGN=bb-form LINK_WALK_MOUNT=jetson-form \
+  SCREENSHOT_DIR="$out/walk" pnpm exec vitest run --config vitest.browser.config.ts browser/linkdesign.spec.ts) >"$out/walk.log" 2>&1; then
+  echo "PASS: the form linked, moved and opened both revisions; screenshots in $out/walk"
+else
+  echo "FAIL: the designs page walk; see $out/walk.log and $out/serve.log" >&2
   fail=1
 fi
 

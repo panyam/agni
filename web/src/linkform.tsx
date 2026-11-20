@@ -159,7 +159,7 @@ export function LinkFields(props: { onTarget: (t: LinkTarget | null) => void; ar
         <label>
           Ref{" "}
           <input
-            name="ref"
+            name="link-ref"
             placeholder="tag, branch or commit; empty follows the mount's branch"
             value={ref()}
             onInput={(e) => {

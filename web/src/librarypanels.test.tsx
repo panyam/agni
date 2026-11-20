@@ -221,15 +221,17 @@ describe("linking a design to a mount (agni issue 1727)", () => {
     fake.design = create(DesignSchema, { name: "designs/bb" });
     fake.revisions = [
       create(DesignRevisionSchema, { name: "designs/bb@8e087f4f946a", revisionId: "8e087f4f946a", refs: ["1.1.3"], current: true }),
-      create(DesignRevisionSchema, { name: "designs/bb@3411086e6d6a", revisionId: "3411086e6d6a", refs: [] }),
+      create(DesignRevisionSchema, { name: "designs/bb@90deab8dd75e", revisionId: "90deab8dd75e", refs: [], sourceVersions: { schematic: "3411086e6d6ad2384d0609c53cd6b96323f97c24", board: "3411086e6d6ad2384d0609c53cd6b96323f97c24" } }),
     ];
     const el = mount((e) => designIsland(e, null, "bb"));
     await vi.waitFor(() => expect(el.querySelectorAll("tr[data-revision]").length).toBe(2));
     const rows = [...el.querySelectorAll("tr[data-revision]")].map((r) => [(r as HTMLElement).dataset.revision, r.querySelector("td")?.textContent, r.querySelector("a")?.getAttribute("href")]);
     expect(rows).toEqual([
       ["1.1.3", "1.1.3", "/designs/bb%401.1.3/view"],
-      ["3411086e6d6a", "3411086e6d6a", "/designs/bb%403411086e6d6a/view"],
+      ["90deab8dd75e", "90deab8dd75e", "/designs/bb%4090deab8dd75e/view"],
     ]);
+    // A link records its commit in source_versions, not refs, and the row names it once.
+    expect(el.querySelector('tr[data-revision="90deab8dd75e"] .lb-versions')?.textContent).toBe("3411086e6d6a");
     expect(el.querySelector('tr[data-revision="1.1.3"]')?.textContent).toMatch(/current/);
   });
 
@@ -252,7 +254,7 @@ describe("linking a design to a mount (agni issue 1727)", () => {
     set(form().querySelector('select[name="mount"]'), "board", "change");
     await vi.waitFor(() => expect(form().querySelector('button[data-path="hw"]')).not.toBeNull());
     expect(form().querySelector('button[data-path="README.md"]')).toBeNull();
-    expect((form().querySelector('input[name="ref"]') as HTMLInputElement).value).toBe("1.1.2");
+    expect((form().querySelector('input[name="link-ref"]') as HTMLInputElement).value).toBe("1.1.2");
     const submit = form().querySelector("button.lb-submit") as HTMLButtonElement;
     expect(submit.textContent).toBe("Create and link");
     expect(submit.disabled).toBe(true);

@@ -687,6 +687,12 @@ export function revisionRef(r: DesignRevision): string {
   return r.refs[0] || r.revisionId;
 }
 
+// versionsWords names the commits a revision's linked artifacts hold, each shortened, once each. A
+// link records its commit here rather than in refs, so this is how a person tells two links apart.
+export function versionsWords(r: DesignRevision): string {
+  return [...new Set(Object.values(r.sourceVersions).map((v) => v.slice(0, 12)))].sort().join(", ");
+}
+
 // Revisions lists the revisions the server has read of a design (agni issue 1725), each with a link
 // that opens it in the viewer, so a person can open 1.1.2 after the design moved to 1.1.3 (agni issue
 // 1727). version changes when the artifacts do, which reloads the list.
@@ -708,6 +714,7 @@ function Revisions(props: { design: string; version: Artifact[] }) {
             {(r) => (
               <tr data-revision={revisionRef(r)}>
                 <td>{r.refs.length ? r.refs.join(", ") : r.revisionId}</td>
+                <td class="lb-versions">{versionsWords(r)}</td>
                 <td>{r.current ? "current" : ""}</td>
                 <td>{when({ updateTime: r.createTime })}</td>
                 <td>
