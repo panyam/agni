@@ -3,12 +3,14 @@ package mountset_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/panyam/goapplib/storage/connections"
 	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
+	"golang.org/x/oauth2"
 
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
@@ -126,5 +128,45 @@ func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 	}
 	if _, err := reader.Resolve(uri(t, "mount://open/hw/bb.kicad_sch")); err != nil {
 		t.Errorf("a reader hiding private mounts resolves open: %v", err)
+	}
+}
+
+// A GitHub sign-in keeps the person's token as their own connection, named for the login, and a
+// second sign-in replaces the token rather than making another. Another person can't take over that
+// connection by signing in under its login (agni issue 1772).
+func TestASignInKeepsTheTokenAsThePersonsOwnConnection(t *testing.T) {
+	gh := githubtest.New(t)
+	board := gh.AddRepo("acme", "board", true, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
+	board.Grant("ghp_alice_signin")
+	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("ab", 32))
+	dir := t.TempDir()
+	table, err := mountset.Open(mountset.Config{
+		Uploads: filepath.Join(dir, "uploads"), Records: filepath.Join(dir, "store", "mounts"), Connections: filepath.Join(dir, "store", "connections"),
+		UserTokens: filepath.Join(dir, "store", mountset.UserTokensDir), ConnectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY",
+		GitHubAPI: gh.URL, GitHubRaw: gh.RawURL(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	id, err := table.SaveSignedIn(ctx, "github:alice", "Alice", &oauth2.Token{AccessToken: "ghp_alice_signin"})
+	if err != nil || id != "github-alice" {
+		t.Fatalf("SaveSignedIn for alice = %q, %v; want github-alice", id, err)
+	}
+	c, err := table.Connections().GetConnection(ctx, id)
+	if err != nil || c.Owner != "github:alice" || c.Kind != connections.KindGitHubUser || c.Pasted || c.BaseURL != gh.URL {
+		t.Errorf("alice's signed-in connection = %+v, %v; want hers, issued by the app, reading through the server's GitHub API", c, err)
+	}
+	if err := table.CanRead(service.WithCaller(ctx, service.Caller{Subject: "github:alice"}), "github://acme/board"); err != nil {
+		t.Errorf("alice reading github://acme/board through her sign-in: %v", err)
+	}
+	if _, err := table.SaveSignedIn(ctx, "github:alice", "alice", &oauth2.Token{AccessToken: "ghp_alice_again"}); err != nil {
+		t.Errorf("alice signing in again: %v", err)
+	}
+	if all, _ := table.Connections().ListConnections(ctx, "github:alice"); len(all) != 1 {
+		t.Errorf("after two sign-ins alice has connections %+v; want one", all)
+	}
+	if _, err := table.SaveSignedIn(ctx, "mallory", "alice", &oauth2.Token{AccessToken: "ghp_mallory"}); !errors.Is(err, service.ErrFailedPrecondition) || !strings.Contains(fmt.Sprint(err), "belongs to someone else") {
+		t.Errorf("mallory saving a token under alice's login: %v; want failed precondition, saying it's someone else's", err)
 	}
 }

@@ -35,18 +35,19 @@ type follower struct {
 	wg sync.WaitGroup
 }
 
-// webhookSecret reads --github-webhook-secret, a secret reference such as env:NAME.
-func webhookSecret(ref string) ([]byte, error) {
+// secretFlag reads the secret flag names, given as a secret reference such as env:NAME. An empty
+// secret is an error.
+func secretFlag(flag, ref string) ([]byte, error) {
 	r, err := outbound.ParseSecretRef(ref)
 	if err != nil {
-		return nil, fmt.Errorf("--github-webhook-secret %q: want env:NAME or file:/abs/path: %w", ref, err)
+		return nil, fmt.Errorf("%s %q: want env:NAME or file:/abs/path: %w", flag, ref, err)
 	}
 	s, err := r.Resolve()
 	if err != nil {
-		return nil, fmt.Errorf("--github-webhook-secret: %w", err)
+		return nil, fmt.Errorf("%s: %w", flag, err)
 	}
 	if s = strings.TrimSpace(s); s == "" {
-		return nil, fmt.Errorf("--github-webhook-secret %s is empty, and anyone could sign under it", ref)
+		return nil, fmt.Errorf("%s %s is empty", flag, ref)
 	}
 	return []byte(s), nil
 }

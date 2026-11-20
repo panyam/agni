@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/alexedwards/scs/v2 v2.9.0 // indirect
 	github.com/andybalholm/brotli v1.2.2 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
@@ -32,6 +33,7 @@ require (
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
 	github.com/panyam/oneauth/grpc v0.3.12 // indirect
+	github.com/panyam/oneauth/oauth2 v0.3.12 // indirect
 	github.com/panyam/templar v0.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
@@ -43,6 +45,7 @@ require (
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/oauth2 v0.38.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
 )

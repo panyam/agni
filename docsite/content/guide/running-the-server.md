@@ -672,8 +672,8 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files \
   token it checked for a minute, so a revoked token stops working within a minute.
 
 `--auth tokens` needs `--store`. Without `--tls-cert` and `--tls-key` it starts only on a localhost
-address, with a warning. Signing in through an identity provider, and per-person viewer tabs, are
-agni issue 1176.
+address, with a warning. People can also sign in with GitHub, as
+[Signing in with GitHub](#signing-in-with-github) says. Per-person viewer tabs are agni issue 1176.
 
 `agnids` takes the same three flags and checks the same tokens, read from the `--store` it shares
 with `agni serve` (agni issue 1765). Without them, anyone who can reach it can write through the
@@ -716,11 +716,53 @@ AGNI_TOKEN=... agni connections add alice-gh --mine --github-token env:GITHUB_TO
 - Linking an artifact from a private mount needs the same access, so a person can't copy files
   from a repo they can't see into a design of their own.
 - Only alice sees her connection. `agni connections rm alice-gh` deletes it and its sealed token.
-  A person's connection on GitHub Enterprise passes `--base-url`.
+  The server doesn't ask GitHub to revoke a pasted token, since alice made it there and revokes it
+  there.
+- A person's connection reads through the server's `--github-api`, so on GitHub Enterprise it needs
+  no `--base-url`.
+- `agni mounts ls` shows bob the board mount by name, with "a private source you can't read" where
+  the repo would be. `ListMounts` sets `source_hidden` and leaves out its source, ref and commit.
 - `agnids` with `--auth` can't check anyone's connection, since it reads `--store` without
   writing it. It serves no mount that reads through a connection.
 
 A server without `--auth` checks nothing, since it doesn't know who is asking.
+
+### Signing in with GitHub
+
+Pasting tokens works, but each person needs a token from the operator and a GitHub token of their
+own. With a GitHub App, they sign in with GitHub instead, and the server keeps the GitHub token it
+gets as their own connection (agni issue 1772).
+
+The operator registers a GitHub App first. Its callback URL is the server's
+`/signin/github/callback/`, and it has "Enable Device Flow" ticked for `agni login`. The App needs
+read access to Contents and Metadata on the repos people link from, and an org installs it there.
+A person's token then reads only repos the App is installed on, and only those the person can see.
+
+```bash
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth tokens \
+  --connections-key env:AGNI_CONNECTIONS_KEY --tls-cert /etc/agni/cert.pem --tls-key /etc/agni/key.pem \
+  --public-url https://agni.example.com --github-client-id Iv1.0123456789abcdef \
+  --github-client-secret env:AGNI_GITHUB_CLIENT_SECRET --github-allow org:acme
+agni login --remote https://agni.example.com
+```
+
+- `/signin` offers "Sign in with GitHub" beside the token form. GitHub sends the browser back to
+  `--public-url`, and the server checks the person against `--github-allow`. It then sets the
+  session cookie and goes on to the page they asked for.
+- `--github-allow` takes `org:<org>` for an org's members and `user:<login>` for one person, comma
+  separated or repeated. It can't be empty, since anyone with a GitHub account could sign in
+  otherwise. Someone it leaves out gets a page saying so, and no session.
+- `agni login` signs in from a terminal through GitHub's device flow. It prints an address and a
+  code, waits while the person types the code there, and keeps the token the server mints in
+  `agni/credentials` in their config folder. Every `--remote` call to that server sends it when
+  `AGNI_TOKEN` isn't set.
+- A person signed in as `alice` is the caller `github:alice`. The minted token works for 30 days,
+  and `agni token ls` lists it as "github sign-in".
+- Their GitHub token becomes the connection `github-alice`, owned by `github:alice`, so a design
+  linked from a private repo they can read opens for them. The next sign-in replaces the token.
+  goapplib refreshes it through the App, since a GitHub App's user token lasts eight hours, and
+  `agni connections rm github-alice` revokes it at GitHub.
+- On localhost `--public-url` can be left out, and the server uses the address it listens on.
 
 ## Analysing in the visitor's browser
 

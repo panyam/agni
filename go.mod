@@ -20,6 +20,7 @@ require (
 	github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.21
 	github.com/panyam/oneauth v0.3.12
 	github.com/panyam/oneauth/grpc v0.3.12
+	github.com/panyam/oneauth/oauth2 v0.3.12
 	github.com/panyam/servicekit v0.2.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -31,6 +32,7 @@ require (
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/alexedwards/scs/v2 v2.9.0 // indirect
 	github.com/andybalholm/brotli v1.2.2 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
