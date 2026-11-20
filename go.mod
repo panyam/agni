@@ -7,8 +7,8 @@ require (
 	github.com/bodgit/sevenzip v1.6.5
 	github.com/ebitengine/purego v0.8.4
 	github.com/klauspost/compress v1.19.1
-	github.com/panyam/goapplib v0.7.18
-	github.com/panyam/goapplib/storage v0.7.18
+	github.com/panyam/goapplib v0.7.19
+	github.com/panyam/goapplib/storage v0.7.19
 	github.com/panyam/jaala/frontends/mcp v0.1.101
 	github.com/panyam/jaala/frontends/nl v0.1.101
 	github.com/panyam/massrelay v0.3.7
@@ -18,8 +18,8 @@ require (
 	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.21
 	github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.21
 	github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.21
-	github.com/panyam/oneauth v0.3.11
-	github.com/panyam/oneauth/grpc v0.3.11
+	github.com/panyam/oneauth v0.3.12
+	github.com/panyam/oneauth/grpc v0.3.12
 	github.com/panyam/servicekit v0.2.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
