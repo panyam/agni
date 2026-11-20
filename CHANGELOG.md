@@ -13,7 +13,7 @@ GitHub Release body carries.
 ### Added
 
 - A design linked from a private repo opens only for a caller whose own GitHub connection reads the
-  repo, on a server with `--auth tokens` (PR pending, issue 1728). A person keeps their connection
+  repo, on a server with `--auth tokens` (PR 1771, issue 1728). A person keeps their connection
   with `agni connections add <id> --mine --github-token env:NAME`, and the server seals the token
   under the new `--connections-key`. Every read is checked: by name, by check, by snapshot, in a
   listing, and by file path. `Design.access_sources` names the repos that decide it. agnids with
