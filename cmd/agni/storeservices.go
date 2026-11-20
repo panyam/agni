@@ -35,7 +35,7 @@ var sweepInterval = time.Hour
 // blobs go to the same folder, so they outlive a restart, and a sweep at startup and every hour
 // after removes what nothing names. The sweep stops when ctx ends. With --store it keeps packs too, and a pack's files go to --uploads beside the designs'.
 // With --store and checks, it keeps each design's reports, each run by checks.
-func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
+func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, guard *service.AccessGuard, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
 	projectSvc := service.NewProjectService(projectStore)
 	var store service.DesignStore
 	var packStore service.PackStore
@@ -87,7 +87,7 @@ func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir
 	}
 	// The designs are the store's records alone. A folder in a mount becomes a design only when a
 	// person adds it (AddDesigns), so its design.yaml makes none (agni issue 1736).
-	catalog := service.NewDesignCatalog(store)
+	catalog := service.NewDesignCatalog(store).WithGuard(guard)
 	if resolver != nil {
 		// A snapshot may name its design, designs/{d}, and Ingest looks it up here (agni issue 1695).
 		resolver.Designs = catalog

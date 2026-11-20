@@ -47,6 +47,8 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.LazyStringArrayList.emptyList();
     packs_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    accessSources_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -673,6 +675,71 @@ private static final long serialVersionUID = 0L;
     return packs_.getByteString(index);
   }
 
+  public static final int ACCESS_SOURCES_FIELD_NUMBER = 16;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList accessSources_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * access_sources name the private sources that decide who may open this design, such as
+   * "github://acme/board", one per source its artifacts were read from through a connection (agni
+   * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+   * them gets the design. Empty means every caller the server lets in may open it. Output only.
+   * </pre>
+   *
+   * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+   * @return A list containing the accessSources.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getAccessSourcesList() {
+    return accessSources_;
+  }
+  /**
+   * <pre>
+   * access_sources name the private sources that decide who may open this design, such as
+   * "github://acme/board", one per source its artifacts were read from through a connection (agni
+   * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+   * them gets the design. Empty means every caller the server lets in may open it. Output only.
+   * </pre>
+   *
+   * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+   * @return The count of accessSources.
+   */
+  public int getAccessSourcesCount() {
+    return accessSources_.size();
+  }
+  /**
+   * <pre>
+   * access_sources name the private sources that decide who may open this design, such as
+   * "github://acme/board", one per source its artifacts were read from through a connection (agni
+   * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+   * them gets the design. Empty means every caller the server lets in may open it. Output only.
+   * </pre>
+   *
+   * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+   * @param index The index of the element to return.
+   * @return The accessSources at the given index.
+   */
+  public java.lang.String getAccessSources(int index) {
+    return accessSources_.get(index);
+  }
+  /**
+   * <pre>
+   * access_sources name the private sources that decide who may open this design, such as
+   * "github://acme/board", one per source its artifacts were read from through a connection (agni
+   * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+   * them gets the design. Empty means every caller the server lets in may open it. Output only.
+   * </pre>
+   *
+   * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the accessSources at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getAccessSourcesBytes(int index) {
+    return accessSources_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -725,6 +792,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < packs_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 15, packs_.getRaw(i));
+    }
+    for (int i = 0; i < accessSources_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 16, accessSources_.getRaw(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -789,6 +859,14 @@ private static final long serialVersionUID = 0L;
       size += dataSize;
       size += 1 * getPacksList().size();
     }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < accessSources_.size(); i++) {
+        dataSize += computeStringSizeNoTag(accessSources_.getRaw(i));
+      }
+      size += dataSize;
+      size += 2 * getAccessSourcesList().size();
+    }
     return size;
   }
   @java.lang.Override
@@ -845,6 +923,8 @@ private static final long serialVersionUID = 0L;
         != other.getReadOnly()) return false;
     if (!getPacksList()
         .equals(other.getPacksList())) return false;
+    if (!getAccessSourcesList()
+        .equals(other.getAccessSourcesList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -894,6 +974,10 @@ private static final long serialVersionUID = 0L;
     if (getPacksCount() > 0) {
       hash = (37 * hash) + PACKS_FIELD_NUMBER;
       hash = (53 * hash) + getPacksList().hashCode();
+    }
+    if (getAccessSourcesCount() > 0) {
+      hash = (37 * hash) + ACCESS_SOURCES_FIELD_NUMBER;
+      hash = (53 * hash) + getAccessSourcesList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -1065,6 +1149,8 @@ private static final long serialVersionUID = 0L;
       readOnly_ = false;
       packs_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
+      accessSources_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -1146,6 +1232,10 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00001000) != 0)) {
         packs_.makeImmutable();
         result.packs_ = packs_;
+      }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        accessSources_.makeImmutable();
+        result.accessSources_ = accessSources_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1229,6 +1319,16 @@ private static final long serialVersionUID = 0L;
         } else {
           ensurePacksIsMutable();
           packs_.addAll(other.packs_);
+        }
+        onChanged();
+      }
+      if (!other.accessSources_.isEmpty()) {
+        if (accessSources_.isEmpty()) {
+          accessSources_ = other.accessSources_;
+          bitField0_ |= 0x00002000;
+        } else {
+          ensureAccessSourcesIsMutable();
+          accessSources_.addAll(other.accessSources_);
         }
         onChanged();
       }
@@ -1325,6 +1425,11 @@ private static final long serialVersionUID = 0L;
               packs_.add(input.readStringRequireUtf8());
               break;
             } // case 122
+            case 130: {
+              ensureAccessSourcesIsMutable();
+              accessSources_.add(input.readStringRequireUtf8());
+              break;
+            } // case 130
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2903,6 +3008,180 @@ private static final long serialVersionUID = 0L;
       ensurePacksIsMutable();
       packs_.add(value);
       bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList accessSources_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureAccessSourcesIsMutable() {
+      if (!accessSources_.isModifiable()) {
+        accessSources_ = new com.google.protobuf.LazyStringArrayList(accessSources_);
+      }
+      bitField0_ |= 0x00002000;
+    }
+    /**
+     * <pre>
+     * access_sources name the private sources that decide who may open this design, such as
+     * "github://acme/board", one per source its artifacts were read from through a connection (agni
+     * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+     * them gets the design. Empty means every caller the server lets in may open it. Output only.
+     * </pre>
+     *
+     * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+     * @return A list containing the accessSources.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getAccessSourcesList() {
+      accessSources_.makeImmutable();
+      return accessSources_;
+    }
+    /**
+     * <pre>
+     * access_sources name the private sources that decide who may open this design, such as
+     * "github://acme/board", one per source its artifacts were read from through a connection (agni
+     * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+     * them gets the design. Empty means every caller the server lets in may open it. Output only.
+     * </pre>
+     *
+     * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+     * @return The count of accessSources.
+     */
+    public int getAccessSourcesCount() {
+      return accessSources_.size();
+    }
+    /**
+     * <pre>
+     * access_sources name the private sources that decide who may open this design, such as
+     * "github://acme/board", one per source its artifacts were read from through a connection (agni
+     * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+     * them gets the design. Empty means every caller the server lets in may open it. Output only.
+     * </pre>
+     *
+     * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+     * @param index The index of the element to return.
+     * @return The accessSources at the given index.
+     */
+    public java.lang.String getAccessSources(int index) {
+      return accessSources_.get(index);
+    }
+    /**
+     * <pre>
+     * access_sources name the private sources that decide who may open this design, such as
+     * "github://acme/board", one per source its artifacts were read from through a connection (agni
+     * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+     * them gets the design. Empty means every caller the server lets in may open it. Output only.
+     * </pre>
+     *
+     * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the accessSources at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getAccessSourcesBytes(int index) {
+      return accessSources_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * access_sources name the private sources that decide who may open this design, such as
+     * "github://acme/board", one per source its artifacts were read from through a connection (agni
+     * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+     * them gets the design. Empty means every caller the server lets in may open it. Output only.
+     * </pre>
+     *
+     * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+     * @param index The index to set the value at.
+     * @param value The accessSources to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAccessSources(
+        int index, java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureAccessSourcesIsMutable();
+      accessSources_.set(index, value);
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * access_sources name the private sources that decide who may open this design, such as
+     * "github://acme/board", one per source its artifacts were read from through a connection (agni
+     * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+     * them gets the design. Empty means every caller the server lets in may open it. Output only.
+     * </pre>
+     *
+     * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+     * @param value The accessSources to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAccessSources(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureAccessSourcesIsMutable();
+      accessSources_.add(value);
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * access_sources name the private sources that decide who may open this design, such as
+     * "github://acme/board", one per source its artifacts were read from through a connection (agni
+     * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+     * them gets the design. Empty means every caller the server lets in may open it. Output only.
+     * </pre>
+     *
+     * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+     * @param values The accessSources to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllAccessSources(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureAccessSourcesIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, accessSources_);
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * access_sources name the private sources that decide who may open this design, such as
+     * "github://acme/board", one per source its artifacts were read from through a connection (agni
+     * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+     * them gets the design. Empty means every caller the server lets in may open it. Output only.
+     * </pre>
+     *
+     * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAccessSources() {
+      accessSources_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00002000);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * access_sources name the private sources that decide who may open this design, such as
+     * "github://acme/board", one per source its artifacts were read from through a connection (agni
+     * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+     * them gets the design. Empty means every caller the server lets in may open it. Output only.
+     * </pre>
+     *
+     * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+     * @param value The bytes of the accessSources to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAccessSourcesBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      ensureAccessSourcesIsMutable();
+      accessSources_.add(value);
+      bitField0_ |= 0x00002000;
       onChanged();
       return this;
     }

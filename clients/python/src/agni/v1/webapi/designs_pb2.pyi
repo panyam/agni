@@ -176,7 +176,7 @@ class Artifact(_message.Message):
     def __init__(self, name: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ..., type: _Optional[_Union[ArtifactType, str]] = ..., entry: _Optional[str] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., source: _Optional[_Union[ArtifactSource, _Mapping]] = ...) -> None: ...
 
 class ArtifactSource(_message.Message):
-    __slots__ = ("mount", "path", "ref", "follow", "version", "read_time", "read_hash")
+    __slots__ = ("mount", "path", "ref", "follow", "version", "read_time", "read_hash", "access_source")
     MOUNT_FIELD_NUMBER: _ClassVar[int]
     PATH_FIELD_NUMBER: _ClassVar[int]
     REF_FIELD_NUMBER: _ClassVar[int]
@@ -184,6 +184,7 @@ class ArtifactSource(_message.Message):
     VERSION_FIELD_NUMBER: _ClassVar[int]
     READ_TIME_FIELD_NUMBER: _ClassVar[int]
     READ_HASH_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_SOURCE_FIELD_NUMBER: _ClassVar[int]
     mount: str
     path: str
     ref: str
@@ -191,7 +192,8 @@ class ArtifactSource(_message.Message):
     version: str
     read_time: _timestamp_pb2.Timestamp
     read_hash: str
-    def __init__(self, mount: _Optional[str] = ..., path: _Optional[str] = ..., ref: _Optional[str] = ..., follow: _Optional[bool] = ..., version: _Optional[str] = ..., read_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., read_hash: _Optional[str] = ...) -> None: ...
+    access_source: str
+    def __init__(self, mount: _Optional[str] = ..., path: _Optional[str] = ..., ref: _Optional[str] = ..., follow: _Optional[bool] = ..., version: _Optional[str] = ..., read_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., read_hash: _Optional[str] = ..., access_source: _Optional[str] = ...) -> None: ...
 
 class AddDesignsRequest(_message.Message):
     __slots__ = ("uri", "designs", "validate_only", "no_symbol_copy")

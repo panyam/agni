@@ -37,6 +37,7 @@ private static final long serialVersionUID = 0L;
     ref_ = "";
     version_ = "";
     readHash_ = "";
+    accessSource_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -359,6 +360,59 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int ACCESS_SOURCE_FIELD_NUMBER = 8;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object accessSource_ = "";
+  /**
+   * <pre>
+   * access_source is the private source the files were read from, such as "github://acme/board",
+   * recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+   * the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+   * read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+   * </pre>
+   *
+   * <code>string access_source = 8 [json_name = "accessSource"];</code>
+   * @return The accessSource.
+   */
+  @java.lang.Override
+  public java.lang.String getAccessSource() {
+    java.lang.Object ref = accessSource_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      accessSource_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * access_source is the private source the files were read from, such as "github://acme/board",
+   * recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+   * the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+   * read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+   * </pre>
+   *
+   * <code>string access_source = 8 [json_name = "accessSource"];</code>
+   * @return The bytes for accessSource.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAccessSourceBytes() {
+    java.lang.Object ref = accessSource_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      accessSource_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -394,6 +448,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(readHash_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 7, readHash_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(accessSource_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 8, accessSource_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -420,6 +477,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(readHash_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(7, readHash_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(accessSource_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(8, accessSource_);
     }
     return size;
   }
@@ -462,6 +522,8 @@ private static final long serialVersionUID = 0L;
     }
     if (!getReadHash()
         .equals(other.getReadHash())) return false;
+    if (!getAccessSource()
+        .equals(other.getAccessSource())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -490,6 +552,8 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + READ_HASH_FIELD_NUMBER;
     hash = (53 * hash) + getReadHash().hashCode();
+    hash = (37 * hash) + ACCESS_SOURCE_FIELD_NUMBER;
+    hash = (53 * hash) + getAccessSource().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -642,6 +706,7 @@ private static final long serialVersionUID = 0L;
         readTimeBuilder_ = null;
       }
       readHash_ = "";
+      accessSource_ = "";
       return this;
     }
 
@@ -700,6 +765,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000040) != 0)) {
         result.readHash_ = readHash_;
       }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.accessSource_ = accessSource_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -744,6 +812,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getReadHash().isEmpty()) {
         readHash_ = other.readHash_;
         bitField0_ |= 0x00000040;
+        onChanged();
+      }
+      if (!other.getAccessSource().isEmpty()) {
+        accessSource_ = other.accessSource_;
+        bitField0_ |= 0x00000080;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -807,6 +880,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 58
+            case 66: {
+              accessSource_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 66
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1512,6 +1590,113 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       readHash_ = value;
       bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object accessSource_ = "";
+    /**
+     * <pre>
+     * access_source is the private source the files were read from, such as "github://acme/board",
+     * recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+     * the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+     * read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+     * </pre>
+     *
+     * <code>string access_source = 8 [json_name = "accessSource"];</code>
+     * @return The accessSource.
+     */
+    public java.lang.String getAccessSource() {
+      java.lang.Object ref = accessSource_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        accessSource_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * access_source is the private source the files were read from, such as "github://acme/board",
+     * recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+     * the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+     * read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+     * </pre>
+     *
+     * <code>string access_source = 8 [json_name = "accessSource"];</code>
+     * @return The bytes for accessSource.
+     */
+    public com.google.protobuf.ByteString
+        getAccessSourceBytes() {
+      java.lang.Object ref = accessSource_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        accessSource_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * access_source is the private source the files were read from, such as "github://acme/board",
+     * recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+     * the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+     * read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+     * </pre>
+     *
+     * <code>string access_source = 8 [json_name = "accessSource"];</code>
+     * @param value The accessSource to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAccessSource(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      accessSource_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * access_source is the private source the files were read from, such as "github://acme/board",
+     * recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+     * the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+     * read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+     * </pre>
+     *
+     * <code>string access_source = 8 [json_name = "accessSource"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAccessSource() {
+      accessSource_ = getDefaultInstance().getAccessSource();
+      bitField0_ = (bitField0_ & ~0x00000080);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * access_source is the private source the files were read from, such as "github://acme/board",
+     * recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+     * the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+     * read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+     * </pre>
+     *
+     * <code>string access_source = 8 [json_name = "accessSource"];</code>
+     * @param value The bytes for accessSource to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAccessSourceBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      accessSource_ = value;
+      bitField0_ |= 0x00000080;
       onChanged();
       return this;
     }

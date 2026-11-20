@@ -32,6 +32,15 @@ public enum ConnectionKind
    * <code>CONNECTION_KIND_GITHUB_TOKEN = 2;</code>
    */
   CONNECTION_KIND_GITHUB_TOKEN(2),
+  /**
+   * <pre>
+   * CONNECTION_KIND_GITHUB_USER signs in as one person with their own GitHub token. It is always
+   * CONNECTION_SCOPE_PERSON, and the server keeps the token sealed rather than naming where it is.
+   * </pre>
+   *
+   * <code>CONNECTION_KIND_GITHUB_USER = 3;</code>
+   */
+  CONNECTION_KIND_GITHUB_USER(3),
   UNRECOGNIZED(-1),
   ;
 
@@ -65,6 +74,15 @@ public enum ConnectionKind
    * <code>CONNECTION_KIND_GITHUB_TOKEN = 2;</code>
    */
   public static final int CONNECTION_KIND_GITHUB_TOKEN_VALUE = 2;
+  /**
+   * <pre>
+   * CONNECTION_KIND_GITHUB_USER signs in as one person with their own GitHub token. It is always
+   * CONNECTION_SCOPE_PERSON, and the server keeps the token sealed rather than naming where it is.
+   * </pre>
+   *
+   * <code>CONNECTION_KIND_GITHUB_USER = 3;</code>
+   */
+  public static final int CONNECTION_KIND_GITHUB_USER_VALUE = 3;
 
 
   public final int getNumber() {
@@ -94,6 +112,7 @@ public enum ConnectionKind
       case 0: return CONNECTION_KIND_UNSPECIFIED;
       case 1: return CONNECTION_KIND_GITHUB_APP;
       case 2: return CONNECTION_KIND_GITHUB_TOKEN;
+      case 3: return CONNECTION_KIND_GITHUB_USER;
       default: return null;
     }
   }
@@ -124,7 +143,7 @@ public enum ConnectionKind
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return io.github.panyam.agni.v1.webapi.ConnectionsProto.getDescriptor().getEnumType(0);
+    return io.github.panyam.agni.v1.webapi.ConnectionsProto.getDescriptor().getEnumType(1);
   }
 
   private static final ConnectionKind[] VALUES = values();

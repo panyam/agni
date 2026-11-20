@@ -29,6 +29,7 @@ private static final long serialVersionUID = 0L;
   }
   private CreateConnectionRequest() {
     connectionId_ = "";
+    userToken_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -135,6 +136,57 @@ private static final long serialVersionUID = 0L;
     return connection_ == null ? io.github.panyam.agni.v1.webapi.Connection.getDefaultInstance() : connection_;
   }
 
+  public static final int USER_TOKEN_FIELD_NUMBER = 3;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object userToken_ = "";
+  /**
+   * <pre>
+   * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+   * under --connections-key and never sends it back. A token kind of person connection takes no
+   * token_source, since a reference would let a caller name a secret of the server's.
+   * </pre>
+   *
+   * <code>string user_token = 3 [json_name = "userToken"];</code>
+   * @return The userToken.
+   */
+  @java.lang.Override
+  public java.lang.String getUserToken() {
+    java.lang.Object ref = userToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      userToken_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+   * under --connections-key and never sends it back. A token kind of person connection takes no
+   * token_source, since a reference would let a caller name a secret of the server's.
+   * </pre>
+   *
+   * <code>string user_token = 3 [json_name = "userToken"];</code>
+   * @return The bytes for userToken.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getUserTokenBytes() {
+    java.lang.Object ref = userToken_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      userToken_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -155,6 +207,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(2, getConnection());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userToken_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 3, userToken_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -165,6 +220,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(2, getConnection());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userToken_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(3, userToken_);
     }
     return size;
   }
@@ -197,6 +255,8 @@ private static final long serialVersionUID = 0L;
       if (!getConnection()
           .equals(other.getConnection())) return false;
     }
+    if (!getUserToken()
+        .equals(other.getUserToken())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -214,6 +274,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + CONNECTION_FIELD_NUMBER;
       hash = (53 * hash) + getConnection().hashCode();
     }
+    hash = (37 * hash) + USER_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + getUserToken().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -357,6 +419,7 @@ private static final long serialVersionUID = 0L;
         connectionBuilder_.dispose();
         connectionBuilder_ = null;
       }
+      userToken_ = "";
       return this;
     }
 
@@ -400,6 +463,9 @@ private static final long serialVersionUID = 0L;
             : connectionBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.userToken_ = userToken_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -422,6 +488,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasConnection()) {
         mergeConnection(other.getConnection());
+      }
+      if (!other.getUserToken().isEmpty()) {
+        userToken_ = other.userToken_;
+        bitField0_ |= 0x00000004;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -459,6 +530,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 18
+            case 26: {
+              userToken_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 26
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -721,6 +797,108 @@ private static final long serialVersionUID = 0L;
         connection_ = null;
       }
       return connectionBuilder_;
+    }
+
+    private java.lang.Object userToken_ = "";
+    /**
+     * <pre>
+     * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+     * under --connections-key and never sends it back. A token kind of person connection takes no
+     * token_source, since a reference would let a caller name a secret of the server's.
+     * </pre>
+     *
+     * <code>string user_token = 3 [json_name = "userToken"];</code>
+     * @return The userToken.
+     */
+    public java.lang.String getUserToken() {
+      java.lang.Object ref = userToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        userToken_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+     * under --connections-key and never sends it back. A token kind of person connection takes no
+     * token_source, since a reference would let a caller name a secret of the server's.
+     * </pre>
+     *
+     * <code>string user_token = 3 [json_name = "userToken"];</code>
+     * @return The bytes for userToken.
+     */
+    public com.google.protobuf.ByteString
+        getUserTokenBytes() {
+      java.lang.Object ref = userToken_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        userToken_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+     * under --connections-key and never sends it back. A token kind of person connection takes no
+     * token_source, since a reference would let a caller name a secret of the server's.
+     * </pre>
+     *
+     * <code>string user_token = 3 [json_name = "userToken"];</code>
+     * @param value The userToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUserToken(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      userToken_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+     * under --connections-key and never sends it back. A token kind of person connection takes no
+     * token_source, since a reference would let a caller name a secret of the server's.
+     * </pre>
+     *
+     * <code>string user_token = 3 [json_name = "userToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearUserToken() {
+      userToken_ = getDefaultInstance().getUserToken();
+      bitField0_ = (bitField0_ & ~0x00000004);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+     * under --connections-key and never sends it back. A token kind of person connection takes no
+     * token_source, since a reference would let a caller name a secret of the server's.
+     * </pre>
+     *
+     * <code>string user_token = 3 [json_name = "userToken"];</code>
+     * @param value The bytes for userToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUserTokenBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      userToken_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.CreateConnectionRequest)

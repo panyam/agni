@@ -31,6 +31,9 @@ func (s *WorkspaceService) ProposeDesigns(ctx context.Context, req *webapi.Propo
 	if err != nil {
 		return nil, err
 	}
+	if err := s.guard.URI(ctx, u); err != nil {
+		return nil, err
+	}
 	var files []string
 	budget := designFilesMaxDirs
 	if err := s.walkFiles(ctx, u.Mount, u.Path, func(p string) { files = append(files, p) }, &budget); err != nil {

@@ -114,7 +114,7 @@ public enum ConnectionStatus
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return io.github.panyam.agni.v1.webapi.ConnectionsProto.getDescriptor().getEnumType(1);
+    return io.github.panyam.agni.v1.webapi.ConnectionsProto.getDescriptor().getEnumType(2);
   }
 
   private static final ConnectionStatus[] VALUES = values();

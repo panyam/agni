@@ -52,14 +52,17 @@ const (
 type ConnectionServiceClient interface {
 	// CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
 	// secret field holding anything but a reference, or a kind's field left empty, is
-	// INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION.
+	// INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
+	// connection needs a signed-in caller, and a server started with --connections-key.
 	CreateConnection(context.Context, *connect.Request[webapi.CreateConnectionRequest]) (*connect.Response[webapi.Connection], error)
-	// GetConnection returns one connection by resource name.
+	// GetConnection returns one connection by resource name. Another person's connection is
+	// NOT_FOUND.
 	GetConnection(context.Context, *connect.Request[webapi.GetConnectionRequest]) (*connect.Response[webapi.Connection], error)
-	// ListConnections returns the server's connections, ordered by name.
+	// ListConnections returns the server's connections and the caller's own, ordered by name.
 	ListConnections(context.Context, *connect.Request[webapi.ListConnectionsRequest]) (*connect.Response[webapi.ListConnectionsResponse], error)
 	// DeleteConnection forgets a connection. One a mount still reads through is FAILED_PRECONDITION,
-	// naming the mounts, until they are deleted.
+	// naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
+	// token too. Another person's connection is NOT_FOUND.
 	DeleteConnection(context.Context, *connect.Request[webapi.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
@@ -133,14 +136,17 @@ func (c *connectionServiceClient) DeleteConnection(ctx context.Context, req *con
 type ConnectionServiceHandler interface {
 	// CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
 	// secret field holding anything but a reference, or a kind's field left empty, is
-	// INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION.
+	// INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
+	// connection needs a signed-in caller, and a server started with --connections-key.
 	CreateConnection(context.Context, *connect.Request[webapi.CreateConnectionRequest]) (*connect.Response[webapi.Connection], error)
-	// GetConnection returns one connection by resource name.
+	// GetConnection returns one connection by resource name. Another person's connection is
+	// NOT_FOUND.
 	GetConnection(context.Context, *connect.Request[webapi.GetConnectionRequest]) (*connect.Response[webapi.Connection], error)
-	// ListConnections returns the server's connections, ordered by name.
+	// ListConnections returns the server's connections and the caller's own, ordered by name.
 	ListConnections(context.Context, *connect.Request[webapi.ListConnectionsRequest]) (*connect.Response[webapi.ListConnectionsResponse], error)
 	// DeleteConnection forgets a connection. One a mount still reads through is FAILED_PRECONDITION,
-	// naming the mounts, until they are deleted.
+	// naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
+	// token too. Another person's connection is NOT_FOUND.
 	DeleteConnection(context.Context, *connect.Request[webapi.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 }
 

@@ -46,7 +46,7 @@ func serveCmd() *cobra.Command {
 			"holding datasheets, and --web-dir for the built workbench assets.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			table, err := serveTable(specs, mountRoot, storeURL, uploadsURL)
+			table, err := serveTable(specs, mountRoot, storeURL, uploadsURL, auth != "")
 			if err != nil {
 				return err
 			}
@@ -233,7 +233,10 @@ func serveMounts(specs []string, root string) ([]mounts.Mount, error) {
 // serveTable is the workbench's live mount table: the folders from --mount and --mount-root, and,
 // with agni serve's --store and --uploads, the mounts agni serve made at runtime, read from their
 // records (agni issue 1735). agnids only reads the records, and sees a new one within a second.
-func serveTable(specs []string, root, storeURL, uploadsURL string) (*mountset.Table, error) {
+//
+// With private, as under --auth, it serves no mount that reads a private repo through a connection.
+// agnids can't check a caller's own connections, so it can't tell who may read one (agni issue 1728).
+func serveTable(specs []string, root, storeURL, uploadsURL string, private bool) (*mountset.Table, error) {
 	ms, err := serveMounts(specs, root)
 	if err != nil {
 		return nil, err
@@ -242,7 +245,7 @@ func serveTable(specs []string, root, storeURL, uploadsURL string) (*mountset.Ta
 	if err != nil {
 		return nil, err
 	}
-	cfg := mountset.Config{Fixed: ms, ReadOnly: true}
+	cfg := mountset.Config{Fixed: ms, ReadOnly: true, HidePrivate: private}
 	if storeDir != "" && uploadsDir != "" {
 		cfg.Uploads, cfg.Records = uploadsDir, filepath.Join(storeDir, mountset.RecordsDir)
 	}

@@ -81,6 +81,11 @@ func (s *DesignService) LinkArtifact(ctx context.Context, req *webapi.LinkArtifa
 	if err != nil {
 		return nil, err
 	}
+	// The caller links only from a source they can read themselves, since the server's connection
+	// reads it for them (agni issue 1728).
+	if err := s.catalog.guard.Mount(ctx, src.GetMount()); err != nil {
+		return nil, err
+	}
 	r, err := s.readers(ctx, src.GetMount())
 	if err != nil {
 		return nil, err
@@ -114,7 +119,13 @@ func (s *DesignService) UnlinkArtifact(ctx context.Context, req *webapi.UnlinkAr
 		return a, nil
 	}
 	d, id, _ := ArtifactID(a.GetName())
-	out, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(d), []ArtifactWrite{{ID: id, Files: a.GetFiles()}}, s.blobs)
+	// The files keep the private source they came from, so unlinking them never opens them to a
+	// caller who can't read it (agni issue 1728).
+	var keep *webapi.ArtifactSource
+	if as := a.GetSource().GetAccessSource(); as != "" {
+		keep = &webapi.ArtifactSource{Mount: s.uploadsMount, AccessSource: as}
+	}
+	out, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(d), []ArtifactWrite{{ID: id, Files: a.GetFiles(), Source: keep}}, s.blobs)
 	if err != nil {
 		return nil, err
 	}
@@ -243,6 +254,9 @@ func (s *DesignService) LinkedTo(ctx context.Context, mount string) ([]string, e
 	if mount == s.uploadsMount {
 		return nil, nil
 	}
+	// Every design counts, including ones the caller can't open, or a mount would be deleted under
+	// a design its deleter can't see.
+	ctx = unguarded(ctx)
 	designs, _, err := s.catalog.Designs(ctx)
 	if err != nil {
 		return nil, err

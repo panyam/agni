@@ -66,6 +66,9 @@ func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRe
 	if err != nil {
 		return nil, err
 	}
+	if err := s.catalog.guard.URI(ctx, u); err != nil {
+		return nil, err
+	}
 	if len(req.GetDesigns()) == 0 {
 		return nil, fmt.Errorf("%w: name the proposals to add, each by its folder", ErrInvalidArgument)
 	}

@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/panyam/oneauth/outbound"
 	"github.com/spf13/cobra"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -27,7 +28,13 @@ when it needs a token, so no secret is stored or sent back.
   agni connections add acme-token --github-token env:GITHUB_TOKEN --remote http://localhost:8080
   agni connections add acme-app --github-app 12345 --installation 678 --key file:/run/secrets/app.pem --remote http://localhost:8080
   agni connections ls --remote http://localhost:8080
-  agni connections rm acme-token --remote http://localhost:8080`,
+  agni connections rm acme-token --remote http://localhost:8080
+
+With --mine the connection is the caller's own. The CLI reads the token from the reference on this
+machine and sends it once, and the server seals it under --connections-key. A design linked from a
+private repo opens only for a caller whose own connection can read the repo (agni issue 1728).
+
+  AGNI_TOKEN=... agni connections add my-github --mine --github-token env:GITHUB_TOKEN --remote https://agni.example`,
 	}
 	cmd.PersistentFlags().StringVar(&remoteURL, "remote", "", "the agni serve whose connections these are, such as http://localhost:8080 (required)")
 	client := func(cmd *cobra.Command) (webapiconnect.ConnectionServiceClient, error) {
@@ -63,13 +70,29 @@ when it needs a token, so no secret is stored or sent back.
 
 	var token, app, key, title, baseURL string
 	var installation int64
+	var mine bool
 	add := &cobra.Command{
 		Use:   "add <id>",
 		Short: "Keep a connection: a token with --github-token, or an App installation with --github-app",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conn := &webapi.Connection{DisplayName: title, BaseUrl: baseURL}
+			req := &webapi.CreateConnectionRequest{ConnectionId: args[0], Connection: conn}
 			switch {
+			case mine && token == "":
+				return fmt.Errorf("--mine keeps your own GitHub token; name where it is with --github-token env:NAME or file:/abs/path")
+			case mine && app != "":
+				return fmt.Errorf("a GitHub App installation signs in as the server, so it can't be --mine")
+			case mine:
+				ref, err := outbound.ParseSecretRef(token)
+				if err != nil {
+					return fmt.Errorf("--github-token: %w", err)
+				}
+				secret, err := ref.Resolve()
+				if err != nil {
+					return fmt.Errorf("--github-token: %w", err)
+				}
+				conn.Kind, conn.Scope, req.UserToken = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER, webapi.ConnectionScope_CONNECTION_SCOPE_PERSON, strings.TrimSpace(secret)
 			case token != "" && app != "":
 				return fmt.Errorf("--github-token and --github-app make different kinds of connection; pass one")
 			case token != "":
@@ -83,7 +106,7 @@ when it needs a token, so no secret is stored or sent back.
 			if err != nil {
 				return err
 			}
-			out, err := unary(cmd.Context(), c.CreateConnection, &webapi.CreateConnectionRequest{ConnectionId: args[0], Connection: conn})
+			out, err := unary(cmd.Context(), c.CreateConnection, req)
 			if err != nil {
 				return err
 			}
@@ -91,7 +114,8 @@ when it needs a token, so no secret is stored or sent back.
 			return nil
 		},
 	}
-	add.Flags().StringVar(&token, "github-token", "", "where a GitHub token is, env:NAME or file:/abs/path")
+	add.Flags().StringVar(&token, "github-token", "", "where a GitHub token is, env:NAME or file:/abs/path; the server reads it, or with --mine this command does")
+	add.Flags().BoolVar(&mine, "mine", false, "keep the connection as your own: the server seals your token and checks it before it shows you a design linked from a private repo")
 	add.Flags().StringVar(&app, "github-app", "", "a GitHub App's id, for an installation of it")
 	add.Flags().Int64Var(&installation, "installation", 0, "the GitHub App installation's id, with --github-app")
 	add.Flags().StringVar(&key, "key", "", "where the GitHub App's private key is, env:NAME or file:/abs/path, with --github-app")
@@ -120,12 +144,15 @@ when it needs a token, so no secret is stored or sent back.
 }
 
 // printConnection writes one connection as a tab-separated line: its id, its kind, where its secret
-// is, and its status.
+// is, and its status. A person's connection says whose it is in place of where its secret is.
 func printConnection(w io.Writer, c *webapi.Connection) {
 	kind := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(c.GetKind().String(), "CONNECTION_KIND_"), "_", "-"))
 	secret := c.GetTokenSource()
-	if c.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP {
+	switch {
+	case c.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP:
 		secret = fmt.Sprintf("app %s installation %d key %s", c.GetAppId(), c.GetInstallationId(), c.GetKeySource())
+	case c.GetScope() == webapi.ConnectionScope_CONNECTION_SCOPE_PERSON:
+		secret = "sealed, for " + c.GetOwner()
 	}
 	status := strings.ToLower(strings.TrimPrefix(c.GetStatus().String(), "CONNECTION_STATUS_"))
 	fmt.Fprintf(w, "%s\t%s\t%s\t%s", service.ConnectionID(c.GetName()), kind, secret, status)

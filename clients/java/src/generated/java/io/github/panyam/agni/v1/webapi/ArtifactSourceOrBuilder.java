@@ -159,4 +159,30 @@ public interface ArtifactSourceOrBuilder extends
    */
   com.google.protobuf.ByteString
       getReadHashBytes();
+
+  /**
+   * <pre>
+   * access_source is the private source the files were read from, such as "github://acme/board",
+   * recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+   * the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+   * read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+   * </pre>
+   *
+   * <code>string access_source = 8 [json_name = "accessSource"];</code>
+   * @return The accessSource.
+   */
+  java.lang.String getAccessSource();
+  /**
+   * <pre>
+   * access_source is the private source the files were read from, such as "github://acme/board",
+   * recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+   * the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+   * read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+   * </pre>
+   *
+   * <code>string access_source = 8 [json_name = "accessSource"];</code>
+   * @return The bytes for accessSource.
+   */
+  com.google.protobuf.ByteString
+      getAccessSourceBytes();
 }

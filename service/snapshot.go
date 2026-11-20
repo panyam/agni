@@ -229,6 +229,9 @@ func (r *ProjectResolver) Snapshot(ctx context.Context, name string) (context.Co
 			return ctx, Snap{}, &SnapshotError{Name: name}
 		}
 	}
+	if err := r.entryAllowed(ctx, e); err != nil {
+		return ctx, Snap{}, err
+	}
 	if e.touched.Len() > 0 && !e.touched.Unchanged() {
 		changed := e.changedTiers(ctx)
 		e.mu.Lock()
@@ -246,6 +249,25 @@ func (r *ProjectResolver) Snapshot(ctx context.Context, name string) (context.Co
 		e = fresh
 	}
 	return withTouched(ctx, e.touched), e.snap, nil
+}
+
+// allowed returns nil when the caller may read what def reads.
+func (r *ProjectResolver) allowed(ctx context.Context, def *webapi.Snapshot) error {
+	if r == nil {
+		return nil
+	}
+	return r.Guard.Snapshot(ctx, def)
+}
+
+// entryAllowed is allowed for a held snapshot's definition.
+func (r *ProjectResolver) entryAllowed(ctx context.Context, e *snapshotEntry) error {
+	if r == nil || r.Guard == nil {
+		return nil
+	}
+	e.mu.Lock()
+	def := definitionOf(e.def)
+	e.mu.Unlock()
+	return r.allowed(ctx, def)
 }
 
 // recoverSnapshot ingests a snapshot the registry does not hold from the definition the store kept,
@@ -385,6 +407,9 @@ func (s *SnapshotService) keep(ctx context.Context, name string, e *snapshotEntr
 // different definition is ErrAlreadyExists.
 func (s *SnapshotService) Ingest(ctx context.Context, req *webapi.IngestRequest) (*webapi.Snapshot, error) {
 	def := definitionOf(req.GetSnapshot())
+	if err := s.projects.allowed(ctx, def); err != nil {
+		return nil, err
+	}
 	name := ""
 	if id := req.GetSnapshotId(); id != "" {
 		if strings.ContainsAny(id, "/ ") {
@@ -422,6 +447,9 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, req *webapi.GetSnapsh
 	if !ok {
 		return nil, &SnapshotError{Name: req.GetName()}
 	}
+	if err := s.projects.entryAllowed(ctx, e); err != nil {
+		return nil, err
+	}
 	return e.out(), nil
 }
 
@@ -442,6 +470,9 @@ func (s *SnapshotService) ListSnapshots(ctx context.Context, req *webapi.ListSna
 	for _, e := range all {
 		o := e.out()
 		if uri != "" && o.GetUri() != uri {
+			continue
+		}
+		if s.projects.entryAllowed(ctx, e) != nil {
 			continue
 		}
 		outs = append(outs, o)
@@ -471,6 +502,9 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 	old, ok := s.held(ctx, name)
 	if !ok {
 		return nil, &SnapshotError{Name: name}
+	}
+	if err := s.projects.entryAllowed(ctx, old); err != nil {
+		return nil, err
 	}
 	old.mu.Lock()
 	def := definitionOf(old.def)
@@ -506,6 +540,9 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 			}
 		}
 	}
+	if err := s.projects.allowed(ctx, def); err != nil {
+		return nil, err
+	}
 	e, err := s.load(ctx, name, def, req.GetReadBoard())
 	if err != nil {
 		return nil, err
@@ -520,6 +557,15 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 // DeleteSnapshot forgets a snapshot, its kept definition included, so it is not recovered. The
 // DesignCache keeps what it read for another snapshot to use.
 func (s *SnapshotService) DeleteSnapshot(ctx context.Context, req *webapi.DeleteSnapshotRequest) (*emptypb.Empty, error) {
+	if e, ok := s.projects.registry().get(req.GetName()); ok {
+		if err := s.projects.entryAllowed(ctx, e); err != nil {
+			return nil, err
+		}
+	} else if def, err := s.projects.snapshotStore().Get(ctx, req.GetName()); err == nil {
+		if err := s.projects.allowed(ctx, def); err != nil {
+			return nil, err
+		}
+	}
 	g := s.projects.registry()
 	g.mu.Lock()
 	_, ok := g.m[req.GetName()]

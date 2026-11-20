@@ -148,12 +148,46 @@ func StandaloneDesignID(name string) (string, bool) {
 type DesignCatalog struct {
 	store   DesignStore
 	mounted []DesignReader
+	// guard hides a design read from a private source from a caller who can't read the source
+	// (agni issue 1728). Nil shows every design.
+	guard *AccessGuard
 }
 
 // NewDesignCatalog returns a catalog writing through store, which may be nil, and reading through
 // store and each of mounted.
 func NewDesignCatalog(store DesignStore, mounted ...DesignReader) *DesignCatalog {
 	return &DesignCatalog{store: store, mounted: mounted}
+}
+
+// WithGuard makes the catalog answer a caller only with the designs g lets them read, and returns c.
+// A design g refuses is ErrPermissionDenied from every call that names it, and left out of Designs.
+func (c *DesignCatalog) WithGuard(g *AccessGuard) *DesignCatalog {
+	c.guard = g
+	if g != nil {
+		g.design = func(ctx context.Context, name string) error {
+			_, _, err := c.find(ctx, name)
+			return err
+		}
+	}
+	return c
+}
+
+// guarded sets d's access sources from its artifacts, and returns nil when the caller may read them
+// all. Only a stored design has artifacts, so a mounted one is never guarded.
+func (c *DesignCatalog) guarded(ctx context.Context, d *webapi.Design, stored bool) error {
+	if c.guard == nil || !stored {
+		return nil
+	}
+	id, _ := StandaloneDesignID(d.GetName())
+	arts, err := c.store.Artifacts(ctx, id)
+	if err != nil {
+		return err
+	}
+	d.AccessSources = c.guard.Sources(arts)
+	if ctx.Value(unguardedKey{}) != nil {
+		return nil
+	}
+	return c.guard.Check(ctx, d.AccessSources)
 }
 
 func (c *DesignCatalog) readers() []DesignReader {
@@ -169,7 +203,8 @@ func (c *DesignCatalog) Design(ctx context.Context, name string) (*webapi.Design
 	return d, err
 }
 
-// Designs returns every design in every store, ordered by name. Names held twice are left out and
+// Designs returns every design in every store the caller may read, ordered by name. Names held
+// twice, and designs whose source couldn't say whether the caller may read them, are left out and
 // returned in unreachable, ordered.
 func (c *DesignCatalog) Designs(ctx context.Context) (designs []*webapi.Design, unreachable []string, err error) {
 	count := map[string]int{}
@@ -186,8 +221,15 @@ func (c *DesignCatalog) Designs(ctx context.Context) (designs []*webapi.Design, 
 		}
 	}
 	for _, d := range all {
-		if count[d.GetName()] == 1 {
+		if count[d.GetName()] != 1 {
+			continue
+		}
+		switch err := c.guarded(ctx, d, !d.ReadOnly); {
+		case err == nil:
 			designs = append(designs, d)
+		case errors.Is(err, ErrPermissionDenied):
+		default:
+			unreachable = append(unreachable, d.GetName())
 		}
 	}
 	for name, n := range count {
@@ -256,6 +298,7 @@ func (c *DesignCatalog) WriteArtifacts(ctx context.Context, name string, writes 
 	if err != nil {
 		return nil, err
 	}
+	c.guard.stamp(writes)
 	return c.store.WriteArtifacts(ctx, id, writes, blobs)
 }
 
@@ -325,6 +368,9 @@ func (c *DesignCatalog) find(ctx context.Context, name string) (*webapi.Design, 
 	}
 	if found == nil {
 		return nil, nil, fmt.Errorf("%w: no design %s", ErrNotFound, name)
+	}
+	if err := c.guarded(ctx, found, !found.ReadOnly); err != nil {
+		return nil, nil, fmt.Errorf("%s: %w", name, err)
 	}
 	return found, holder, nil
 }

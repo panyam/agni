@@ -37,6 +37,8 @@ const faithfulLayout = formats.LayoutFaithful
 //	                      the PartSpec service behind --params-url)
 //	ErrResourceExhausted -> resource exhausted (a query stopped at its work budget)
 //	ErrFailedPrecondition -> failed precondition (a write the resource's state refuses)
+//	ErrPermissionDenied -> permission denied (the caller can't read the private source a design
+//	                      or mount comes from)
 //
 // An unclassified error reaching a transport is treated as an invalid argument, the common
 // case for load/parse failures.
@@ -52,6 +54,9 @@ var (
 	// project declared in a mounted folder or a delete of a project that still holds designs (agni
 	// issue 1693). The same request can succeed once that state changes.
 	ErrFailedPrecondition = errors.New("failed precondition")
+	// ErrPermissionDenied marks a request for something read from a private source the caller's own
+	// connections can't read (agni issue 1728). It names the source, never the files.
+	ErrPermissionDenied = errors.New("permission denied")
 )
 
 // Loader materializes a design's read model from an mounts.URI. osLoader in cmd/agni is the

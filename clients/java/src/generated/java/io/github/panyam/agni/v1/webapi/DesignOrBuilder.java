@@ -406,4 +406,57 @@ public interface DesignOrBuilder extends
    */
   com.google.protobuf.ByteString
       getPacksBytes(int index);
+
+  /**
+   * <pre>
+   * access_sources name the private sources that decide who may open this design, such as
+   * "github://acme/board", one per source its artifacts were read from through a connection (agni
+   * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+   * them gets the design. Empty means every caller the server lets in may open it. Output only.
+   * </pre>
+   *
+   * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+   * @return A list containing the accessSources.
+   */
+  java.util.List<java.lang.String>
+      getAccessSourcesList();
+  /**
+   * <pre>
+   * access_sources name the private sources that decide who may open this design, such as
+   * "github://acme/board", one per source its artifacts were read from through a connection (agni
+   * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+   * them gets the design. Empty means every caller the server lets in may open it. Output only.
+   * </pre>
+   *
+   * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+   * @return The count of accessSources.
+   */
+  int getAccessSourcesCount();
+  /**
+   * <pre>
+   * access_sources name the private sources that decide who may open this design, such as
+   * "github://acme/board", one per source its artifacts were read from through a connection (agni
+   * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+   * them gets the design. Empty means every caller the server lets in may open it. Output only.
+   * </pre>
+   *
+   * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+   * @param index The index of the element to return.
+   * @return The accessSources at the given index.
+   */
+  java.lang.String getAccessSources(int index);
+  /**
+   * <pre>
+   * access_sources name the private sources that decide who may open this design, such as
+   * "github://acme/board", one per source its artifacts were read from through a connection (agni
+   * issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+   * them gets the design. Empty means every caller the server lets in may open it. Output only.
+   * </pre>
+   *
+   * <code>repeated string access_sources = 16 [json_name = "accessSources"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the accessSources at the given index.
+   */
+  com.google.protobuf.ByteString
+      getAccessSourcesBytes(int index);
 }

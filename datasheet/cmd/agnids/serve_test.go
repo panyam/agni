@@ -173,7 +173,7 @@ func TestAgnidsCarriesTheImageCommands(t *testing.T) {
 
 func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
 	root, store, uploads := t.TempDir(), t.TempDir(), t.TempDir()
-	table, err := serveTable([]string{"ds=" + root}, "", "file://"+filepath.ToSlash(store), "file://"+filepath.ToSlash(uploads))
+	table, err := serveTable([]string{"ds=" + root}, "", "file://"+filepath.ToSlash(store), "file://"+filepath.ToSlash(uploads), false)
 	if err != nil {
 		t.Fatal(err)
 	}

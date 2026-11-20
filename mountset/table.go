@@ -19,6 +19,10 @@ import (
 	"github.com/panyam/goapplib/storage/mounts/folder"
 	"github.com/panyam/goapplib/storage/mounts/fsstore"
 	"github.com/panyam/goapplib/storage/mounts/github"
+	"github.com/panyam/oneauth/outbound"
+	"github.com/panyam/oneauth/stores/fs"
+	"golang.org/x/oauth2"
+	ghendpoint "golang.org/x/oauth2/github"
 
 	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/service"
@@ -59,6 +63,16 @@ type Config struct {
 	ReadOnly bool
 	// Log gets a line for each old record Open rewrites or can't, and each view it can't build.
 	Log io.Writer
+	// UserTokens is the folder under --store holding people's own tokens, sealed under
+	// ConnectionsKey, "" for none (agni issue 1728).
+	UserTokens string
+	// ConnectionsKey is where the key that seals people's tokens is, as a secret reference such as
+	// env:NAME. It holds 64 hex characters. Empty keeps no person's token.
+	ConnectionsKey string
+	// HidePrivate leaves out every mount that reads through a connection, from List and from
+	// Resolve, for a server that asks who its callers are but can't check their connections. agnids
+	// with --auth is one (agni issue 1728).
+	HidePrivate bool
 }
 
 // Table is a server's live mount list over goapplib's mounts registry (agni issues 1735, 1759). The
@@ -73,6 +87,12 @@ type Table struct {
 	blobs   *blobs.Dir
 	uploads string
 	upMount string
+	// svc gives connections' tokens and asks GitHub whether a person can read a repo, and users
+	// holds people's sealed tokens. Both are nil without Connections.
+	svc   *connections.Service
+	users outbound.UserTokenStore
+	// hidePrivate is Config.HidePrivate.
+	hidePrivate bool
 }
 
 // NewTable returns a table serving fixed and nothing else, for the CLI and for a server with no
@@ -85,9 +105,10 @@ func NewTable(fixed ...mounts.Mount) *Table {
 // Open returns the table cfg describes. With Records and Uploads it first rewrites any record an
 // older agni wrote (see migrate).
 func Open(cfg Config) (*Table, error) {
-	t := &Table{fixed: slices.Clone(cfg.Fixed), uploads: cfg.Uploads, upMount: cfg.UploadsMount}
+	t := &Table{fixed: slices.Clone(cfg.Fixed), uploads: cfg.Uploads, upMount: cfg.UploadsMount, hidePrivate: cfg.HidePrivate}
 	folderOpts := []folder.Option{folder.WithLinksInside()}
 	drivers := []mounts.Driver{}
+	var gh *github.Driver
 	var store mounts.RecordStore
 	if cfg.Uploads != "" {
 		var b blobs.Linker
@@ -110,7 +131,8 @@ func Open(cfg Config) (*Table, error) {
 		if cfg.GitHubRaw != "" {
 			ghOpts = append(ghOpts, github.WithRawURL(cfg.GitHubRaw))
 		}
-		drivers = append(drivers, github.New(b, ghOpts...))
+		gh = github.New(b, ghOpts...)
+		drivers = append(drivers, gh)
 		if cfg.Records != "" && cfg.ReadOnly {
 			// A read-only reader can't make the folder, so it waits for agni serve to (laterStore).
 			store = &laterStore{dir: cfg.Records}
@@ -137,8 +159,16 @@ func Open(cfg Config) (*Table, error) {
 			return nil, fmt.Errorf("--store: %w", err)
 		}
 		t.conns = cs
-		svc := connections.NewService(cs)
-		opts = append(opts, mounts.WithCredentials(svc.TokenSource))
+		var copts []connections.Option
+		if gh != nil {
+			copts = append(copts, connections.WithReadCheck(gh.CanRead))
+		}
+		if cfg.ConnectionsKey != "" && cfg.UserTokens != "" {
+			t.users = fs.NewFSUserTokenStore(cfg.UserTokens)
+			copts = append(copts, connections.WithUserTokens(t.users, cfg.ConnectionsKey, &oauth2.Config{Endpoint: ghendpoint.Endpoint}))
+		}
+		t.svc = connections.NewService(cs, copts...)
+		opts = append(opts, mounts.WithCredentials(t.svc.TokenSource))
 	}
 	t.reg = mounts.NewRegistry(store, drivers, opts...)
 	if store != nil {
@@ -173,7 +203,7 @@ func (t *Table) List() []mounts.Mount {
 	out := slices.Clone(t.fixed)
 	all, _ := t.reg.List(context.Background())
 	for _, m := range all {
-		if !t.Fixed(m.Name) {
+		if !t.Fixed(m.Name) && !(t.hidePrivate && m.Connection != "") {
 			out = append(out, m)
 		}
 	}
@@ -195,6 +225,9 @@ func (t *Table) Fixed(name string) bool {
 // archive file, and the rest of the path is joined on for archivefs to read.
 func (t *Table) Resolve(uri mounts.URI) (string, error) {
 	ctx := context.Background()
+	if t.hidePrivate && t.privateMount(uri.Mount) {
+		return "", fmt.Errorf("%w: the mount %q reads a private repo, which this server can't check your access to", service.ErrPermissionDenied, uri.Mount)
+	}
 	p, err := t.reg.HostPath(ctx, uri)
 	if err == nil {
 		return p, nil
@@ -233,6 +266,7 @@ const noMaker = "this server makes no mounts at runtime; start it with --store a
 // CreateMount snapshots a github://<owner>/<repo> source at ref and serves it as name. A file://
 // source is refused, because a client must not choose which folder on the server's disk is served.
 func (t *Table) CreateMount(ctx context.Context, name, source, ref, connection string) (service.MountInfo, error) {
+	ctx = viewing(ctx)
 	if t.blobs == nil {
 		return service.MountInfo{}, fmt.Errorf("%w: %s", service.ErrFailedPrecondition, noMaker)
 	}

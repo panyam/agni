@@ -477,6 +477,9 @@ func printDesign(w io.Writer, d *webapi.Design) {
 	} else {
 		notes = append(notes, "reads "+d.GetEntryUri())
 	}
+	if src := d.GetAccessSources(); len(src) > 0 {
+		notes = append(notes, "opens for who can read "+strings.Join(src, " and "))
+	}
 	fmt.Fprintf(w, "%s\t%s\n", d.GetName(), strings.Join(notes, "; "))
 }
 

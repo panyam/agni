@@ -892,6 +892,9 @@ impl serde::Serialize for ArtifactSource {
         if !self.read_hash.is_empty() {
             len += 1;
         }
+        if !self.access_source.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.ArtifactSource", len)?;
         if !self.mount.is_empty() {
             struct_ser.serialize_field("mount", &self.mount)?;
@@ -914,6 +917,9 @@ impl serde::Serialize for ArtifactSource {
         if !self.read_hash.is_empty() {
             struct_ser.serialize_field("readHash", &self.read_hash)?;
         }
+        if !self.access_source.is_empty() {
+            struct_ser.serialize_field("accessSource", &self.access_source)?;
+        }
         struct_ser.end()
     }
 }
@@ -933,6 +939,8 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
             "readTime",
             "read_hash",
             "readHash",
+            "access_source",
+            "accessSource",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -944,6 +952,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
             Version,
             ReadTime,
             ReadHash,
+            AccessSource,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -972,6 +981,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
                             "version" => Ok(GeneratedField::Version),
                             "readTime" | "read_time" => Ok(GeneratedField::ReadTime),
                             "readHash" | "read_hash" => Ok(GeneratedField::ReadHash),
+                            "accessSource" | "access_source" => Ok(GeneratedField::AccessSource),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -998,6 +1008,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
                 let mut version__ = None;
                 let mut read_time__ = None;
                 let mut read_hash__ = None;
+                let mut access_source__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Mount => {
@@ -1042,6 +1053,12 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
                             }
                             read_hash__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::AccessSource => {
+                            if access_source__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("accessSource"));
+                            }
+                            access_source__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(ArtifactSource {
@@ -1052,6 +1069,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
                     version: version__.unwrap_or_default(),
                     read_time: read_time__,
                     read_hash: read_hash__.unwrap_or_default(),
+                    access_source: access_source__.unwrap_or_default(),
                 })
             }
         }
@@ -2856,6 +2874,12 @@ impl serde::Serialize for Connection {
         if self.last_use_time.is_some() {
             len += 1;
         }
+        if self.scope != 0 {
+            len += 1;
+        }
+        if !self.owner.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Connection", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -2899,6 +2923,14 @@ impl serde::Serialize for Connection {
         if let Some(v) = self.last_use_time.as_ref() {
             struct_ser.serialize_field("lastUseTime", v)?;
         }
+        if self.scope != 0 {
+            let v = ConnectionScope::try_from(self.scope)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", self.scope)))?;
+            struct_ser.serialize_field("scope", &v)?;
+        }
+        if !self.owner.is_empty() {
+            struct_ser.serialize_field("owner", &self.owner)?;
+        }
         struct_ser.end()
     }
 }
@@ -2930,6 +2962,8 @@ impl<'de> serde::Deserialize<'de> for Connection {
             "createTime",
             "last_use_time",
             "lastUseTime",
+            "scope",
+            "owner",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -2946,6 +2980,8 @@ impl<'de> serde::Deserialize<'de> for Connection {
             LastError,
             CreateTime,
             LastUseTime,
+            Scope,
+            Owner,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -2979,6 +3015,8 @@ impl<'de> serde::Deserialize<'de> for Connection {
                             "lastError" | "last_error" => Ok(GeneratedField::LastError),
                             "createTime" | "create_time" => Ok(GeneratedField::CreateTime),
                             "lastUseTime" | "last_use_time" => Ok(GeneratedField::LastUseTime),
+                            "scope" => Ok(GeneratedField::Scope),
+                            "owner" => Ok(GeneratedField::Owner),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -3010,6 +3048,8 @@ impl<'de> serde::Deserialize<'de> for Connection {
                 let mut last_error__ = None;
                 let mut create_time__ = None;
                 let mut last_use_time__ = None;
+                let mut scope__ = None;
+                let mut owner__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -3086,6 +3126,18 @@ impl<'de> serde::Deserialize<'de> for Connection {
                             }
                             last_use_time__ = map_.next_value()?;
                         }
+                        GeneratedField::Scope => {
+                            if scope__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("scope"));
+                            }
+                            scope__ = Some(map_.next_value::<ConnectionScope>()? as i32);
+                        }
+                        GeneratedField::Owner => {
+                            if owner__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("owner"));
+                            }
+                            owner__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Connection {
@@ -3101,6 +3153,8 @@ impl<'de> serde::Deserialize<'de> for Connection {
                     last_error: last_error__.unwrap_or_default(),
                     create_time: create_time__,
                     last_use_time: last_use_time__,
+                    scope: scope__.unwrap_or_default(),
+                    owner: owner__.unwrap_or_default(),
                 })
             }
         }
@@ -3117,6 +3171,7 @@ impl serde::Serialize for ConnectionKind {
             Self::Unspecified => "CONNECTION_KIND_UNSPECIFIED",
             Self::GithubApp => "CONNECTION_KIND_GITHUB_APP",
             Self::GithubToken => "CONNECTION_KIND_GITHUB_TOKEN",
+            Self::GithubUser => "CONNECTION_KIND_GITHUB_USER",
         };
         serializer.serialize_str(variant)
     }
@@ -3131,6 +3186,7 @@ impl<'de> serde::Deserialize<'de> for ConnectionKind {
             "CONNECTION_KIND_UNSPECIFIED",
             "CONNECTION_KIND_GITHUB_APP",
             "CONNECTION_KIND_GITHUB_TOKEN",
+            "CONNECTION_KIND_GITHUB_USER",
         ];
 
         struct GeneratedVisitor;
@@ -3174,6 +3230,81 @@ impl<'de> serde::Deserialize<'de> for ConnectionKind {
                     "CONNECTION_KIND_UNSPECIFIED" => Ok(ConnectionKind::Unspecified),
                     "CONNECTION_KIND_GITHUB_APP" => Ok(ConnectionKind::GithubApp),
                     "CONNECTION_KIND_GITHUB_TOKEN" => Ok(ConnectionKind::GithubToken),
+                    "CONNECTION_KIND_GITHUB_USER" => Ok(ConnectionKind::GithubUser),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ConnectionScope {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unspecified => "CONNECTION_SCOPE_UNSPECIFIED",
+            Self::Server => "CONNECTION_SCOPE_SERVER",
+            Self::Person => "CONNECTION_SCOPE_PERSON",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for ConnectionScope {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "CONNECTION_SCOPE_UNSPECIFIED",
+            "CONNECTION_SCOPE_SERVER",
+            "CONNECTION_SCOPE_PERSON",
+        ];
+
+        struct GeneratedVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ConnectionScope;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", &FIELDS)
+            }
+
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                    })
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                    })
+            }
+
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "CONNECTION_SCOPE_UNSPECIFIED" => Ok(ConnectionScope::Unspecified),
+                    "CONNECTION_SCOPE_SERVER" => Ok(ConnectionScope::Server),
+                    "CONNECTION_SCOPE_PERSON" => Ok(ConnectionScope::Person),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -3360,12 +3491,18 @@ impl serde::Serialize for CreateConnectionRequest {
         if self.connection.is_some() {
             len += 1;
         }
+        if !self.user_token.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.CreateConnectionRequest", len)?;
         if !self.connection_id.is_empty() {
             struct_ser.serialize_field("connectionId", &self.connection_id)?;
         }
         if let Some(v) = self.connection.as_ref() {
             struct_ser.serialize_field("connection", v)?;
+        }
+        if !self.user_token.is_empty() {
+            struct_ser.serialize_field("userToken", &self.user_token)?;
         }
         struct_ser.end()
     }
@@ -3380,12 +3517,15 @@ impl<'de> serde::Deserialize<'de> for CreateConnectionRequest {
             "connection_id",
             "connectionId",
             "connection",
+            "user_token",
+            "userToken",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             ConnectionId,
             Connection,
+            UserToken,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -3409,6 +3549,7 @@ impl<'de> serde::Deserialize<'de> for CreateConnectionRequest {
                         match value {
                             "connectionId" | "connection_id" => Ok(GeneratedField::ConnectionId),
                             "connection" => Ok(GeneratedField::Connection),
+                            "userToken" | "user_token" => Ok(GeneratedField::UserToken),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -3430,6 +3571,7 @@ impl<'de> serde::Deserialize<'de> for CreateConnectionRequest {
             {
                 let mut connection_id__ = None;
                 let mut connection__ = None;
+                let mut user_token__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ConnectionId => {
@@ -3444,11 +3586,18 @@ impl<'de> serde::Deserialize<'de> for CreateConnectionRequest {
                             }
                             connection__ = map_.next_value()?;
                         }
+                        GeneratedField::UserToken => {
+                            if user_token__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("userToken"));
+                            }
+                            user_token__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(CreateConnectionRequest {
                     connection_id: connection_id__.unwrap_or_default(),
                     connection: connection__,
+                    user_token: user_token__.unwrap_or_default(),
                 })
             }
         }
@@ -5460,6 +5609,9 @@ impl serde::Serialize for Design {
         if !self.packs.is_empty() {
             len += 1;
         }
+        if !self.access_sources.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Design", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -5500,6 +5652,9 @@ impl serde::Serialize for Design {
         if !self.packs.is_empty() {
             struct_ser.serialize_field("packs", &self.packs)?;
         }
+        if !self.access_sources.is_empty() {
+            struct_ser.serialize_field("accessSources", &self.access_sources)?;
+        }
         struct_ser.end()
     }
 }
@@ -5529,6 +5684,8 @@ impl<'de> serde::Deserialize<'de> for Design {
             "read_only",
             "readOnly",
             "packs",
+            "access_sources",
+            "accessSources",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -5546,6 +5703,7 @@ impl<'de> serde::Deserialize<'de> for Design {
             Artifacts,
             ReadOnly,
             Packs,
+            AccessSources,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -5580,6 +5738,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                             "artifacts" => Ok(GeneratedField::Artifacts),
                             "readOnly" | "read_only" => Ok(GeneratedField::ReadOnly),
                             "packs" => Ok(GeneratedField::Packs),
+                            "accessSources" | "access_sources" => Ok(GeneratedField::AccessSources),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -5612,6 +5771,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                 let mut artifacts__ = None;
                 let mut read_only__ = None;
                 let mut packs__ = None;
+                let mut access_sources__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -5692,6 +5852,12 @@ impl<'de> serde::Deserialize<'de> for Design {
                             }
                             packs__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::AccessSources => {
+                            if access_sources__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("accessSources"));
+                            }
+                            access_sources__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Design {
@@ -5708,6 +5874,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                     artifacts: artifacts__.unwrap_or_default(),
                     read_only: read_only__.unwrap_or_default(),
                     packs: packs__.unwrap_or_default(),
+                    access_sources: access_sources__.unwrap_or_default(),
                 })
             }
         }

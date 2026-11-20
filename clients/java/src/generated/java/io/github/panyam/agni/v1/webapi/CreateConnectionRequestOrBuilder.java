@@ -56,4 +56,28 @@ public interface CreateConnectionRequestOrBuilder extends
    * <code>.agni.v1.webapi.Connection connection = 2 [json_name = "connection"];</code>
    */
   io.github.panyam.agni.v1.webapi.ConnectionOrBuilder getConnectionOrBuilder();
+
+  /**
+   * <pre>
+   * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+   * under --connections-key and never sends it back. A token kind of person connection takes no
+   * token_source, since a reference would let a caller name a secret of the server's.
+   * </pre>
+   *
+   * <code>string user_token = 3 [json_name = "userToken"];</code>
+   * @return The userToken.
+   */
+  java.lang.String getUserToken();
+  /**
+   * <pre>
+   * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+   * under --connections-key and never sends it back. A token kind of person connection takes no
+   * token_source, since a reference would let a caller name a secret of the server's.
+   * </pre>
+   *
+   * <code>string user_token = 3 [json_name = "userToken"];</code>
+   * @return The bytes for userToken.
+   */
+  com.google.protobuf.ByteString
+      getUserTokenBytes();
 }

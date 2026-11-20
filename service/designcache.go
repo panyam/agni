@@ -428,6 +428,16 @@ type CacheableLoader interface {
 type CachingLoader struct {
 	CacheableLoader
 	cache *DesignCache
+	// guard refuses a read the caller may not make before the cache answers it (agni issue 1728),
+	// since a cached copy outlives the caller who read it. WithGuard sets it.
+	guard *AccessGuard
+}
+
+// WithGuard refuses each cached read g refuses, and returns l. The reads that pass through to the
+// wrapped loader are its own to guard.
+func (l *CachingLoader) WithGuard(g *AccessGuard) *CachingLoader {
+	l.guard = g
+	return l
 }
 
 // NewCachingLoader wraps l. A nil cache passes every read through.
@@ -443,6 +453,9 @@ func (l *CachingLoader) Cache() *DesignCache { return l.cache }
 // A worker under another overlay restores the parse and runs only the derive, which costs about a
 // tenth of the parse on a large board.
 func (l *CachingLoader) Design(ctx context.Context, uri mounts.URI, opts ...ReadOption) (*ir.Design, error) {
+	if err := l.guard.URI(ctx, uri); err != nil {
+		return nil, err
+	}
 	o := ReadOpts(opts...)
 	derive := func(ctx context.Context) (any, error) {
 		p, err := l.parse(ctx, uri, o.SymbolPaths, o.FlattenHierarchy)
@@ -499,6 +512,9 @@ func (l *CachingLoader) parse(ctx context.Context, uri mounts.URI, symbolPaths [
 
 // Geometry returns a copy of the drawing, read once per layout, symbol source and identity.
 func (l *CachingLoader) Geometry(ctx context.Context, uri mounts.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
+	if err := l.guard.URI(ctx, uri); err != nil {
+		return nil, err
+	}
 	sym := "glyph"
 	if faithfulSymbols {
 		sym = "faithful"
@@ -522,6 +538,9 @@ func (l *CachingLoader) Geometry(ctx context.Context, uri mounts.URI, layout str
 
 // Board returns a copy of the board sidecar. A board read takes no options, so its key is the URI.
 func (l *CachingLoader) Board(ctx context.Context, uri mounts.URI) (*geom.BoardGeometry, error) {
+	if err := l.guard.URI(ctx, uri); err != nil {
+		return nil, err
+	}
 	ok, key := l.key("board", uri.String(), nil)
 	if !ok {
 		return l.CacheableLoader.Board(ctx, uri)
@@ -542,6 +561,9 @@ func (l *CachingLoader) Board(ctx context.Context, uri mounts.URI) (*geom.BoardG
 // BoardMeshes passes through to the wrapped loader's BoardMeshes, or reports every key unread when
 // it has none. Meshes stay out of the DesignCache, since GetBoardMeshes keeps its own fitted sets.
 func (l *CachingLoader) BoardMeshes(ctx context.Context, uri mounts.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+	if err := l.guard.URI(ctx, uri); err != nil {
+		return nil, nil, err
+	}
 	if ml, ok := l.CacheableLoader.(BoardMeshLoader); ok {
 		return ml.BoardMeshes(ctx, uri, keys)
 	}

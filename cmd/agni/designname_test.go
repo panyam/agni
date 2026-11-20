@@ -42,7 +42,7 @@ func designServer(t *testing.T, store, uploads string, mounted ...mounts.Mount) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, packSvc, err := storeServices(t.Context(), tableOf(ms), store, uploads, projectStore, resolver, checkSvc, io.Discard)
+	projectSvc, designSvc, packSvc, err := storeServices(t.Context(), tableOf(ms), store, uploads, projectStore, resolver, checkSvc, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

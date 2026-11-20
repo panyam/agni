@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/connections.proto.
  */
 export const file_agni_v1_webapi_connections: GenFile = /*@__PURE__*/
-  fileDesc("CiBhZ25pL3YxL3dlYmFwaS9jb25uZWN0aW9ucy5wcm90bxIOYWduaS52MS53ZWJhcGki7QIKCkNvbm5lY3Rpb24SDAoEbmFtZRgBIAEoCRIsCgRraW5kGAIgASgOMh4uYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbktpbmQSFAoMZGlzcGxheV9uYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEg4KBmFwcF9pZBgFIAEoCRIXCg9pbnN0YWxsYXRpb25faWQYBiABKAMSEgoKa2V5X3NvdXJjZRgHIAEoCRIUCgx0b2tlbl9zb3VyY2UYCCABKAkSMAoGc3RhdHVzGAkgASgOMiAuYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvblN0YXR1cxISCgpsYXN0X2Vycm9yGAogASgJEi8KC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCg1sYXN0X3VzZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJgChdDcmVhdGVDb25uZWN0aW9uUmVxdWVzdBIVCg1jb25uZWN0aW9uX2lkGAEgASgJEi4KCmNvbm5lY3Rpb24YAiABKAsyGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uIiQKFEdldENvbm5lY3Rpb25SZXF1ZXN0EgwKBG5hbWUYASABKAkiGAoWTGlzdENvbm5lY3Rpb25zUmVxdWVzdCJKChdMaXN0Q29ubmVjdGlvbnNSZXNwb25zZRIvCgtjb25uZWN0aW9ucxgBIAMoCzIaLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb24iJwoXRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QSDAoEbmFtZRgBIAEoCSpzCg5Db25uZWN0aW9uS2luZBIfChtDT05ORUNUSU9OX0tJTkRfVU5TUEVDSUZJRUQQABIeChpDT05ORUNUSU9OX0tJTkRfR0lUSFVCX0FQUBABEiAKHENPTk5FQ1RJT05fS0lORF9HSVRIVUJfVE9LRU4QAiptChBDb25uZWN0aW9uU3RhdHVzEiEKHUNPTk5FQ1RJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASGAoUQ09OTkVDVElPTl9TVEFUVVNfT0sQARIcChhDT05ORUNUSU9OX1NUQVRVU19GQUlMRUQQAjL4AgoRQ29ubmVjdGlvblNlcnZpY2USVwoQQ3JlYXRlQ29ubmVjdGlvbhInLmFnbmkudjEud2ViYXBpLkNyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0GhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbhJRCg1HZXRDb25uZWN0aW9uEiQuYWduaS52MS53ZWJhcGkuR2V0Q29ubmVjdGlvblJlcXVlc3QaGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uEmIKD0xpc3RDb25uZWN0aW9ucxImLmFnbmkudjEud2ViYXBpLkxpc3RDb25uZWN0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0Q29ubmVjdGlvbnNSZXNwb25zZRJTChBEZWxldGVDb25uZWN0aW9uEicuYWduaS52MS53ZWJhcGkuRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_google_protobuf_empty, file_google_protobuf_timestamp]);
+  fileDesc("CiBhZ25pL3YxL3dlYmFwaS9jb25uZWN0aW9ucy5wcm90bxIOYWduaS52MS53ZWJhcGkirAMKCkNvbm5lY3Rpb24SDAoEbmFtZRgBIAEoCRIsCgRraW5kGAIgASgOMh4uYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbktpbmQSFAoMZGlzcGxheV9uYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEg4KBmFwcF9pZBgFIAEoCRIXCg9pbnN0YWxsYXRpb25faWQYBiABKAMSEgoKa2V5X3NvdXJjZRgHIAEoCRIUCgx0b2tlbl9zb3VyY2UYCCABKAkSMAoGc3RhdHVzGAkgASgOMiAuYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvblN0YXR1cxISCgpsYXN0X2Vycm9yGAogASgJEi8KC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCg1sYXN0X3VzZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgVzY29wZRgNIAEoDjIfLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb25TY29wZRINCgVvd25lchgOIAEoCSJ0ChdDcmVhdGVDb25uZWN0aW9uUmVxdWVzdBIVCg1jb25uZWN0aW9uX2lkGAEgASgJEi4KCmNvbm5lY3Rpb24YAiABKAsyGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uEhIKCnVzZXJfdG9rZW4YAyABKAkiJAoUR2V0Q29ubmVjdGlvblJlcXVlc3QSDAoEbmFtZRgBIAEoCSIYChZMaXN0Q29ubmVjdGlvbnNSZXF1ZXN0IkoKF0xpc3RDb25uZWN0aW9uc1Jlc3BvbnNlEi8KC2Nvbm5lY3Rpb25zGAEgAygLMhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbiInChdEZWxldGVDb25uZWN0aW9uUmVxdWVzdBIMCgRuYW1lGAEgASgJKm0KD0Nvbm5lY3Rpb25TY29wZRIgChxDT05ORUNUSU9OX1NDT1BFX1VOU1BFQ0lGSUVEEAASGwoXQ09OTkVDVElPTl9TQ09QRV9TRVJWRVIQARIbChdDT05ORUNUSU9OX1NDT1BFX1BFUlNPThACKpQBCg5Db25uZWN0aW9uS2luZBIfChtDT05ORUNUSU9OX0tJTkRfVU5TUEVDSUZJRUQQABIeChpDT05ORUNUSU9OX0tJTkRfR0lUSFVCX0FQUBABEiAKHENPTk5FQ1RJT05fS0lORF9HSVRIVUJfVE9LRU4QAhIfChtDT05ORUNUSU9OX0tJTkRfR0lUSFVCX1VTRVIQAyptChBDb25uZWN0aW9uU3RhdHVzEiEKHUNPTk5FQ1RJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASGAoUQ09OTkVDVElPTl9TVEFUVVNfT0sQARIcChhDT05ORUNUSU9OX1NUQVRVU19GQUlMRUQQAjL4AgoRQ29ubmVjdGlvblNlcnZpY2USVwoQQ3JlYXRlQ29ubmVjdGlvbhInLmFnbmkudjEud2ViYXBpLkNyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0GhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbhJRCg1HZXRDb25uZWN0aW9uEiQuYWduaS52MS53ZWJhcGkuR2V0Q29ubmVjdGlvblJlcXVlc3QaGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uEmIKD0xpc3RDb25uZWN0aW9ucxImLmFnbmkudjEud2ViYXBpLkxpc3RDb25uZWN0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0Q29ubmVjdGlvbnNSZXNwb25zZRJTChBEZWxldGVDb25uZWN0aW9uEicuYWduaS52MS53ZWJhcGkuRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_google_protobuf_empty, file_google_protobuf_timestamp]);
 
 /**
  * Connection is one sign-in the server reads a source through, named "connections/{connection}".
@@ -99,6 +99,22 @@ export type Connection = Message<"agni.v1.webapi.Connection"> & {
    * @generated from field: google.protobuf.Timestamp last_use_time = 12;
    */
   lastUseTime?: Timestamp | undefined;
+
+  /**
+   * scope says whether the connection signs in as the server or as one person. Unspecified on a
+   * create is CONNECTION_SCOPE_SERVER.
+   *
+   * @generated from field: agni.v1.webapi.ConnectionScope scope = 13;
+   */
+  scope: ConnectionScope;
+
+  /**
+   * owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+   * who made it. It is empty for a server connection. Output only.
+   *
+   * @generated from field: string owner = 14;
+   */
+  owner: string;
 };
 
 /**
@@ -125,6 +141,15 @@ export type CreateConnectionRequest = Message<"agni.v1.webapi.CreateConnectionRe
    * @generated from field: agni.v1.webapi.Connection connection = 2;
    */
   connection?: Connection | undefined;
+
+  /**
+   * user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+   * under --connections-key and never sends it back. A token kind of person connection takes no
+   * token_source, since a reference would let a caller name a secret of the server's.
+   *
+   * @generated from field: string user_token = 3;
+   */
+  userToken: string;
 };
 
 /**
@@ -203,6 +228,38 @@ export const DeleteConnectionRequestSchema: GenMessage<DeleteConnectionRequest> 
   messageDesc(file_agni_v1_webapi_connections, 5);
 
 /**
+ * @generated from enum agni.v1.webapi.ConnectionScope
+ */
+export enum ConnectionScope {
+  /**
+   * @generated from enum value: CONNECTION_SCOPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * CONNECTION_SCOPE_SERVER signs in as the server. Every caller the server lets in reads a mount
+   * through it.
+   *
+   * @generated from enum value: CONNECTION_SCOPE_SERVER = 1;
+   */
+  SERVER = 1,
+
+  /**
+   * CONNECTION_SCOPE_PERSON signs in as the caller who made it, and only their requests use it. It
+   * decides which linked designs they may open.
+   *
+   * @generated from enum value: CONNECTION_SCOPE_PERSON = 2;
+   */
+  PERSON = 2,
+}
+
+/**
+ * Describes the enum agni.v1.webapi.ConnectionScope.
+ */
+export const ConnectionScopeSchema: GenEnum<ConnectionScope> = /*@__PURE__*/
+  enumDesc(file_agni_v1_webapi_connections, 0);
+
+/**
  * @generated from enum agni.v1.webapi.ConnectionKind
  */
 export enum ConnectionKind {
@@ -225,13 +282,21 @@ export enum ConnectionKind {
    * @generated from enum value: CONNECTION_KIND_GITHUB_TOKEN = 2;
    */
   GITHUB_TOKEN = 2,
+
+  /**
+   * CONNECTION_KIND_GITHUB_USER signs in as one person with their own GitHub token. It is always
+   * CONNECTION_SCOPE_PERSON, and the server keeps the token sealed rather than naming where it is.
+   *
+   * @generated from enum value: CONNECTION_KIND_GITHUB_USER = 3;
+   */
+  GITHUB_USER = 3,
 }
 
 /**
  * Describes the enum agni.v1.webapi.ConnectionKind.
  */
 export const ConnectionKindSchema: GenEnum<ConnectionKind> = /*@__PURE__*/
-  enumDesc(file_agni_v1_webapi_connections, 0);
+  enumDesc(file_agni_v1_webapi_connections, 1);
 
 /**
  * @generated from enum agni.v1.webapi.ConnectionStatus
@@ -259,7 +324,7 @@ export enum ConnectionStatus {
  * Describes the enum agni.v1.webapi.ConnectionStatus.
  */
 export const ConnectionStatusSchema: GenEnum<ConnectionStatus> = /*@__PURE__*/
-  enumDesc(file_agni_v1_webapi_connections, 1);
+  enumDesc(file_agni_v1_webapi_connections, 2);
 
 /**
  * This file defines ConnectionService, which keeps the sign-ins a server reads private sources
@@ -267,9 +332,14 @@ export const ConnectionStatusSchema: GenEnum<ConnectionStatus> = /*@__PURE__*/
  * with that connection's token. Several mounts can share one, such as one GitHub App installation
  * over many repos. The records come from goapplib storage's connections package.
  *
- * A connection never holds a secret. Its key_source and token_source name where the secret is,
- * "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So no
- * secret is written to --store or sent back over this API.
+ * A server connection never holds a secret. Its key_source and token_source name where the secret
+ * is, "env:NAME" or "file:/abs/path", and the server reads it from there when it needs a token. So
+ * no secret is written to --store or sent back over this API.
+ *
+ * A person's connection belongs to the caller who made it (agni issue 1728). It holds that
+ * person's own GitHub token, sealed in --store under the server's --connections-key, and nobody
+ * else's request can use it. A design linked from a private repo opens only for a caller whose own
+ * connection can read the repo.
  *
  * @generated from service agni.v1.webapi.ConnectionService
  */
@@ -277,7 +347,8 @@ export const ConnectionService: GenService<{
   /**
    * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
    * secret field holding anything but a reference, or a kind's field left empty, is
-   * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION.
+   * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
+   * connection needs a signed-in caller, and a server started with --connections-key.
    *
    * @generated from rpc agni.v1.webapi.ConnectionService.CreateConnection
    */
@@ -287,7 +358,8 @@ export const ConnectionService: GenService<{
     output: typeof ConnectionSchema;
   },
   /**
-   * GetConnection returns one connection by resource name.
+   * GetConnection returns one connection by resource name. Another person's connection is
+   * NOT_FOUND.
    *
    * @generated from rpc agni.v1.webapi.ConnectionService.GetConnection
    */
@@ -297,7 +369,7 @@ export const ConnectionService: GenService<{
     output: typeof ConnectionSchema;
   },
   /**
-   * ListConnections returns the server's connections, ordered by name.
+   * ListConnections returns the server's connections and the caller's own, ordered by name.
    *
    * @generated from rpc agni.v1.webapi.ConnectionService.ListConnections
    */
@@ -308,7 +380,8 @@ export const ConnectionService: GenService<{
   },
   /**
    * DeleteConnection forgets a connection. One a mount still reads through is FAILED_PRECONDITION,
-   * naming the mounts, until they are deleted.
+   * naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
+   * token too. Another person's connection is NOT_FOUND.
    *
    * @generated from rpc agni.v1.webapi.ConnectionService.DeleteConnection
    */

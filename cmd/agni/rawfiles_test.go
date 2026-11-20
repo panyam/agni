@@ -19,7 +19,7 @@ func TestRawFileHandlerServesFilesInsideAMountOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(rawFileHandler(tableOf([]mounts.Mount{mountset.Folder("tut", root)})))
+	srv := httptest.NewServer(rawFileHandler(tableOf([]mounts.Mount{mountset.Folder("tut", root)}), nil))
 	defer srv.Close()
 	get := func(p string) (int, string) {
 		t.Helper()
@@ -49,7 +49,7 @@ func TestRawFileHandlerAsksTheBrowserToRevalidate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(rawFileHandler(tableOf([]mounts.Mount{mountset.Folder("tut", root)})))
+	srv := httptest.NewServer(rawFileHandler(tableOf([]mounts.Mount{mountset.Folder("tut", root)}), nil))
 	defer srv.Close()
 	res, err := http.Get(srv.URL + "/raw/tut/project.yaml")
 	if err != nil {

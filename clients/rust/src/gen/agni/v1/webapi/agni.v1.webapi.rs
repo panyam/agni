@@ -1151,6 +1151,14 @@ pub struct Connection {
     pub create_time: ::core::option::Option<::pbjson_types::Timestamp>,
     #[prost(message, optional, tag="12")]
     pub last_use_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    /// scope says whether the connection signs in as the server or as one person. Unspecified on a
+    /// create is CONNECTION_SCOPE_SERVER.
+    #[prost(enumeration="ConnectionScope", tag="13")]
+    pub scope: i32,
+    /// owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
+    /// who made it. It is empty for a server connection. Output only.
+    #[prost(string, tag="14")]
+    pub owner: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateConnectionRequest {
@@ -1160,6 +1168,11 @@ pub struct CreateConnectionRequest {
     /// connection holds the kind and its fields. Its name and output fields are ignored.
     #[prost(message, optional, tag="2")]
     pub connection: ::core::option::Option<Connection>,
+    /// user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
+    /// under --connections-key and never sends it back. A token kind of person connection takes no
+    /// token_source, since a reference would let a caller name a secret of the server's.
+    #[prost(string, tag="3")]
+    pub user_token: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetConnectionRequest {
@@ -1183,6 +1196,39 @@ pub struct DeleteConnectionRequest {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
+pub enum ConnectionScope {
+    Unspecified = 0,
+    /// CONNECTION_SCOPE_SERVER signs in as the server. Every caller the server lets in reads a mount
+    /// through it.
+    Server = 1,
+    /// CONNECTION_SCOPE_PERSON signs in as the caller who made it, and only their requests use it. It
+    /// decides which linked designs they may open.
+    Person = 2,
+}
+impl ConnectionScope {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "CONNECTION_SCOPE_UNSPECIFIED",
+            Self::Server => "CONNECTION_SCOPE_SERVER",
+            Self::Person => "CONNECTION_SCOPE_PERSON",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CONNECTION_SCOPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "CONNECTION_SCOPE_SERVER" => Some(Self::Server),
+            "CONNECTION_SCOPE_PERSON" => Some(Self::Person),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
 pub enum ConnectionKind {
     Unspecified = 0,
     /// CONNECTION_KIND_GITHUB_APP signs in as a GitHub App installation, scoped to the repos the
@@ -1190,6 +1236,9 @@ pub enum ConnectionKind {
     GithubApp = 1,
     /// CONNECTION_KIND_GITHUB_TOKEN sends a token, such as a fine-grained personal access token.
     GithubToken = 2,
+    /// CONNECTION_KIND_GITHUB_USER signs in as one person with their own GitHub token. It is always
+    /// CONNECTION_SCOPE_PERSON, and the server keeps the token sealed rather than naming where it is.
+    GithubUser = 3,
 }
 impl ConnectionKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1201,6 +1250,7 @@ impl ConnectionKind {
             Self::Unspecified => "CONNECTION_KIND_UNSPECIFIED",
             Self::GithubApp => "CONNECTION_KIND_GITHUB_APP",
             Self::GithubToken => "CONNECTION_KIND_GITHUB_TOKEN",
+            Self::GithubUser => "CONNECTION_KIND_GITHUB_USER",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1209,6 +1259,7 @@ impl ConnectionKind {
             "CONNECTION_KIND_UNSPECIFIED" => Some(Self::Unspecified),
             "CONNECTION_KIND_GITHUB_APP" => Some(Self::GithubApp),
             "CONNECTION_KIND_GITHUB_TOKEN" => Some(Self::GithubToken),
+            "CONNECTION_KIND_GITHUB_USER" => Some(Self::GithubUser),
             _ => None,
         }
     }
@@ -2242,6 +2293,12 @@ pub struct Design {
     /// update_mask "packs". A design in a mounted folder has none.
     #[prost(string, repeated, tag="15")]
     pub packs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// access_sources name the private sources that decide who may open this design, such as
+    /// "github://acme/board", one per source its artifacts were read from through a connection (agni
+    /// issue 1728). On a server with --auth, only a caller whose own connection can read every one of
+    /// them gets the design. Empty means every caller the server lets in may open it. Output only.
+    #[prost(string, repeated, tag="16")]
+    pub access_sources: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetProjectRequest {
@@ -2733,7 +2790,8 @@ pub struct ListDesignsResponse {
     /// next_page_token is empty when the last page has been reached.
     #[prost(string, tag="2")]
     pub next_page_token: ::prost::alloc::string::String,
-    /// unreachable names the designs left out because two mounted folders declare the same id (AIP-217).
+    /// unreachable names the designs left out because two mounted folders declare the same id (AIP-217),
+    /// and those whose private source couldn't say whether the caller may read them (agni issue 1728).
     /// Each entry is "designs/{design}". The rest of the listing is complete.
     #[prost(string, repeated, tag="3")]
     pub unreachable: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
@@ -2820,6 +2878,12 @@ pub struct ArtifactSource {
     /// instead. Only a link sets it, so it tells a linked artifact from an added one. It is output only.
     #[prost(string, tag="7")]
     pub read_hash: ::prost::alloc::string::String,
+    /// access_source is the private source the files were read from, such as "github://acme/board",
+    /// recorded when they were read through a mount with a connection (agni issue 1728). It stays when
+    /// the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
+    /// read that source. Empty is a public source, a folder on the server, or an upload. Output only.
+    #[prost(string, tag="8")]
+    pub access_source: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AddDesignsRequest {
