@@ -169,6 +169,8 @@ jobs:
           go test -v ./... > go-test.log 2>&1 || true
           echo "Skipped on Windows:"; grep -E -B2 "^\s*--- SKIP" go-test.log || echo "  none"
           grep -E "^(--- FAIL|FAIL|panic)" go-test.log > failures.log || true
+          # A failure's messages come just before its --- FAIL line.
+          grep -E -B30 "^\s*--- FAIL" go-test.log || true
           cat failures.log; test ! -s failures.log
 
       - name: Smoke test agni.exe in a browser, on a drive-letter mount
