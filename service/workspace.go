@@ -119,6 +119,15 @@ type WorkspaceService struct {
 	// hooks makes a mount's GitHub webhook with hookSecret, and both are set by WithWebhooks.
 	hooks      WebhookMaker
 	hookSecret []byte
+	// signInURL is where a person signs in with GitHub, and is set by WithSignInURL.
+	signInURL string
+}
+
+// WithSignInURL makes ListMounts name url as where a person signs in with GitHub (agni issue 1727),
+// and returns s. Empty, the default, says the server offers no sign-in.
+func (s *WorkspaceService) WithSignInURL(url string) *WorkspaceService {
+	s.signInURL = url
+	return s
 }
 
 // WithGuard refuses a read under a mount or design g refuses (agni issue 1728), and returns s. A
@@ -281,7 +290,7 @@ func NewWorkspaceService(ws Workspace) *WorkspaceService {
 // into many full walks. A later mount can inherit an exhausted budget and be kept without being
 // examined, which errs toward showing too much.
 func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMountsRequest) (*webapi.ListMountsResponse, error) {
-	resp := &webapi.ListMountsResponse{CanCreateMounts: s.maker != nil}
+	resp := &webapi.ListMountsResponse{CanCreateMounts: s.maker != nil, SignInUrl: s.signInURL}
 	opens := opensSet(req.GetOpens())
 	pruneBudget := pruneMaxDirs
 	for _, m := range s.ws.Mounts() {

@@ -56,4 +56,28 @@ public interface ListMountsResponseOrBuilder extends
    * @return The canCreateMounts.
    */
   boolean getCanCreateMounts();
+
+  /**
+   * <pre>
+   * sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+   * offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+   * person's own links there, so they can add a private repo through their own GitHub account.
+   * </pre>
+   *
+   * <code>string sign_in_url = 4 [json_name = "signInUrl"];</code>
+   * @return The signInUrl.
+   */
+  java.lang.String getSignInUrl();
+  /**
+   * <pre>
+   * sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+   * offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+   * person's own links there, so they can add a private repo through their own GitHub account.
+   * </pre>
+   *
+   * <code>string sign_in_url = 4 [json_name = "signInUrl"];</code>
+   * @return The bytes for signInUrl.
+   */
+  com.google.protobuf.ByteString
+      getSignInUrlBytes();
 }

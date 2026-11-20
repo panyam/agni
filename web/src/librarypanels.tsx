@@ -3,19 +3,21 @@
 // design's own page lists its artifacts, and replaces or deletes one. Files go up as the CLI's
 // `agni designs push` sends them (libraryupload.ts), and the server groups a folder into artifacts.
 
-import { createMemo, createSignal, For, Show, type JSX } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show, type JSX } from "solid-js";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland } from "@panyam/tsappkit-solid";
 import { filesFromDrop, filesFromFileList } from "@panyam/tsappkit/wasmhost";
 import type { Design } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
-import { ArtifactType, type Artifact, type Report } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
+import { create } from "@bufbuild/protobuf";
+import { ArtifactSourceSchema, ArtifactType, type Artifact, type ArtifactSource, type DesignRevision, type Report } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
 import type { Pack } from "@panyam/agni-client/gen/agni/v1/webapi/packs_pb";
 import type { Project } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 import { uriMount } from "@agni/web-shared/uri.js";
 import { designClient, packClient, projectClient, uploadsClient } from "./api.js";
 import { designViewUrl, diffUrl, filterDesigns, findingUrl, KEPT_HERE, lastSegment, packUrl, projectUrl, reportState, wheres } from "./storepages.js";
 import { designId, groupBySeries, importFolder, libraryUrl, replaceArtifact, type DesignsClient, type Picked, type UploadsClient } from "./libraryupload.js";
+import { LinkArtifact, LinkFields, linkInto, type LinkClient, type LinkTarget } from "./linkform.js";
 
 // noStore words the answer of a server started without --store or --uploads.
 const noStore = "This server keeps no designs of its own. Start it with --store and --uploads to create and upload designs here.";
@@ -217,21 +219,46 @@ export async function createAndUpload(c: LibraryClient, uploads: UploadsClient, 
   }
 }
 
-// NewDesign makes a design and sends its files. A design it made and could not fill is deleted, so a
-// failed upload leaves nothing behind.
+// DESIGN_ID is the server's pattern for a design id.
+const DESIGN_ID = /^[a-z0-9][a-z0-9._-]*$/;
+
+// createAndLink makes a design and links its first artifact (agni issue 1727). A design it made and
+// could not link is deleted before the error is passed on, as createAndUpload does.
+export async function createAndLink(c: LibraryClient & LinkClient, d: { id: string; title: string; series: string }, t: LinkTarget, status: (s: string) => void = () => undefined): Promise<void> {
+  status("Creating the design…");
+  const made = await c.createDesign({ designId: d.id, design: { title: d.title, series: d.series } });
+  try {
+    status(`Reading ${t.mount}/${t.path}${t.ref ? `@${t.ref}` : ""}…`);
+    await linkInto(c, made.name, t);
+  } catch (err) {
+    await c.deleteDesign({ name: made.name }).catch(() => undefined);
+    throw err;
+  }
+}
+
+// NewDesign makes a design from uploaded files, or links its first artifact from a mount (agni issue
+// 1727). A design it made and could not fill is deleted, so a failure leaves nothing behind. It is a
+// plain block rather than a <form>, since the link fields hold the add-mount form and forms don't
+// nest.
 function NewDesign(props: { onDone: (id: string) => void }) {
+  const [mode, setMode] = createSignal<"upload" | "link">("upload");
   const [id, setId] = createSignal("");
   const [title, setTitle] = createSignal("");
   const [series, setSeries] = createSignal("");
   const [picked, setPicked] = createSignal<Picked | null>(null);
+  const [target, setTarget] = createSignal<LinkTarget | null>(null);
   const [status, setStatus] = createSignal("");
   const [busy, setBusy] = createSignal(false);
+  const ready = () => DESIGN_ID.test(id()) && (mode() === "upload" ? picked() !== null : target() !== null);
   const submit = async () => {
-    const files = picked();
-    if (!id() || !files) return;
+    if (!ready()) return;
     setBusy(true);
+    const d = { id: id(), title: title(), series: series() };
     try {
-      await createAndUpload(designClient(), uploadsClient(), { id: id(), title: title(), series: series() }, files, setStatus);
+      const files = picked();
+      const t = target();
+      if (mode() === "upload" && files) await createAndUpload(designClient(), uploadsClient(), d, files, setStatus);
+      else if (mode() === "link" && t) await createAndLink(designClient(), d, t, setStatus);
       props.onDone(id());
     } catch (err) {
       setStatus(explain(err));
@@ -240,14 +267,7 @@ function NewDesign(props: { onDone: (id: string) => void }) {
     }
   };
   return (
-    <form
-      class="lb-new"
-      data-testid="new-design"
-      onSubmit={(ev) => {
-        ev.preventDefault();
-        void submit();
-      }}
-    >
+    <div class="lb-new" data-testid="new-design">
       <h2>New design</h2>
       <label>
         Id <input name="id" required pattern="[a-z0-9][a-z0-9._\-]*" placeholder="bb-1.1.3" value={id()} onInput={(e) => setId(e.currentTarget.value)} />
@@ -258,15 +278,32 @@ function NewDesign(props: { onDone: (id: string) => void }) {
       <label>
         Series <input name="series" placeholder="baseboard" value={series()} onInput={(e) => setSeries(e.currentTarget.value)} />
       </label>
-      <FilePicker label="Drop a design's folder here, or" testid="new-files" onPick={setPicked} />
-      <Show when={picked()}>{(p) => <p class="lb-note">{Object.keys(p()).length} files picked</p>}</Show>
-      <button type="submit" class="lb-submit" disabled={busy() || !id() || !picked()}>
-        Create and upload
+      <p class="lb-mode" role="radiogroup" aria-label="Where the files come from">
+        <label>
+          <input type="radio" name="from" value="upload" checked={mode() === "upload"} onChange={() => setMode("upload")} /> Upload files
+        </label>{" "}
+        <label>
+          <input type="radio" name="from" value="link" checked={mode() === "link"} onChange={() => setMode("link")} /> Link from a mount
+        </label>
+      </p>
+      <Show
+        when={mode() === "link"}
+        fallback={
+          <>
+            <FilePicker label="Drop a design's folder here, or" testid="new-files" onPick={setPicked} />
+            <Show when={picked()}>{(p) => <p class="lb-note">{Object.keys(p()).length} files picked</p>}</Show>
+          </>
+        }
+      >
+        <LinkFields onTarget={setTarget} />
+      </Show>
+      <button type="button" class="lb-submit" disabled={busy() || !ready()} onClick={() => void submit()}>
+        {mode() === "link" ? "Create and link" : "Create and upload"}
       </button>
       <p class="lb-status" data-testid="new-status">
         {status()}
       </p>
-    </form>
+    </div>
   );
 }
 
@@ -644,6 +681,91 @@ function Reports(props: { design: string }) {
 
 // DesignPage shows one design: its title and series, its artifacts, a diff with another design, and
 // its reports. A design declared in a mounted folder has no artifacts and is read-only.
+// revisionRef is how a link names a revision: its first tag or commit, which keeps naming the same
+// files while the ref does, and else its id.
+export function revisionRef(r: DesignRevision): string {
+  return r.refs[0] || r.revisionId;
+}
+
+// versionsWords names the commits a revision's linked artifacts hold, each shortened, once each. A
+// link records its commit here rather than in refs, so this is how a person tells two links apart.
+export function versionsWords(r: DesignRevision): string {
+  return [...new Set(Object.values(r.sourceVersions).map((v) => v.slice(0, 12)))].sort().join(", ");
+}
+
+// Revisions lists the revisions the server has read of a design (agni issue 1725), each with a link
+// that opens it in the viewer, so a person can open 1.1.2 after the design moved to 1.1.3 (agni issue
+// 1727). version changes when the artifacts do, which reloads the list.
+function Revisions(props: { design: string; version: Artifact[] }) {
+  const [revisions, setRevisions] = createSignal<DesignRevision[]>([]);
+  createEffect(() => {
+    void props.version;
+    designClient()
+      .listDesignRevisions({ parent: props.design })
+      .then((r) => setRevisions(r.revisions))
+      .catch(() => setRevisions([]));
+  });
+  return (
+    <Show when={revisions().length > 0}>
+      <h2>Revisions</h2>
+      <table class="lb-revisions" data-testid="revisions">
+        <tbody>
+          <For each={revisions()}>
+            {(r) => (
+              <tr data-revision={revisionRef(r)}>
+                <td>{r.refs.length ? r.refs.join(", ") : r.revisionId}</td>
+                <td class="lb-versions">{versionsWords(r)}</td>
+                <td>{r.current ? "current" : ""}</td>
+                <td>{when({ updateTime: r.createTime })}</td>
+                <td>
+                  <a class="lb-open" href={designViewUrl(`${props.design}@${revisionRef(r)}`, [])}>
+                    Open in viewer
+                  </a>
+                </td>
+              </tr>
+            )}
+          </For>
+        </tbody>
+      </table>
+    </Show>
+  );
+}
+
+// LinkControls are a linked artifact's actions (agni issue 1727). Sync reads a followed artifact's
+// branch again, or takes the newer version a webhook or poll saw. Move links the same path at
+// another ref, which is how a pinned artifact goes to a new tag. Unlink keeps the files and forgets
+// the source.
+function LinkControls(props: { design: string; name: string; short: string; source: ArtifactSource; act: (what: string, run: () => Promise<unknown>) => void }) {
+  const [ref, setRef] = createSignal("");
+  const src = props.source;
+  return (
+    <span class="lb-link-controls">
+      <Show when={src.follow || src.newerVersion}>
+        {" "}
+        <button type="button" data-testid={`sync-${props.short}`} onClick={() => props.act(`Syncing ${props.short}…`, () => designClient().syncDesign({ name: props.design, artifacts: [props.short] }))}>
+          Sync
+        </button>
+      </Show>{" "}
+      <input class="lb-ref" name={`ref-${props.short}`} data-testid={`ref-${props.short}`} placeholder="another ref" aria-label={`Move ${props.short} to a tag, branch or commit`} value={ref()} onInput={(e) => setRef(e.currentTarget.value)} />
+      <button
+        type="button"
+        data-testid={`move-${props.short}`}
+        disabled={!ref().trim()}
+        onClick={() =>
+          props.act(`Reading ${props.short} at ${ref().trim()}…`, () =>
+            designClient().linkArtifact({ name: props.name, source: create(ArtifactSourceSchema, { mount: src.mount, path: src.path, ref: ref().trim() }), allowMissing: false }),
+          )
+        }
+      >
+        Move
+      </button>{" "}
+      <button type="button" data-testid={`unlink-${props.short}`} onClick={() => props.act(`Unlinking ${props.short}…`, () => designClient().unlinkArtifact({ name: props.name }))}>
+        Unlink
+      </button>
+    </span>
+  );
+}
+
 function DesignPage(props: { id: string }) {
   const name = `designs/${props.id}`;
   const [design, setDesign] = createSignal<Design | null>(null);
@@ -726,17 +848,18 @@ function DesignPage(props: { id: string }) {
                     <td>{a.files.length}</td>
                     <td class="lb-source">
                       {sourceWords(a)}
+                      <Show when={a.source?.accessSource}>{(src) => <span class="lb-access"> · opens for who can read {src()}</span>}</Show>
                       {/* A design that marks a source change waits for a person to sync (agni issue 1726). */}
                       <Show when={a.source?.newerVersion}>
                         {(v) => (
                           <>
                             {" "}
-                            <span class="lb-newer">newer at the source: {v().slice(0, 12)}</span>{" "}
-                            <button type="button" data-testid={`sync-${short}`} onClick={() => act(`Syncing ${short}…`, () => designClient().syncDesign({ name, artifacts: [short] }))}>
-                              Sync
-                            </button>
+                            <span class="lb-newer">newer at the source: {v().slice(0, 12)}</span>
                           </>
                         )}
+                      </Show>
+                      <Show when={a.source?.readHash ? a.source : undefined}>
+                        {(src) => <LinkControls short={short} name={a.name} source={src()} act={act} design={name} />}
                       </Show>
                     </td>
                     <td>{when(a)}</td>
@@ -761,10 +884,14 @@ function DesignPage(props: { id: string }) {
           testid="import-files"
           onPick={(files) => act("Sending files…", () => importFolder(designClient(), uploadsClient(), name, files))}
         />
+        <LinkArtifact design={name} onLinked={reload} />
       </Show>
       <p class="lb-status" data-testid="design-status">
         {status()}
       </p>
+      <Show when={design() && !mounted()}>
+        <Revisions design={name} version={artifacts()} />
+      </Show>
       <Show when={design()}>
         <Reports design={name} />
       </Show>

@@ -4572,6 +4572,11 @@ pub struct ListMountsResponse {
     /// --uploads (agni issue 1749). A client offers to add a mount only when it is set.
     #[prost(bool, tag="3")]
     pub can_create_mounts: bool,
+    /// sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+    /// offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+    /// person's own links there, so they can add a private repo through their own GitHub account.
+    #[prost(string, tag="4")]
+    pub sign_in_url: ::prost::alloc::string::String,
 }
 /// DirEntry is one item in a directory listing: a subdirectory or a supported design file.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

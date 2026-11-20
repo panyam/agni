@@ -418,9 +418,10 @@ exercise-mounts: agni
 
 # The linked-sources mission's exercise (agni issues 1722, 1723): a design's schematic and board linked
 # to Antmicro's Jetson baseboard repo at 1.1.2, checked, moved to 1.1.3, synced, and read back after a
-# restart. It reads GitHub, so it is run by hand. cmd/agni/linkreaders_test.go runs the same steps
+# restart, then the same link and move through the designs page in a browser (agni issue 1727). It
+# reads GitHub, so it is run by hand. cmd/agni/linkreaders_test.go runs the same steps
 # against a fake GitHub.
-exercise-linked-sources: agni samples-revisions
+exercise-linked-sources: agni ui samples-revisions
 	AGNI=$(CURDIR)/bin/agni EXERCISE_OUT=$(EXERCISE_OUT) ./hack/exercise_linked_sources.sh
 
 # Checking a layout handed off as ODB++ against its schematic (agni issue 1250): the odb-verification

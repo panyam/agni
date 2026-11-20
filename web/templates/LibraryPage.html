@@ -22,6 +22,23 @@
   .lb-new { margin-top: 30px; display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
   .lb-new label { display: flex; gap: 8px; align-items: baseline; }
   .lb-new label input { flex: 1; padding: 4px 6px; }
+  /* The link form (agni issue 1727): a column of fields, the mount's folder as a list of buttons. */
+  .lb-new .lb-mode { display: flex; gap: 16px; margin: 4px 0; }
+  .lb-new .lb-mode label, .lb-link .lb-mode label { display: inline-flex; flex: none; gap: 4px; align-items: center; }
+  .lb-new .lb-mode input { flex: none; }
+  .lb-link { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+  .lb-link label { display: flex; gap: 8px; align-items: baseline; }
+  .lb-link label input, .lb-link label select { flex: 1; padding: 4px 6px; }
+  .lb-link .mount-add form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .lb-browse { border: 1px solid #e5e5e5; border-radius: 4px; padding: 4px 8px; max-height: 240px; overflow-y: auto; }
+  .lb-browse ul { list-style: none; margin: 0; padding: 0; }
+  .lb-browse button { background: none; border: 0; padding: 2px 0; cursor: pointer; font: inherit; color: #1a5fd0; text-align: left; }
+  .lb-browse .lb-picked { font-weight: 600; color: #222; }
+  .lb-link-more { margin: 10px 0; }
+  .lb-link-controls .lb-ref { width: 9em; padding: 2px 4px; }
+  .lb-access { color: #8a5a00; }
+  .lb-revisions td { padding: 2px 10px 2px 0; font-size: 13px; }
+  .lb-versions { font-family: ui-monospace, monospace; color: #555; }
   .lb-drop { border: 1px dashed #bbb; border-radius: 6px; padding: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: #666; }
   .lb-drop-over { border-color: #2563eb; background: #f8faff; }
   .lb-submit { align-self: flex-start; padding: 5px 12px; }

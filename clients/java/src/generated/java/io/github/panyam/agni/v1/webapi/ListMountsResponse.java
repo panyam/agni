@@ -29,6 +29,7 @@ private static final long serialVersionUID = 0L;
   }
   private ListMountsResponse() {
     mounts_ = java.util.Collections.emptyList();
+    signInUrl_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -123,6 +124,57 @@ private static final long serialVersionUID = 0L;
     return canCreateMounts_;
   }
 
+  public static final int SIGN_IN_URL_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object signInUrl_ = "";
+  /**
+   * <pre>
+   * sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+   * offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+   * person's own links there, so they can add a private repo through their own GitHub account.
+   * </pre>
+   *
+   * <code>string sign_in_url = 4 [json_name = "signInUrl"];</code>
+   * @return The signInUrl.
+   */
+  @java.lang.Override
+  public java.lang.String getSignInUrl() {
+    java.lang.Object ref = signInUrl_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      signInUrl_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+   * offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+   * person's own links there, so they can add a private repo through their own GitHub account.
+   * </pre>
+   *
+   * <code>string sign_in_url = 4 [json_name = "signInUrl"];</code>
+   * @return The bytes for signInUrl.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSignInUrlBytes() {
+    java.lang.Object ref = signInUrl_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      signInUrl_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -146,6 +198,9 @@ private static final long serialVersionUID = 0L;
     if (canCreateMounts_ != false) {
       output.writeBool(3, canCreateMounts_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(signInUrl_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, signInUrl_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -166,6 +221,9 @@ private static final long serialVersionUID = 0L;
     if (canCreateMounts_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(3, canCreateMounts_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(signInUrl_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, signInUrl_);
     }
     return size;
   }
@@ -197,6 +255,8 @@ private static final long serialVersionUID = 0L;
         != other.getPrunedMounts()) return false;
     if (getCanCreateMounts()
         != other.getCanCreateMounts()) return false;
+    if (!getSignInUrl()
+        .equals(other.getSignInUrl())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -217,6 +277,8 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + CAN_CREATE_MOUNTS_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getCanCreateMounts());
+    hash = (37 * hash) + SIGN_IN_URL_FIELD_NUMBER;
+    hash = (53 * hash) + getSignInUrl().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -357,6 +419,7 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000001);
       prunedMounts_ = 0;
       canCreateMounts_ = false;
+      signInUrl_ = "";
       return this;
     }
 
@@ -409,6 +472,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.canCreateMounts_ = canCreateMounts_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.signInUrl_ = signInUrl_;
+      }
     }
 
     @java.lang.Override
@@ -454,6 +520,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getCanCreateMounts() != false) {
         setCanCreateMounts(other.getCanCreateMounts());
+      }
+      if (!other.getSignInUrl().isEmpty()) {
+        signInUrl_ = other.signInUrl_;
+        bitField0_ |= 0x00000008;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -502,6 +573,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 24
+            case 34: {
+              signInUrl_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -846,6 +922,108 @@ private static final long serialVersionUID = 0L;
     public Builder clearCanCreateMounts() {
       bitField0_ = (bitField0_ & ~0x00000004);
       canCreateMounts_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object signInUrl_ = "";
+    /**
+     * <pre>
+     * sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+     * offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+     * person's own links there, so they can add a private repo through their own GitHub account.
+     * </pre>
+     *
+     * <code>string sign_in_url = 4 [json_name = "signInUrl"];</code>
+     * @return The signInUrl.
+     */
+    public java.lang.String getSignInUrl() {
+      java.lang.Object ref = signInUrl_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        signInUrl_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+     * offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+     * person's own links there, so they can add a private repo through their own GitHub account.
+     * </pre>
+     *
+     * <code>string sign_in_url = 4 [json_name = "signInUrl"];</code>
+     * @return The bytes for signInUrl.
+     */
+    public com.google.protobuf.ByteString
+        getSignInUrlBytes() {
+      java.lang.Object ref = signInUrl_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        signInUrl_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+     * offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+     * person's own links there, so they can add a private repo through their own GitHub account.
+     * </pre>
+     *
+     * <code>string sign_in_url = 4 [json_name = "signInUrl"];</code>
+     * @param value The signInUrl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSignInUrl(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      signInUrl_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+     * offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+     * person's own links there, so they can add a private repo through their own GitHub account.
+     * </pre>
+     *
+     * <code>string sign_in_url = 4 [json_name = "signInUrl"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSignInUrl() {
+      signInUrl_ = getDefaultInstance().getSignInUrl();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * sign_in_url is where a person signs in with GitHub, such as "/signin/github", when the server
+     * offers it, and empty otherwise (agni issue 1727). A client that lists no connection of the
+     * person's own links there, so they can add a private repo through their own GitHub account.
+     * </pre>
+     *
+     * <code>string sign_in_url = 4 [json_name = "signInUrl"];</code>
+     * @param value The bytes for signInUrl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSignInUrlBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      signInUrl_ = value;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }

@@ -530,6 +530,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if runtime {
 		workspace.WithMountMaker(table)
 	}
+	if o.githubSignIn != nil && o.auth != "" {
+		workspace.WithSignInURL(authgate.SignInPath)
+	}
 	features := []string{"grpc"}
 	if o.auth != "" {
 		// A caller on another machine has no business with the server's folder layout.
