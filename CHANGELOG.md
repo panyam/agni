@@ -20,7 +20,7 @@ GitHub Release body carries.
   (`Report.source_versions`).
 - `agni designs revisions --tags` and `--commits` list the linked repo's tags and a branch's commits
   as revisions, read or not (issue 1725). Listing tags needs the mount to read through a connection.
-- A push to a branch a linked design follows moves the design with no one running sync (PR pending,
+- A push to a branch a linked design follows moves the design with no one running sync (PR 1777,
   issue 1726). GitHub's push webhook arrives at `/hooks/github`, signed with the secret
   `agni serve --github-webhook-secret` names, and `--poll 5m` asks each followed branch or folder on a
   timer instead. `agni designs update --on-source-change mark` keeps a design at its files and notes
