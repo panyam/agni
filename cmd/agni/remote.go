@@ -85,7 +85,8 @@ func (r *remoteServer) uri(arg string) (string, error) {
 	return cliArgURI(arg)
 }
 
-var storedDesignPattern = regexp.MustCompile(`^designs/[a-z0-9][a-z0-9._-]*$`)
+// A design may be named at a revision, designs/<id>@<ref> (agni issue 1725).
+var storedDesignPattern = regexp.MustCompile(`^designs/[a-z0-9][a-z0-9._-]*(@[^\s@]+)?$`)
 
 // storedDesignArg reports whether a command-line argument names a design on a server rather than a
 // path here. A path that exists wins, so a local folder called designs/gw is still read as a folder.

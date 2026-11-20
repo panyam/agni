@@ -2001,6 +2001,35 @@ pub mod design_service_client {
                 .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "SyncDesign"));
             self.inner.unary(req, path, codec).await
         }
+        pub async fn list_design_revisions(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListDesignRevisionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListDesignRevisionsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/ListDesignRevisions",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "agni.v1.webapi.DesignService",
+                        "ListDesignRevisions",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn create_report(
             &mut self,
             request: impl tonic::IntoRequest<super::CreateReportRequest>,

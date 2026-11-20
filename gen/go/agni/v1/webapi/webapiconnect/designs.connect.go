@@ -78,6 +78,9 @@ const (
 	// DesignServiceSyncDesignProcedure is the fully-qualified name of the DesignService's SyncDesign
 	// RPC.
 	DesignServiceSyncDesignProcedure = "/agni.v1.webapi.DesignService/SyncDesign"
+	// DesignServiceListDesignRevisionsProcedure is the fully-qualified name of the DesignService's
+	// ListDesignRevisions RPC.
+	DesignServiceListDesignRevisionsProcedure = "/agni.v1.webapi.DesignService/ListDesignRevisions"
 	// DesignServiceCreateReportProcedure is the fully-qualified name of the DesignService's
 	// CreateReport RPC.
 	DesignServiceCreateReportProcedure = "/agni.v1.webapi.DesignService/CreateReport"
@@ -172,6 +175,11 @@ type DesignServiceClient interface {
 	// artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
 	// validate_only it reports what a sync would change and writes nothing.
 	SyncDesign(context.Context, *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error)
+	// ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
+	// issue 1725). A revision is the design's files as of one version of each linked source. One is
+	// kept each time a link or a sync reads a source, and each time a read names the design at a ref,
+	// "designs/{design}@{ref}". A design with no linked artifact has none.
+	ListDesignRevisions(context.Context, *connect.Request[webapi.ListDesignRevisionsRequest]) (*connect.Response[webapi.ListDesignRevisionsResponse], error)
 	// CreateReport checks a stored design against packs and keeps the run as
 	// "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
 	// own intent: the default packs of the project the request names, then the packs the report names.
@@ -288,6 +296,12 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("SyncDesign")),
 			connect.WithClientOptions(opts...),
 		),
+		listDesignRevisions: connect.NewClient[webapi.ListDesignRevisionsRequest, webapi.ListDesignRevisionsResponse](
+			httpClient,
+			baseURL+DesignServiceListDesignRevisionsProcedure,
+			connect.WithSchema(designServiceMethods.ByName("ListDesignRevisions")),
+			connect.WithClientOptions(opts...),
+		),
 		createReport: connect.NewClient[webapi.CreateReportRequest, webapi.Report](
 			httpClient,
 			baseURL+DesignServiceCreateReportProcedure,
@@ -332,6 +346,7 @@ type designServiceClient struct {
 	linkArtifact         *connect.Client[webapi.LinkArtifactRequest, webapi.Artifact]
 	unlinkArtifact       *connect.Client[webapi.UnlinkArtifactRequest, webapi.Artifact]
 	syncDesign           *connect.Client[webapi.SyncDesignRequest, webapi.SyncDesignResponse]
+	listDesignRevisions  *connect.Client[webapi.ListDesignRevisionsRequest, webapi.ListDesignRevisionsResponse]
 	createReport         *connect.Client[webapi.CreateReportRequest, webapi.Report]
 	getReport            *connect.Client[webapi.GetReportRequest, webapi.Report]
 	listReports          *connect.Client[webapi.ListReportsRequest, webapi.ListReportsResponse]
@@ -411,6 +426,11 @@ func (c *designServiceClient) UnlinkArtifact(ctx context.Context, req *connect.R
 // SyncDesign calls agni.v1.webapi.DesignService.SyncDesign.
 func (c *designServiceClient) SyncDesign(ctx context.Context, req *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error) {
 	return c.syncDesign.CallUnary(ctx, req)
+}
+
+// ListDesignRevisions calls agni.v1.webapi.DesignService.ListDesignRevisions.
+func (c *designServiceClient) ListDesignRevisions(ctx context.Context, req *connect.Request[webapi.ListDesignRevisionsRequest]) (*connect.Response[webapi.ListDesignRevisionsResponse], error) {
+	return c.listDesignRevisions.CallUnary(ctx, req)
 }
 
 // CreateReport calls agni.v1.webapi.DesignService.CreateReport.
@@ -514,6 +534,11 @@ type DesignServiceHandler interface {
 	// artifact whose version hasn't changed fetches nothing, and a pinned one is never moved. With
 	// validate_only it reports what a sync would change and writes nothing.
 	SyncDesign(context.Context, *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error)
+	// ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
+	// issue 1725). A revision is the design's files as of one version of each linked source. One is
+	// kept each time a link or a sync reads a source, and each time a read names the design at a ref,
+	// "designs/{design}@{ref}". A design with no linked artifact has none.
+	ListDesignRevisions(context.Context, *connect.Request[webapi.ListDesignRevisionsRequest]) (*connect.Response[webapi.ListDesignRevisionsResponse], error)
 	// CreateReport checks a stored design against packs and keeps the run as
 	// "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
 	// own intent: the default packs of the project the request names, then the packs the report names.
@@ -626,6 +651,12 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("SyncDesign")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceListDesignRevisionsHandler := connect.NewUnaryHandler(
+		DesignServiceListDesignRevisionsProcedure,
+		svc.ListDesignRevisions,
+		connect.WithSchema(designServiceMethods.ByName("ListDesignRevisions")),
+		connect.WithHandlerOptions(opts...),
+	)
 	designServiceCreateReportHandler := connect.NewUnaryHandler(
 		DesignServiceCreateReportProcedure,
 		svc.CreateReport,
@@ -682,6 +713,8 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceUnlinkArtifactHandler.ServeHTTP(w, r)
 		case DesignServiceSyncDesignProcedure:
 			designServiceSyncDesignHandler.ServeHTTP(w, r)
+		case DesignServiceListDesignRevisionsProcedure:
+			designServiceListDesignRevisionsHandler.ServeHTTP(w, r)
 		case DesignServiceCreateReportProcedure:
 			designServiceCreateReportHandler.ServeHTTP(w, r)
 		case DesignServiceGetReportProcedure:
@@ -757,6 +790,10 @@ func (UnimplementedDesignServiceHandler) UnlinkArtifact(context.Context, *connec
 
 func (UnimplementedDesignServiceHandler) SyncDesign(context.Context, *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.SyncDesign is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) ListDesignRevisions(context.Context, *connect.Request[webapi.ListDesignRevisionsRequest]) (*connect.Response[webapi.ListDesignRevisionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.ListDesignRevisions is not implemented"))
 }
 
 func (UnimplementedDesignServiceHandler) CreateReport(context.Context, *connect.Request[webapi.CreateReportRequest]) (*connect.Response[webapi.Report], error) {

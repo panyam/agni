@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -144,6 +146,15 @@ func printReport(w io.Writer, r *webapi.Report) {
 	note := "current"
 	if len(changed) > 0 {
 		note = strings.Join(changed, "; ")
+	}
+	// A linked design's report names the commit each artifact was read at (agni issue 1725).
+	versions := r.GetSourceVersions()
+	for _, id := range slices.Sorted(maps.Keys(versions)) {
+		v := versions[id]
+		if len(v) > 12 {
+			v = v[:12]
+		}
+		note += "; " + id + " at " + v
 	}
 	fmt.Fprintf(w, "%s\t%s\t%d findings\t%s\n", r.GetName(), strings.Join(r.GetPacks(), ","), r.GetFindingCount(), note)
 }

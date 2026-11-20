@@ -402,6 +402,44 @@ they are unlinked or deleted. The calls are `DesignService.LinkArtifact`, `Unlin
 it to 1.1.3, syncs, and reads it all back after a restart. A private repo links and syncs the same
 way, through the connection its mount names.
 
+### Reading a design at another commit
+
+Say the team wants to see what changed between two releases of the board, without making a design
+for each. A linked design reads at any ref of its source as `designs/<id>@<ref>` (agni issue 1725).
+The name works wherever a design's name does:
+
+```bash
+agni diff designs/bb@3411086e designs/bb@8e087f4f --remote http://localhost:8080 --format json
+agni check designs/bb@3411086e --remote http://localhost:8080
+```
+
+The server resolves the ref on each linked artifact's mount and reads the files at that commit. It
+downloads only the files it doesn't hold, and leaves the design as it is. An uploaded artifact keeps
+its files, and so does one linked to a `--mount` folder, which has no history. A tag or a commit
+reads the same files next time with no call to GitHub. A branch is resolved again on each read.
+
+`agni designs revisions bb` lists the revisions the server has read, newest first. A link or a sync
+keeps one each time, so a design that follows a folder still has a history of what it read. Each line
+names the revision, `designs/bb@<id>`, the tags and commits that gave it, and each artifact's commit.
+Here is the exercise's design after it links both artifacts at 1.1.2, moves them to 1.1.3 one at a
+time, and diffs the two commits:
+
+```
+designs/bb@c82028f4036a	read 2026-11-20 00:40:17; current; refs 8e087f4f946a925041380699dcde51ae8519f621; board at 8e087f4f946a925041380699dcde51ae8519f621; schematic at 8e087f4f946a925041380699dcde51ae8519f621
+designs/bb@98e7af684fdb	read 2026-11-20 00:40:11; board at 3411086e6d6ad2384d0609c53cd6b96323f97c24; schematic at 8e087f4f946a925041380699dcde51ae8519f621
+designs/bb@584814cd1342	read 2026-11-20 00:40:04; refs 3411086e6d6ad2384d0609c53cd6b96323f97c24; board at 3411086e6d6ad2384d0609c53cd6b96323f97c24; schematic at 3411086e6d6ad2384d0609c53cd6b96323f97c24
+designs/bb@267ee377b594	read 2026-11-20 00:39:58; schematic at 3411086e6d6ad2384d0609c53cd6b96323f97c24
+```
+
+Each link wrote a revision, so linking the schematic before the board gave one with the schematic
+alone, and moving them one at a time gave one with the two at different commits. A sync moves every
+artifact from one repo together, so it never leaves one half moved.
+
+A revision keeps its files on the server until the design is deleted. A report names the commit each
+artifact was read at, such as `schematic at 8e087f4f946a`, so it still says what it ran on after a
+sync moves the design. The calls are `DesignService.ListDesignRevisions`, a snapshot naming
+`designs/{design}@{ref}`, and `Report.source_versions`.
+
 ## Connections
 
 A private repo needs a sign-in, and a server with `--store` keeps one as a connection (agni issue

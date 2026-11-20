@@ -115,6 +115,12 @@ service DesignService {
   // validate_only it reports what a sync would change and writes nothing.
   rpc SyncDesign(SyncDesignRequest) returns (SyncDesignResponse);
 
+  // ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
+  // issue 1725). A revision is the design's files as of one version of each linked source. One is
+  // kept each time a link or a sync reads a source, and each time a read names the design at a ref,
+  // "designs/{design}@{ref}". A design with no linked artifact has none.
+  rpc ListDesignRevisions(ListDesignRevisionsRequest) returns (ListDesignRevisionsResponse);
+
   // CreateReport checks a stored design against packs and keeps the run as
   // "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
   // own intent: the default packs of the project the request names, then the packs the report names.
@@ -163,6 +169,43 @@ message Report {
   // finding_count is how many findings results holds, set on every read, so a BASIC view that leaves
   // results out still says it (agni issue 1753). Output only.
   int32 finding_count = 10;
+  // source_versions maps each linked artifact's id to the source version the run read, a commit
+  // SHA on a github mount (agni issue 1725). An artifact read from a source with no history, or
+  // uploaded, has none. Output only.
+  map<string, string> source_versions = 11;
+}
+
+// DesignRevision is a design's files as of one version of each linked source (agni issue 1725). Its
+// name reads anywhere a design's name does: a snapshot's design, `agni check`, `agni diff`.
+message DesignRevision {
+  // name is "designs/{design}@{revision_id}".
+  string name = 1;
+  // revision_id names the revision by the files it holds, 12 hex digits. Two reads that give the same
+  // files give one revision.
+  string revision_id = 2;
+  // refs are the tags and commits a read named that gave this revision, such as "1.1.2". A branch
+  // moves, so it is left out. "designs/{design}@{ref}" reads the same revision while the ref names
+  // the same version.
+  repeated string refs = 3;
+  // source_versions maps each linked artifact's id to the version it holds here, a commit SHA on a
+  // github mount. An artifact from a source with no history has none.
+  map<string, string> source_versions = 4;
+  // create_time is when the server first read this revision.
+  google.protobuf.Timestamp create_time = 5;
+  // current is true on the revision the design holds now.
+  bool current = 6;
+}
+
+message ListDesignRevisionsRequest {
+  string parent = 1; // "designs/{design}"
+  // page_size caps the page, 50 when 0, and at most 200.
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListDesignRevisionsResponse {
+  repeated DesignRevision revisions = 1;
+  string next_page_token = 2;
 }
 
 // ReportView is how much of a report a read returns (AIP-157). A report keeps its whole run, every

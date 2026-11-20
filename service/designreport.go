@@ -110,6 +110,13 @@ func (s *DesignService) CreateReport(ctx context.Context, req *webapi.CreateRepo
 		return nil, fmt.Errorf("%w: %s changed while its report ran; ask again", ErrFailedPrecondition, req.GetParent())
 	}
 	r := &webapi.Report{Packs: packs, Project: req.GetProject(), DesignHash: before, Results: results}
+	// The report names the commit each linked artifact was read at, so it says what it ran on after a
+	// sync moves the design (agni issue 1725).
+	arts, err := s.catalog.Artifacts(ctx, req.GetParent())
+	if err != nil {
+		return nil, err
+	}
+	r.SourceVersions = sourceVersions(arts)
 	for _, p := range read {
 		r.PackHashes = append(r.PackHashes, p.GetHash())
 	}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -136,7 +137,42 @@ to find its type, and reads the design from its netlist, else its schematic, els
 				return err
 			}
 			printDesign(cmd.OutOrStdout(), d)
+			if _, rev := service.SplitRevision(d.GetName()); rev != "" {
+				// A revision's files are listed by agni designs revisions; its artifacts are the design's.
+				return nil
+			}
 			return c.printArtifacts(cmd.Context(), cmd.OutOrStdout(), d.GetName())
+		},
+	}
+
+	revisions := &cobra.Command{
+		Use:   "revisions <id>",
+		Short: "List the revisions of a design the server has read, newest first",
+		Long: `revisions lists the design as of each version of its linked sources the server has read (agni
+issue 1725). A link or a sync keeps one, and so does reading the design at a ref, designs/<id>@<ref>.
+Each line gives the revision's name, when the server first read it, the tags and commits that name it,
+and each linked artifact's source version. Any of them reads the design at that revision:
+
+  agni diff designs/bb@1.1.2 designs/bb@1.1.3 --remote http://localhost:8080`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			req := &webapi.ListDesignRevisionsRequest{Parent: designName(args[0])}
+			for {
+				resp, err := unary(cmd.Context(), c.designs.ListDesignRevisions, req)
+				if err != nil {
+					return err
+				}
+				for _, r := range resp.GetRevisions() {
+					printRevision(cmd.OutOrStdout(), r)
+				}
+				if req.PageToken = resp.GetNextPageToken(); req.PageToken == "" {
+					return nil
+				}
+			}
 		},
 	}
 
@@ -399,7 +435,7 @@ is listed and never moved. --dry-run says what a sync would change and writes no
 	}
 	sync.Flags().BoolVar(&dryRun, "dry-run", false, "report what a sync would change, and write nothing")
 
-	cmd.AddCommand(create, list, get, artifacts, put, rm, push, add, link, unlink, sync)
+	cmd.AddCommand(create, list, get, artifacts, put, rm, push, add, link, unlink, sync, revisions)
 	return cmd
 }
 
@@ -481,6 +517,23 @@ func printDesign(w io.Writer, d *webapi.Design) {
 		notes = append(notes, "opens for who can read "+strings.Join(src, " and "))
 	}
 	fmt.Fprintf(w, "%s\t%s\n", d.GetName(), strings.Join(notes, "; "))
+}
+
+// printRevision writes one revision as a tab-separated line: its name, when the server first read
+// it, the refs that name it, and each artifact's source version, the current one marked.
+func printRevision(w io.Writer, r *webapi.DesignRevision) {
+	notes := []string{"read " + r.GetCreateTime().AsTime().UTC().Format("2006-01-02 15:04:05")}
+	if r.GetCurrent() {
+		notes = append(notes, "current")
+	}
+	if refs := r.GetRefs(); len(refs) > 0 {
+		notes = append(notes, "refs "+strings.Join(refs, ", "))
+	}
+	ids := slices.Sorted(maps.Keys(r.GetSourceVersions()))
+	for _, id := range ids {
+		notes = append(notes, id+" at "+r.GetSourceVersions()[id])
+	}
+	fmt.Fprintf(w, "%s\t%s\n", r.GetName(), strings.Join(notes, "; "))
 }
 
 func printArtifact(w io.Writer, a *webapi.Artifact) {

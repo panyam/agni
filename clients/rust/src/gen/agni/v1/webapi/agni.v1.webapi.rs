@@ -2692,6 +2692,56 @@ pub struct Report {
     /// results out still says it (agni issue 1753). Output only.
     #[prost(int32, tag="10")]
     pub finding_count: i32,
+    /// source_versions maps each linked artifact's id to the source version the run read, a commit
+    /// SHA on a github mount (agni issue 1725). An artifact read from a source with no history, or
+    /// uploaded, has none. Output only.
+    #[prost(map="string, string", tag="11")]
+    pub source_versions: ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
+}
+/// DesignRevision is a design's files as of one version of each linked source (agni issue 1725). Its
+/// name reads anywhere a design's name does: a snapshot's design, `agni check`, `agni diff`.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DesignRevision {
+    /// name is "designs/{design}@{revision_id}".
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// revision_id names the revision by the files it holds, 12 hex digits. Two reads that give the same
+    /// files give one revision.
+    #[prost(string, tag="2")]
+    pub revision_id: ::prost::alloc::string::String,
+    /// refs are the tags and commits a read named that gave this revision, such as "1.1.2". A branch
+    /// moves, so it is left out. "designs/{design}@{ref}" reads the same revision while the ref names
+    /// the same version.
+    #[prost(string, repeated, tag="3")]
+    pub refs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// source_versions maps each linked artifact's id to the version it holds here, a commit SHA on a
+    /// github mount. An artifact from a source with no history has none.
+    #[prost(map="string, string", tag="4")]
+    pub source_versions: ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
+    /// create_time is when the server first read this revision.
+    #[prost(message, optional, tag="5")]
+    pub create_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    /// current is true on the revision the design holds now.
+    #[prost(bool, tag="6")]
+    pub current: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListDesignRevisionsRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub parent: ::prost::alloc::string::String,
+    /// page_size caps the page, 50 when 0, and at most 200.
+    #[prost(int32, tag="2")]
+    pub page_size: i32,
+    #[prost(string, tag="3")]
+    pub page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListDesignRevisionsResponse {
+    #[prost(message, repeated, tag="1")]
+    pub revisions: ::prost::alloc::vec::Vec<DesignRevision>,
+    #[prost(string, tag="2")]
+    pub next_page_token: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateReportRequest {

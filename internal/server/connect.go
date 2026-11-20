@@ -671,6 +671,15 @@ func (a *Design) UnlinkArtifact(ctx context.Context, req *connect.Request[webapi
 	return connect.NewResponse(resp), nil
 }
 
+// ListDesignRevisions lists the revisions of a design the server has read (agni issue 1725).
+func (a *Design) ListDesignRevisions(ctx context.Context, req *connect.Request[webapi.ListDesignRevisionsRequest]) (*connect.Response[webapi.ListDesignRevisionsResponse], error) {
+	resp, err := a.svc.ListDesignRevisions(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Design) SyncDesign(ctx context.Context, req *connect.Request[webapi.SyncDesignRequest]) (*connect.Response[webapi.SyncDesignResponse], error) {
 	resp, err := a.svc.SyncDesign(ctx, req.Msg)
 	if err != nil {

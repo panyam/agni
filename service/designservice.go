@@ -53,7 +53,9 @@ func NewDesignService(catalog *DesignCatalog, blobs BlobSource) *DesignService {
 	if blobs == nil {
 		blobs = func(context.Context, string) ([]byte, bool) { return nil, false }
 	}
-	return &DesignService{catalog: catalog, blobs: blobs}
+	s := &DesignService{catalog: catalog, blobs: blobs}
+	catalog.revise = s.revisionOf
+	return s
 }
 
 // WithProjects lets ListDesigns filter by `project = "projects/{p}"`, and returns s.

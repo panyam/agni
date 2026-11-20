@@ -487,6 +487,37 @@ public final class DesignServiceGrpc {
     return getSyncDesignMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest,
+      io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse> getListDesignRevisionsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListDesignRevisions",
+      requestType = io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest,
+      io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse> getListDesignRevisionsMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest, io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse> getListDesignRevisionsMethod;
+    if ((getListDesignRevisionsMethod = DesignServiceGrpc.getListDesignRevisionsMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getListDesignRevisionsMethod = DesignServiceGrpc.getListDesignRevisionsMethod) == null) {
+          DesignServiceGrpc.getListDesignRevisionsMethod = getListDesignRevisionsMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest, io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListDesignRevisions"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("ListDesignRevisions"))
+              .build();
+        }
+      }
+    }
+    return getListDesignRevisionsMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateReportRequest,
       io.github.panyam.agni.v1.webapi.Report> getCreateReportMethod;
 
@@ -883,6 +914,19 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
+     * issue 1725). A revision is the design's files as of one version of each linked source. One is
+     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
+     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * </pre>
+     */
+    default void listDesignRevisions(io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListDesignRevisionsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * CreateReport checks a stored design against packs and keeps the run as
      * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
      * own intent: the default packs of the project the request names, then the packs the report names.
@@ -1188,6 +1232,20 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
+     * issue 1725). A revision is the design's files as of one version of each linked source. One is
+     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
+     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * </pre>
+     */
+    public void listDesignRevisions(io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListDesignRevisionsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * CreateReport checks a stored design against packs and keeps the run as
      * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
      * own intent: the default packs of the project the request names, then the packs the report names.
@@ -1461,6 +1519,19 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
+     * issue 1725). A revision is the design's files as of one version of each linked source. One is
+     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
+     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse listDesignRevisions(io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListDesignRevisionsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * CreateReport checks a stored design against packs and keeps the run as
      * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
      * own intent: the default packs of the project the request names, then the packs the report names.
@@ -1726,6 +1797,19 @@ public final class DesignServiceGrpc {
     public io.github.panyam.agni.v1.webapi.SyncDesignResponse syncDesign(io.github.panyam.agni.v1.webapi.SyncDesignRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getSyncDesignMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
+     * issue 1725). A revision is the design's files as of one version of each linked source. One is
+     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
+     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse listDesignRevisions(io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListDesignRevisionsMethod(), getCallOptions(), request);
     }
 
     /**
@@ -2014,6 +2098,20 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * ListDesignRevisions returns the revisions of a design the server has read, newest first (agni
+     * issue 1725). A revision is the design's files as of one version of each linked source. One is
+     * kept each time a link or a sync reads a source, and each time a read names the design at a ref,
+     * "designs/{design}&#64;{ref}". A design with no linked artifact has none.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse> listDesignRevisions(
+        io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListDesignRevisionsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * CreateReport checks a stored design against packs and keeps the run as
      * "designs/{design}/reports/{report}" (agni issue 1704). The packs apply in order over the design's
      * own intent: the default packs of the project the request names, then the packs the report names.
@@ -2077,10 +2175,11 @@ public final class DesignServiceGrpc {
   private static final int METHODID_LINK_ARTIFACT = 12;
   private static final int METHODID_UNLINK_ARTIFACT = 13;
   private static final int METHODID_SYNC_DESIGN = 14;
-  private static final int METHODID_CREATE_REPORT = 15;
-  private static final int METHODID_GET_REPORT = 16;
-  private static final int METHODID_LIST_REPORTS = 17;
-  private static final int METHODID_DELETE_REPORT = 18;
+  private static final int METHODID_LIST_DESIGN_REVISIONS = 15;
+  private static final int METHODID_CREATE_REPORT = 16;
+  private static final int METHODID_GET_REPORT = 17;
+  private static final int METHODID_LIST_REPORTS = 18;
+  private static final int METHODID_DELETE_REPORT = 19;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -2158,6 +2257,10 @@ public final class DesignServiceGrpc {
         case METHODID_SYNC_DESIGN:
           serviceImpl.syncDesign((io.github.panyam.agni.v1.webapi.SyncDesignRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.SyncDesignResponse>) responseObserver);
+          break;
+        case METHODID_LIST_DESIGN_REVISIONS:
+          serviceImpl.listDesignRevisions((io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse>) responseObserver);
           break;
         case METHODID_CREATE_REPORT:
           serviceImpl.createReport((io.github.panyam.agni.v1.webapi.CreateReportRequest) request,
@@ -2299,6 +2402,13 @@ public final class DesignServiceGrpc {
               io.github.panyam.agni.v1.webapi.SyncDesignResponse>(
                 service, METHODID_SYNC_DESIGN)))
         .addMethod(
+          getListDesignRevisionsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.ListDesignRevisionsRequest,
+              io.github.panyam.agni.v1.webapi.ListDesignRevisionsResponse>(
+                service, METHODID_LIST_DESIGN_REVISIONS)))
+        .addMethod(
           getCreateReportMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -2389,6 +2499,7 @@ public final class DesignServiceGrpc {
               .addMethod(getLinkArtifactMethod())
               .addMethod(getUnlinkArtifactMethod())
               .addMethod(getSyncDesignMethod())
+              .addMethod(getListDesignRevisionsMethod())
               .addMethod(getCreateReportMethod())
               .addMethod(getGetReportMethod())
               .addMethod(getListReportsMethod())

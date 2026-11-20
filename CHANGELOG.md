@@ -12,6 +12,15 @@ GitHub Release body carries.
 
 ### Added
 
+- A linked design reads at any ref of its source as `designs/<id>@<ref>`, for check, diff and query
+  (PR pending, issue 1725). `agni diff designs/bb@1.1.2 designs/bb@1.1.3 --remote`
+  compares two releases with no second design. The server downloads only the files it lacks and
+  leaves the design as it is. `agni designs revisions` and `DesignService.ListDesignRevisions` list
+  the revisions read, and a report names the commit each artifact was read at
+  (`Report.source_versions`).
+
+### Added
+
 - A design linked from a private repo opens only for a caller whose own GitHub connection reads the
   repo, on a server with `--auth tokens` (PR 1771, issue 1728). A person keeps their connection
   with `agni connections add <id> --mine --github-token env:NAME`, and the server seals the token
