@@ -13,7 +13,9 @@ NEXTSTEPS.md, the release notes or the conduct and security pages skips the gate
 them (`paths-ignore` in `.github/workflows/ci.yml`). A `windows` job runs beside them and is no
 part of `testall` (agni issue 1595). It runs every Go test on a Windows runner, lists each skip with
 its reason, and serves a built `agni.exe` on a drive-letter mount to headless Chromium
-(`web/browser/smoke.mjs`). A test that cannot pass on Windows skips there and says why. Green means
+(`web/browser/smoke.mjs`). A test that cannot pass on Windows skips there and says why. Windows has
+no Unix file modes, and Go reports any writable file there as 0666, so a test checks a mode such as
+0600 only off Windows (agni 1779). Green means
 ship-ready. It also lies to you in three specific ways, and most of this page is about them.
 
 ```mermaid

@@ -9,39 +9,28 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-18, at `b5cd9f1b`.
+Last pruned 2026-11-20, at `306e5f25`.
 
 ## At a glance
 
-**#1691 `mission_design_store`** (keep projects and designs on an agni server, and come back to every
-one) is active, at 11 of 15. Its exercise, `make exercise-design-store`, last passed on main at
-`9365260c` on 2026-11-18, before PR #1744 merged. PR #1741 split `--store` (records) from `--uploads`
-(files by hash). PR #1744 (#1734) moved `/files/` to `/mounts/`, and agnids now keeps doc-IR and
-annotations in its corpus under `derived/<sha256 of the PDF>/`, so a datasheet mount can be
-read-only. #1735 (mounts made at runtime) is next, then #1722 (linked artifacts point into mounts).
+**#1722** (link a design to where the team keeps it, and follow its history) is active, at 13 of 19.
+Its exercise is `make exercise-linked-sources`. PR #1779 merged on 2026-11-20. It added sign-in with
+GitHub, from the browser and from `agni login`, and keeps each person's GitHub token as their own
+connection. The exercise passes at `306e5f25`. #1727 (the link form on `/designs`) is next, and builds on that sign-in.
 
-- **#1625 `mission_clients`** is active, at 12 of 13. Its last ticket is #1627 (TLS and tokens). The
-  pushdowns are tagged as panyam/oneauth v0.3.3 and panyam/servicekit v0.2.3, and agni still pins
-  v0.3.2 and v0.2.2. The ticket's last comment records what is decided and what is open.
-- **#1664 `mission_board_rendering`** closed on 2026-11-17, at 15 of 15, with its exercise passing at
-  `76ef182e`. Run headed, the cross-probe walks still time out at "two views" on the main Mac.
-- **Four missions filed on 2026-11-17 by a retriage, none active.** Each one's first ticket writes its
-  exercise. #1708 `mission_check_verdicts` (#1712), #1709 `mission_rule_authoring` (#1713), #1710
-  `mission_format_fidelity` (#1714), and #1711 `mission_datasheets` (#1715, which needs a datasheet
-  PDF that agni-samples may carry before anything else can run).
-- **#1611 `mission_markup`** is filed and not active. #1612 and #1613 come first, then #1594.
+- **#1611 `mission_markup`** is filed and not active. #1612 and #1613 come first.
+- **Four missions filed on 2026-11-17, none active.** Each one's first ticket writes its exercise.
+  #1708 (#1712), #1709 (#1713), #1710 (#1714), and #1711 (#1715, which needs a datasheet PDF that
+  agni-samples may carry before anything else can run).
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting`.
 
 ## Open, ranked
 
-1. **#1704** (packs and reports), then #1697 (the viewer for them). #1742 (a periodic sweep of
-   `--uploads`) is P3.
-2. **#1735**, in the `~/projects/Agni/main` clone. The plan was approved on 2026-11-18 and is on
-   the issue. A GitHub mount is a snapshot of the repo at its commit, kept in the store, so
-   `osLoader` reads it and #864 is not needed. agnids already serves `WorkspaceService`, so it reads
-   the same runtime mount records from the shared store.
-3. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
-   ticket for the gRPC clients to trust a CA, which closes #1625.
+1. **#1727**, in a worktree of the `~/projects/Agni/main` clone. It also picks up the viewer's
+   access text and a `/mounts/` form.
+2. **The rest of #1722.** #1774 and #1778 hold the leftovers from PRs #1773 and #1779. #1729
+   (SharePoint) and #1730 (S3 and GCS) are P3.
+3. **#1780** (CI uses the runner's Chrome) is P2 and serves no mission.
 4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
