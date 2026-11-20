@@ -185,4 +185,57 @@ public interface ArtifactSourceOrBuilder extends
    */
   com.google.protobuf.ByteString
       getAccessSourceBytes();
+
+  /**
+   * <pre>
+   * newer_version is a version the source moved to that the design doesn't hold yet, as a push
+   * webhook or a poll found it (agni issue 1726). The server sets it when the design's
+   * on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+   * a connection that is one person's own. A sync clears it. Output only.
+   * </pre>
+   *
+   * <code>string newer_version = 9 [json_name = "newerVersion"];</code>
+   * @return The newerVersion.
+   */
+  java.lang.String getNewerVersion();
+  /**
+   * <pre>
+   * newer_version is a version the source moved to that the design doesn't hold yet, as a push
+   * webhook or a poll found it (agni issue 1726). The server sets it when the design's
+   * on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+   * a connection that is one person's own. A sync clears it. Output only.
+   * </pre>
+   *
+   * <code>string newer_version = 9 [json_name = "newerVersion"];</code>
+   * @return The bytes for newerVersion.
+   */
+  com.google.protobuf.ByteString
+      getNewerVersionBytes();
+
+  /**
+   * <pre>
+   * newer_time is when the server saw newer_version. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+   * @return Whether the newerTime field is set.
+   */
+  boolean hasNewerTime();
+  /**
+   * <pre>
+   * newer_time is when the server saw newer_version. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+   * @return The newerTime.
+   */
+  com.google.protobuf.Timestamp getNewerTime();
+  /**
+   * <pre>
+   * newer_time is when the server saw newer_version. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getNewerTimeOrBuilder();
 }

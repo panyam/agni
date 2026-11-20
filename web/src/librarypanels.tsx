@@ -27,6 +27,17 @@ export function explain(err: unknown): string {
   return ce.rawMessage || String(err);
 }
 
+// sourceWords says where an artifact's files come from, as `agni designs artifacts` does: the link
+// as `mount/path@ref`, the version it read, and whether it follows or is pinned. An uploaded artifact
+// is "uploaded". Only a link records a read hash (agni issue 1723).
+export function sourceWords(a: Artifact): string {
+  const src = a.source;
+  if (!src || !src.readHash) return "uploaded";
+  let out = src.mount + (src.path ? `/${src.path}` : "") + (src.ref ? `@${src.ref}` : "");
+  if (src.version && src.version !== src.ref) out += ` at ${src.version.slice(0, 12)}`;
+  return out + (src.follow ? ", followed" : ", pinned");
+}
+
 // typeWord is an artifact type as the page shows it.
 export function typeWord(t: ArtifactType): string {
   switch (t) {
@@ -698,6 +709,7 @@ function DesignPage(props: { id: string }) {
               <th>Type</th>
               <th>Reads first</th>
               <th>Files</th>
+              <th>Source</th>
               <th>Updated</th>
               <th />
             </tr>
@@ -712,6 +724,21 @@ function DesignPage(props: { id: string }) {
                     <td>{typeWord(a.type)}</td>
                     <td>{a.entry || "-"}</td>
                     <td>{a.files.length}</td>
+                    <td class="lb-source">
+                      {sourceWords(a)}
+                      {/* A design that marks a source change waits for a person to sync (agni issue 1726). */}
+                      <Show when={a.source?.newerVersion}>
+                        {(v) => (
+                          <>
+                            {" "}
+                            <span class="lb-newer">newer at the source: {v().slice(0, 12)}</span>{" "}
+                            <button type="button" data-testid={`sync-${short}`} onClick={() => act(`Syncing ${short}…`, () => designClient().syncDesign({ name, artifacts: [short] }))}>
+                              Sync
+                            </button>
+                          </>
+                        )}
+                      </Show>
+                    </td>
                     <td>{when(a)}</td>
                     <td>
                       <FilePicker

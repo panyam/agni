@@ -91,10 +91,10 @@ private static final long serialVersionUID = 0L;
   private com.google.protobuf.FieldMask updateMask_;
   /**
    * <pre>
-   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-   * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-   * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-   * under.
+   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+   * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+   * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+   * design's config comes from the packs it is read under.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -106,10 +106,10 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-   * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-   * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-   * under.
+   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+   * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+   * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+   * design's config comes from the packs it is read under.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -121,10 +121,10 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-   * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-   * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-   * under.
+   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+   * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+   * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+   * design's config comes from the packs it is read under.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -649,10 +649,10 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder> updateMaskBuilder_;
     /**
      * <pre>
-     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-     * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-     * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-     * under.
+     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+     * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+     * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+     * design's config comes from the packs it is read under.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -663,10 +663,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-     * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-     * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-     * under.
+     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+     * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+     * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+     * design's config comes from the packs it is read under.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -681,10 +681,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-     * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-     * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-     * under.
+     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+     * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+     * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+     * design's config comes from the packs it is read under.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -702,10 +702,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-     * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-     * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-     * under.
+     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+     * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+     * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+     * design's config comes from the packs it is read under.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -723,10 +723,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-     * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-     * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-     * under.
+     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+     * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+     * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+     * design's config comes from the packs it is read under.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -751,10 +751,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-     * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-     * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-     * under.
+     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+     * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+     * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+     * design's config comes from the packs it is read under.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -771,10 +771,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-     * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-     * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-     * under.
+     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+     * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+     * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+     * design's config comes from the packs it is read under.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -786,10 +786,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-     * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-     * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-     * under.
+     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+     * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+     * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+     * design's config comes from the packs it is read under.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -804,10 +804,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-     * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-     * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-     * under.
+     * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+     * `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+     * mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+     * design's config comes from the packs it is read under.
      * </pre>
      *
      * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>

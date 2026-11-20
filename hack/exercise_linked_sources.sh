@@ -7,7 +7,11 @@
 # of the pinned links must fetch nothing, and the mount must refuse removal while the links point in.
 # Then it restarts the server over the same folders and reads everything again. Last, it diffs
 # designs/bb@1.1.2 against designs/bb@1.1.3 and compares the counts with agni diff on the two folders
-# (agni issue 1725). It kills only the server it started.
+# (agni issue 1725). Then it restarts the server polling, links a design to a copy of 1.1.2 in a
+# mounted folder, copies 1.1.3 over it, and waits for a poll to read the new files (agni issue 1726).
+# Last, it links a design to the repo's main branch and sends the server a signed push naming 1.1.2.
+# The server must refuse a bad signature, and must leave the design alone, since main isn't at 1.1.2.
+# It kills only the server it started.
 #
 # It reads GitHub, so it is run by hand and not in the gate. The Go tests in
 # cmd/agni/linkreaders_test.go run the same steps against a fake GitHub.
@@ -42,7 +46,7 @@ uploads=$out/uploads
 pid=
 
 serve() {
-  (cd "$out" && exec "$agni" serve --store "file://$store" --uploads "file://$uploads" --addr "127.0.0.1:$port") >>"$out/serve.log" 2>&1 &
+  (cd "$out" && exec "$agni" serve --store "file://$store" --uploads "file://$uploads" --addr "127.0.0.1:$port" "$@") >>"$out/serve.log" 2>&1 &
   pid=$!
   for _ in $(seq 1 100); do
     curl -fs -o /dev/null "$url/healthz" && return 0
@@ -69,14 +73,14 @@ done
 downloaded() { find "$uploads/blobs/aliases/git" -type f ! -name '.*' | wc -l | tr -d ' '; }
 fail=0
 check() {
-  local rev=$1 stored local_
-  stored=$("$agni" check designs/bb --remote "$url" --format json | findings)
+  local rev=$1 design=${2:-bb} stored local_
+  stored=$("$agni" check "designs/$design" --remote "$url" --format json | findings)
   local_=$("$agni" check "$out/folder-$rev" --format json 2>/dev/null | findings)
-  echo "designs/bb: $stored findings; the $rev files: $local_ findings"
+  echo "designs/$design: $stored findings; the $rev files: $local_ findings"
   if [ "$stored" -gt 0 ] && [ "$stored" = "$local_" ]; then
-    echo "PASS: a check on designs/bb at $rev gives the folder's $local_ findings"
+    echo "PASS: a check on designs/$design at $rev gives the folder's $local_ findings"
   else
-    echo "FAIL: a check on designs/bb at $rev differs from the folder" >&2
+    echo "FAIL: a check on designs/$design at $rev differs from the folder" >&2
     fail=1
   fi
 }
@@ -163,6 +167,60 @@ if grep -q "refs $v112" "$out/revisions.txt" && grep -q "refs $v113" "$out/revis
   echo "PASS: both commits name a revision"
 else
   echo "FAIL: designs revisions bb doesn't name both commits; see $out/revisions.txt" >&2
+  fail=1
+fi
+
+step "a poll reads a followed folder's new files"
+# The folder starts as 1.1.2. Copying 1.1.3 over it changes its files' times, which a poll sees
+# (agni issue 1726). Only the folder follows anything, so the poll asks GitHub nothing.
+stop
+mkdir -p "$out/lab"
+cp "$out/folder-1.1.2"/* "$out/lab/"
+EXERCISE_HOOK_SECRET=$(openssl rand -hex 32)
+export EXERCISE_HOOK_SECRET
+serve --poll 1s --mount "lab=$out/lab"
+"$agni" designs create lab --remote "$url" >/dev/null
+"$agni" designs link lab schematic "lab/$board.kicad_sch" --remote "$url" >/dev/null
+"$agni" designs link lab board "lab/$board.kicad_pcb" --remote "$url" >/dev/null
+digest() { "$agni" designs artifacts lab --remote "$url" | sed -n 's/.*content \([0-9a-f]*\).*/\1/p' | tr '\n' ' '; }
+first=$(digest)
+cp "$out/folder-1.1.3"/* "$out/lab/"
+moved=
+for _ in $(seq 1 50); do
+  [ "$(digest)" != "$first" ] && moved=1 && break
+  sleep 0.2
+done
+if [ -n "$moved" ]; then
+  echo "PASS: a poll read the folder's new files"
+  check 1.1.3 lab
+else
+  echo "FAIL: no poll read the folder's new files; see $out/serve.log" >&2
+  fail=1
+fi
+
+step "a signed push naming an older commit leaves the design on main alone"
+# A push only says that main moved. The server asks GitHub where main is, so a push naming 1.1.2
+# neither moves nor marks a design that holds main's head.
+stop
+serve --github-webhook-secret env:EXERCISE_HOOK_SECRET --mount "lab=$out/lab"
+"$agni" designs create head --remote "$url" >/dev/null
+"$agni" designs link head schematic "jetson/$board.kicad_sch@main" --remote "$url" >/dev/null
+"$agni" designs update head --on-source-change mark --remote "$url" >/dev/null
+payload=$(printf '{"ref":"refs/heads/main","before":"%s","after":"%s","repository":{"full_name":"antmicro/jetson-agx-thor-baseboard","default_branch":"main"}}' "$v113" "$v112")
+push() {
+  local sig
+  sig=$(printf '%s' "$payload" | openssl dgst -sha256 -hmac "$1" | sed 's/^.* //')
+  curl -s -o /dev/null -w '%{http_code}' -X POST "$url/hooks/github" -H "X-GitHub-Event: push" \
+    -H "Content-Type: application/json" -H "X-Hub-Signature-256: sha256=$sig" --data-binary "$payload"
+}
+bad=$(push not-the-secret)
+good=$(push "$EXERCISE_HOOK_SECRET")
+sleep 2
+"$agni" designs artifacts head --remote "$url" | tee "$out/head.txt"
+if [ "$bad" = 401 ] && [ "$good" = 202 ] && grep -q "@main at [0-9a-f]\{40\}, followed$" "$out/head.txt"; then
+  echo "PASS: the server refused the bad signature, took the push, and left designs/head at main's head"
+else
+  echo "FAIL: bad signature $bad, good signature $good; see $out/head.txt and $out/serve.log" >&2
   fail=1
 fi
 

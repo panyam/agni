@@ -5,9 +5,9 @@ go 1.26.9
 require (
 	connectrpc.com/connect v1.21.1
 	github.com/panyam/agni v0.0.0
-	github.com/panyam/goapplib v0.7.16
-	github.com/panyam/goapplib/storage v0.7.16
-	github.com/panyam/oneauth v0.3.10
+	github.com/panyam/goapplib v0.7.18
+	github.com/panyam/goapplib/storage v0.7.18
+	github.com/panyam/oneauth v0.3.11
 	github.com/panyam/servicekit v0.2.3
 	github.com/spf13/cobra v1.10.2
 	google.golang.org/protobuf v1.36.12
@@ -31,7 +31,7 @@ require (
 	github.com/panyam/gocurrent v0.1.2 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
-	github.com/panyam/oneauth/grpc v0.3.9 // indirect
+	github.com/panyam/oneauth/grpc v0.3.11 // indirect
 	github.com/panyam/templar v0.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/spf13/afero v1.15.0 // indirect

@@ -186,11 +186,15 @@ func TestARunningServerSweepsAReplacedArtifactsFiles(t *testing.T) {
 		hex := strings.TrimPrefix(h, "sha256:")
 		return filepath.Join(uploads, "blobs", "sha256", hex[:2], hex[2:])
 	}
-	// Age everything past the grace, as a server up for a day sees it.
+	// Age everything past the grace, as a server up for a day sees it. The sweeper is already
+	// running, so it can remove a file aged earlier in this walk before the walk reaches it.
 	aged := time.Now().Add(-48 * time.Hour)
 	if err := filepath.WalkDir(uploads, func(p string, _ os.DirEntry, err error) error {
 		if err == nil {
 			err = os.Chtimes(p, aged, aged)
+		}
+		if _, gone := os.Stat(p); errors.Is(gone, os.ErrNotExist) {
+			return nil
 		}
 		return err
 	}); err != nil {

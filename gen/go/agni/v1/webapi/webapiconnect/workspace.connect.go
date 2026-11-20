@@ -45,6 +45,9 @@ const (
 	// WorkspaceServiceDeleteMountProcedure is the fully-qualified name of the WorkspaceService's
 	// DeleteMount RPC.
 	WorkspaceServiceDeleteMountProcedure = "/agni.v1.webapi.WorkspaceService/DeleteMount"
+	// WorkspaceServiceCreateMountWebhookProcedure is the fully-qualified name of the WorkspaceService's
+	// CreateMountWebhook RPC.
+	WorkspaceServiceCreateMountWebhookProcedure = "/agni.v1.webapi.WorkspaceService/CreateMountWebhook"
 	// WorkspaceServiceListDirProcedure is the fully-qualified name of the WorkspaceService's ListDir
 	// RPC.
 	WorkspaceServiceListDirProcedure = "/agni.v1.webapi.WorkspaceService/ListDir"
@@ -79,6 +82,13 @@ type WorkspaceServiceClient interface {
 	// DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
 	// server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
 	DeleteMount(context.Context, *connect.Request[webapi.DeleteMountRequest]) (*connect.Response[webapi.DeleteMountResponse], error)
+	// CreateMountWebhook asks GitHub to send the pushes of a github mount's repo to url, signed with
+	// the server's --github-webhook-secret (agni issue 1726). It goes through the mount's connection,
+	// whose token must be allowed to manage the repo's webhooks. A hook already sending to url gets the
+	// server's secret and the push event again, so a second call changes nothing else. A server with
+	// no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
+	// that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+	CreateMountWebhook(context.Context, *connect.Request[webapi.CreateMountWebhookRequest]) (*connect.Response[webapi.MountWebhook], error)
 	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
 	// file is labeled with the reader that would open it. The client addresses a location by an
 	// artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -143,6 +153,12 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(workspaceServiceMethods.ByName("DeleteMount")),
 			connect.WithClientOptions(opts...),
 		),
+		createMountWebhook: connect.NewClient[webapi.CreateMountWebhookRequest, webapi.MountWebhook](
+			httpClient,
+			baseURL+WorkspaceServiceCreateMountWebhookProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("CreateMountWebhook")),
+			connect.WithClientOptions(opts...),
+		),
 		listDir: connect.NewClient[webapi.ListDirRequest, webapi.ListDirResponse](
 			httpClient,
 			baseURL+WorkspaceServiceListDirProcedure,
@@ -172,14 +188,15 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 
 // workspaceServiceClient implements WorkspaceServiceClient.
 type workspaceServiceClient struct {
-	listMounts       *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
-	getMount         *connect.Client[webapi.GetMountRequest, webapi.Mount]
-	createMount      *connect.Client[webapi.CreateMountRequest, webapi.Mount]
-	deleteMount      *connect.Client[webapi.DeleteMountRequest, webapi.DeleteMountResponse]
-	listDir          *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
-	listDesignFiles  *connect.Client[webapi.ListDesignFilesRequest, webapi.ListDesignFilesResponse]
-	proposeDesigns   *connect.Client[webapi.ProposeDesignsRequest, webapi.ProposeDesignsResponse]
-	declareCompanion *connect.Client[webapi.DeclareCompanionRequest, webapi.DeclareCompanionResponse]
+	listMounts         *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
+	getMount           *connect.Client[webapi.GetMountRequest, webapi.Mount]
+	createMount        *connect.Client[webapi.CreateMountRequest, webapi.Mount]
+	deleteMount        *connect.Client[webapi.DeleteMountRequest, webapi.DeleteMountResponse]
+	createMountWebhook *connect.Client[webapi.CreateMountWebhookRequest, webapi.MountWebhook]
+	listDir            *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
+	listDesignFiles    *connect.Client[webapi.ListDesignFilesRequest, webapi.ListDesignFilesResponse]
+	proposeDesigns     *connect.Client[webapi.ProposeDesignsRequest, webapi.ProposeDesignsResponse]
+	declareCompanion   *connect.Client[webapi.DeclareCompanionRequest, webapi.DeclareCompanionResponse]
 }
 
 // ListMounts calls agni.v1.webapi.WorkspaceService.ListMounts.
@@ -200,6 +217,11 @@ func (c *workspaceServiceClient) CreateMount(ctx context.Context, req *connect.R
 // DeleteMount calls agni.v1.webapi.WorkspaceService.DeleteMount.
 func (c *workspaceServiceClient) DeleteMount(ctx context.Context, req *connect.Request[webapi.DeleteMountRequest]) (*connect.Response[webapi.DeleteMountResponse], error) {
 	return c.deleteMount.CallUnary(ctx, req)
+}
+
+// CreateMountWebhook calls agni.v1.webapi.WorkspaceService.CreateMountWebhook.
+func (c *workspaceServiceClient) CreateMountWebhook(ctx context.Context, req *connect.Request[webapi.CreateMountWebhookRequest]) (*connect.Response[webapi.MountWebhook], error) {
+	return c.createMountWebhook.CallUnary(ctx, req)
 }
 
 // ListDir calls agni.v1.webapi.WorkspaceService.ListDir.
@@ -242,6 +264,13 @@ type WorkspaceServiceHandler interface {
 	// DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
 	// server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
 	DeleteMount(context.Context, *connect.Request[webapi.DeleteMountRequest]) (*connect.Response[webapi.DeleteMountResponse], error)
+	// CreateMountWebhook asks GitHub to send the pushes of a github mount's repo to url, signed with
+	// the server's --github-webhook-secret (agni issue 1726). It goes through the mount's connection,
+	// whose token must be allowed to manage the repo's webhooks. A hook already sending to url gets the
+	// server's secret and the push event again, so a second call changes nothing else. A server with
+	// no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
+	// that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+	CreateMountWebhook(context.Context, *connect.Request[webapi.CreateMountWebhookRequest]) (*connect.Response[webapi.MountWebhook], error)
 	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
 	// file is labeled with the reader that would open it. The client addresses a location by an
 	// artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -302,6 +331,12 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 		connect.WithSchema(workspaceServiceMethods.ByName("DeleteMount")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workspaceServiceCreateMountWebhookHandler := connect.NewUnaryHandler(
+		WorkspaceServiceCreateMountWebhookProcedure,
+		svc.CreateMountWebhook,
+		connect.WithSchema(workspaceServiceMethods.ByName("CreateMountWebhook")),
+		connect.WithHandlerOptions(opts...),
+	)
 	workspaceServiceListDirHandler := connect.NewUnaryHandler(
 		WorkspaceServiceListDirProcedure,
 		svc.ListDir,
@@ -336,6 +371,8 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 			workspaceServiceCreateMountHandler.ServeHTTP(w, r)
 		case WorkspaceServiceDeleteMountProcedure:
 			workspaceServiceDeleteMountHandler.ServeHTTP(w, r)
+		case WorkspaceServiceCreateMountWebhookProcedure:
+			workspaceServiceCreateMountWebhookHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListDirProcedure:
 			workspaceServiceListDirHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListDesignFilesProcedure:
@@ -367,6 +404,10 @@ func (UnimplementedWorkspaceServiceHandler) CreateMount(context.Context, *connec
 
 func (UnimplementedWorkspaceServiceHandler) DeleteMount(context.Context, *connect.Request[webapi.DeleteMountRequest]) (*connect.Response[webapi.DeleteMountResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.DeleteMount is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) CreateMountWebhook(context.Context, *connect.Request[webapi.CreateMountWebhookRequest]) (*connect.Response[webapi.MountWebhook], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.CreateMountWebhook is not implemented"))
 }
 
 func (UnimplementedWorkspaceServiceHandler) ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {

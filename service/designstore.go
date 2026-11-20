@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -80,6 +81,19 @@ type DesignRecord struct {
 	// Intent is the design's declared architecture (agni issue 1704), as `intent:` in a design.yaml.
 	// Nil declares none. A pack's intent, or a request's, replaces it for one read.
 	Intent *configpb.DesignIntent
+	// OnSourceChange is what the server does when a source the design's artifacts follow moves
+	// (agni issue 1726).
+	OnSourceChange webapi.SourceChange
+	// Newer maps a linked artifact's id to a version its source moved to that the design doesn't
+	// hold yet. The store keeps it on the artifact's source as newer_version, and drops it when the
+	// artifact's files are written again. An id naming no linked artifact is ignored.
+	Newer map[string]NewerVersion
+}
+
+// NewerVersion is a version a linked artifact's source moved to, and when the server saw it.
+type NewerVersion struct {
+	Version string
+	Seen    time.Time
 }
 
 // ArtifactWrite is one artifact's new files. AllowMissing creates the artifact when the design has

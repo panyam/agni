@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIrsBCgVNb3VudBIMCgRuYW1lGAEgASgJEgwKBHJvb3QYAiABKAkSCwoDdXJpGAMgASgJEicKBGtpbmQYBCABKA4yGS5hZ25pLnYxLndlYmFwaS5Nb3VudEtpbmQSDgoGc291cmNlGAUgASgJEgsKA3JlZhgGIAEoCRIOCgZjb21taXQYByABKAkSDQoFZml4ZWQYCCABKAgSEAoId3JpdGFibGUYCSABKAgSEgoKY29ubmVjdGlvbhgKIAEoCSJTChJDcmVhdGVNb3VudFJlcXVlc3QSDAoEbmFtZRgBIAEoCRIOCgZzb3VyY2UYAiABKAkSCwoDcmVmGAMgASgJEhIKCmNvbm5lY3Rpb24YBCABKAkiIgoSRGVsZXRlTW91bnRSZXF1ZXN0EgwKBG5hbWUYASABKAkiFQoTRGVsZXRlTW91bnRSZXNwb25zZSIfCg9HZXRNb3VudFJlcXVlc3QSDAoEbmFtZRgBIAEoCSJCChFMaXN0TW91bnRzUmVxdWVzdBInCgVvcGVucxgCIAMoDjIYLmFnbmkudjEud2ViYXBpLkZpbGVLaW5kSgQIARACIm0KEkxpc3RNb3VudHNSZXNwb25zZRIlCgZtb3VudHMYASADKAsyFS5hZ25pLnYxLndlYmFwaS5Nb3VudBIVCg1wcnVuZWRfbW91bnRzGAIgASgFEhkKEWNhbl9jcmVhdGVfbW91bnRzGAMgASgIIoABCghEaXJFbnRyeRIMCgRuYW1lGAEgASgJEg4KBmlzX2RpchgCIAEoCBIOCgZmb3JtYXQYAyABKAkSCwoDdXJpGAQgASgJEiYKBGtpbmQYBSABKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZBIRCglib2FyZF91cmkYBiABKAkiYQoOTGlzdERpclJlcXVlc3QSCwoDdXJpGAEgASgJEicKBW9wZW5zGAMgAygOMhguYWduaS52MS53ZWJhcGkuRmlsZUtpbmQSEwoLbWFya19ib2FyZHMYBCABKAhKBAgCEAMiPAoPTGlzdERpclJlc3BvbnNlEikKB2VudHJpZXMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5EaXJFbnRyeSIlChZMaXN0RGVzaWduRmlsZXNSZXF1ZXN0EgsKA3VyaRgBIAEoCSJnChdMaXN0RGVzaWduRmlsZXNSZXNwb25zZRINCgVtb3VudBgBIAEoCRIpCgVmaWxlcxgCIAMoCzIaLmFnbmkudjEud2ViYXBpLkRlc2lnbkZpbGUSEgoKdG90YWxfc2l6ZRgDIAEoAyJHCgpEZXNpZ25GaWxlEgwKBHBhdGgYASABKAkSDAoEc2l6ZRgCIAEoAxIOCgZzaGEyNTYYAyABKAkSDQoFYm9hcmQYBCABKAgiRAoXRGVjbGFyZUNvbXBhbmlvblJlcXVlc3QSEgoKZGVzaWduX3VyaRgBIAEoCRIVCg1jb21wYW5pb25fdXJpGAIgASgJImkKGERlY2xhcmVDb21wYW5pb25SZXNwb25zZRIWCg5kZXNjcmlwdG9yX3VyaRgBIAEoCRITCgtkZXNpZ25feWFtbBgCIAEoCRIPCgdleGlzdGVkGAMgASgIEg8KB2NoYW5nZWQYBCABKAgiJAoVUHJvcG9zZURlc2lnbnNSZXF1ZXN0EgsKA3VyaRgBIAEoCSKGAQoWUHJvcG9zZURlc2lnbnNSZXNwb25zZRIvCgdkZXNpZ25zGAEgAygLMh4uYWduaS52MS53ZWJhcGkuUHJvcG9zZWREZXNpZ24SKgoGdW5yZWFkGAIgAygLMhouYWduaS52MS53ZWJhcGkuVW5yZWFkRmlsZRIPCgdzdXBwb3J0GAMgAygJIowBCg5Qcm9wb3NlZERlc2lnbhIOCgZmb2xkZXIYASABKAkSJgoGZGVzaWduGAIgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEhMKC2Rlc2lnbl95YW1sGAMgASgJEg0KBWZpbGVzGAQgAygJEgwKBG5vdGUYBSABKAkSEAoIZGVjbGFyZWQYBiABKAgiKgoKVW5yZWFkRmlsZRIMCgRwYXRoGAEgASgJEg4KBnJlYXNvbhgCIAEoCSprCglNb3VudEtpbmQSGgoWTU9VTlRfS0lORF9VTlNQRUNJRklFRBAAEhMKD01PVU5UX0tJTkRfRklMRRABEhYKEk1PVU5UX0tJTkRfVVBMT0FEUxACEhUKEU1PVU5UX0tJTkRfR0lUSFVCEAMqVAoIRmlsZUtpbmQSGQoVRklMRV9LSU5EX1VOU1BFQ0lGSUVEEAASFAoQRklMRV9LSU5EX0RFU0lHThABEhcKE0ZJTEVfS0lORF9EQVRBU0hFRVQQAjLFBQoQV29ya3NwYWNlU2VydmljZRJTCgpMaXN0TW91bnRzEiEuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVzcG9uc2USQgoIR2V0TW91bnQSHy5hZ25pLnYxLndlYmFwaS5HZXRNb3VudFJlcXVlc3QaFS5hZ25pLnYxLndlYmFwaS5Nb3VudBJICgtDcmVhdGVNb3VudBIiLmFnbmkudjEud2ViYXBpLkNyZWF0ZU1vdW50UmVxdWVzdBoVLmFnbmkudjEud2ViYXBpLk1vdW50ElYKC0RlbGV0ZU1vdW50EiIuYWduaS52MS53ZWJhcGkuRGVsZXRlTW91bnRSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuRGVsZXRlTW91bnRSZXNwb25zZRJKCgdMaXN0RGlyEh4uYWduaS52MS53ZWJhcGkuTGlzdERpclJlcXVlc3QaHy5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVzcG9uc2USYgoPTGlzdERlc2lnbkZpbGVzEiYuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbkZpbGVzUmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25GaWxlc1Jlc3BvbnNlEl8KDlByb3Bvc2VEZXNpZ25zEiUuYWduaS52MS53ZWJhcGkuUHJvcG9zZURlc2lnbnNSZXF1ZXN0GiYuYWduaS52MS53ZWJhcGkuUHJvcG9zZURlc2lnbnNSZXNwb25zZRJlChBEZWNsYXJlQ29tcGFuaW9uEicuYWduaS52MS53ZWJhcGkuRGVjbGFyZUNvbXBhbmlvblJlcXVlc3QaKC5hZ25pLnYxLndlYmFwaS5EZWNsYXJlQ29tcGFuaW9uUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_project]);
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIrsBCgVNb3VudBIMCgRuYW1lGAEgASgJEgwKBHJvb3QYAiABKAkSCwoDdXJpGAMgASgJEicKBGtpbmQYBCABKA4yGS5hZ25pLnYxLndlYmFwaS5Nb3VudEtpbmQSDgoGc291cmNlGAUgASgJEgsKA3JlZhgGIAEoCRIOCgZjb21taXQYByABKAkSDQoFZml4ZWQYCCABKAgSEAoId3JpdGFibGUYCSABKAgSEgoKY29ubmVjdGlvbhgKIAEoCSJTChJDcmVhdGVNb3VudFJlcXVlc3QSDAoEbmFtZRgBIAEoCRIOCgZzb3VyY2UYAiABKAkSCwoDcmVmGAMgASgJEhIKCmNvbm5lY3Rpb24YBCABKAkiIgoSRGVsZXRlTW91bnRSZXF1ZXN0EgwKBG5hbWUYASABKAkiFQoTRGVsZXRlTW91bnRSZXNwb25zZSI2ChlDcmVhdGVNb3VudFdlYmhvb2tSZXF1ZXN0EgwKBG5hbWUYASABKAkSCwoDdXJsGAIgASgJImcKDE1vdW50V2ViaG9vaxINCgVtb3VudBgBIAEoCRIOCgZzb3VyY2UYAiABKAkSCgoCaWQYAyABKAMSCwoDdXJsGAQgASgJEg4KBmV2ZW50cxgFIAMoCRIPCgdjcmVhdGVkGAYgASgIIh8KD0dldE1vdW50UmVxdWVzdBIMCgRuYW1lGAEgASgJIkIKEUxpc3RNb3VudHNSZXF1ZXN0EicKBW9wZW5zGAIgAygOMhguYWduaS52MS53ZWJhcGkuRmlsZUtpbmRKBAgBEAIibQoSTGlzdE1vdW50c1Jlc3BvbnNlEiUKBm1vdW50cxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLk1vdW50EhUKDXBydW5lZF9tb3VudHMYAiABKAUSGQoRY2FuX2NyZWF0ZV9tb3VudHMYAyABKAgigAEKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAIgASgIEg4KBmZvcm1hdBgDIAEoCRILCgN1cmkYBCABKAkSJgoEa2luZBgFIAEoDjIYLmFnbmkudjEud2ViYXBpLkZpbGVLaW5kEhEKCWJvYXJkX3VyaRgGIAEoCSJhCg5MaXN0RGlyUmVxdWVzdBILCgN1cmkYASABKAkSJwoFb3BlbnMYAyADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZBITCgttYXJrX2JvYXJkcxgEIAEoCEoECAIQAyI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5IiUKFkxpc3REZXNpZ25GaWxlc1JlcXVlc3QSCwoDdXJpGAEgASgJImcKF0xpc3REZXNpZ25GaWxlc1Jlc3BvbnNlEg0KBW1vdW50GAEgASgJEikKBWZpbGVzGAIgAygLMhouYWduaS52MS53ZWJhcGkuRGVzaWduRmlsZRISCgp0b3RhbF9zaXplGAMgASgDIkcKCkRlc2lnbkZpbGUSDAoEcGF0aBgBIAEoCRIMCgRzaXplGAIgASgDEg4KBnNoYTI1NhgDIAEoCRINCgVib2FyZBgEIAEoCCJEChdEZWNsYXJlQ29tcGFuaW9uUmVxdWVzdBISCgpkZXNpZ25fdXJpGAEgASgJEhUKDWNvbXBhbmlvbl91cmkYAiABKAkiaQoYRGVjbGFyZUNvbXBhbmlvblJlc3BvbnNlEhYKDmRlc2NyaXB0b3JfdXJpGAEgASgJEhMKC2Rlc2lnbl95YW1sGAIgASgJEg8KB2V4aXN0ZWQYAyABKAgSDwoHY2hhbmdlZBgEIAEoCCIkChVQcm9wb3NlRGVzaWduc1JlcXVlc3QSCwoDdXJpGAEgASgJIoYBChZQcm9wb3NlRGVzaWduc1Jlc3BvbnNlEi8KB2Rlc2lnbnMYASADKAsyHi5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlZERlc2lnbhIqCgZ1bnJlYWQYAiADKAsyGi5hZ25pLnYxLndlYmFwaS5VbnJlYWRGaWxlEg8KB3N1cHBvcnQYAyADKAkijAEKDlByb3Bvc2VkRGVzaWduEg4KBmZvbGRlchgBIAEoCRImCgZkZXNpZ24YAiABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SEwoLZGVzaWduX3lhbWwYAyABKAkSDQoFZmlsZXMYBCADKAkSDAoEbm90ZRgFIAEoCRIQCghkZWNsYXJlZBgGIAEoCCIqCgpVbnJlYWRGaWxlEgwKBHBhdGgYASABKAkSDgoGcmVhc29uGAIgASgJKmsKCU1vdW50S2luZBIaChZNT1VOVF9LSU5EX1VOU1BFQ0lGSUVEEAASEwoPTU9VTlRfS0lORF9GSUxFEAESFgoSTU9VTlRfS0lORF9VUExPQURTEAISFQoRTU9VTlRfS0lORF9HSVRIVUIQAypUCghGaWxlS2luZBIZChVGSUxFX0tJTkRfVU5TUEVDSUZJRUQQABIUChBGSUxFX0tJTkRfREVTSUdOEAESFwoTRklMRV9LSU5EX0RBVEFTSEVFVBACMqQGChBXb3Jrc3BhY2VTZXJ2aWNlElMKCkxpc3RNb3VudHMSIS5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXNwb25zZRJCCghHZXRNb3VudBIfLmFnbmkudjEud2ViYXBpLkdldE1vdW50UmVxdWVzdBoVLmFnbmkudjEud2ViYXBpLk1vdW50EkgKC0NyZWF0ZU1vdW50EiIuYWduaS52MS53ZWJhcGkuQ3JlYXRlTW91bnRSZXF1ZXN0GhUuYWduaS52MS53ZWJhcGkuTW91bnQSVgoLRGVsZXRlTW91bnQSIi5hZ25pLnYxLndlYmFwaS5EZWxldGVNb3VudFJlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5EZWxldGVNb3VudFJlc3BvbnNlEl0KEkNyZWF0ZU1vdW50V2ViaG9vaxIpLmFnbmkudjEud2ViYXBpLkNyZWF0ZU1vdW50V2ViaG9va1JlcXVlc3QaHC5hZ25pLnYxLndlYmFwaS5Nb3VudFdlYmhvb2sSSgoHTGlzdERpchIeLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXF1ZXN0Gh8uYWduaS52MS53ZWJhcGkuTGlzdERpclJlc3BvbnNlEmIKD0xpc3REZXNpZ25GaWxlcxImLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25GaWxlc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduRmlsZXNSZXNwb25zZRJfCg5Qcm9wb3NlRGVzaWducxIlLmFnbmkudjEud2ViYXBpLlByb3Bvc2VEZXNpZ25zUmVxdWVzdBomLmFnbmkudjEud2ViYXBpLlByb3Bvc2VEZXNpZ25zUmVzcG9uc2USZQoQRGVjbGFyZUNvbXBhbmlvbhInLmFnbmkudjEud2ViYXBpLkRlY2xhcmVDb21wYW5pb25SZXF1ZXN0GiguYWduaS52MS53ZWJhcGkuRGVjbGFyZUNvbXBhbmlvblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_project]);
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls. root is a
@@ -180,6 +180,91 @@ export const DeleteMountResponseSchema: GenMessage<DeleteMountResponse> = /*@__P
   messageDesc(file_agni_v1_webapi_workspace, 3);
 
 /**
+ * @generated from message agni.v1.webapi.CreateMountWebhookRequest
+ */
+export type CreateMountWebhookRequest = Message<"agni.v1.webapi.CreateMountWebhookRequest"> & {
+  /**
+   * name is the mount's handle.
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
+   * "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
+   * caller names it.
+   *
+   * @generated from field: string url = 2;
+   */
+  url: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.CreateMountWebhookRequest.
+ * Use `create(CreateMountWebhookRequestSchema)` to create a new message.
+ */
+export const CreateMountWebhookRequestSchema: GenMessage<CreateMountWebhookRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 4);
+
+/**
+ * MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server.
+ *
+ * @generated from message agni.v1.webapi.MountWebhook
+ */
+export type MountWebhook = Message<"agni.v1.webapi.MountWebhook"> & {
+  /**
+   * mount is the mount's handle.
+   *
+   * @generated from field: string mount = 1;
+   */
+  mount: string;
+
+  /**
+   * source is the repo the hook is on, such as "github://acme/board".
+   *
+   * @generated from field: string source = 2;
+   */
+  source: string;
+
+  /**
+   * id is GitHub's id for the hook.
+   *
+   * @generated from field: int64 id = 3;
+   */
+  id: bigint;
+
+  /**
+   * url is where the hook sends its deliveries.
+   *
+   * @generated from field: string url = 4;
+   */
+  url: string;
+
+  /**
+   * events are the events it sends, ["push"].
+   *
+   * @generated from field: repeated string events = 5;
+   */
+  events: string[];
+
+  /**
+   * created is true when the call made the hook, and false when a hook sending to url was there and
+   * was updated.
+   *
+   * @generated from field: bool created = 6;
+   */
+  created: boolean;
+};
+
+/**
+ * Describes the message agni.v1.webapi.MountWebhook.
+ * Use `create(MountWebhookSchema)` to create a new message.
+ */
+export const MountWebhookSchema: GenMessage<MountWebhook> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 5);
+
+/**
  * @generated from message agni.v1.webapi.GetMountRequest
  */
 export type GetMountRequest = Message<"agni.v1.webapi.GetMountRequest"> & {
@@ -196,7 +281,7 @@ export type GetMountRequest = Message<"agni.v1.webapi.GetMountRequest"> & {
  * Use `create(GetMountRequestSchema)` to create a new message.
  */
 export const GetMountRequestSchema: GenMessage<GetMountRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 4);
+  messageDesc(file_agni_v1_webapi_workspace, 6);
 
 /**
  * @generated from message agni.v1.webapi.ListMountsRequest
@@ -223,7 +308,7 @@ export type ListMountsRequest = Message<"agni.v1.webapi.ListMountsRequest"> & {
  * Use `create(ListMountsRequestSchema)` to create a new message.
  */
 export const ListMountsRequestSchema: GenMessage<ListMountsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 5);
+  messageDesc(file_agni_v1_webapi_workspace, 7);
 
 /**
  * @generated from message agni.v1.webapi.ListMountsResponse
@@ -257,7 +342,7 @@ export type ListMountsResponse = Message<"agni.v1.webapi.ListMountsResponse"> & 
  * Use `create(ListMountsResponseSchema)` to create a new message.
  */
 export const ListMountsResponseSchema: GenMessage<ListMountsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 6);
+  messageDesc(file_agni_v1_webapi_workspace, 8);
 
 /**
  * DirEntry is one item in a directory listing: a subdirectory or a supported design file.
@@ -326,7 +411,7 @@ export type DirEntry = Message<"agni.v1.webapi.DirEntry"> & {
  * Use `create(DirEntrySchema)` to create a new message.
  */
 export const DirEntrySchema: GenMessage<DirEntry> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 7);
+  messageDesc(file_agni_v1_webapi_workspace, 9);
 
 /**
  * @generated from message agni.v1.webapi.ListDirRequest
@@ -372,7 +457,7 @@ export type ListDirRequest = Message<"agni.v1.webapi.ListDirRequest"> & {
  * Use `create(ListDirRequestSchema)` to create a new message.
  */
 export const ListDirRequestSchema: GenMessage<ListDirRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 8);
+  messageDesc(file_agni_v1_webapi_workspace, 10);
 
 /**
  * @generated from message agni.v1.webapi.ListDirResponse
@@ -392,7 +477,7 @@ export type ListDirResponse = Message<"agni.v1.webapi.ListDirResponse"> & {
  * Use `create(ListDirResponseSchema)` to create a new message.
  */
 export const ListDirResponseSchema: GenMessage<ListDirResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 9);
+  messageDesc(file_agni_v1_webapi_workspace, 11);
 
 /**
  * @generated from message agni.v1.webapi.ListDesignFilesRequest
@@ -411,7 +496,7 @@ export type ListDesignFilesRequest = Message<"agni.v1.webapi.ListDesignFilesRequ
  * Use `create(ListDesignFilesRequestSchema)` to create a new message.
  */
 export const ListDesignFilesRequestSchema: GenMessage<ListDesignFilesRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 10);
+  messageDesc(file_agni_v1_webapi_workspace, 12);
 
 /**
  * @generated from message agni.v1.webapi.ListDesignFilesResponse
@@ -445,7 +530,7 @@ export type ListDesignFilesResponse = Message<"agni.v1.webapi.ListDesignFilesRes
  * Use `create(ListDesignFilesResponseSchema)` to create a new message.
  */
 export const ListDesignFilesResponseSchema: GenMessage<ListDesignFilesResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 11);
+  messageDesc(file_agni_v1_webapi_workspace, 13);
 
 /**
  * DesignFile is one file a design's analysis reads.
@@ -487,7 +572,7 @@ export type DesignFile = Message<"agni.v1.webapi.DesignFile"> & {
  * Use `create(DesignFileSchema)` to create a new message.
  */
 export const DesignFileSchema: GenMessage<DesignFile> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 12);
+  messageDesc(file_agni_v1_webapi_workspace, 14);
 
 /**
  * @generated from message agni.v1.webapi.DeclareCompanionRequest
@@ -514,7 +599,7 @@ export type DeclareCompanionRequest = Message<"agni.v1.webapi.DeclareCompanionRe
  * Use `create(DeclareCompanionRequestSchema)` to create a new message.
  */
 export const DeclareCompanionRequestSchema: GenMessage<DeclareCompanionRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 13);
+  messageDesc(file_agni_v1_webapi_workspace, 15);
 
 /**
  * @generated from message agni.v1.webapi.DeclareCompanionResponse
@@ -556,7 +641,7 @@ export type DeclareCompanionResponse = Message<"agni.v1.webapi.DeclareCompanionR
  * Use `create(DeclareCompanionResponseSchema)` to create a new message.
  */
 export const DeclareCompanionResponseSchema: GenMessage<DeclareCompanionResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 14);
+  messageDesc(file_agni_v1_webapi_workspace, 16);
 
 /**
  * @generated from message agni.v1.webapi.ProposeDesignsRequest
@@ -576,7 +661,7 @@ export type ProposeDesignsRequest = Message<"agni.v1.webapi.ProposeDesignsReques
  * Use `create(ProposeDesignsRequestSchema)` to create a new message.
  */
 export const ProposeDesignsRequestSchema: GenMessage<ProposeDesignsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 15);
+  messageDesc(file_agni_v1_webapi_workspace, 17);
 
 /**
  * @generated from message agni.v1.webapi.ProposeDesignsResponse
@@ -610,7 +695,7 @@ export type ProposeDesignsResponse = Message<"agni.v1.webapi.ProposeDesignsRespo
  * Use `create(ProposeDesignsResponseSchema)` to create a new message.
  */
 export const ProposeDesignsResponseSchema: GenMessage<ProposeDesignsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 16);
+  messageDesc(file_agni_v1_webapi_workspace, 18);
 
 /**
  * ProposedDesign is one design a folder's files make.
@@ -670,7 +755,7 @@ export type ProposedDesign = Message<"agni.v1.webapi.ProposedDesign"> & {
  * Use `create(ProposedDesignSchema)` to create a new message.
  */
 export const ProposedDesignSchema: GenMessage<ProposedDesign> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 17);
+  messageDesc(file_agni_v1_webapi_workspace, 19);
 
 /**
  * UnreadFile is a file no proposed design reads.
@@ -694,7 +779,7 @@ export type UnreadFile = Message<"agni.v1.webapi.UnreadFile"> & {
  * Use `create(UnreadFileSchema)` to create a new message.
  */
 export const UnreadFileSchema: GenMessage<UnreadFile> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 18);
+  messageDesc(file_agni_v1_webapi_workspace, 20);
 
 /**
  * MountKind is how a mount's files are reached. S3, GCS and SharePoint come with agni issues 1729
@@ -837,6 +922,21 @@ export const WorkspaceService: GenService<{
     methodKind: "unary";
     input: typeof DeleteMountRequestSchema;
     output: typeof DeleteMountResponseSchema;
+  },
+  /**
+   * CreateMountWebhook asks GitHub to send the pushes of a github mount's repo to url, signed with
+   * the server's --github-webhook-secret (agni issue 1726). It goes through the mount's connection,
+   * whose token must be allowed to manage the repo's webhooks. A hook already sending to url gets the
+   * server's secret and the push event again, so a second call changes nothing else. A server with
+   * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
+   * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+   *
+   * @generated from rpc agni.v1.webapi.WorkspaceService.CreateMountWebhook
+   */
+  createMountWebhook: {
+    methodKind: "unary";
+    input: typeof CreateMountWebhookRequestSchema;
+    output: typeof MountWebhookSchema;
   },
   /**
    * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each

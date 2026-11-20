@@ -49,6 +49,7 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.LazyStringArrayList.emptyList();
     accessSources_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    onSourceChange_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -740,6 +741,36 @@ private static final long serialVersionUID = 0L;
     return accessSources_.getByteString(index);
   }
 
+  public static final int ON_SOURCE_CHANGE_FIELD_NUMBER = 17;
+  private int onSourceChange_ = 0;
+  /**
+   * <pre>
+   * on_source_change says what the server does when a source this design's artifacts follow moves,
+   * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+   * "on_source_change".
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.SourceChange on_source_change = 17 [json_name = "onSourceChange"];</code>
+   * @return The enum numeric value on the wire for onSourceChange.
+   */
+  @java.lang.Override public int getOnSourceChangeValue() {
+    return onSourceChange_;
+  }
+  /**
+   * <pre>
+   * on_source_change says what the server does when a source this design's artifacts follow moves,
+   * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+   * "on_source_change".
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.SourceChange on_source_change = 17 [json_name = "onSourceChange"];</code>
+   * @return The onSourceChange.
+   */
+  @java.lang.Override public io.github.panyam.agni.v1.webapi.SourceChange getOnSourceChange() {
+    io.github.panyam.agni.v1.webapi.SourceChange result = io.github.panyam.agni.v1.webapi.SourceChange.forNumber(onSourceChange_);
+    return result == null ? io.github.panyam.agni.v1.webapi.SourceChange.UNRECOGNIZED : result;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -795,6 +826,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < accessSources_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 16, accessSources_.getRaw(i));
+    }
+    if (onSourceChange_ != io.github.panyam.agni.v1.webapi.SourceChange.SOURCE_CHANGE_UNSPECIFIED.getNumber()) {
+      output.writeEnum(17, onSourceChange_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -867,6 +901,10 @@ private static final long serialVersionUID = 0L;
       size += dataSize;
       size += 2 * getAccessSourcesList().size();
     }
+    if (onSourceChange_ != io.github.panyam.agni.v1.webapi.SourceChange.SOURCE_CHANGE_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(17, onSourceChange_);
+    }
     return size;
   }
   @java.lang.Override
@@ -925,6 +963,7 @@ private static final long serialVersionUID = 0L;
         .equals(other.getPacksList())) return false;
     if (!getAccessSourcesList()
         .equals(other.getAccessSourcesList())) return false;
+    if (onSourceChange_ != other.onSourceChange_) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -979,6 +1018,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + ACCESS_SOURCES_FIELD_NUMBER;
       hash = (53 * hash) + getAccessSourcesList().hashCode();
     }
+    hash = (37 * hash) + ON_SOURCE_CHANGE_FIELD_NUMBER;
+    hash = (53 * hash) + onSourceChange_;
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1151,6 +1192,7 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.LazyStringArrayList.emptyList();
       accessSources_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
+      onSourceChange_ = 0;
       return this;
     }
 
@@ -1236,6 +1278,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00002000) != 0)) {
         accessSources_.makeImmutable();
         result.accessSources_ = accessSources_;
+      }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.onSourceChange_ = onSourceChange_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1331,6 +1376,9 @@ private static final long serialVersionUID = 0L;
           accessSources_.addAll(other.accessSources_);
         }
         onChanged();
+      }
+      if (other.onSourceChange_ != 0) {
+        setOnSourceChangeValue(other.getOnSourceChangeValue());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1430,6 +1478,11 @@ private static final long serialVersionUID = 0L;
               accessSources_.add(input.readStringRequireUtf8());
               break;
             } // case 130
+            case 136: {
+              onSourceChange_ = input.readEnum();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 136
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -3182,6 +3235,88 @@ private static final long serialVersionUID = 0L;
       ensureAccessSourcesIsMutable();
       accessSources_.add(value);
       bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private int onSourceChange_ = 0;
+    /**
+     * <pre>
+     * on_source_change says what the server does when a source this design's artifacts follow moves,
+     * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+     * "on_source_change".
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.SourceChange on_source_change = 17 [json_name = "onSourceChange"];</code>
+     * @return The enum numeric value on the wire for onSourceChange.
+     */
+    @java.lang.Override public int getOnSourceChangeValue() {
+      return onSourceChange_;
+    }
+    /**
+     * <pre>
+     * on_source_change says what the server does when a source this design's artifacts follow moves,
+     * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+     * "on_source_change".
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.SourceChange on_source_change = 17 [json_name = "onSourceChange"];</code>
+     * @param value The enum numeric value on the wire for onSourceChange to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOnSourceChangeValue(int value) {
+      onSourceChange_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * on_source_change says what the server does when a source this design's artifacts follow moves,
+     * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+     * "on_source_change".
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.SourceChange on_source_change = 17 [json_name = "onSourceChange"];</code>
+     * @return The onSourceChange.
+     */
+    @java.lang.Override
+    public io.github.panyam.agni.v1.webapi.SourceChange getOnSourceChange() {
+      io.github.panyam.agni.v1.webapi.SourceChange result = io.github.panyam.agni.v1.webapi.SourceChange.forNumber(onSourceChange_);
+      return result == null ? io.github.panyam.agni.v1.webapi.SourceChange.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * on_source_change says what the server does when a source this design's artifacts follow moves,
+     * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+     * "on_source_change".
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.SourceChange on_source_change = 17 [json_name = "onSourceChange"];</code>
+     * @param value The onSourceChange to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setOnSourceChange(io.github.panyam.agni.v1.webapi.SourceChange value) {
+      java.util.Objects.requireNonNull(value);
+      bitField0_ |= 0x00004000;
+      onSourceChange_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * on_source_change says what the server does when a source this design's artifacts follow moves,
+     * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+     * "on_source_change".
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.SourceChange on_source_change = 17 [json_name = "onSourceChange"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOnSourceChange() {
+      bitField0_ = (bitField0_ & ~0x00004000);
+      onSourceChange_ = 0;
       onChanged();
       return this;
     }

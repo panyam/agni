@@ -449,10 +449,39 @@ is listed and never moved. --dry-run says what a sync would change and writes no
 	}
 	sync.Flags().BoolVar(&dryRun, "dry-run", false, "report what a sync would change, and write nothing")
 
+	var onSourceChange string
+	update := &cobra.Command{
+		Use:   "update <id> --on-source-change sync|mark",
+		Short: "Change what a design does when a branch or folder it follows moves",
+		Long: `update --on-source-change sets what the server does when a push webhook or a poll finds that a
+source the design's linked artifacts follow moved (agni issue 1726). sync, the default, reads the new
+files into the design. mark leaves the files as they are and notes the newer version on each artifact,
+so the design stays at what someone reviewed until a person runs agni designs sync.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v, ok := webapi.SourceChange_value["SOURCE_CHANGE_"+strings.ToUpper(onSourceChange)]
+			if !ok || onSourceChange == "" || strings.EqualFold(onSourceChange, "unspecified") {
+				return fmt.Errorf("--on-source-change %q: want sync or mark", onSourceChange)
+			}
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			in := &webapi.Design{Name: designName(args[0]), OnSourceChange: webapi.SourceChange(v)}
+			d, err := unary(cmd.Context(), c.designs.UpdateDesign, &webapi.UpdateDesignRequest{Design: in, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"on_source_change"}}})
+			if err != nil {
+				return err
+			}
+			printDesign(cmd.OutOrStdout(), d)
+			return nil
+		},
+	}
+	update.Flags().StringVar(&onSourceChange, "on-source-change", "", "sync to read a followed source's new files into the design when it moves, or mark to note the newer version and leave the files")
+
 	revisions.Flags().BoolVar(&revTags, "tags", false, "list the linked repo's tags, read or not")
 	revisions.Flags().BoolVar(&revCommits, "commits", false, "list the commits on a branch of the linked repo, read or not")
 	revisions.Flags().StringVar(&revBranch, "branch", "", "the branch --commits lists; the one the design follows when empty")
-	cmd.AddCommand(create, list, get, artifacts, put, rm, push, add, link, unlink, sync, revisions)
+	cmd.AddCommand(create, list, get, update, artifacts, put, rm, push, add, link, unlink, sync, revisions)
 	return cmd
 }
 
@@ -533,6 +562,9 @@ func printDesign(w io.Writer, d *webapi.Design) {
 	if src := d.GetAccessSources(); len(src) > 0 {
 		notes = append(notes, "opens for who can read "+strings.Join(src, " and "))
 	}
+	if d.GetOnSourceChange() == webapi.SourceChange_SOURCE_CHANGE_MARK {
+		notes = append(notes, "marks a source change rather than syncing")
+	}
 	fmt.Fprintf(w, "%s\t%s\n", d.GetName(), strings.Join(notes, "; "))
 }
 
@@ -584,6 +616,9 @@ func printArtifact(w io.Writer, a *webapi.Artifact) {
 			fmt.Fprint(w, ", followed")
 		default:
 			fmt.Fprint(w, ", pinned")
+		}
+		if v := src.GetNewerVersion(); v != "" {
+			fmt.Fprintf(w, "; newer at the source: %s", v)
 		}
 	}
 	fmt.Fprintln(w)

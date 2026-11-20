@@ -2299,6 +2299,11 @@ pub struct Design {
     /// them gets the design. Empty means every caller the server lets in may open it. Output only.
     #[prost(string, repeated, tag="16")]
     pub access_sources: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// on_source_change says what the server does when a source this design's artifacts follow moves,
+    /// as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+    /// "on_source_change".
+    #[prost(enumeration="SourceChange", tag="17")]
+    pub on_source_change: i32,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetProjectRequest {
@@ -2385,6 +2390,41 @@ pub struct ResolveDesignResponse {
     /// project's rules. The structure enforces that.
     #[prost(message, optional, tag="2")]
     pub project: ::core::option::Option<Project>,
+}
+/// SourceChange is what a stored design does when a branch or folder its linked artifacts follow
+/// moves (agni issue 1726).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum SourceChange {
+    /// SOURCE_CHANGE_UNSPECIFIED syncs, as SOURCE_CHANGE_SYNC does.
+    Unspecified = 0,
+    /// SOURCE_CHANGE_SYNC reads the new files into the design, as SyncDesign does.
+    Sync = 1,
+    /// SOURCE_CHANGE_MARK leaves the design's files as they are and sets each moved artifact's
+    /// source.newer_version, so the design stays at what someone reviewed until a person syncs it.
+    Mark = 2,
+}
+impl SourceChange {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "SOURCE_CHANGE_UNSPECIFIED",
+            Self::Sync => "SOURCE_CHANGE_SYNC",
+            Self::Mark => "SOURCE_CHANGE_MARK",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "SOURCE_CHANGE_UNSPECIFIED" => Some(Self::Unspecified),
+            "SOURCE_CHANGE_SYNC" => Some(Self::Sync),
+            "SOURCE_CHANGE_MARK" => Some(Self::Mark),
+            _ => None,
+        }
+    }
 }
 /// Snapshot is one loaded design. The fields up to overlay are its DEFINITION, which a client sets on
 /// Ingest and changes with UpdateSnapshot. The rest are output only.
@@ -2865,10 +2905,10 @@ pub struct UpdateDesignRequest {
     /// design names the design to change, "designs/{design}", and carries the new values.
     #[prost(message, optional, tag="3")]
     pub design: ::core::option::Option<Design>,
-    /// update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-    /// `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-    /// INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-    /// under.
+    /// update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+    /// `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+    /// mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+    /// design's config comes from the packs it is read under.
     #[prost(message, optional, tag="4")]
     pub update_mask: ::core::option::Option<::pbjson_types::FieldMask>,
 }
@@ -2948,6 +2988,15 @@ pub struct ArtifactSource {
     /// read that source. Empty is a public source, a folder on the server, or an upload. Output only.
     #[prost(string, tag="8")]
     pub access_source: ::prost::alloc::string::String,
+    /// newer_version is a version the source moved to that the design doesn't hold yet, as a push
+    /// webhook or a poll found it (agni issue 1726). The server sets it when the design's
+    /// on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+    /// a connection that is one person's own. A sync clears it. Output only.
+    #[prost(string, tag="9")]
+    pub newer_version: ::prost::alloc::string::String,
+    /// newer_time is when the server saw newer_version. Output only.
+    #[prost(message, optional, tag="10")]
+    pub newer_time: ::core::option::Option<::pbjson_types::Timestamp>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AddDesignsRequest {
@@ -4450,6 +4499,40 @@ pub struct DeleteMountRequest {
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeleteMountResponse {
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CreateMountWebhookRequest {
+    /// name is the mount's handle.
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
+    /// "<https://agni.example.com/hooks/github".> The server can't tell its own public address, so the
+    /// caller names it.
+    #[prost(string, tag="2")]
+    pub url: ::prost::alloc::string::String,
+}
+/// MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct MountWebhook {
+    /// mount is the mount's handle.
+    #[prost(string, tag="1")]
+    pub mount: ::prost::alloc::string::String,
+    /// source is the repo the hook is on, such as "github://acme/board".
+    #[prost(string, tag="2")]
+    pub source: ::prost::alloc::string::String,
+    /// id is GitHub's id for the hook.
+    #[prost(int64, tag="3")]
+    pub id: i64,
+    /// url is where the hook sends its deliveries.
+    #[prost(string, tag="4")]
+    pub url: ::prost::alloc::string::String,
+    /// events are the events it sends, \["push"\].
+    #[prost(string, repeated, tag="5")]
+    pub events: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// created is true when the call made the hook, and false when a hook sending to url was there and
+    /// was updated.
+    #[prost(bool, tag="6")]
+    pub created: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetMountRequest {

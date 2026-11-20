@@ -73,6 +73,10 @@ func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 		if err := table.SaveUserToken(ctx, id, p.who, p.token); err != nil {
 			t.Fatalf("seal %s's token: %v", p.who, err)
 		}
+		// A person pastes their token, so a later disconnect mustn't ask GitHub to revoke it.
+		if c, err := conns.GetConnection(ctx, id); err != nil || !c.Pasted {
+			t.Errorf("%s's connection after sealing a pasted token = %+v, %v; want it marked pasted", p.who, c, err)
+		}
 	}
 	server := service.WithCaller(ctx, service.Caller{Subject: "ops"})
 	if _, err := table.CreateMount(server, "board", "github://acme/board", "main", "server"); err != nil {

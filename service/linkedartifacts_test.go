@@ -29,10 +29,15 @@ type fakeMount struct {
 	// commits on.
 	tags        []service.SourceRef
 	branchAsked string
+	// err, when set, is what Resolve returns, as a source answers that can't be read now.
+	err error
 }
 
 func (m *fakeMount) Resolve(_ context.Context, ref string) (string, bool, error) {
 	m.resolves++
+	if m.err != nil {
+		return "", false, m.err
+	}
 	if m.refs == nil {
 		return "", true, nil
 	}

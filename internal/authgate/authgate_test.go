@@ -1,6 +1,8 @@
 package authgate
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -41,6 +43,20 @@ func TestSafeNext(t *testing.T) {
 	} {
 		if got := safeNext(in); got != want {
 			t.Errorf("safeNext(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// GitHub sends a push webhook with no token, so the gate lets that one path through to the handler,
+// which checks the delivery's signature, and still refuses its neighbors (agni issue 1726).
+func TestTheGateLetsAWebhookThroughWithNoToken(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusAccepted) })
+	h := New(Store(t.TempDir()), false).Wrap(next)
+	for path, want := range map[string]int{"/hooks/github": http.StatusAccepted, "/hooks/gitlab": http.StatusUnauthorized, "/hooks/github/x": http.StatusUnauthorized} {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}")))
+		if w.Code != want {
+			t.Errorf("POST %s with no token = %d; want %d", path, w.Code, want)
 		}
 	}
 }

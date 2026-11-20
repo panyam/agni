@@ -86,6 +86,8 @@ func serveCmd() *cobra.Command {
 	var mcp bool
 	var viewerRooms bool
 	var auth, tlsCert, tlsKey, connectionsKey string
+	var webhookSecretRef string
+	var pollEvery time.Duration
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -116,8 +118,21 @@ func serveCmd() *cobra.Command {
 			if connectionsKey != "" && (storeDir == "" || uploadsDir == "") {
 				return fmt.Errorf("--connections-key seals people's tokens in --store, so it needs --store and --uploads")
 			}
+			if (webhookSecretRef != "" || pollEvery != 0) && (storeDir == "" || uploadsDir == "") {
+				return fmt.Errorf("--github-webhook-secret and --poll move linked designs, so they need --store and --uploads")
+			}
+			if pollEvery < 0 {
+				return fmt.Errorf("--poll %s: want a positive duration, such as 5m", pollEvery)
+			}
+			var hookSecret []byte
+			if webhookSecretRef != "" {
+				if hookSecret, err = webhookSecret(webhookSecretRef); err != nil {
+					return err
+				}
+			}
 			return runViewer(cmd, viewerOpts{
 				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, connectionsKey: connectionsKey,
+				webhookSecret: hookSecret, poll: pollEvery,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
@@ -170,6 +185,8 @@ func serveCmd() *cobra.Command {
 	_ = c.Flags().MarkHidden("github-raw")
 	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` makes in --store, and refuses a call without one (agni issue 1627). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost. Empty asks nobody")
 	c.Flags().StringVar(&connectionsKey, "connections-key", "", "where the key that seals people's own GitHub tokens is, as env:NAME or file:/abs/path holding 64 hex characters (agni issue 1728). With it, a caller keeps their own connection with agni connections add --mine, and a design linked from a private repo opens for them when their token can read the repo. Needs --store and --uploads")
+	c.Flags().StringVar(&webhookSecretRef, "github-webhook-secret", "", "where the secret GitHub signs push webhooks with is, as env:NAME or file:/abs/path (agni issue 1726). With it, the server takes deliveries at "+githubHookPath+", and a push to a branch a linked design follows syncs the design, or marks it when the design is set to mark. Give every repo's webhook this one secret. It proves a delivery came from GitHub and grants no access to any repo. Needs --store and --uploads")
+	c.Flags().DurationVar(&pollEvery, "poll", 0, "ask every source a linked design follows whether it moved, this often, such as 5m (agni issue 1726). It resolves each branch or folder once per pass, one request to GitHub for a repo, and syncs or marks the designs behind it. 0 polls nothing. Needs --store and --uploads")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with, HTTP/2 included, so gRPC clients reach the server over TLS; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
 	return c
@@ -258,6 +275,12 @@ type viewerOpts struct {
 	tlsCert, tlsKey string
 	// connectionsKey is --connections-key, where the key sealing people's own tokens is.
 	connectionsKey string
+	// webhookSecret is --github-webhook-secret resolved. Empty serves no webhook (agni issue 1726).
+	webhookSecret []byte
+	// poll is --poll, how often the server asks followed sources whether they moved. 0 never asks.
+	poll time.Duration
+	// follow, when non-nil, receives the server's follower, for a test to wait on its moves.
+	follow func(*follower)
 }
 
 const (
@@ -486,8 +509,20 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if runtime {
 		// An artifact links to a mount, and a mount with artifacts linked to it isn't deleted under
 		// them (agni issue 1723).
-		designSvc.WithLinks(table.Readers, uploadsMount)
+		designSvc.WithLinks(table.Readers, uploadsMount).WithSourceChanges(table.MountsOf)
 		workspace.WithLinkedArtifacts(designSvc.LinkedTo)
+		// A push or a poll moves the designs that follow a branch or a folder (agni issue 1726).
+		f := &follower{designs: designSvc, life: life, log: cmd.ErrOrStderr()}
+		if len(o.webhookSecret) > 0 {
+			mux.Handle("POST "+githubHookPath, f.githubHook(o.webhookSecret))
+			workspace.WithWebhooks(table, o.webhookSecret)
+		}
+		if o.poll > 0 {
+			f.poll(o.poll)
+		}
+		if o.follow != nil {
+			o.follow(f)
+		}
 	}
 	api := server.API{
 		Workspace: workspace,

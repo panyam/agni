@@ -324,10 +324,10 @@ message UpdateDesignRequest {
   reserved "name", "files";
   // design names the design to change, "designs/{design}", and carries the new values.
   Design design = 3;
-  // update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
-  // `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
-  // INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
-  // under.
+  // update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy`,
+  // `config.intent` (agni issue 1704), `packs` and `on_source_change` (agni issue 1726). An empty
+  // mask changes the first three. Any other path is INVALID_ARGUMENT, since the rest of a stored
+  // design's config comes from the packs it is read under.
   google.protobuf.FieldMask update_mask = 4;
 }
 
@@ -389,6 +389,13 @@ message ArtifactSource {
   // the artifact is unlinked or the mount is deleted, so the files open only for a caller who can
   // read that source. Empty is a public source, a folder on the server, or an upload. Output only.
   string access_source = 8;
+  // newer_version is a version the source moved to that the design doesn't hold yet, as a push
+  // webhook or a poll found it (agni issue 1726). The server sets it when the design's
+  // on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+  // a connection that is one person's own. A sync clears it. Output only.
+  string newer_version = 9;
+  // newer_time is when the server saw newer_version. Output only.
+  google.protobuf.Timestamp newer_time = 10;
 }
 
 message AddDesignsRequest {

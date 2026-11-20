@@ -2,8 +2,8 @@
 // @generated from file agni/v1/webapi/project.proto (package agni.v1.webapi, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { AnalysisConfig } from "./config_pb";
 import { file_agni_v1_webapi_config } from "./config_pb";
 import type { EmptySchema, FieldMask, Timestamp } from "@bufbuild/protobuf/wkt";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/project.proto.
  */
 export const file_agni_v1_webapi_project: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSKpAQoHUHJvamVjdBIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIuCgZjb25maWcYCSABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZxIPCgdkZXNpZ25zGAogAygJEhUKDWRlZmF1bHRfcGFja3MYCyADKAlKBAgEEAVKBAgFEAZKBAgGEAdKBAgHEAhKBAgIEAki5AIKBkRlc2lnbhIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIRCgllbnRyeV91cmkYBCABKAkSFgoOY29tcGFuaW9uX3VyaXMYBSADKAkSLgoGY29uZmlnGAcgASgLMh4uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcSDgoGc2VyaWVzGAogASgJEhkKEWZsYXR0ZW5faGllcmFyY2h5GAkgASgIEi8KC3VwZGF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIVCg1zZXJpZXNfbGF0ZXN0GAwgASgIEhEKCWFydGlmYWN0cxgNIAMoCRIRCglyZWFkX29ubHkYDiABKAgSDQoFcGFja3MYDyADKAkSFgoOYWNjZXNzX3NvdXJjZXMYECADKAlKBAgGEAdKBAgIEAlSCXJldmlzaW9ucyIhChFHZXRQcm9qZWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIkwKE0xpc3RQcm9qZWN0c1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIloKFExpc3RQcm9qZWN0c1Jlc3BvbnNlEikKCHByb2plY3RzGAEgAygLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiVAoUQ3JlYXRlUHJvamVjdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIoCgdwcm9qZWN0GAIgASgLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdCJxChRVcGRhdGVQcm9qZWN0UmVxdWVzdBIoCgdwcm9qZWN0GAEgASgLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBIvCgt1cGRhdGVfbWFzaxgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE1hc2siJAoURGVsZXRlUHJvamVjdFJlcXVlc3QSDAoEbmFtZRgBIAEoCSIjChRSZXNvbHZlRGVzaWduUmVxdWVzdBILCgN1cmkYASABKAkiaQoVUmVzb2x2ZURlc2lnblJlc3BvbnNlEiYKBmRlc2lnbhgBIAEoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhIoCgdwcm9qZWN0GAIgASgLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdDKCBAoOUHJvamVjdFNlcnZpY2USSAoKR2V0UHJvamVjdBIhLmFnbmkudjEud2ViYXBpLkdldFByb2plY3RSZXF1ZXN0GhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBJZCgxMaXN0UHJvamVjdHMSIy5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdHNSZXF1ZXN0GiQuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3RzUmVzcG9uc2USTgoNQ3JlYXRlUHJvamVjdBIkLmFnbmkudjEud2ViYXBpLkNyZWF0ZVByb2plY3RSZXF1ZXN0GhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBJOCg1VcGRhdGVQcm9qZWN0EiQuYWduaS52MS53ZWJhcGkuVXBkYXRlUHJvamVjdFJlcXVlc3QaFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0Ek0KDURlbGV0ZVByb2plY3QSJC5hZ25pLnYxLndlYmFwaS5EZWxldGVQcm9qZWN0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJcCg1SZXNvbHZlRGVzaWduEiQuYWduaS52MS53ZWJhcGkuUmVzb2x2ZURlc2lnblJlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_config, file_google_protobuf_field_mask, file_google_protobuf_empty, file_google_protobuf_timestamp]);
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSKpAQoHUHJvamVjdBIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIuCgZjb25maWcYCSABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZxIPCgdkZXNpZ25zGAogAygJEhUKDWRlZmF1bHRfcGFja3MYCyADKAlKBAgEEAVKBAgFEAZKBAgGEAdKBAgHEAhKBAgIEAkinAMKBkRlc2lnbhIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIRCgllbnRyeV91cmkYBCABKAkSFgoOY29tcGFuaW9uX3VyaXMYBSADKAkSLgoGY29uZmlnGAcgASgLMh4uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcSDgoGc2VyaWVzGAogASgJEhkKEWZsYXR0ZW5faGllcmFyY2h5GAkgASgIEi8KC3VwZGF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIVCg1zZXJpZXNfbGF0ZXN0GAwgASgIEhEKCWFydGlmYWN0cxgNIAMoCRIRCglyZWFkX29ubHkYDiABKAgSDQoFcGFja3MYDyADKAkSFgoOYWNjZXNzX3NvdXJjZXMYECADKAkSNgoQb25fc291cmNlX2NoYW5nZRgRIAEoDjIcLmFnbmkudjEud2ViYXBpLlNvdXJjZUNoYW5nZUoECAYQB0oECAgQCVIJcmV2aXNpb25zIiEKEUdldFByb2plY3RSZXF1ZXN0EgwKBG5hbWUYASABKAkiTAoTTGlzdFByb2plY3RzUmVxdWVzdBIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkiWgoUTGlzdFByb2plY3RzUmVzcG9uc2USKQoIcHJvamVjdHMYASADKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSJUChRDcmVhdGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEigKB3Byb2plY3QYAiABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0InEKFFVwZGF0ZVByb2plY3RSZXF1ZXN0EigKB3Byb2plY3QYASABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0Ei8KC3VwZGF0ZV9tYXNrGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzayIkChREZWxldGVQcm9qZWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIiMKFFJlc29sdmVEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCSJpChVSZXNvbHZlRGVzaWduUmVzcG9uc2USJgoGZGVzaWduGAEgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEigKB3Byb2plY3QYAiABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0Kl0KDFNvdXJjZUNoYW5nZRIdChlTT1VSQ0VfQ0hBTkdFX1VOU1BFQ0lGSUVEEAASFgoSU09VUkNFX0NIQU5HRV9TWU5DEAESFgoSU09VUkNFX0NIQU5HRV9NQVJLEAIyggQKDlByb2plY3RTZXJ2aWNlEkgKCkdldFByb2plY3QSIS5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0UmVxdWVzdBoXLmFnbmkudjEud2ViYXBpLlByb2plY3QSWQoMTGlzdFByb2plY3RzEiMuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3RzUmVxdWVzdBokLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1Jlc3BvbnNlEk4KDUNyZWF0ZVByb2plY3QSJC5hZ25pLnYxLndlYmFwaS5DcmVhdGVQcm9qZWN0UmVxdWVzdBoXLmFnbmkudjEud2ViYXBpLlByb2plY3QSTgoNVXBkYXRlUHJvamVjdBIkLmFnbmkudjEud2ViYXBpLlVwZGF0ZVByb2plY3RSZXF1ZXN0GhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBJNCg1EZWxldGVQcm9qZWN0EiQuYWduaS52MS53ZWJhcGkuRGVsZXRlUHJvamVjdFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSXAoNUmVzb2x2ZURlc2lnbhIkLmFnbmkudjEud2ViYXBpLlJlc29sdmVEZXNpZ25SZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuUmVzb2x2ZURlc2lnblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_config, file_google_protobuf_field_mask, file_google_protobuf_empty, file_google_protobuf_timestamp]);
 
 /**
  * Project groups designs. One declared in a mounted folder also carries the configuration its
@@ -246,6 +246,15 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
    * @generated from field: repeated string access_sources = 16;
    */
   accessSources: string[];
+
+  /**
+   * on_source_change says what the server does when a source this design's artifacts follow moves,
+   * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+   * "on_source_change".
+   *
+   * @generated from field: agni.v1.webapi.SourceChange on_source_change = 17;
+   */
+  onSourceChange: SourceChange;
 };
 
 /**
@@ -468,6 +477,42 @@ export type ResolveDesignResponse = Message<"agni.v1.webapi.ResolveDesignRespons
  */
 export const ResolveDesignResponseSchema: GenMessage<ResolveDesignResponse> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_project, 9);
+
+/**
+ * SourceChange is what a stored design does when a branch or folder its linked artifacts follow
+ * moves (agni issue 1726).
+ *
+ * @generated from enum agni.v1.webapi.SourceChange
+ */
+export enum SourceChange {
+  /**
+   * SOURCE_CHANGE_UNSPECIFIED syncs, as SOURCE_CHANGE_SYNC does.
+   *
+   * @generated from enum value: SOURCE_CHANGE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * SOURCE_CHANGE_SYNC reads the new files into the design, as SyncDesign does.
+   *
+   * @generated from enum value: SOURCE_CHANGE_SYNC = 1;
+   */
+  SYNC = 1,
+
+  /**
+   * SOURCE_CHANGE_MARK leaves the design's files as they are and sets each moved artifact's
+   * source.newer_version, so the design stays at what someone reviewed until a person syncs it.
+   *
+   * @generated from enum value: SOURCE_CHANGE_MARK = 2;
+   */
+  MARK = 2,
+}
+
+/**
+ * Describes the enum agni.v1.webapi.SourceChange.
+ */
+export const SourceChangeSchema: GenEnum<SourceChange> = /*@__PURE__*/
+  enumDesc(file_agni_v1_webapi_project, 0);
 
 /**
  * This file defines ProjectService. It answers "which design is this, and whose design is it"

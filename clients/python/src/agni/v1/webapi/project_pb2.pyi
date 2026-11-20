@@ -5,12 +5,22 @@ from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from google.protobuf import empty_pb2 as _empty_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class SourceChange(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    SOURCE_CHANGE_UNSPECIFIED: _ClassVar[SourceChange]
+    SOURCE_CHANGE_SYNC: _ClassVar[SourceChange]
+    SOURCE_CHANGE_MARK: _ClassVar[SourceChange]
+SOURCE_CHANGE_UNSPECIFIED: SourceChange
+SOURCE_CHANGE_SYNC: SourceChange
+SOURCE_CHANGE_MARK: SourceChange
 
 class Project(_message.Message):
     __slots__ = ("name", "title", "uri", "config", "designs", "default_packs")
@@ -29,7 +39,7 @@ class Project(_message.Message):
     def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., designs: _Optional[_Iterable[str]] = ..., default_packs: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class Design(_message.Message):
-    __slots__ = ("name", "title", "uri", "entry_uri", "companion_uris", "config", "series", "flatten_hierarchy", "update_time", "series_latest", "artifacts", "read_only", "packs", "access_sources")
+    __slots__ = ("name", "title", "uri", "entry_uri", "companion_uris", "config", "series", "flatten_hierarchy", "update_time", "series_latest", "artifacts", "read_only", "packs", "access_sources", "on_source_change")
     NAME_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
@@ -44,6 +54,7 @@ class Design(_message.Message):
     READ_ONLY_FIELD_NUMBER: _ClassVar[int]
     PACKS_FIELD_NUMBER: _ClassVar[int]
     ACCESS_SOURCES_FIELD_NUMBER: _ClassVar[int]
+    ON_SOURCE_CHANGE_FIELD_NUMBER: _ClassVar[int]
     name: str
     title: str
     uri: str
@@ -58,7 +69,8 @@ class Design(_message.Message):
     read_only: bool
     packs: _containers.RepeatedScalarFieldContainer[str]
     access_sources: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., entry_uri: _Optional[str] = ..., companion_uris: _Optional[_Iterable[str]] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., series: _Optional[str] = ..., flatten_hierarchy: _Optional[bool] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., series_latest: _Optional[bool] = ..., artifacts: _Optional[_Iterable[str]] = ..., read_only: _Optional[bool] = ..., packs: _Optional[_Iterable[str]] = ..., access_sources: _Optional[_Iterable[str]] = ...) -> None: ...
+    on_source_change: SourceChange
+    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., entry_uri: _Optional[str] = ..., companion_uris: _Optional[_Iterable[str]] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., series: _Optional[str] = ..., flatten_hierarchy: _Optional[bool] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., series_latest: _Optional[bool] = ..., artifacts: _Optional[_Iterable[str]] = ..., read_only: _Optional[bool] = ..., packs: _Optional[_Iterable[str]] = ..., access_sources: _Optional[_Iterable[str]] = ..., on_source_change: _Optional[_Union[SourceChange, str]] = ...) -> None: ...
 
 class GetProjectRequest(_message.Message):
     __slots__ = ("name",)

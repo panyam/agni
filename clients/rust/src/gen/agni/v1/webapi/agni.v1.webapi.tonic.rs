@@ -3474,6 +3474,32 @@ pub mod workspace_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn create_mount_webhook(
+            &mut self,
+            request: impl tonic::IntoRequest<super::CreateMountWebhookRequest>,
+        ) -> std::result::Result<tonic::Response<super::MountWebhook>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.WorkspaceService/CreateMountWebhook",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "agni.v1.webapi.WorkspaceService",
+                        "CreateMountWebhook",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn list_dir(
             &mut self,
             request: impl tonic::IntoRequest<super::ListDirRequest>,
