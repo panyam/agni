@@ -70,9 +70,9 @@ github.com/panyam/demokit v0.0.31 h1:CZtit9fq42zX3sxYfBLWe73snp8bnBvs7593G2kFTXw
 github.com/panyam/demokit v0.0.31/go.mod h1:Lyz5i2DGL2c2s/9tW1Nru+kKU02CLfp5ls02JLsrj30=
 github.com/panyam/demokit/notebook v0.0.28 h1:gzR6X9c/XlkTqKHkbtTK8K0QobIAYARt+zvFfOrZr1c=
 github.com/panyam/demokit/notebook v0.0.28/go.mod h1:412YG4kCp9K/VqrfAg6cJqaBhcRQOi0Jc81Nc75nf0k=
-github.com/panyam/goapplib v0.7.17 h1:ArpoeJox9X4NAU5qYF/ixmhKyTZDeLPbNnYs8/yzxxw=
-github.com/panyam/goapplib/storage v0.7.17 h1:UMxyeZJ9DdUo9TuSsnTHIfu17AL2Hk7mgW4m5wc3NQE=
-github.com/panyam/goapplib/storage v0.7.17/go.mod h1:BQAlt+k4THRF5/jkxhthlyoLsV4dz76e5pcvXgkoPWY=
+github.com/panyam/goapplib v0.7.18 h1:pOM0eim3h/98WXSsQykHqNRmu99zE7yUgwiAtmvuQh0=
+github.com/panyam/goapplib/storage v0.7.18 h1:GLI22D1GA29gUaonmbTm3Fk7t340mqzCr/FAe3PKt0k=
+github.com/panyam/goapplib/storage v0.7.18/go.mod h1:BQAlt+k4THRF5/jkxhthlyoLsV4dz76e5pcvXgkoPWY=
 github.com/panyam/gocurrent v0.1.2 h1:MtD98xJKVvGGdMrxIvUqhVA7AxA6rr9eU1ZUo5pNoyc=
 github.com/panyam/gocurrent v0.1.2/go.mod h1:jIIhcNfNnnIe2JXH8aY2+ba+/5G1fzwCWoZXdcMNw6o=
 github.com/panyam/goutils v0.1.15 h1:znjWI1jzAqeH2DRpxQid7GMrGCj296Wws7mWh7QPk7Y=

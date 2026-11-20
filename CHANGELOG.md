@@ -31,7 +31,7 @@ GitHub Release body carries.
 
 ### Changed
 
-- goapplib and goapplib storage v0.7.17, and oneauth and oneauth grpc v0.3.11 (issues 1775, 1726).
+- goapplib and goapplib storage v0.7.18, and oneauth and oneauth grpc v0.3.11 (issues 1775, 1726).
   A token a person pastes with `agni connections add --mine` is kept as pasted, so a later
   disconnect doesn't ask GitHub to revoke a token the server didn't issue. A folder mount now names
   a version from its files' sizes and modification times, so a sync of an unchanged folder reads no

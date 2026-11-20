@@ -39,10 +39,10 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/klauspost/compress v1.19.1 h1:VsB4HPswih7mmZ8WleSFQ75c/Ui1M4trX5oAsJnhSlk=
 github.com/klauspost/compress v1.19.1/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
-github.com/panyam/goapplib v0.7.17 h1:ArpoeJox9X4NAU5qYF/ixmhKyTZDeLPbNnYs8/yzxxw=
-github.com/panyam/goapplib v0.7.17/go.mod h1:j/70WdBbS4H5Lj2a2OHgIkzlOaafXSMtlXa6W2/vLag=
-github.com/panyam/goapplib/storage v0.7.17 h1:UMxyeZJ9DdUo9TuSsnTHIfu17AL2Hk7mgW4m5wc3NQE=
-github.com/panyam/goapplib/storage v0.7.17/go.mod h1:BQAlt+k4THRF5/jkxhthlyoLsV4dz76e5pcvXgkoPWY=
+github.com/panyam/goapplib v0.7.18 h1:pOM0eim3h/98WXSsQykHqNRmu99zE7yUgwiAtmvuQh0=
+github.com/panyam/goapplib v0.7.18/go.mod h1:j/70WdBbS4H5Lj2a2OHgIkzlOaafXSMtlXa6W2/vLag=
+github.com/panyam/goapplib/storage v0.7.18 h1:GLI22D1GA29gUaonmbTm3Fk7t340mqzCr/FAe3PKt0k=
+github.com/panyam/goapplib/storage v0.7.18/go.mod h1:BQAlt+k4THRF5/jkxhthlyoLsV4dz76e5pcvXgkoPWY=
 github.com/panyam/gocurrent v0.1.2 h1:MtD98xJKVvGGdMrxIvUqhVA7AxA6rr9eU1ZUo5pNoyc=
 github.com/panyam/gocurrent v0.1.2/go.mod h1:jIIhcNfNnnIe2JXH8aY2+ba+/5G1fzwCWoZXdcMNw6o=
 github.com/panyam/goutils v0.1.15 h1:znjWI1jzAqeH2DRpxQid7GMrGCj296Wws7mWh7QPk7Y=

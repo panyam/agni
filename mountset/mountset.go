@@ -150,6 +150,7 @@ func Err(err error) error {
 		{mounts.ErrConflict, service.ErrFailedPrecondition},
 		{mounts.ErrTooLarge, service.ErrResourceExhausted},
 		{mounts.ErrUnavailable, service.ErrUnavailable},
+		{mounts.ErrPermissionDenied, service.ErrPermissionDenied},
 	} {
 		if errors.Is(err, m.lib) {
 			return fmt.Errorf("%w: %w", m.svc, err)
