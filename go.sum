@@ -69,10 +69,10 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
-github.com/panyam/goapplib v0.7.19 h1:WrqI6qimw4n/zIsJxYpu3q+gNEASRdLpTIQJlQoDJ7E=
-github.com/panyam/goapplib v0.7.19/go.mod h1:j/70WdBbS4H5Lj2a2OHgIkzlOaafXSMtlXa6W2/vLag=
-github.com/panyam/goapplib/storage v0.7.19 h1:uGTJ/qqtNAsPDC4bsz5Io9mjZuzGnw1rqGWHLskqX34=
-github.com/panyam/goapplib/storage v0.7.19/go.mod h1:Q8DgM3Ag93s/nd8eth6xheEcP2Hih17l9CJsstOkCeU=
+github.com/panyam/goapplib v0.7.20 h1:DX6z5fuz7PgcwVHVri9w+IC/4B+BdCtPp4uSklhkK1c=
+github.com/panyam/goapplib v0.7.20/go.mod h1:EbnGiJt/3WR7k9+xw+D+m6tHPf50nQOwJkIgMVr5ff4=
+github.com/panyam/goapplib/storage v0.7.20 h1:U8UFtvTMxoS9UxrMB5YHtv2zEl+qG3gpRXHfSZAkPXs=
+github.com/panyam/goapplib/storage v0.7.20/go.mod h1:d6ISI/eZXdvk684BAM0Bvgal23AWfb/2xDBBk40+EKM=
 github.com/panyam/gocurrent v0.1.2 h1:MtD98xJKVvGGdMrxIvUqhVA7AxA6rr9eU1ZUo5pNoyc=
 github.com/panyam/gocurrent v0.1.2/go.mod h1:jIIhcNfNnnIe2JXH8aY2+ba+/5G1fzwCWoZXdcMNw6o=
 github.com/panyam/goutils v0.1.15 h1:znjWI1jzAqeH2DRpxQid7GMrGCj296Wws7mWh7QPk7Y=
@@ -103,8 +103,8 @@ github.com/panyam/oneauth v0.3.12 h1:T7Df1AiNcbq7YEcBtc9J6tSIx0uTCjSnLhcOZeGQqeM
 github.com/panyam/oneauth v0.3.12/go.mod h1:o96puZu6zVL4O5aB2Y4uZdzHoXK8pFLnHkamY5DmPwM=
 github.com/panyam/oneauth/grpc v0.3.12 h1:JURuauuSEAu5+T2h/gEv3UFzTx+A/25weF3zPnSbF2c=
 github.com/panyam/oneauth/grpc v0.3.12/go.mod h1:/vPzxGpgTKavKQtzAQOGkR1ztVDdOjWRgnZoJEmtOG8=
-github.com/panyam/oneauth/oauth2 v0.3.11 h1:NFO9eiHF2+WCeL9XCMz2LR5B9izcvmc2+0NIQjMQVb8=
-github.com/panyam/oneauth/oauth2 v0.3.11/go.mod h1:ePmsYQP4g6uCjO5eazWbBMmjzUewVAP/H5V6JWU8Kc4=
+github.com/panyam/oneauth/oauth2 v0.3.12 h1:hq4ecB+aYAHJDz8v6yYBv212aPFUl9MUm3A8qYzqyfE=
+github.com/panyam/oneauth/oauth2 v0.3.12/go.mod h1:ePmsYQP4g6uCjO5eazWbBMmjzUewVAP/H5V6JWU8Kc4=
 github.com/panyam/servicekit v0.2.3 h1:XKkv8lMZGnoYWwZr0uDR3cKxWQ6YpAcC1r2OOnB3En0=
 github.com/panyam/servicekit v0.2.3/go.mod h1:GslqqjqDYzMw9a3h8LRTAmydHUIPV6VjAeOmWHjCzck=
 github.com/panyam/templar v0.1.2 h1:JFOx31tCFDfu299iF8fKA0yu6fDB4vopEaB/coT1kMQ=

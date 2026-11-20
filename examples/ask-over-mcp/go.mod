@@ -49,7 +49,7 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/panyam/demokit/notebook v0.0.28 // indirect
-	github.com/panyam/goapplib/storage v0.7.19 // indirect
+	github.com/panyam/goapplib/storage v0.7.20 // indirect
 	github.com/panyam/gocurrent v0.1.2 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
