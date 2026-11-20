@@ -24,6 +24,61 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// SourceChange is what a stored design does when a branch or folder its linked artifacts follow
+// moves (agni issue 1726).
+type SourceChange int32
+
+const (
+	// SOURCE_CHANGE_UNSPECIFIED syncs, as SOURCE_CHANGE_SYNC does.
+	SourceChange_SOURCE_CHANGE_UNSPECIFIED SourceChange = 0
+	// SOURCE_CHANGE_SYNC reads the new files into the design, as SyncDesign does.
+	SourceChange_SOURCE_CHANGE_SYNC SourceChange = 1
+	// SOURCE_CHANGE_MARK leaves the design's files as they are and sets each moved artifact's
+	// source.newer_version, so the design stays at what someone reviewed until a person syncs it.
+	SourceChange_SOURCE_CHANGE_MARK SourceChange = 2
+)
+
+// Enum value maps for SourceChange.
+var (
+	SourceChange_name = map[int32]string{
+		0: "SOURCE_CHANGE_UNSPECIFIED",
+		1: "SOURCE_CHANGE_SYNC",
+		2: "SOURCE_CHANGE_MARK",
+	}
+	SourceChange_value = map[string]int32{
+		"SOURCE_CHANGE_UNSPECIFIED": 0,
+		"SOURCE_CHANGE_SYNC":        1,
+		"SOURCE_CHANGE_MARK":        2,
+	}
+)
+
+func (x SourceChange) Enum() *SourceChange {
+	p := new(SourceChange)
+	*p = x
+	return p
+}
+
+func (x SourceChange) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SourceChange) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_project_proto_enumTypes[0].Descriptor()
+}
+
+func (SourceChange) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_project_proto_enumTypes[0]
+}
+
+func (x SourceChange) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SourceChange.Descriptor instead.
+func (SourceChange) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_project_proto_rawDescGZIP(), []int{0}
+}
+
 // Project groups designs. One declared in a mounted folder also carries the configuration its
 // designs extend.
 //
@@ -217,8 +272,12 @@ type Design struct {
 	// issue 1728). On a server with --auth, only a caller whose own connection can read every one of
 	// them gets the design. Empty means every caller the server lets in may open it. Output only.
 	AccessSources []string `protobuf:"bytes,16,rep,name=access_sources,json=accessSources,proto3" json:"access_sources,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// on_source_change says what the server does when a source this design's artifacts follow moves,
+	// as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+	// "on_source_change".
+	OnSourceChange SourceChange `protobuf:"varint,17,opt,name=on_source_change,json=onSourceChange,proto3,enum=agni.v1.webapi.SourceChange" json:"on_source_change,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Design) Reset() {
@@ -347,6 +406,13 @@ func (x *Design) GetAccessSources() []string {
 		return x.AccessSources
 	}
 	return nil
+}
+
+func (x *Design) GetOnSourceChange() SourceChange {
+	if x != nil {
+		return x.OnSourceChange
+	}
+	return SourceChange_SOURCE_CHANGE_UNSPECIFIED
 }
 
 type GetProjectRequest struct {
@@ -793,7 +859,7 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12\x18\n" +
 	"\adesigns\x18\n" +
 	" \x03(\tR\adesigns\x12#\n" +
-	"\rdefault_packs\x18\v \x03(\tR\fdefaultPacksJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xf6\x03\n" +
+	"\rdefault_packs\x18\v \x03(\tR\fdefaultPacksJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xbe\x04\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
@@ -810,7 +876,8 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\tartifacts\x18\r \x03(\tR\tartifacts\x12\x1b\n" +
 	"\tread_only\x18\x0e \x01(\bR\breadOnly\x12\x14\n" +
 	"\x05packs\x18\x0f \x03(\tR\x05packs\x12%\n" +
-	"\x0eaccess_sources\x18\x10 \x03(\tR\raccessSourcesJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
+	"\x0eaccess_sources\x18\x10 \x03(\tR\raccessSources\x12F\n" +
+	"\x10on_source_change\x18\x11 \x01(\x0e2\x1c.agni.v1.webapi.SourceChangeR\x0eonSourceChangeJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
 	"\x11GetProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"i\n" +
 	"\x13ListProjectsRequest\x12\x1b\n" +
@@ -835,7 +902,11 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"z\n" +
 	"\x15ResolveDesignResponse\x12.\n" +
 	"\x06design\x18\x01 \x01(\v2\x16.agni.v1.webapi.DesignR\x06design\x121\n" +
-	"\aproject\x18\x02 \x01(\v2\x17.agni.v1.webapi.ProjectR\aproject2\x82\x04\n" +
+	"\aproject\x18\x02 \x01(\v2\x17.agni.v1.webapi.ProjectR\aproject*]\n" +
+	"\fSourceChange\x12\x1d\n" +
+	"\x19SOURCE_CHANGE_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12SOURCE_CHANGE_SYNC\x10\x01\x12\x16\n" +
+	"\x12SOURCE_CHANGE_MARK\x10\x022\x82\x04\n" +
 	"\x0eProjectService\x12H\n" +
 	"\n" +
 	"GetProject\x12!.agni.v1.webapi.GetProjectRequest\x1a\x17.agni.v1.webapi.Project\x12Y\n" +
@@ -857,50 +928,53 @@ func file_agni_v1_webapi_project_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_project_proto_rawDescData
 }
 
+var file_agni_v1_webapi_project_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_agni_v1_webapi_project_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_agni_v1_webapi_project_proto_goTypes = []any{
-	(*Project)(nil),               // 0: agni.v1.webapi.Project
-	(*Design)(nil),                // 1: agni.v1.webapi.Design
-	(*GetProjectRequest)(nil),     // 2: agni.v1.webapi.GetProjectRequest
-	(*ListProjectsRequest)(nil),   // 3: agni.v1.webapi.ListProjectsRequest
-	(*ListProjectsResponse)(nil),  // 4: agni.v1.webapi.ListProjectsResponse
-	(*CreateProjectRequest)(nil),  // 5: agni.v1.webapi.CreateProjectRequest
-	(*UpdateProjectRequest)(nil),  // 6: agni.v1.webapi.UpdateProjectRequest
-	(*DeleteProjectRequest)(nil),  // 7: agni.v1.webapi.DeleteProjectRequest
-	(*ResolveDesignRequest)(nil),  // 8: agni.v1.webapi.ResolveDesignRequest
-	(*ResolveDesignResponse)(nil), // 9: agni.v1.webapi.ResolveDesignResponse
-	(*AnalysisConfig)(nil),        // 10: agni.v1.webapi.AnalysisConfig
-	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil), // 12: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),         // 13: google.protobuf.Empty
+	(SourceChange)(0),             // 0: agni.v1.webapi.SourceChange
+	(*Project)(nil),               // 1: agni.v1.webapi.Project
+	(*Design)(nil),                // 2: agni.v1.webapi.Design
+	(*GetProjectRequest)(nil),     // 3: agni.v1.webapi.GetProjectRequest
+	(*ListProjectsRequest)(nil),   // 4: agni.v1.webapi.ListProjectsRequest
+	(*ListProjectsResponse)(nil),  // 5: agni.v1.webapi.ListProjectsResponse
+	(*CreateProjectRequest)(nil),  // 6: agni.v1.webapi.CreateProjectRequest
+	(*UpdateProjectRequest)(nil),  // 7: agni.v1.webapi.UpdateProjectRequest
+	(*DeleteProjectRequest)(nil),  // 8: agni.v1.webapi.DeleteProjectRequest
+	(*ResolveDesignRequest)(nil),  // 9: agni.v1.webapi.ResolveDesignRequest
+	(*ResolveDesignResponse)(nil), // 10: agni.v1.webapi.ResolveDesignResponse
+	(*AnalysisConfig)(nil),        // 11: agni.v1.webapi.AnalysisConfig
+	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil), // 13: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),         // 14: google.protobuf.Empty
 }
 var file_agni_v1_webapi_project_proto_depIdxs = []int32{
-	10, // 0: agni.v1.webapi.Project.config:type_name -> agni.v1.webapi.AnalysisConfig
-	10, // 1: agni.v1.webapi.Design.config:type_name -> agni.v1.webapi.AnalysisConfig
-	11, // 2: agni.v1.webapi.Design.update_time:type_name -> google.protobuf.Timestamp
-	0,  // 3: agni.v1.webapi.ListProjectsResponse.projects:type_name -> agni.v1.webapi.Project
-	0,  // 4: agni.v1.webapi.CreateProjectRequest.project:type_name -> agni.v1.webapi.Project
-	0,  // 5: agni.v1.webapi.UpdateProjectRequest.project:type_name -> agni.v1.webapi.Project
-	12, // 6: agni.v1.webapi.UpdateProjectRequest.update_mask:type_name -> google.protobuf.FieldMask
-	1,  // 7: agni.v1.webapi.ResolveDesignResponse.design:type_name -> agni.v1.webapi.Design
-	0,  // 8: agni.v1.webapi.ResolveDesignResponse.project:type_name -> agni.v1.webapi.Project
-	2,  // 9: agni.v1.webapi.ProjectService.GetProject:input_type -> agni.v1.webapi.GetProjectRequest
-	3,  // 10: agni.v1.webapi.ProjectService.ListProjects:input_type -> agni.v1.webapi.ListProjectsRequest
-	5,  // 11: agni.v1.webapi.ProjectService.CreateProject:input_type -> agni.v1.webapi.CreateProjectRequest
-	6,  // 12: agni.v1.webapi.ProjectService.UpdateProject:input_type -> agni.v1.webapi.UpdateProjectRequest
-	7,  // 13: agni.v1.webapi.ProjectService.DeleteProject:input_type -> agni.v1.webapi.DeleteProjectRequest
-	8,  // 14: agni.v1.webapi.ProjectService.ResolveDesign:input_type -> agni.v1.webapi.ResolveDesignRequest
-	0,  // 15: agni.v1.webapi.ProjectService.GetProject:output_type -> agni.v1.webapi.Project
-	4,  // 16: agni.v1.webapi.ProjectService.ListProjects:output_type -> agni.v1.webapi.ListProjectsResponse
-	0,  // 17: agni.v1.webapi.ProjectService.CreateProject:output_type -> agni.v1.webapi.Project
-	0,  // 18: agni.v1.webapi.ProjectService.UpdateProject:output_type -> agni.v1.webapi.Project
-	13, // 19: agni.v1.webapi.ProjectService.DeleteProject:output_type -> google.protobuf.Empty
-	9,  // 20: agni.v1.webapi.ProjectService.ResolveDesign:output_type -> agni.v1.webapi.ResolveDesignResponse
-	15, // [15:21] is the sub-list for method output_type
-	9,  // [9:15] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	11, // 0: agni.v1.webapi.Project.config:type_name -> agni.v1.webapi.AnalysisConfig
+	11, // 1: agni.v1.webapi.Design.config:type_name -> agni.v1.webapi.AnalysisConfig
+	12, // 2: agni.v1.webapi.Design.update_time:type_name -> google.protobuf.Timestamp
+	0,  // 3: agni.v1.webapi.Design.on_source_change:type_name -> agni.v1.webapi.SourceChange
+	1,  // 4: agni.v1.webapi.ListProjectsResponse.projects:type_name -> agni.v1.webapi.Project
+	1,  // 5: agni.v1.webapi.CreateProjectRequest.project:type_name -> agni.v1.webapi.Project
+	1,  // 6: agni.v1.webapi.UpdateProjectRequest.project:type_name -> agni.v1.webapi.Project
+	13, // 7: agni.v1.webapi.UpdateProjectRequest.update_mask:type_name -> google.protobuf.FieldMask
+	2,  // 8: agni.v1.webapi.ResolveDesignResponse.design:type_name -> agni.v1.webapi.Design
+	1,  // 9: agni.v1.webapi.ResolveDesignResponse.project:type_name -> agni.v1.webapi.Project
+	3,  // 10: agni.v1.webapi.ProjectService.GetProject:input_type -> agni.v1.webapi.GetProjectRequest
+	4,  // 11: agni.v1.webapi.ProjectService.ListProjects:input_type -> agni.v1.webapi.ListProjectsRequest
+	6,  // 12: agni.v1.webapi.ProjectService.CreateProject:input_type -> agni.v1.webapi.CreateProjectRequest
+	7,  // 13: agni.v1.webapi.ProjectService.UpdateProject:input_type -> agni.v1.webapi.UpdateProjectRequest
+	8,  // 14: agni.v1.webapi.ProjectService.DeleteProject:input_type -> agni.v1.webapi.DeleteProjectRequest
+	9,  // 15: agni.v1.webapi.ProjectService.ResolveDesign:input_type -> agni.v1.webapi.ResolveDesignRequest
+	1,  // 16: agni.v1.webapi.ProjectService.GetProject:output_type -> agni.v1.webapi.Project
+	5,  // 17: agni.v1.webapi.ProjectService.ListProjects:output_type -> agni.v1.webapi.ListProjectsResponse
+	1,  // 18: agni.v1.webapi.ProjectService.CreateProject:output_type -> agni.v1.webapi.Project
+	1,  // 19: agni.v1.webapi.ProjectService.UpdateProject:output_type -> agni.v1.webapi.Project
+	14, // 20: agni.v1.webapi.ProjectService.DeleteProject:output_type -> google.protobuf.Empty
+	10, // 21: agni.v1.webapi.ProjectService.ResolveDesign:output_type -> agni.v1.webapi.ResolveDesignResponse
+	16, // [16:22] is the sub-list for method output_type
+	10, // [10:16] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_project_proto_init() }
@@ -914,13 +988,14 @@ func file_agni_v1_webapi_project_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_project_proto_rawDesc), len(file_agni_v1_webapi_project_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_agni_v1_webapi_project_proto_goTypes,
 		DependencyIndexes: file_agni_v1_webapi_project_proto_depIdxs,
+		EnumInfos:         file_agni_v1_webapi_project_proto_enumTypes,
 		MessageInfos:      file_agni_v1_webapi_project_proto_msgTypes,
 	}.Build()
 	File_agni_v1_webapi_project_proto = out.File

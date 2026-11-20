@@ -90,3 +90,19 @@ You ->> Agni: DeleteProject(projects/lab)
 You ->> Agni: ListDesigns()
 Agni -->> You: three designs
 ```
+
+## Follow a folder without running sync {#follow}
+
+> A design's netlist links to a folder the server mounts, `lab/mixer.edn`, and follows it. Someone drops rev B's netlist into the folder, and the server's next poll reads it into the design. Nobody calls SyncDesign. Then the design is set to mark. When rev A comes back, the poll leaves the design's files alone and notes the folder's new version as `newer_version`, until a person syncs. `agni serve --poll 5m` runs the same pass on a timer, and a GitHub push webhook starts it for a repo.
+
+```mermaid
+sequenceDiagram
+You ->> Agni: LinkArtifact(mixer-live/netlist, lab/mixer.edn)
+Note over You: the folder's netlist changes
+You ->> Agni: PollSources
+Agni -->> You: mixer-live synced
+You ->> Agni: UpdateDesign(on_source_change MARK)
+Note over You: the folder's netlist changes again
+You ->> Agni: PollSources
+Agni -->> You: netlist newer_version set
+```

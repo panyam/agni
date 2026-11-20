@@ -430,7 +430,9 @@ An artifact also has a source, `Artifact.source`: a mount, a path in it and a re
 An uploaded artifact's mount is the uploads mount. A linked artifact's mount is another, such as a
 GitHub repo, and the server reads its files from there and keeps them by hash like an upload's. The
 two differ only in the mount, so a check, a diff and a report read both the same way. `SyncDesign`
-moves a followed link to its source's newest version. "Linking an artifact to a mount" in
+moves a followed link to its source's newest version. A push webhook or a poll calls the same sync
+when a followed source moves, or notes the new version as `newer_version` on a design whose
+`on_source_change` is mark (agni issue 1726). "Linking an artifact to a mount" in
 [running the server](../../guide/running-the-server/#linking-an-artifact-to-a-mount) walks through it.
 
 The server reads each artifact to find its type and its entry, with the grouping `ProposeDesigns`

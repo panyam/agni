@@ -93,6 +93,8 @@ type Table struct {
 	users outbound.UserTokenStore
 	// hidePrivate is Config.HidePrivate.
 	hidePrivate bool
+	// gh is the GitHub driver, nil without Uploads. MountsOf asks it whether two sources match.
+	gh *github.Driver
 }
 
 // NewTable returns a table serving fixed and nothing else, for the CLI and for a server with no
@@ -170,6 +172,7 @@ func Open(cfg Config) (*Table, error) {
 		t.svc = connections.NewService(cs, copts...)
 		opts = append(opts, mounts.WithCredentials(t.svc.TokenSource))
 	}
+	t.gh = gh
 	t.reg = mounts.NewRegistry(store, drivers, opts...)
 	if store != nil {
 		all, err := t.reg.List(context.Background())
@@ -209,6 +212,29 @@ func (t *Table) List() []mounts.Mount {
 	}
 	return out
 }
+
+// MountsOf names every mount whose source is source, for service.MountsOf (agni issue 1726). It
+// counts the mounts a viewer can't see too, since a push moves every design that follows it. GitHub's
+// owner and repo names ignore case.
+func (t *Table) MountsOf(ctx context.Context, source string) ([]string, error) {
+	all, err := t.reg.List(ctx)
+	if err != nil {
+		return nil, Err(err)
+	}
+	var out []string
+	for _, m := range all {
+		same := m.Source == source
+		if m.Kind == mounts.KindGitHub && t.gh != nil {
+			same = t.gh.SameSource(m.Source, source)
+		}
+		if same {
+			out = append(out, m.Name)
+		}
+	}
+	return out, nil
+}
+
+var _ service.MountsOf = (*Table)(nil).MountsOf
 
 // Find returns the mount named name.
 func (t *Table) Find(name string) (mounts.Mount, bool) { return Find(t.List(), name) }

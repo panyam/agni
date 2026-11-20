@@ -448,6 +448,56 @@ artifact was read at, such as `schematic at 8e087f4f946a`, so it still says what
 sync moves the design. The calls are `DesignService.ListDesignRevisions`, a snapshot naming
 `designs/{design}@{ref}`, and `Report.source_versions`.
 
+### Following a branch without running sync
+
+Say someone pushes a fix to the board's `main` branch, and the design on the server follows `main`.
+Nobody should have to run `agni designs sync` for the design to catch up (agni issue 1726). The
+server can learn of the push in two ways. GitHub can send it a push webhook, or the server can ask
+each source on a timer.
+
+For the webhook, start the server with a secret, and give the repo a webhook in GitHub's settings.
+Its payload URL is `https://<server>/hooks/github`, its content type `application/json`, its secret
+the same value, and its event `push`:
+
+```bash
+export AGNI_WEBHOOK_SECRET=$(openssl rand -hex 32)
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --github-webhook-secret env:AGNI_WEBHOOK_SECRET
+```
+
+GitHub signs each delivery with the secret, and the server refuses one whose signature doesn't
+match with 401. Every repo's webhook takes the same secret. It proves a delivery came from GitHub,
+and it grants no access to any repo. A delivery for a repo moves only the artifacts linked through
+that repo's mounts. Each one follows the pushed branch, by naming it or by naming no ref when the
+push is to the default branch. A forged delivery could only start a sync, and the sync asks GitHub
+for the branch's commit again, so the worst it does is spend API calls. The same check means a late
+delivery of an older push never moves a design backward. With `--auth`, the webhook needs no token,
+since the signature stands in for one.
+
+For a server GitHub can't reach, or a link to a `--mount` folder, poll instead:
+
+```bash
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --poll 5m
+```
+
+Each pass asks each followed branch or folder once, however many designs follow it. That is one
+request to GitHub for a repo, and a walk of the file times for a folder. It syncs only the designs
+whose source moved. The two flags work together, and a webhook answers in seconds where a poll waits
+for its next pass.
+
+A design syncs when its source moves, unless someone set it to mark:
+
+```bash
+agni designs update bb --on-source-change mark --remote http://localhost:8080
+agni designs artifacts bb --remote http://localhost:8080
+```
+
+A design that marks keeps its files, and `agni designs artifacts` ends each moved artifact's line
+with `newer at the source: <commit>`. The design stays at what someone reviewed until a person runs
+`agni designs sync`, which clears the mark. A link through a connection that is one person's own
+can't be read when no one is viewing, so it is marked too, and the server's log says why. A report
+from before a sync says `run on earlier design files`, with the commit it ran on. The calls are
+`Design.on_source_change` through `UpdateDesign`, and `ArtifactSource.newer_version`.
+
 ## Connections
 
 A private repo needs a sign-in, and a server with `--store` keeps one as a connection (agni issue

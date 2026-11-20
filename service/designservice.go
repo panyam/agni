@@ -41,6 +41,9 @@ type DesignService struct {
 	now func() time.Time
 	// packer keeps an added design's project as a pack, and is set by WithProjectPacks.
 	packer ProjectPacker
+	// mountsOf finds the mounts of a source that moved, and is set by WithSourceChanges (agni issue
+	// 1726).
+	mountsOf MountsOf
 }
 
 // NewDesignService returns a DesignService over catalog, reading uploaded file contents from blobs.
@@ -120,8 +123,8 @@ func (s *DesignService) ListDesigns(ctx context.Context, req *webapi.ListDesigns
 	return resp, nil
 }
 
-// UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, as update_mask
-// names. The intent's path is `config.intent`, and an empty mask leaves the intent alone.
+// UpdateDesign changes a stored design's title, series, flatten_hierarchy, intent, packs or
+// on_source_change, as update_mask names. The intent's path is `config.intent`, and an empty mask leaves the intent alone.
 func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesignRequest) (*webapi.Design, error) {
 	in := req.GetDesign()
 	paths := req.GetUpdateMask().GetPaths()
@@ -129,8 +132,8 @@ func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesi
 		paths = []string{"title", "series", "flatten_hierarchy"}
 	}
 	for _, p := range paths {
-		if p != "title" && p != "series" && p != "flatten_hierarchy" && p != "config.intent" && p != "packs" {
-			return nil, fmt.Errorf("%w: update_mask path %q; a design's title, series, flatten_hierarchy, config.intent and packs can be changed", ErrInvalidArgument, p)
+		if p != "title" && p != "series" && p != "flatten_hierarchy" && p != "config.intent" && p != "packs" && p != "on_source_change" {
+			return nil, fmt.Errorf("%w: update_mask path %q; a design's title, series, flatten_hierarchy, config.intent, packs and on_source_change can be changed", ErrInvalidArgument, p)
 		}
 		if p == "packs" {
 			if _, err := packNames(in.GetPacks()); err != nil {
@@ -156,6 +159,8 @@ func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesi
 				r.Intent = in.GetConfig().GetIntent()
 			case "packs":
 				r.Packs = in.GetPacks()
+			case "on_source_change":
+				r.OnSourceChange = in.GetOnSourceChange()
 			}
 		}
 	})

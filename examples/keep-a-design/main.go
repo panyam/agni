@@ -1,7 +1,8 @@
 // Command keep-a-design is the walkthrough of the designs a server keeps (agni issues 1694, 1696).
 // It stores two revisions of a board as designs of one series, each holding a netlist artifact, keeps a
 // pack of house rules and a report under it (agni issue 1704), groups the designs in a project with a design
-// from a mounted folder, and shows what a mounted folder will not let it change. The narration is in
+// from a mounted folder, and shows what a mounted folder will not let it change. Last, it links a
+// design to a folder and lets a poll follow the folder's changes (agni issue 1726). The narration is in
 // the sidecar walkthrough.md, so this file only binds the steps that run engine code.
 //
 // The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
@@ -121,6 +122,17 @@ func main() {
 			return demokit.Errf("list designs: %v", err)
 		}
 		fmt.Printf("With projects/lab gone, the server still holds %d designs.\n", len(list.GetDesigns()))
+		return nil
+	})
+
+	demo.Bind("follow").Run(func(demokit.StepContext) *demokit.StepResult {
+		linked, synced, marked, err := t.follow(ctx)
+		if err != nil {
+			return demokit.Errf("follow the lab folder: %v", err)
+		}
+		fmt.Printf("linked to the folder holding rev A\n  version %s\n", linked.GetVersion())
+		fmt.Printf("after rev B replaced the folder's netlist, a poll synced it\n  version %s\n", synced.GetVersion())
+		fmt.Printf("after rev A came back, with the design set to mark\n  version %s\n  newer_version %s\n", marked.GetVersion(), marked.GetNewerVersion())
 		return nil
 	})
 

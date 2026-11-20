@@ -122,6 +122,9 @@ type recordYAML struct {
 	Rev              string           `yaml:"rev,omitempty"`
 	UpdateTime       time.Time        `yaml:"update_time"`
 	Artifacts        []artifactRecord `yaml:"artifacts,omitempty"`
+	// OnSourceChange is the design's webapi.SourceChange by name, empty for the default (agni issue
+	// 1726).
+	OnSourceChange string `yaml:"on_source_change,omitempty"`
 }
 
 type artifactRecord struct {
@@ -148,6 +151,10 @@ type sourceRecord struct {
 	ReadHash string    `yaml:"read_hash,omitempty"`
 	// AccessSource is the private repo the files came from, kept after an unlink (agni issue 1728).
 	AccessSource string `yaml:"access_source,omitempty"`
+	// NewerVersion is a version the source moved to that the files aren't at yet, and NewerTime when
+	// the server saw it (agni issue 1726). A write of new files makes a new record without them.
+	NewerVersion string    `yaml:"newer_version,omitempty"`
+	NewerTime    time.Time `yaml:"newer_time,omitempty"`
 }
 
 func sourceRecordOf(src *webapi.ArtifactSource) *sourceRecord {
@@ -165,6 +172,11 @@ func (r *sourceRecord) proto() *webapi.ArtifactSource {
 	out := &webapi.ArtifactSource{Mount: r.Mount, Path: r.Path, Ref: r.Ref, Follow: r.Follow, Version: r.Version, ReadHash: r.ReadHash, AccessSource: r.AccessSource}
 	if !r.ReadTime.IsZero() {
 		out.ReadTime = timestamppb.New(r.ReadTime)
+	}
+	// A mark the files caught up with says nothing more.
+	if r.NewerVersion != "" && r.NewerVersion != r.Version {
+		out.NewerVersion = r.NewerVersion
+		out.NewerTime = timestamppb.New(r.NewerTime)
 	}
 	return out
 }
@@ -244,6 +256,7 @@ func (s *DirStore) designOf(id string, rec recordYAML) (*webapi.Design, error) {
 		}
 	}
 	d.Packs = rec.Packs
+	d.OnSourceChange = webapi.SourceChange(webapi.SourceChange_value[rec.OnSourceChange])
 	d.Name = service.StandaloneDesignName(id)
 	if !rec.UpdateTime.IsZero() {
 		d.UpdateTime = timestamppb.New(rec.UpdateTime)
@@ -340,12 +353,31 @@ func (s *DirStore) UpdateDesign(_ context.Context, id string, update func(*servi
 	if err != nil {
 		return nil, err
 	}
-	rec := service.DesignRecord{Title: r.Title, Series: r.Series, FlattenHierarchy: r.FlattenHierarchy, Packs: r.Packs}
+	rec := service.DesignRecord{Title: r.Title, Series: r.Series, FlattenHierarchy: r.FlattenHierarchy, Packs: r.Packs,
+		OnSourceChange: webapi.SourceChange(webapi.SourceChange_value[r.OnSourceChange]), Newer: map[string]service.NewerVersion{}}
 	if rec.Intent, err = decodeIntent(r.Intent); err != nil {
 		return nil, err
 	}
+	for _, a := range r.Artifacts {
+		if a.Source != nil && a.Source.NewerVersion != "" {
+			rec.Newer[a.ID] = service.NewerVersion{Version: a.Source.NewerVersion, Seen: a.Source.NewerTime}
+		}
+	}
 	update(&rec)
 	r.Title, r.Series, r.FlattenHierarchy, r.Packs = rec.Title, rec.Series, rec.FlattenHierarchy, rec.Packs
+	r.OnSourceChange = ""
+	if rec.OnSourceChange != webapi.SourceChange_SOURCE_CHANGE_UNSPECIFIED {
+		r.OnSourceChange = rec.OnSourceChange.String()
+	}
+	for i, a := range r.Artifacts {
+		if a.Source == nil {
+			continue
+		}
+		src := *a.Source
+		n := rec.Newer[a.ID]
+		src.NewerVersion, src.NewerTime = n.Version, n.Seen.UTC()
+		r.Artifacts[i].Source = &src
+	}
 	if r.Intent, err = encodeIntent(rec.Intent); err != nil {
 		return nil, err
 	}

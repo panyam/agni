@@ -185,11 +185,27 @@ message Design {
   // issue 1728). On a server with --auth, only a caller whose own connection can read every one of
   // them gets the design. Empty means every caller the server lets in may open it. Output only.
   repeated string access_sources = 16;
+  // on_source_change says what the server does when a source this design's artifacts follow moves,
+  // as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+  // "on_source_change".
+  SourceChange on_source_change = 17;
 
   // intent_uri, which moved into config and is now config.intent. revisions, whose versions became
   // designs of their own named by series (agni issue 1692).
   reserved 6, 8;
   reserved "revisions";
+}
+
+// SourceChange is what a stored design does when a branch or folder its linked artifacts follow
+// moves (agni issue 1726).
+enum SourceChange {
+  // SOURCE_CHANGE_UNSPECIFIED syncs, as SOURCE_CHANGE_SYNC does.
+  SOURCE_CHANGE_UNSPECIFIED = 0;
+  // SOURCE_CHANGE_SYNC reads the new files into the design, as SyncDesign does.
+  SOURCE_CHANGE_SYNC = 1;
+  // SOURCE_CHANGE_MARK leaves the design's files as they are and sets each moved artifact's
+  // source.newer_version, so the design stays at what someone reviewed until a person syncs it.
+  SOURCE_CHANGE_MARK = 2;
 }
 
 message GetProjectRequest {

@@ -459,4 +459,27 @@ public interface DesignOrBuilder extends
    */
   com.google.protobuf.ByteString
       getAccessSourcesBytes(int index);
+
+  /**
+   * <pre>
+   * on_source_change says what the server does when a source this design's artifacts follow moves,
+   * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+   * "on_source_change".
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.SourceChange on_source_change = 17 [json_name = "onSourceChange"];</code>
+   * @return The enum numeric value on the wire for onSourceChange.
+   */
+  int getOnSourceChangeValue();
+  /**
+   * <pre>
+   * on_source_change says what the server does when a source this design's artifacts follow moves,
+   * as a push webhook or a poll finds (agni issue 1726). UpdateDesign changes it with update_mask
+   * "on_source_change".
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.SourceChange on_source_change = 17 [json_name = "onSourceChange"];</code>
+   * @return The onSourceChange.
+   */
+  io.github.panyam.agni.v1.webapi.SourceChange getOnSourceChange();
 }

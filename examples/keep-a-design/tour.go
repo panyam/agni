@@ -7,7 +7,9 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
+	"github.com/panyam/goapplib/storage/mounts"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	"github.com/panyam/agni"
@@ -15,6 +17,7 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	_ "github.com/panyam/agni/stdlib/relations"     // the fact base every datalog rule reads
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // the built-in rule catalog a report runs
@@ -160,4 +163,79 @@ func (t *tour) report(ctx context.Context) (kept, after *webapi.Report, err erro
 	}
 	after, err = t.designs.GetReport(ctx, &webapi.GetReportRequest{Name: kept.GetName()})
 	return kept, after, err
+}
+
+// follow links a design's netlist to a folder the server mounts, and lets a poll find each change to
+// the folder (agni issue 1726). The first change syncs the design. Then the design is set to mark,
+// and the next change only notes that the folder moved. It returns the netlist's source as linked,
+// and after each change.
+func (t *tour) follow(ctx context.Context) (linked, synced, marked *webapi.ArtifactSource, err error) {
+	lab := filepath.Join(t.root, "lab")
+	if err := os.MkdirAll(lab, 0o750); err != nil {
+		return nil, nil, nil, err
+	}
+	sheet := filepath.Join(lab, "mixer.edn")
+	// put writes one revision's netlist into the folder, and moves its time on, since a folder's
+	// version is its files' times and a filesystem may round them to the second.
+	step := 0
+	put := func(rev string) error {
+		b, err := os.ReadFile("../common/designs/" + rev + ".edn")
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(sheet, b, 0o600); err != nil {
+			return err
+		}
+		step++
+		when := time.Now().Add(time.Duration(step) * 2 * time.Second)
+		return os.Chtimes(sheet, when, when)
+	}
+	if err := put("rev-a"); err != nil {
+		return nil, nil, nil, err
+	}
+	// The table reads the folder as agni serve reads a --mount, into the same uploads the store keeps.
+	table, err := mountset.Open(mountset.Config{Fixed: []mounts.Mount{mountset.Folder("lab", lab)}, Uploads: filepath.Join(t.root, "uploads")})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	t.designs.WithLinks(table.Readers, "uploads").WithSourceChanges(table.MountsOf)
+	if _, err := t.designs.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "mixer-live", Design: &webapi.Design{Title: "Mixer, from the lab folder"}}); err != nil {
+		return nil, nil, nil, err
+	}
+	name := service.ArtifactName("mixer-live", "netlist")
+	if _, err := t.designs.LinkArtifact(ctx, &webapi.LinkArtifactRequest{Name: name, Source: &webapi.ArtifactSource{Mount: "lab", Path: "mixer.edn"}, AllowMissing: true}); err != nil {
+		return nil, nil, nil, err
+	}
+	source := func() (*webapi.ArtifactSource, error) {
+		a, err := t.designs.GetArtifact(ctx, &webapi.GetArtifactRequest{Name: name})
+		return a.GetSource(), err
+	}
+	if linked, err = source(); err != nil {
+		return nil, nil, nil, err
+	}
+
+	if err := put("rev-b"); err != nil {
+		return nil, nil, nil, err
+	}
+	if _, err := t.designs.PollSources(ctx); err != nil {
+		return nil, nil, nil, err
+	}
+	if synced, err = source(); err != nil {
+		return nil, nil, nil, err
+	}
+
+	if _, err := t.designs.UpdateDesign(ctx, &webapi.UpdateDesignRequest{
+		Design:     &webapi.Design{Name: "designs/mixer-live", OnSourceChange: webapi.SourceChange_SOURCE_CHANGE_MARK},
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"on_source_change"}},
+	}); err != nil {
+		return nil, nil, nil, err
+	}
+	if err := put("rev-a"); err != nil {
+		return nil, nil, nil, err
+	}
+	if _, err := t.designs.PollSources(ctx); err != nil {
+		return nil, nil, nil, err
+	}
+	marked, err = source()
+	return linked, synced, marked, err
 }

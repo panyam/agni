@@ -46,3 +46,22 @@ func TestTheTourKeepsTwoRevisionsAndRefusesTheMountedDesign(t *testing.T) {
 		t.Errorf("designs after deleting the project = %v, %v; want all three", all.GetDesigns(), err)
 	}
 }
+
+// A poll reads a followed folder's change into the design, and only notes the next one once the
+// design is set to mark (agni issue 1726).
+func TestTheTourFollowsAFolder(t *testing.T) {
+	tr, err := newTour(t.TempDir(), mounted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	linked, synced, marked, err := tr.follow(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if synced.GetVersion() == linked.GetVersion() || synced.GetReadHash() == linked.GetReadHash() || synced.GetNewerVersion() != "" {
+		t.Errorf("after the first change, the netlist's source = %v; want it synced past %v", synced, linked)
+	}
+	if marked.GetVersion() != synced.GetVersion() || marked.GetNewerVersion() == "" || marked.GetNewerVersion() == synced.GetVersion() {
+		t.Errorf("after the second change to a design that marks, the netlist's source = %v; want it left at %s with a newer version noted", marked, synced.GetVersion())
+	}
+}

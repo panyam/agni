@@ -38,6 +38,7 @@ private static final long serialVersionUID = 0L;
     version_ = "";
     readHash_ = "";
     accessSource_ = "";
+    newerVersion_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -413,6 +414,97 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int NEWER_VERSION_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object newerVersion_ = "";
+  /**
+   * <pre>
+   * newer_version is a version the source moved to that the design doesn't hold yet, as a push
+   * webhook or a poll found it (agni issue 1726). The server sets it when the design's
+   * on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+   * a connection that is one person's own. A sync clears it. Output only.
+   * </pre>
+   *
+   * <code>string newer_version = 9 [json_name = "newerVersion"];</code>
+   * @return The newerVersion.
+   */
+  @java.lang.Override
+  public java.lang.String getNewerVersion() {
+    java.lang.Object ref = newerVersion_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      newerVersion_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * newer_version is a version the source moved to that the design doesn't hold yet, as a push
+   * webhook or a poll found it (agni issue 1726). The server sets it when the design's
+   * on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+   * a connection that is one person's own. A sync clears it. Output only.
+   * </pre>
+   *
+   * <code>string newer_version = 9 [json_name = "newerVersion"];</code>
+   * @return The bytes for newerVersion.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getNewerVersionBytes() {
+    java.lang.Object ref = newerVersion_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      newerVersion_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int NEWER_TIME_FIELD_NUMBER = 10;
+  private com.google.protobuf.Timestamp newerTime_;
+  /**
+   * <pre>
+   * newer_time is when the server saw newer_version. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+   * @return Whether the newerTime field is set.
+   */
+  @java.lang.Override
+  public boolean hasNewerTime() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * newer_time is when the server saw newer_version. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+   * @return The newerTime.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getNewerTime() {
+    return newerTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : newerTime_;
+  }
+  /**
+   * <pre>
+   * newer_time is when the server saw newer_version. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getNewerTimeOrBuilder() {
+    return newerTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : newerTime_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -451,6 +543,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(accessSource_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 8, accessSource_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(newerVersion_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 9, newerVersion_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeMessage(10, getNewerTime());
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -480,6 +578,13 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(accessSource_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(8, accessSource_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(newerVersion_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(9, newerVersion_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(10, getNewerTime());
     }
     return size;
   }
@@ -524,6 +629,13 @@ private static final long serialVersionUID = 0L;
         .equals(other.getReadHash())) return false;
     if (!getAccessSource()
         .equals(other.getAccessSource())) return false;
+    if (!getNewerVersion()
+        .equals(other.getNewerVersion())) return false;
+    if (hasNewerTime() != other.hasNewerTime()) return false;
+    if (hasNewerTime()) {
+      if (!getNewerTime()
+          .equals(other.getNewerTime())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -554,6 +666,12 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getReadHash().hashCode();
     hash = (37 * hash) + ACCESS_SOURCE_FIELD_NUMBER;
     hash = (53 * hash) + getAccessSource().hashCode();
+    hash = (37 * hash) + NEWER_VERSION_FIELD_NUMBER;
+    hash = (53 * hash) + getNewerVersion().hashCode();
+    if (hasNewerTime()) {
+      hash = (37 * hash) + NEWER_TIME_FIELD_NUMBER;
+      hash = (53 * hash) + getNewerTime().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -689,6 +807,7 @@ private static final long serialVersionUID = 0L;
       if (com.google.protobuf.GeneratedMessage
               .alwaysUseFieldBuilders) {
         internalGetReadTimeFieldBuilder();
+        internalGetNewerTimeFieldBuilder();
       }
     }
     @java.lang.Override
@@ -707,6 +826,12 @@ private static final long serialVersionUID = 0L;
       }
       readHash_ = "";
       accessSource_ = "";
+      newerVersion_ = "";
+      newerTime_ = null;
+      if (newerTimeBuilder_ != null) {
+        newerTimeBuilder_.dispose();
+        newerTimeBuilder_ = null;
+      }
       return this;
     }
 
@@ -768,6 +893,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.accessSource_ = accessSource_;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.newerVersion_ = newerVersion_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.newerTime_ = newerTimeBuilder_ == null
+            ? newerTime_
+            : newerTimeBuilder_.build();
+        to_bitField0_ |= 0x00000002;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -818,6 +952,14 @@ private static final long serialVersionUID = 0L;
         accessSource_ = other.accessSource_;
         bitField0_ |= 0x00000080;
         onChanged();
+      }
+      if (!other.getNewerVersion().isEmpty()) {
+        newerVersion_ = other.newerVersion_;
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (other.hasNewerTime()) {
+        mergeNewerTime(other.getNewerTime());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -885,6 +1027,18 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 66
+            case 74: {
+              newerVersion_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 82: {
+              input.readMessage(
+                  internalGetNewerTimeFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1699,6 +1853,268 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000080;
       onChanged();
       return this;
+    }
+
+    private java.lang.Object newerVersion_ = "";
+    /**
+     * <pre>
+     * newer_version is a version the source moved to that the design doesn't hold yet, as a push
+     * webhook or a poll found it (agni issue 1726). The server sets it when the design's
+     * on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+     * a connection that is one person's own. A sync clears it. Output only.
+     * </pre>
+     *
+     * <code>string newer_version = 9 [json_name = "newerVersion"];</code>
+     * @return The newerVersion.
+     */
+    public java.lang.String getNewerVersion() {
+      java.lang.Object ref = newerVersion_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        newerVersion_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * newer_version is a version the source moved to that the design doesn't hold yet, as a push
+     * webhook or a poll found it (agni issue 1726). The server sets it when the design's
+     * on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+     * a connection that is one person's own. A sync clears it. Output only.
+     * </pre>
+     *
+     * <code>string newer_version = 9 [json_name = "newerVersion"];</code>
+     * @return The bytes for newerVersion.
+     */
+    public com.google.protobuf.ByteString
+        getNewerVersionBytes() {
+      java.lang.Object ref = newerVersion_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        newerVersion_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * newer_version is a version the source moved to that the design doesn't hold yet, as a push
+     * webhook or a poll found it (agni issue 1726). The server sets it when the design's
+     * on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+     * a connection that is one person's own. A sync clears it. Output only.
+     * </pre>
+     *
+     * <code>string newer_version = 9 [json_name = "newerVersion"];</code>
+     * @param value The newerVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNewerVersion(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      newerVersion_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * newer_version is a version the source moved to that the design doesn't hold yet, as a push
+     * webhook or a poll found it (agni issue 1726). The server sets it when the design's
+     * on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+     * a connection that is one person's own. A sync clears it. Output only.
+     * </pre>
+     *
+     * <code>string newer_version = 9 [json_name = "newerVersion"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearNewerVersion() {
+      newerVersion_ = getDefaultInstance().getNewerVersion();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * newer_version is a version the source moved to that the design doesn't hold yet, as a push
+     * webhook or a poll found it (agni issue 1726). The server sets it when the design's
+     * on_source_change is SOURCE_CHANGE_MARK, or when it couldn't read the new files, such as through
+     * a connection that is one person's own. A sync clears it. Output only.
+     * </pre>
+     *
+     * <code>string newer_version = 9 [json_name = "newerVersion"];</code>
+     * @param value The bytes for newerVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNewerVersionBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      newerVersion_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp newerTime_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> newerTimeBuilder_;
+    /**
+     * <pre>
+     * newer_time is when the server saw newer_version. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+     * @return Whether the newerTime field is set.
+     */
+    public boolean hasNewerTime() {
+      return ((bitField0_ & 0x00000200) != 0);
+    }
+    /**
+     * <pre>
+     * newer_time is when the server saw newer_version. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+     * @return The newerTime.
+     */
+    public com.google.protobuf.Timestamp getNewerTime() {
+      if (newerTimeBuilder_ == null) {
+        return newerTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : newerTime_;
+      } else {
+        return newerTimeBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * newer_time is when the server saw newer_version. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+     */
+    public Builder setNewerTime(com.google.protobuf.Timestamp value) {
+      if (newerTimeBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        newerTime_ = value;
+      } else {
+        newerTimeBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * newer_time is when the server saw newer_version. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+     */
+    public Builder setNewerTime(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (newerTimeBuilder_ == null) {
+        newerTime_ = builderForValue.build();
+      } else {
+        newerTimeBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * newer_time is when the server saw newer_version. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+     */
+    public Builder mergeNewerTime(com.google.protobuf.Timestamp value) {
+      if (newerTimeBuilder_ == null) {
+        if (((bitField0_ & 0x00000200) != 0) &&
+          newerTime_ != null &&
+          newerTime_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getNewerTimeBuilder().mergeFrom(value);
+        } else {
+          newerTime_ = value;
+        }
+      } else {
+        newerTimeBuilder_.mergeFrom(value);
+      }
+      if (newerTime_ != null) {
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * newer_time is when the server saw newer_version. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+     */
+    public Builder clearNewerTime() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      newerTime_ = null;
+      if (newerTimeBuilder_ != null) {
+        newerTimeBuilder_.dispose();
+        newerTimeBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * newer_time is when the server saw newer_version. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getNewerTimeBuilder() {
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return internalGetNewerTimeFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * newer_time is when the server saw newer_version. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getNewerTimeOrBuilder() {
+      if (newerTimeBuilder_ != null) {
+        return newerTimeBuilder_.getMessageOrBuilder();
+      } else {
+        return newerTime_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : newerTime_;
+      }
+    }
+    /**
+     * <pre>
+     * newer_time is when the server saw newer_version. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        internalGetNewerTimeFieldBuilder() {
+      if (newerTimeBuilder_ == null) {
+        newerTimeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getNewerTime(),
+                getParentForChildren(),
+                isClean());
+        newerTime_ = null;
+      }
+      return newerTimeBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.ArtifactSource)
