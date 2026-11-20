@@ -144,6 +144,9 @@ func printMount(w io.Writer, m *webapi.Mount) {
 	if c := m.GetCommit(); c != "" {
 		from += "@" + c
 	}
+	if m.GetSourceHidden() {
+		from = "a private source you can't read"
+	}
 	life := "runtime"
 	if m.GetFixed() {
 		life = "fixed"

@@ -199,4 +199,16 @@ public interface MountOrBuilder extends
    */
   com.google.protobuf.ByteString
       getConnectionBytes();
+
+  /**
+   * <pre>
+   * source_hidden says the caller can't read the mount's private source, so root, source, ref and
+   * commit are left out. The name and kind stay, so the caller can tell the mount is there (agni
+   * issue 1772).
+   * </pre>
+   *
+   * <code>bool source_hidden = 11 [json_name = "sourceHidden"];</code>
+   * @return The sourceHidden.
+   */
+  boolean getSourceHidden();
 }

@@ -141,94 +141,95 @@ public final class WorkspaceProto extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\036agni/v1/webapi/workspace.proto\022\016agni.v" +
-      "1.webapi\032\034agni/v1/webapi/project.proto\"\204" +
+      "1.webapi\032\034agni/v1/webapi/project.proto\"\251" +
       "\002\n\005Mount\022\022\n\004name\030\001 \001(\tR\004name\022\022\n\004root\030\002 \001" +
       "(\tR\004root\022\020\n\003uri\030\003 \001(\tR\003uri\022-\n\004kind\030\004 \001(\016" +
       "2\031.agni.v1.webapi.MountKindR\004kind\022\026\n\006sou" +
       "rce\030\005 \001(\tR\006source\022\020\n\003ref\030\006 \001(\tR\003ref\022\026\n\006c" +
       "ommit\030\007 \001(\tR\006commit\022\024\n\005fixed\030\010 \001(\010R\005fixe" +
       "d\022\032\n\010writable\030\t \001(\010R\010writable\022\036\n\nconnect" +
-      "ion\030\n \001(\tR\nconnection\"r\n\022CreateMountRequ" +
-      "est\022\022\n\004name\030\001 \001(\tR\004name\022\026\n\006source\030\002 \001(\tR" +
-      "\006source\022\020\n\003ref\030\003 \001(\tR\003ref\022\036\n\nconnection\030" +
-      "\004 \001(\tR\nconnection\"(\n\022DeleteMountRequest\022" +
-      "\022\n\004name\030\001 \001(\tR\004name\"\025\n\023DeleteMountRespon" +
-      "se\"A\n\031CreateMountWebhookRequest\022\022\n\004name\030" +
-      "\001 \001(\tR\004name\022\020\n\003url\030\002 \001(\tR\003url\"\220\001\n\014MountW" +
-      "ebhook\022\024\n\005mount\030\001 \001(\tR\005mount\022\026\n\006source\030\002" +
-      " \001(\tR\006source\022\016\n\002id\030\003 \001(\003R\002id\022\020\n\003url\030\004 \001(" +
-      "\tR\003url\022\026\n\006events\030\005 \003(\tR\006events\022\030\n\007create" +
-      "d\030\006 \001(\010R\007created\"%\n\017GetMountRequest\022\022\n\004n" +
-      "ame\030\001 \001(\tR\004name\"I\n\021ListMountsRequest\022.\n\005" +
-      "opens\030\002 \003(\0162\030.agni.v1.webapi.FileKindR\005o" +
-      "pensJ\004\010\001\020\002\"\224\001\n\022ListMountsResponse\022-\n\006mou" +
-      "nts\030\001 \003(\0132\025.agni.v1.webapi.MountR\006mounts" +
-      "\022#\n\rpruned_mounts\030\002 \001(\005R\014prunedMounts\022*\n" +
-      "\021can_create_mounts\030\003 \001(\010R\017canCreateMount" +
-      "s\"\252\001\n\010DirEntry\022\022\n\004name\030\001 \001(\tR\004name\022\025\n\006is" +
-      "_dir\030\002 \001(\010R\005isDir\022\026\n\006format\030\003 \001(\tR\006forma" +
-      "t\022\020\n\003uri\030\004 \001(\tR\003uri\022,\n\004kind\030\005 \001(\0162\030.agni" +
-      ".v1.webapi.FileKindR\004kind\022\033\n\tboard_uri\030\006" +
-      " \001(\tR\010boardUri\"y\n\016ListDirRequest\022\020\n\003uri\030" +
-      "\001 \001(\tR\003uri\022.\n\005opens\030\003 \003(\0162\030.agni.v1.weba" +
-      "pi.FileKindR\005opens\022\037\n\013mark_boards\030\004 \001(\010R" +
-      "\nmarkBoardsJ\004\010\002\020\003\"E\n\017ListDirResponse\0222\n\007" +
-      "entries\030\001 \003(\0132\030.agni.v1.webapi.DirEntryR" +
-      "\007entries\"*\n\026ListDesignFilesRequest\022\020\n\003ur" +
-      "i\030\001 \001(\tR\003uri\"\200\001\n\027ListDesignFilesResponse" +
-      "\022\024\n\005mount\030\001 \001(\tR\005mount\0220\n\005files\030\002 \003(\0132\032." +
-      "agni.v1.webapi.DesignFileR\005files\022\035\n\ntota" +
-      "l_size\030\003 \001(\003R\ttotalSize\"b\n\nDesignFile\022\022\n" +
-      "\004path\030\001 \001(\tR\004path\022\022\n\004size\030\002 \001(\003R\004size\022\026\n" +
-      "\006sha256\030\003 \001(\tR\006sha256\022\024\n\005board\030\004 \001(\010R\005bo" +
-      "ard\"]\n\027DeclareCompanionRequest\022\035\n\ndesign" +
-      "_uri\030\001 \001(\tR\tdesignUri\022#\n\rcompanion_uri\030\002" +
-      " \001(\tR\014companionUri\"\226\001\n\030DeclareCompanionR" +
-      "esponse\022%\n\016descriptor_uri\030\001 \001(\tR\rdescrip" +
-      "torUri\022\037\n\013design_yaml\030\002 \001(\tR\ndesignYaml\022" +
-      "\030\n\007existed\030\003 \001(\010R\007existed\022\030\n\007changed\030\004 \001" +
-      "(\010R\007changed\")\n\025ProposeDesignsRequest\022\020\n\003" +
-      "uri\030\001 \001(\tR\003uri\"\240\001\n\026ProposeDesignsRespons" +
-      "e\0228\n\007designs\030\001 \003(\0132\036.agni.v1.webapi.Prop" +
-      "osedDesignR\007designs\0222\n\006unread\030\002 \003(\0132\032.ag" +
-      "ni.v1.webapi.UnreadFileR\006unread\022\030\n\007suppo" +
-      "rt\030\003 \003(\tR\007support\"\277\001\n\016ProposedDesign\022\026\n\006" +
-      "folder\030\001 \001(\tR\006folder\022.\n\006design\030\002 \001(\0132\026.a" +
-      "gni.v1.webapi.DesignR\006design\022\037\n\013design_y" +
-      "aml\030\003 \001(\tR\ndesignYaml\022\024\n\005files\030\004 \003(\tR\005fi" +
-      "les\022\022\n\004note\030\005 \001(\tR\004note\022\032\n\010declared\030\006 \001(" +
-      "\010R\010declared\"8\n\nUnreadFile\022\022\n\004path\030\001 \001(\tR" +
-      "\004path\022\026\n\006reason\030\002 \001(\tR\006reason*k\n\tMountKi" +
-      "nd\022\032\n\026MOUNT_KIND_UNSPECIFIED\020\000\022\023\n\017MOUNT_" +
-      "KIND_FILE\020\001\022\026\n\022MOUNT_KIND_UPLOADS\020\002\022\025\n\021M" +
-      "OUNT_KIND_GITHUB\020\003*T\n\010FileKind\022\031\n\025FILE_K" +
-      "IND_UNSPECIFIED\020\000\022\024\n\020FILE_KIND_DESIGN\020\001\022" +
-      "\027\n\023FILE_KIND_DATASHEET\020\0022\244\006\n\020WorkspaceSe" +
-      "rvice\022S\n\nListMounts\022!.agni.v1.webapi.Lis" +
-      "tMountsRequest\032\".agni.v1.webapi.ListMoun" +
-      "tsResponse\022B\n\010GetMount\022\037.agni.v1.webapi." +
-      "GetMountRequest\032\025.agni.v1.webapi.Mount\022H" +
-      "\n\013CreateMount\022\".agni.v1.webapi.CreateMou" +
-      "ntRequest\032\025.agni.v1.webapi.Mount\022V\n\013Dele" +
-      "teMount\022\".agni.v1.webapi.DeleteMountRequ" +
-      "est\032#.agni.v1.webapi.DeleteMountResponse" +
-      "\022]\n\022CreateMountWebhook\022).agni.v1.webapi." +
-      "CreateMountWebhookRequest\032\034.agni.v1.weba" +
-      "pi.MountWebhook\022J\n\007ListDir\022\036.agni.v1.web" +
-      "api.ListDirRequest\032\037.agni.v1.webapi.List" +
-      "DirResponse\022b\n\017ListDesignFiles\022&.agni.v1" +
-      ".webapi.ListDesignFilesRequest\032\'.agni.v1" +
-      ".webapi.ListDesignFilesResponse\022_\n\016Propo" +
-      "seDesigns\022%.agni.v1.webapi.ProposeDesign" +
-      "sRequest\032&.agni.v1.webapi.ProposeDesigns" +
-      "Response\022e\n\020DeclareCompanion\022\'.agni.v1.w" +
-      "ebapi.DeclareCompanionRequest\032(.agni.v1." +
-      "webapi.DeclareCompanionResponseB\271\001\n\037io.g" +
-      "ithub.panyam.agni.v1.webapiB\016WorkspacePr" +
-      "otoP\001Z,github.com/panyam/agni/gen/go/agn" +
-      "i/v1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agn" +
-      "i\\V1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetadata" +
-      "\352\002\020Agni::V1::Webapib\006proto3"
+      "ion\030\n \001(\tR\nconnection\022#\n\rsource_hidden\030\013" +
+      " \001(\010R\014sourceHidden\"r\n\022CreateMountRequest" +
+      "\022\022\n\004name\030\001 \001(\tR\004name\022\026\n\006source\030\002 \001(\tR\006so" +
+      "urce\022\020\n\003ref\030\003 \001(\tR\003ref\022\036\n\nconnection\030\004 \001" +
+      "(\tR\nconnection\"(\n\022DeleteMountRequest\022\022\n\004" +
+      "name\030\001 \001(\tR\004name\"\025\n\023DeleteMountResponse\"" +
+      "A\n\031CreateMountWebhookRequest\022\022\n\004name\030\001 \001" +
+      "(\tR\004name\022\020\n\003url\030\002 \001(\tR\003url\"\220\001\n\014MountWebh" +
+      "ook\022\024\n\005mount\030\001 \001(\tR\005mount\022\026\n\006source\030\002 \001(" +
+      "\tR\006source\022\016\n\002id\030\003 \001(\003R\002id\022\020\n\003url\030\004 \001(\tR\003" +
+      "url\022\026\n\006events\030\005 \003(\tR\006events\022\030\n\007created\030\006" +
+      " \001(\010R\007created\"%\n\017GetMountRequest\022\022\n\004name" +
+      "\030\001 \001(\tR\004name\"I\n\021ListMountsRequest\022.\n\005ope" +
+      "ns\030\002 \003(\0162\030.agni.v1.webapi.FileKindR\005open" +
+      "sJ\004\010\001\020\002\"\224\001\n\022ListMountsResponse\022-\n\006mounts" +
+      "\030\001 \003(\0132\025.agni.v1.webapi.MountR\006mounts\022#\n" +
+      "\rpruned_mounts\030\002 \001(\005R\014prunedMounts\022*\n\021ca" +
+      "n_create_mounts\030\003 \001(\010R\017canCreateMounts\"\252" +
+      "\001\n\010DirEntry\022\022\n\004name\030\001 \001(\tR\004name\022\025\n\006is_di" +
+      "r\030\002 \001(\010R\005isDir\022\026\n\006format\030\003 \001(\tR\006format\022\020" +
+      "\n\003uri\030\004 \001(\tR\003uri\022,\n\004kind\030\005 \001(\0162\030.agni.v1" +
+      ".webapi.FileKindR\004kind\022\033\n\tboard_uri\030\006 \001(" +
+      "\tR\010boardUri\"y\n\016ListDirRequest\022\020\n\003uri\030\001 \001" +
+      "(\tR\003uri\022.\n\005opens\030\003 \003(\0162\030.agni.v1.webapi." +
+      "FileKindR\005opens\022\037\n\013mark_boards\030\004 \001(\010R\nma" +
+      "rkBoardsJ\004\010\002\020\003\"E\n\017ListDirResponse\0222\n\007ent" +
+      "ries\030\001 \003(\0132\030.agni.v1.webapi.DirEntryR\007en" +
+      "tries\"*\n\026ListDesignFilesRequest\022\020\n\003uri\030\001" +
+      " \001(\tR\003uri\"\200\001\n\027ListDesignFilesResponse\022\024\n" +
+      "\005mount\030\001 \001(\tR\005mount\0220\n\005files\030\002 \003(\0132\032.agn" +
+      "i.v1.webapi.DesignFileR\005files\022\035\n\ntotal_s" +
+      "ize\030\003 \001(\003R\ttotalSize\"b\n\nDesignFile\022\022\n\004pa" +
+      "th\030\001 \001(\tR\004path\022\022\n\004size\030\002 \001(\003R\004size\022\026\n\006sh" +
+      "a256\030\003 \001(\tR\006sha256\022\024\n\005board\030\004 \001(\010R\005board" +
+      "\"]\n\027DeclareCompanionRequest\022\035\n\ndesign_ur" +
+      "i\030\001 \001(\tR\tdesignUri\022#\n\rcompanion_uri\030\002 \001(" +
+      "\tR\014companionUri\"\226\001\n\030DeclareCompanionResp" +
+      "onse\022%\n\016descriptor_uri\030\001 \001(\tR\rdescriptor" +
+      "Uri\022\037\n\013design_yaml\030\002 \001(\tR\ndesignYaml\022\030\n\007" +
+      "existed\030\003 \001(\010R\007existed\022\030\n\007changed\030\004 \001(\010R" +
+      "\007changed\")\n\025ProposeDesignsRequest\022\020\n\003uri" +
+      "\030\001 \001(\tR\003uri\"\240\001\n\026ProposeDesignsResponse\0228" +
+      "\n\007designs\030\001 \003(\0132\036.agni.v1.webapi.Propose" +
+      "dDesignR\007designs\0222\n\006unread\030\002 \003(\0132\032.agni." +
+      "v1.webapi.UnreadFileR\006unread\022\030\n\007support\030" +
+      "\003 \003(\tR\007support\"\277\001\n\016ProposedDesign\022\026\n\006fol" +
+      "der\030\001 \001(\tR\006folder\022.\n\006design\030\002 \001(\0132\026.agni" +
+      ".v1.webapi.DesignR\006design\022\037\n\013design_yaml" +
+      "\030\003 \001(\tR\ndesignYaml\022\024\n\005files\030\004 \003(\tR\005files" +
+      "\022\022\n\004note\030\005 \001(\tR\004note\022\032\n\010declared\030\006 \001(\010R\010" +
+      "declared\"8\n\nUnreadFile\022\022\n\004path\030\001 \001(\tR\004pa" +
+      "th\022\026\n\006reason\030\002 \001(\tR\006reason*k\n\tMountKind\022" +
+      "\032\n\026MOUNT_KIND_UNSPECIFIED\020\000\022\023\n\017MOUNT_KIN" +
+      "D_FILE\020\001\022\026\n\022MOUNT_KIND_UPLOADS\020\002\022\025\n\021MOUN" +
+      "T_KIND_GITHUB\020\003*T\n\010FileKind\022\031\n\025FILE_KIND" +
+      "_UNSPECIFIED\020\000\022\024\n\020FILE_KIND_DESIGN\020\001\022\027\n\023" +
+      "FILE_KIND_DATASHEET\020\0022\244\006\n\020WorkspaceServi" +
+      "ce\022S\n\nListMounts\022!.agni.v1.webapi.ListMo" +
+      "untsRequest\032\".agni.v1.webapi.ListMountsR" +
+      "esponse\022B\n\010GetMount\022\037.agni.v1.webapi.Get" +
+      "MountRequest\032\025.agni.v1.webapi.Mount\022H\n\013C" +
+      "reateMount\022\".agni.v1.webapi.CreateMountR" +
+      "equest\032\025.agni.v1.webapi.Mount\022V\n\013DeleteM" +
+      "ount\022\".agni.v1.webapi.DeleteMountRequest" +
+      "\032#.agni.v1.webapi.DeleteMountResponse\022]\n" +
+      "\022CreateMountWebhook\022).agni.v1.webapi.Cre" +
+      "ateMountWebhookRequest\032\034.agni.v1.webapi." +
+      "MountWebhook\022J\n\007ListDir\022\036.agni.v1.webapi" +
+      ".ListDirRequest\032\037.agni.v1.webapi.ListDir" +
+      "Response\022b\n\017ListDesignFiles\022&.agni.v1.we" +
+      "bapi.ListDesignFilesRequest\032\'.agni.v1.we" +
+      "bapi.ListDesignFilesResponse\022_\n\016ProposeD" +
+      "esigns\022%.agni.v1.webapi.ProposeDesignsRe" +
+      "quest\032&.agni.v1.webapi.ProposeDesignsRes" +
+      "ponse\022e\n\020DeclareCompanion\022\'.agni.v1.weba" +
+      "pi.DeclareCompanionRequest\032(.agni.v1.web" +
+      "api.DeclareCompanionResponseB\271\001\n\037io.gith" +
+      "ub.panyam.agni.v1.webapiB\016WorkspaceProto" +
+      "P\001Z,github.com/panyam/agni/gen/go/agni/v" +
+      "1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\V" +
+      "1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetadata\352\002\020" +
+      "Agni::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -240,7 +241,7 @@ public final class WorkspaceProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_webapi_Mount_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_Mount_descriptor,
-        new java.lang.String[] { "Name", "Root", "Uri", "Kind", "Source", "Ref", "Commit", "Fixed", "Writable", "Connection", });
+        new java.lang.String[] { "Name", "Root", "Uri", "Kind", "Source", "Ref", "Commit", "Fixed", "Writable", "Connection", "SourceHidden", });
     internal_static_agni_v1_webapi_CreateMountRequest_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_agni_v1_webapi_CreateMountRequest_fieldAccessorTable = new
