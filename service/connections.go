@@ -36,6 +36,8 @@ type ConnectionService struct {
 	usedBy func(ctx context.Context, id string) ([]string, error)
 	// users seals and forgets people's tokens, and is set by WithUserTokens.
 	users UserTokenKeeper
+	// baseURL is the API a new connection reads through when it names none, set by WithBaseURL.
+	baseURL string
 }
 
 // UserTokenKeeper seals and forgets the token of a person's own connection (agni issue 1728).
@@ -70,6 +72,14 @@ func (s *ConnectionService) visible(ctx context.Context, id string) (connections
 	return c, nil
 }
 
+// WithBaseURL makes url the API a new connection reads through when the request names none, such
+// as the server's --github-api for a GitHub Enterprise host (agni issue 1772). Empty leaves it to
+// goapplib, which reads github.com. It returns s.
+func (s *ConnectionService) WithBaseURL(url string) *ConnectionService {
+	s.baseURL = url
+	return s
+}
+
 // NewConnectionService serves the connections in store. usedBy names the mounts reading through a
 // connection. A nil store serves none and refuses a write with ErrFailedPrecondition.
 func NewConnectionService(store connections.Store, usedBy func(ctx context.Context, id string) ([]string, error)) *ConnectionService {
@@ -89,6 +99,9 @@ func (s *ConnectionService) CreateConnection(ctx context.Context, req *webapi.Cr
 		ID: req.GetConnectionId(), Scope: connections.ScopeServer, Name: in.GetDisplayName(), BaseURL: in.GetBaseUrl(),
 		AppID: in.GetAppId(), InstallationID: in.GetInstallationId(), KeyRef: in.GetKeySource(), TokenRef: in.GetTokenSource(),
 		Status: connections.StatusOK, Created: time.Now().UTC(),
+	}
+	if c.BaseURL == "" {
+		c.BaseURL = s.baseURL
 	}
 	person := in.GetScope() == webapi.ConnectionScope_CONNECTION_SCOPE_PERSON || in.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER
 	switch {

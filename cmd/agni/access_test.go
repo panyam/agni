@@ -58,7 +58,7 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	must(runMounts(t, "add", "board", "github://acme/board", "--connection", "acme", "--remote", url))
 
 	as("alice")
-	if out := must(runCobra(t, connectionsCmd(), "add", "alice-gh", "--mine", "--github-token", "env:AGNI_TEST_ALICE_GITHUB", "--base-url", gh.URL, "--remote", url)); out != "alice-gh\tgithub-user\tsealed, for alice\tok\n" {
+	if out := must(runCobra(t, connectionsCmd(), "add", "alice-gh", "--mine", "--github-token", "env:AGNI_TEST_ALICE_GITHUB", "--remote", url)); out != "alice-gh\tgithub-user\tsealed, for alice\tok\n" {
 		t.Errorf("connections add --mine = %q", out)
 	}
 	must(runDesigns(t, url, "create", "bb"))

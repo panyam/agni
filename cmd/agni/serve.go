@@ -530,7 +530,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Design:    designSvc,
 		Pack:      packSvc,
 		// A private source is read through a connection the server keeps (agni issue 1724).
-		Connection: service.NewConnectionService(table.Connections(), table.MountsUsing).WithUserTokens(table),
+		Connection: service.NewConnectionService(table.Connections(), table.MountsUsing).WithUserTokens(table).WithBaseURL(o.githubAPI),
 		Snapshot:   checkSvc.Snapshots(),
 		DesignView: service.NewDesignViewService(loader, nativeR, style, projectResolver),
 		Check:      checkSvc,

@@ -53,7 +53,7 @@ func TestAPersonsConnectionIsTheirsAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	keeper := &fakeKeeper{store: store, tokens: map[string]string{}}
-	svc := service.NewConnectionService(store, nil).WithUserTokens(keeper)
+	svc := service.NewConnectionService(store, nil).WithUserTokens(keeper).WithBaseURL("https://ghe.example.com/api/v3")
 	alice, bob := as("alice"), as("bob")
 	mine := func(ctx context.Context, id, token string) (*webapi.Connection, error) {
 		return svc.CreateConnection(ctx, &webapi.CreateConnectionRequest{ConnectionId: id, UserToken: token,
@@ -66,6 +66,9 @@ func TestAPersonsConnectionIsTheirsAlone(t *testing.T) {
 	}
 	if c.GetOwner() != "alice" || c.GetScope() != webapi.ConnectionScope_CONNECTION_SCOPE_PERSON || c.GetTokenSource() != "" {
 		t.Errorf("alice's connection = %v; want hers, a person's, naming no secret", c)
+	}
+	if c.GetBaseUrl() != "https://ghe.example.com/api/v3" {
+		t.Errorf("alice's connection reads through %q; want the server's GitHub API, since she named none", c.GetBaseUrl())
 	}
 	if keeper.tokens["alice-gh/alice"] != "ghp_alice" {
 		t.Errorf("sealed tokens = %v; want alice's under alice-gh", keeper.tokens)
