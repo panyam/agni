@@ -198,7 +198,7 @@ jobs:
       # Go's build cache from the newest main run of this job, so the wasm build and the agni
       # binary compile only the packages that changed. setup-go's own cache is keyed on go.sum and
       # holds whatever the first job to save built, which never includes the GOOS=js build.
-      - uses: panyam/ci-actions/go-build-cache@c2db24aa1824482bbece9aab3847bc2272c6e416 # go-build-cache branch
+      - uses: panyam/ci-actions/go-build-cache@a141bcd8a0a2018743f6e4cfde60bd734237b5cc # v0.1.2
         with:
           key: browser
           save: "true"
@@ -208,7 +208,7 @@ jobs:
       # points CHROME_PATH at it and the job downloads nothing and runs no apt (agni issue 1780).
       # `playwright-core install --with-deps` took 15 seconds to 5 minutes a job, since apt stalled on
       # font packages. On a runner without Chrome the action installs Playwright's Chromium instead.
-      - uses: panyam/ci-actions/setup-browser@ecf33181dffa847874b7797b0593badea92cd2a4 # v0.1.1
+      - uses: panyam/ci-actions/setup-browser@a141bcd8a0a2018743f6e4cfde60bd734237b5cc # v0.1.2
         with:
           working-directory: web
 
