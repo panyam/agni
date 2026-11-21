@@ -9,15 +9,16 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-21, at `25a6511d`.
+Last pruned 2026-11-21, at `b65d6f7b`.
 
 ## At a glance
 
-**#1722** (link a design to where the team keeps it, and follow its history) is active, at 16 of 20.
+**#1722** (link a design to where the team keeps it, and follow its history) is active, at 18 of 21.
 Its exercise is `make exercise-linked-sources`, which ends with a browser walk of the designs page's
-link form, so it needs `make ui`. PR #1783 merged on 2026-11-21 and closed #1774 and #1781. The
-exercise passes at `25a6511d`. What remains is #1778's per-person connection ids and agnids with
-`--auth`, which wait on goapplib #197, and two P3 sources (#1729, #1730).
+link form, so it needs `make ui`. PRs #1791 and #1794 merged on 2026-11-21 and closed #1778 and
+#1788. The exercise passes at `3f377b2b`. It doesn't list the Jetson repo's tags yet, so #1788's
+change runs only against the fake GitHub. What remains is #1795 (a web-test flake) and two P3
+sources (#1729, #1730).
 
 - **#1611 `mission_markup`** is filed and not active. #1612 and #1613 come first.
 - **Four missions filed on 2026-11-17, none active.** Each one's first ticket writes its exercise.
@@ -27,13 +28,9 @@ exercise passes at `25a6511d`. What remains is #1778's per-person connection ids
 
 ## Open, ranked
 
-1. **The rest of #1778**, in a worktree of the `~/projects/Agni/main` clone, once goapplib #197
-   ships keying a person's connection by owner and id. #1729 (SharePoint) and #1730 (S3 and GCS)
-   are P3.
-2. **A rolling Go build cache for the browser shards.** Each shard compiles the wasm and agni from a
-   cold build cache, about 35 s with setup-go's cache and 60 s or more without. A ci-actions
-   `go-build-cache` action is on branch `go-build-cache` in `~/newstack/ci-actions-gocache`.
-3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
+1. **#1795**, the `XMLSerializer` flake in `web-test`. It fails a run with every test passing. Then
+   #1729 (SharePoint) and #1730 (S3 and GCS), both P3.
+2. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
