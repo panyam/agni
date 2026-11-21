@@ -72,12 +72,13 @@ func TestADiffOfTwoRevisionsMatchesADiffOfTheirFiles(t *testing.T) {
 		t.Errorf("reports create bb = %q; want it to name the commit it ran on", got)
 	}
 
-	// GitHub lists tags only to a request with a token, so a mount with no connection can't.
+	// A public repo's tags list with no connection, through GitHub's REST API (agni issue 1788).
 	repo.Tag("v1", c1, false)
 	repo.Tag("v2", c2, true)
 	repo.Tag("v0", c1, false)
-	if out, err := runDesigns(t, url, "revisions", "bb", "--tags"); err == nil || !strings.Contains(err.Error(), "failed_precondition") || !strings.Contains(err.Error(), "connection") {
-		t.Errorf("designs revisions bb --tags over a mount with no connection = %q, %v; want failed_precondition naming the connection", out, err)
+	public := must(runDesigns(t, url, "revisions", "bb", "--tags"))
+	if !strings.Contains(public, "designs/bb@v2\t") || !strings.Contains(public, "schematic at "+c2) || !strings.Contains(public, "designs/bb@v1\t") || !strings.Contains(public, "designs/bb@v0\t") {
+		t.Errorf("designs revisions bb --tags over a public mount with no connection =\n%s\nwant v2, v1 and v0", public)
 	}
 
 	// Through a connection, the repo's tags list as revisions, read or not. A tag whose commit the
