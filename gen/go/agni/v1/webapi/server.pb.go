@@ -67,11 +67,9 @@ type ServerInfo struct {
 	// cannot rely on any rpc's shape.
 	Api string `protobuf:"bytes,2,opt,name=api,proto3" json:"api,omitempty"`
 	// features names each optional capability this host has on, sorted, from this list:
-	//
-	//	grpc               the host answers gRPC and gRPC-Web beside Connect, on the same port
-	//	snapshot_recovery  a question on a snapshot the host lost re-ingests it (SnapshotService)
-	//	snapshot_store     the host keeps snapshot definitions across a restart, not only in memory
-	//
+	//   grpc               the host answers gRPC and gRPC-Web beside Connect, on the same port
+	//   snapshot_recovery  a question on a snapshot the host lost re-ingests it (SnapshotService)
+	//   snapshot_store     the host keeps snapshot definitions across a restart, not only in memory
 	// A client tests for a name rather than comparing versions, so a feature can be turned off by
 	// configuration without a client mistaking the host's age.
 	Features      []string `protobuf:"bytes,3,rep,name=features,proto3" json:"features,omitempty"`

@@ -1240,13 +1240,13 @@ type Parameter struct {
 	// has BOTH a `name` and a package-relative `designator`. The datasheet side offers the
 	// same two channels. The precedence is:
 	//
-	//  1. MATCH ON NAME. Both sides copy it off the same pin function table, so it is
-	//     die-relative and survives repackaging.
-	//  2. USE THE NUMBER ONLY AS A TIE-BREAKER, when a name hits several pins. Use it only
-	//     inside a package the design is known to place and this spec declares.
-	//  3. REFUSE when the two channels DISAGREE. Also refuse when a name is ambiguous and no
-	//     package is identified. Skip rather than false-pass. A wrong terminal evaluates
-	//     cleanly and reports about the wrong thing, and that is worse than reporting nothing.
+	//   1. MATCH ON NAME. Both sides copy it off the same pin function table, so it is
+	//      die-relative and survives repackaging.
+	//   2. USE THE NUMBER ONLY AS A TIE-BREAKER, when a name hits several pins. Use it only
+	//      inside a package the design is known to place and this spec declares.
+	//   3. REFUSE when the two channels DISAGREE. Also refuse when a name is ambiguous and no
+	//      package is identified. Skip rather than false-pass. A wrong terminal evaluates
+	//      cleanly and reports about the wrong thing, and that is worse than reporting nothing.
 	//
 	// The number looks like the precise key, and it is deliberately NOT the primary one. It
 	// is precise about a PACKAGE, while a parameter is a fact about a DIE. Imagine a part
