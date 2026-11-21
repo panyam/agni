@@ -446,13 +446,14 @@ drops the revisions nothing names, so linking the schematic before the board, or
 time, leaves no half-moved step behind. A sync moves every artifact from one repo together, so it
 never makes one.
 
-`agni designs revisions bb --tags` lists the linked repo's tags instead, newest commit first, whether
-the server has read them or not. `--commits` lists a branch's commits, the branch the design follows
-unless `--branch` names another. A tag the server has read, by its name or by its commit, carries the
-revision it gave; one it hasn't read says "not read yet". GitHub lists tags only to a request with a
-token, so the mount has to read through a connection. A mount without one answers
-`failed_precondition`, and its revisions are still listed without `--tags`. A design whose artifacts
-link two repos lists the refs of neither, since a tag names a commit in one repo.
+`agni designs revisions bb --tags` lists the linked repo's tags instead, whether the server has read
+them or not. `--commits` lists a branch's commits, the branch the design follows unless `--branch`
+names another. A tag the server has read, by its name or by its commit, carries the revision it gave;
+one it hasn't read says "not read yet". Through a connection, tags come newest commit first. A public
+repo's mount with no connection lists them too, in GitHub's version order, newest first, ten to a
+page (agni issue 1788). Those requests count against GitHub's limit of 60 an hour without a token,
+and a refused one is `unavailable`, saying a connection lifts it. A design whose artifacts link two
+repos lists the refs of neither, since a tag names a commit in one repo.
 
 A kept revision keeps its files on the server until it is dropped or the design is deleted. A report
 names the commit each artifact was read at, such as `schematic at 8e087f4f946a`, and the revision it
