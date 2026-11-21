@@ -20,7 +20,7 @@ type fakeKeeper struct {
 	fail   error
 }
 
-func (k *fakeKeeper) SaveUserToken(_ context.Context, id, owner, token string) error {
+func (k *fakeKeeper) SaveUserToken(_ context.Context, owner, id, token string) error {
 	if k.fail != nil {
 		return k.fail
 	}
@@ -28,13 +28,12 @@ func (k *fakeKeeper) SaveUserToken(_ context.Context, id, owner, token string) e
 	return nil
 }
 
-func (k *fakeKeeper) Disconnect(ctx context.Context, id string) error {
-	c, err := k.store.GetConnection(ctx, id)
-	if err != nil {
+func (k *fakeKeeper) Disconnect(ctx context.Context, owner, id string) error {
+	if _, err := k.store.GetConnection(ctx, owner, id); err != nil {
 		return err
 	}
-	delete(k.tokens, id+"/"+c.Owner)
-	return k.store.DeleteConnection(ctx, id)
+	delete(k.tokens, id+"/"+owner)
+	return k.store.DeleteConnection(ctx, owner, id)
 }
 
 func connectionIDs(resp *webapi.ListConnectionsResponse) []string {
@@ -124,5 +123,77 @@ func TestAPersonsConnectionIsTheirsAlone(t *testing.T) {
 
 	if _, err := service.NewConnectionService(store, nil).CreateConnection(alice, &webapi.CreateConnectionRequest{ConnectionId: "alice-gh", UserToken: "ghp_alice", Connection: &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER}}); !errors.Is(err, service.ErrFailedPrecondition) {
 		t.Errorf("a person's connection on a server with no --connections-key: %v; want failed precondition", err)
+	}
+}
+
+// Each person's ids are their own (agni issue 1778). alice and bob can both keep an alice-gh, and
+// each reads, lists and deletes only their own. A person can't take a server connection's id, and
+// when a server connection takes a person's id later, that person's own still answers for them.
+func TestTwoPeopleKeepConnectionsByOneID(t *testing.T) {
+	store, err := fsstore.New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := &fakeKeeper{store: store, tokens: map[string]string{}}
+	svc := service.NewConnectionService(store, nil).WithUserTokens(keeper)
+	alice, bob, ops := as("alice"), as("bob"), as("ops")
+	mine := func(ctx context.Context, id, token string) (*webapi.Connection, error) {
+		return svc.CreateConnection(ctx, &webapi.CreateConnectionRequest{ConnectionId: id, UserToken: token,
+			Connection: &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER}})
+	}
+	server := func(id string) error {
+		_, err := svc.CreateConnection(ops, &webapi.CreateConnectionRequest{ConnectionId: id, Connection: &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN, TokenSource: "env:SERVER_TOKEN"}})
+		return err
+	}
+
+	if _, err := mine(alice, "alice-gh", "ghp_alice"); err != nil {
+		t.Fatal(err)
+	}
+	if c, err := mine(bob, "alice-gh", "ghp_bob"); err != nil || c.GetOwner() != "bob" {
+		t.Fatalf("bob keeps his own alice-gh = %v, %v; want his", c, err)
+	}
+	if keeper.tokens["alice-gh/alice"] != "ghp_alice" || keeper.tokens["alice-gh/bob"] != "ghp_bob" {
+		t.Errorf("sealed tokens = %v; want alice's and bob's apart", keeper.tokens)
+	}
+	if _, err := mine(bob, "alice-gh", "ghp_bob2"); !errors.Is(err, service.ErrAlreadyExists) {
+		t.Errorf("bob making alice-gh a second time: %v; want already exists", err)
+	}
+	for who, ctx := range map[string]context.Context{"alice": alice, "bob": bob} {
+		c, err := svc.GetConnection(ctx, &webapi.GetConnectionRequest{Name: "connections/alice-gh"})
+		if err != nil || c.GetOwner() != who {
+			t.Errorf("%s reads connections/alice-gh = %v, %v; want their own", who, c, err)
+		}
+		if l, err := svc.ListConnections(ctx, &webapi.ListConnectionsRequest{}); err != nil || len(l.GetConnections()) != 1 || l.GetConnections()[0].GetOwner() != who {
+			t.Errorf("%s lists %v, %v; want their own alice-gh alone", who, l.GetConnections(), err)
+		}
+	}
+
+	if err := server("shared"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := mine(alice, "shared", "ghp_alice"); !errors.Is(err, service.ErrAlreadyExists) {
+		t.Errorf("alice taking the server connection's id: %v; want already exists", err)
+	}
+	if err := server("alice-gh"); err != nil {
+		t.Fatalf("a server connection taking an id people keep: %v", err)
+	}
+	if c, err := svc.GetConnection(alice, &webapi.GetConnectionRequest{Name: "connections/alice-gh"}); err != nil || c.GetOwner() != "alice" {
+		t.Errorf("alice reads connections/alice-gh beside the server's = %v, %v; want her own", c, err)
+	}
+	if c, err := svc.GetConnection(ops, &webapi.GetConnectionRequest{Name: "connections/alice-gh"}); err != nil || c.GetOwner() != "" {
+		t.Errorf("ops reads connections/alice-gh = %v, %v; want the server's", c, err)
+	}
+
+	if err := svc.DeleteConnection(bob, &webapi.DeleteConnectionRequest{Name: "connections/alice-gh"}); err != nil {
+		t.Fatalf("bob deletes his alice-gh: %v", err)
+	}
+	if _, ok := keeper.tokens["alice-gh/bob"]; ok {
+		t.Error("bob's sealed token outlived his connection")
+	}
+	if c, err := svc.GetConnection(alice, &webapi.GetConnectionRequest{Name: "connections/alice-gh"}); err != nil || c.GetOwner() != "alice" || keeper.tokens["alice-gh/alice"] != "ghp_alice" {
+		t.Errorf("after bob deletes his, alice's alice-gh = %v, %v, sealed %q; want hers, untouched", c, err, keeper.tokens["alice-gh/alice"])
+	}
+	if c, err := svc.GetConnection(bob, &webapi.GetConnectionRequest{Name: "connections/alice-gh"}); err != nil || c.GetOwner() != "" {
+		t.Errorf("after deleting his own, bob reads connections/alice-gh = %v, %v; want the server's", c, err)
 	}
 }

@@ -179,12 +179,12 @@ func NewDesignViewService(loader Loader, native NativeRenderer, style render.Sty
 	return &DesignViewService{loader: loader, native: native, style: style, projects: projects}
 }
 
-// ClassifyLoadErr keeps an already-classified loader error (unknown mount, containment) and
-// wraps anything else, such as a resolve or parse failure, as an invalid argument. It is exported
-// for the datasheet service, which lives in another module (agni issue 744), so its errors map to
-// the same sentinels.
+// ClassifyLoadErr keeps an already-classified loader error (unknown mount, containment, a private
+// source the caller can't read, a source that didn't answer) and wraps anything else, such as a
+// resolve or parse failure, as an invalid argument. It is exported for the datasheet service, which
+// lives in another module (agni issue 744), so its errors map to the same sentinels.
 func ClassifyLoadErr(err error) error {
-	if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidPath) {
+	if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidPath) || errors.Is(err, ErrPermissionDenied) || errors.Is(err, ErrUnavailable) {
 		return err
 	}
 	return fmt.Errorf("%w: %s", ErrInvalidArgument, err)

@@ -227,10 +227,12 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
-     * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
-     * connection needs a signed-in caller, and a server started with --connections-key.
+     * CreateConnection keeps a new connection. Each person's ids are their own (agni issue 1778), so
+     * an id is ALREADY_EXISTS only when the caller already keeps one by it, or, for a person's
+     * connection, when a server connection holds it. A secret field holding anything but a
+     * reference, or a kind's field left empty, is INVALID_ARGUMENT. A server started without --store
+     * answers FAILED_PRECONDITION. A person's connection needs a signed-in caller, and a server
+     * started with --connections-key.
      * </pre>
      */
     default void createConnection(io.github.panyam.agni.v1.webapi.CreateConnectionRequest request,
@@ -240,8 +242,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name. Another person's connection is
-     * NOT_FOUND.
+     * GetConnection returns one connection by resource name: the caller's own when they keep one by
+     * that id, else the server's. Another person's connection never answers, so its id is NOT_FOUND.
      * </pre>
      */
     default void getConnection(io.github.panyam.agni.v1.webapi.GetConnectionRequest request,
@@ -327,10 +329,12 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
-     * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
-     * connection needs a signed-in caller, and a server started with --connections-key.
+     * CreateConnection keeps a new connection. Each person's ids are their own (agni issue 1778), so
+     * an id is ALREADY_EXISTS only when the caller already keeps one by it, or, for a person's
+     * connection, when a server connection holds it. A secret field holding anything but a
+     * reference, or a kind's field left empty, is INVALID_ARGUMENT. A server started without --store
+     * answers FAILED_PRECONDITION. A person's connection needs a signed-in caller, and a server
+     * started with --connections-key.
      * </pre>
      */
     public void createConnection(io.github.panyam.agni.v1.webapi.CreateConnectionRequest request,
@@ -341,8 +345,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name. Another person's connection is
-     * NOT_FOUND.
+     * GetConnection returns one connection by resource name: the caller's own when they keep one by
+     * that id, else the server's. Another person's connection never answers, so its id is NOT_FOUND.
      * </pre>
      */
     public void getConnection(io.github.panyam.agni.v1.webapi.GetConnectionRequest request,
@@ -407,10 +411,12 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
-     * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
-     * connection needs a signed-in caller, and a server started with --connections-key.
+     * CreateConnection keeps a new connection. Each person's ids are their own (agni issue 1778), so
+     * an id is ALREADY_EXISTS only when the caller already keeps one by it, or, for a person's
+     * connection, when a server connection holds it. A secret field holding anything but a
+     * reference, or a kind's field left empty, is INVALID_ARGUMENT. A server started without --store
+     * answers FAILED_PRECONDITION. A person's connection needs a signed-in caller, and a server
+     * started with --connections-key.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Connection createConnection(io.github.panyam.agni.v1.webapi.CreateConnectionRequest request) throws io.grpc.StatusException {
@@ -420,8 +426,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name. Another person's connection is
-     * NOT_FOUND.
+     * GetConnection returns one connection by resource name: the caller's own when they keep one by
+     * that id, else the server's. Another person's connection never answers, so its id is NOT_FOUND.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Connection getConnection(io.github.panyam.agni.v1.webapi.GetConnectionRequest request) throws io.grpc.StatusException {
@@ -483,10 +489,12 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
-     * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
-     * connection needs a signed-in caller, and a server started with --connections-key.
+     * CreateConnection keeps a new connection. Each person's ids are their own (agni issue 1778), so
+     * an id is ALREADY_EXISTS only when the caller already keeps one by it, or, for a person's
+     * connection, when a server connection holds it. A secret field holding anything but a
+     * reference, or a kind's field left empty, is INVALID_ARGUMENT. A server started without --store
+     * answers FAILED_PRECONDITION. A person's connection needs a signed-in caller, and a server
+     * started with --connections-key.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Connection createConnection(io.github.panyam.agni.v1.webapi.CreateConnectionRequest request) {
@@ -496,8 +504,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name. Another person's connection is
-     * NOT_FOUND.
+     * GetConnection returns one connection by resource name: the caller's own when they keep one by
+     * that id, else the server's. Another person's connection never answers, so its id is NOT_FOUND.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Connection getConnection(io.github.panyam.agni.v1.webapi.GetConnectionRequest request) {
@@ -559,10 +567,12 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
-     * secret field holding anything but a reference, or a kind's field left empty, is
-     * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
-     * connection needs a signed-in caller, and a server started with --connections-key.
+     * CreateConnection keeps a new connection. Each person's ids are their own (agni issue 1778), so
+     * an id is ALREADY_EXISTS only when the caller already keeps one by it, or, for a person's
+     * connection, when a server connection holds it. A secret field holding anything but a
+     * reference, or a kind's field left empty, is INVALID_ARGUMENT. A server started without --store
+     * answers FAILED_PRECONDITION. A person's connection needs a signed-in caller, and a server
+     * started with --connections-key.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Connection> createConnection(
@@ -573,8 +583,8 @@ public final class ConnectionServiceGrpc {
 
     /**
      * <pre>
-     * GetConnection returns one connection by resource name. Another person's connection is
-     * NOT_FOUND.
+     * GetConnection returns one connection by resource name: the caller's own when they keep one by
+     * that id, else the server's. Another person's connection never answers, so its id is NOT_FOUND.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Connection> getConnection(

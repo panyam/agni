@@ -56,7 +56,7 @@ func TestWorkbenchServesItsWholePage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := newWorkbenchMux(tableOf(ms), filepath.Join("..", "..", "web"), nil, "", "", nil)
+	mux := newWorkbenchMux(tableOf(ms), workbenchAccess{}, filepath.Join("..", "..", "web"), nil, "", "", nil)
 	do := func(method, path, body string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
 		if body != "" {
@@ -107,7 +107,7 @@ func TestWorkbenchServesItsWholePage(t *testing.T) {
 // heading links home only when --viewer-url says where the viewer is.
 func TestWorkbenchHeadingLinksTheViewerOnlyWhenConfigured(t *testing.T) {
 	page := func(viewer string) string {
-		mux := newWorkbenchMux(nil, filepath.Join("..", "..", "web"), nil, viewer, "", nil)
+		mux := newWorkbenchMux(nil, workbenchAccess{}, filepath.Join("..", "..", "web"), nil, viewer, "", nil)
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest("GET", "/datasheets/", nil))
 		if rec.Code != 200 {
@@ -173,11 +173,11 @@ func TestAgnidsCarriesTheImageCommands(t *testing.T) {
 
 func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
 	root, store, uploads := t.TempDir(), t.TempDir(), t.TempDir()
-	table, err := serveTable([]string{"ds=" + root}, "", "file://"+filepath.ToSlash(store), "file://"+filepath.ToSlash(uploads), false)
+	table, err := serveTable([]string{"ds=" + root}, "", "file://"+filepath.ToSlash(store), "file://"+filepath.ToSlash(uploads), tableAccess{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := newWorkbenchMux(table, "", nil, "", "", nil)
+	mux := newWorkbenchMux(table, workbenchAccess{}, "", nil, "", "", nil)
 	call := func(rpc, body string) string {
 		req := httptest.NewRequest("POST", "/agni.v1.webapi.WorkspaceService/"+rpc, strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")

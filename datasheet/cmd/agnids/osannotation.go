@@ -74,13 +74,13 @@ func safeAuthor(author string) string {
 func (s *osAnnotationStore) Get(ctx context.Context, uri mounts.URI) ([]*dsapi.AnnotationSet, error) {
 	var dirs []string
 	if s.derived.corpus != "" {
-		dir, err := s.derived.dir(uri)
+		dir, err := s.derived.dir(ctx, uri)
 		if err != nil {
 			return nil, err
 		}
 		dirs = append(dirs, filepath.Join(dir, annotationsFolder))
 	}
-	old, err := s.derived.legacy(uri, annotationsDir)
+	old, err := s.derived.legacy(ctx, uri, annotationsDir)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (s *osAnnotationStore) Get(ctx context.Context, uri mounts.URI) ([]*dsapi.A
 // overwriting just that author's file. A server with no corpus returns dsservice.ErrNoCorpus. The
 // per-file lock only serializes one author's concurrent writes, and there is no compare-and-swap.
 func (s *osAnnotationStore) Save(ctx context.Context, uri mounts.URI, author string, set *dsapi.AnnotationSet) error {
-	derivedDir, err := s.derived.dir(uri)
+	derivedDir, err := s.derived.dir(ctx, uri)
 	if err != nil {
 		return err
 	}

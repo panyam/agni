@@ -34,7 +34,7 @@ func TestParamsURLReadsThePublishedCorpus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(newWorkbenchMux(nil, "", nil, "", dir, store))
+	srv := httptest.NewServer(newWorkbenchMux(nil, workbenchAccess{}, "", nil, "", dir, store))
 	defer srv.Close()
 
 	remote := param.NewRemote(paramclient.New(srv.URL, ""), 0) // re-check the generation on every prefetch
@@ -64,7 +64,7 @@ func TestParamsURLReadsThePublishedCorpus(t *testing.T) {
 // A server started without --corpus answers PartSpecService with a precondition that says what to
 // pass, not a 404 or an empty corpus that would read as every part unseeded.
 func TestPartSpecServiceWithoutACorpusSaysSo(t *testing.T) {
-	srv := httptest.NewServer(newWorkbenchMux(nil, "", nil, "", "", nil))
+	srv := httptest.NewServer(newWorkbenchMux(nil, workbenchAccess{}, "", nil, "", "", nil))
 	defer srv.Close()
 	_, err := paramclient.New(srv.URL, "").Generation(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "failed_precondition") || !strings.Contains(err.Error(), "--corpus") {
@@ -83,7 +83,7 @@ func TestServeWithNoWebDirIsTheAPIAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(newWorkbenchMux(nil, "", nil, "", dir, store))
+	srv := httptest.NewServer(newWorkbenchMux(nil, workbenchAccess{}, "", nil, "", dir, store))
 	defer srv.Close()
 	if resp, err := http.Get(srv.URL + "/datasheets/"); err != nil || resp.StatusCode != http.StatusNotFound {
 		t.Errorf("the workbench page with no web dir = %v, %v; want 404", resp, err)
@@ -163,7 +163,7 @@ func TestAnAgnidsWithAuthAsksForAToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(guard(newWorkbenchMux(nil, "", nil, "", dir, corpus), authgate.Tokens, storeDir, false))
+	srv := httptest.NewServer(guard(newWorkbenchMux(nil, workbenchAccess{}, "", nil, "", dir, corpus), authgate.Tokens, storeDir, false))
 	defer srv.Close()
 	for _, bad := range []string{"", "oa_0_wrong"} {
 		if _, err := paramclient.New(srv.URL, bad).Generation(context.Background()); connect.CodeOf(err) != connect.CodeUnauthenticated {

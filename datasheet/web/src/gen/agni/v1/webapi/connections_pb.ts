@@ -345,10 +345,12 @@ export const ConnectionStatusSchema: GenEnum<ConnectionStatus> = /*@__PURE__*/
  */
 export const ConnectionService: GenService<{
   /**
-   * CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
-   * secret field holding anything but a reference, or a kind's field left empty, is
-   * INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
-   * connection needs a signed-in caller, and a server started with --connections-key.
+   * CreateConnection keeps a new connection. Each person's ids are their own (agni issue 1778), so
+   * an id is ALREADY_EXISTS only when the caller already keeps one by it, or, for a person's
+   * connection, when a server connection holds it. A secret field holding anything but a
+   * reference, or a kind's field left empty, is INVALID_ARGUMENT. A server started without --store
+   * answers FAILED_PRECONDITION. A person's connection needs a signed-in caller, and a server
+   * started with --connections-key.
    *
    * @generated from rpc agni.v1.webapi.ConnectionService.CreateConnection
    */
@@ -358,8 +360,8 @@ export const ConnectionService: GenService<{
     output: typeof ConnectionSchema;
   },
   /**
-   * GetConnection returns one connection by resource name. Another person's connection is
-   * NOT_FOUND.
+   * GetConnection returns one connection by resource name: the caller's own when they keep one by
+   * that id, else the server's. Another person's connection never answers, so its id is NOT_FOUND.
    *
    * @generated from rpc agni.v1.webapi.ConnectionService.GetConnection
    */

@@ -50,13 +50,15 @@ const (
 
 // ConnectionServiceClient is a client for the agni.v1.webapi.ConnectionService service.
 type ConnectionServiceClient interface {
-	// CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
-	// secret field holding anything but a reference, or a kind's field left empty, is
-	// INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
-	// connection needs a signed-in caller, and a server started with --connections-key.
+	// CreateConnection keeps a new connection. Each person's ids are their own (agni issue 1778), so
+	// an id is ALREADY_EXISTS only when the caller already keeps one by it, or, for a person's
+	// connection, when a server connection holds it. A secret field holding anything but a
+	// reference, or a kind's field left empty, is INVALID_ARGUMENT. A server started without --store
+	// answers FAILED_PRECONDITION. A person's connection needs a signed-in caller, and a server
+	// started with --connections-key.
 	CreateConnection(context.Context, *connect.Request[webapi.CreateConnectionRequest]) (*connect.Response[webapi.Connection], error)
-	// GetConnection returns one connection by resource name. Another person's connection is
-	// NOT_FOUND.
+	// GetConnection returns one connection by resource name: the caller's own when they keep one by
+	// that id, else the server's. Another person's connection never answers, so its id is NOT_FOUND.
 	GetConnection(context.Context, *connect.Request[webapi.GetConnectionRequest]) (*connect.Response[webapi.Connection], error)
 	// ListConnections returns the server's connections and the caller's own, ordered by name.
 	ListConnections(context.Context, *connect.Request[webapi.ListConnectionsRequest]) (*connect.Response[webapi.ListConnectionsResponse], error)
@@ -134,13 +136,15 @@ func (c *connectionServiceClient) DeleteConnection(ctx context.Context, req *con
 
 // ConnectionServiceHandler is an implementation of the agni.v1.webapi.ConnectionService service.
 type ConnectionServiceHandler interface {
-	// CreateConnection keeps a new connection. An id a connection already holds is ALREADY_EXISTS. A
-	// secret field holding anything but a reference, or a kind's field left empty, is
-	// INVALID_ARGUMENT. A server started without --store answers FAILED_PRECONDITION. A person's
-	// connection needs a signed-in caller, and a server started with --connections-key.
+	// CreateConnection keeps a new connection. Each person's ids are their own (agni issue 1778), so
+	// an id is ALREADY_EXISTS only when the caller already keeps one by it, or, for a person's
+	// connection, when a server connection holds it. A secret field holding anything but a
+	// reference, or a kind's field left empty, is INVALID_ARGUMENT. A server started without --store
+	// answers FAILED_PRECONDITION. A person's connection needs a signed-in caller, and a server
+	// started with --connections-key.
 	CreateConnection(context.Context, *connect.Request[webapi.CreateConnectionRequest]) (*connect.Response[webapi.Connection], error)
-	// GetConnection returns one connection by resource name. Another person's connection is
-	// NOT_FOUND.
+	// GetConnection returns one connection by resource name: the caller's own when they keep one by
+	// that id, else the server's. Another person's connection never answers, so its id is NOT_FOUND.
 	GetConnection(context.Context, *connect.Request[webapi.GetConnectionRequest]) (*connect.Response[webapi.Connection], error)
 	// ListConnections returns the server's connections and the caller's own, ordered by name.
 	ListConnections(context.Context, *connect.Request[webapi.ListConnectionsRequest]) (*connect.Response[webapi.ListConnectionsResponse], error)

@@ -410,7 +410,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	runtime := o.storeDir != "" && o.uploadsDir != ""
 	if runtime {
 		cfg.Uploads, cfg.Records = o.uploadsDir, filepath.Join(o.storeDir, storeMountsDir)
-		cfg.Connections = filepath.Join(o.storeDir, storeConnectionsDir)
+		cfg.Connections = filepath.Join(o.storeDir, mountset.ConnectionsDir)
 		cfg.UserTokens, cfg.ConnectionsKey = filepath.Join(o.storeDir, mountset.UserTokensDir), o.connectionsKey
 		if o.githubSignIn != nil {
 			cfg.GitHubApp = &oauth2.Config{ClientID: o.githubSignIn.clientID, ClientSecret: o.githubSignIn.clientSecret, Endpoint: authgate.GitHubEndpoint(o.githubAPI)}
@@ -750,8 +750,6 @@ const (
 	storeReportsDir   = "reports"
 	storeReviewsDir   = "reviews"
 	storeMountsDir    = mountset.RecordsDir
-	// storeConnectionsDir holds the connections private sources are read through (agni issue 1724).
-	storeConnectionsDir = "connections"
 )
 
 // withUploadsMount adds --uploads' design views as the mount "uploads", creating the folder (agni

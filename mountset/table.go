@@ -31,6 +31,10 @@ import (
 // RecordsDir is the folder under --store that holds one record per runtime mount.
 const RecordsDir = "mounts"
 
+// ConnectionsDir is the folder under --store that holds the connections private sources are read
+// through (agni issue 1724). agni serve writes it, and agnids reads it.
+const ConnectionsDir = "connections"
+
 // SnapshotsDir is the folder under --uploads that holds the views of runtime mounts. A view is
 // <uploads>/mounts/<name>/<commit>/, hard links to the blobs laid out as the source had them.
 const SnapshotsDir = "mounts"
@@ -75,7 +79,9 @@ type Config struct {
 	GitHubApp *oauth2.Config
 	// HidePrivate leaves out every mount that reads through a connection, from List and from
 	// Resolve, for a server that asks who its callers are but can't check their connections. agnids
-	// with --auth is one (agni issue 1728).
+	// with --auth and no --connections-key is one (agni issue 1728). With ReadOnly, Connections,
+	// UserTokens and ConnectionsKey, a reader checks callers through CanRead instead (agni issue
+	// 1778).
 	HidePrivate bool
 }
 
@@ -161,6 +167,21 @@ func Open(cfg Config) (*Table, error) {
 	}
 	drivers = append(drivers, folder.New(folderOpts...))
 	opts := []mounts.Option{mounts.WithFixed(cfg.Fixed...), mounts.WithLimits(cfg.Limits)}
+	if cfg.Connections != "" && cfg.ReadOnly && cfg.ConnectionsKey != "" && cfg.UserTokens != "" {
+		// A reader answers CanRead through people's own connections, and writes neither the records
+		// nor the tokens (see readonly.go). It hands no mount a token, since it builds no snapshot.
+		cs, err := connstore.New(cfg.Connections)
+		if err != nil {
+			return nil, fmt.Errorf("--store: %w", err)
+		}
+		t.conns = readOnlyConnections{cs}
+		t.users = readOnlyTokens{fs.NewFSUserTokenStore(cfg.UserTokens)}
+		copts := []connections.Option{connections.WithUserTokens(t.users, cfg.ConnectionsKey, noRefresh)}
+		if gh != nil {
+			copts = append(copts, connections.WithReadCheck(gh.CanRead))
+		}
+		t.svc = connections.NewService(t.conns, copts...)
+	}
 	if cfg.Connections != "" && !cfg.ReadOnly {
 		cs, err := connstore.New(cfg.Connections)
 		if err != nil {
@@ -320,7 +341,9 @@ func (t *Table) CreateMount(ctx context.Context, name, source, ref, connection s
 		if t.conns == nil {
 			return service.MountInfo{}, fmt.Errorf("%w: this server keeps no connections", service.ErrFailedPrecondition)
 		}
-		if _, err := t.conns.GetConnection(ctx, connection); err != nil {
+		// A mount reads through a server connection. A person's connection reads for its owner
+		// alone, and a mount is everyone's (agni issue 1778).
+		if _, err := t.conns.GetConnection(ctx, "", connection); err != nil {
 			return service.MountInfo{}, service.ConnectionErr(err)
 		}
 	}

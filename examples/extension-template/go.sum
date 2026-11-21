@@ -20,9 +20,9 @@ github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs
 github.com/hashicorp/golang-lru/v2 v2.0.7/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
 github.com/klauspost/compress v1.20.2 h1:v5tiZvm1KGLyg5d5oXdXe3lsSPrbEUiKoXGia//I7Qo=
 github.com/klauspost/compress v1.20.2/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
-github.com/panyam/goapplib v0.7.22 h1:+Bagjz07En+bKD3GC+rjJ0A1uYRTvMFVp6rrDsZgqnk=
-github.com/panyam/goapplib/storage v0.7.22 h1:iB6R3NgjNAdv/ogj+vgeytBpci61aWOO+uMptynaBi8=
-github.com/panyam/goapplib/storage v0.7.22/go.mod h1:n1MEyJS3q8d2kf1QJR6XJRwXbjkE35ulzapM5zXES3s=
+github.com/panyam/goapplib v0.7.23 h1:k3NycVPjDomA1Ieb0UMWKxQmUPfM0zBRzcf+9QD9McI=
+github.com/panyam/goapplib/storage v0.7.23 h1:yMCZryNRKxcUMgt5WT1J04SeDOVVhClc8baX0T51jFw=
+github.com/panyam/goapplib/storage v0.7.23/go.mod h1:n1MEyJS3q8d2kf1QJR6XJRwXbjkE35ulzapM5zXES3s=
 github.com/panyam/goutils v0.1.15 h1:znjWI1jzAqeH2DRpxQid7GMrGCj296Wws7mWh7QPk7Y=
 github.com/panyam/goutils v0.1.15/go.mod h1:lxEmbCJ04RY+KqFgo/+67bEdU2edpLYafMiJECTm3gQ=
 github.com/panyam/jaala v0.1.101 h1:cQTr2wxR0H9ki3i9xAiav4vOiZmIMd5QsGh0KmrzVEA=

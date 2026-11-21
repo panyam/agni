@@ -32,6 +32,10 @@ func toConnectErr(err error) error {
 		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agnids serve with --corpus <dir>", err))
 	case errors.Is(err, dsservice.ErrCorpusNotReady):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
+	case errors.Is(err, service.ErrPermissionDenied):
+		return connect.NewError(connect.CodePermissionDenied, err)
+	case errors.Is(err, service.ErrUnavailable):
+		return connect.NewError(connect.CodeUnavailable, err)
 	case errors.Is(err, service.ErrInternal):
 		return connect.NewError(connect.CodeInternal, err)
 	default: // ErrInvalidPath, ErrInvalidArgument, and anything unclassified
