@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/panyam/oneauth/core"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
@@ -336,5 +337,39 @@ func TestTokenCommandListsAndRevokes(t *testing.T) {
 	}
 	if _, err := runCobra(t, tokenCmd(), "ls"); err == nil {
 		t.Error("agni token ls with no --store answered, want a refusal")
+	}
+}
+
+// A server with --auth deletes the tokens in its store that have expired when it starts, and keeps
+// the rest (agni issue 1778).
+func TestServeDeletesExpiredTokens(t *testing.T) {
+	dir := t.TempDir()
+	store := filepath.Join(dir, "store")
+	keys := authgate.Store(store)
+	past := time.Now().Add(-time.Hour)
+	if _, err := keys.CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "github:old", Name: "github sign-in", ExpiresAt: &past}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := keys.CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "ops", Name: "ops"}); err != nil {
+		t.Fatal(err)
+	}
+	serveViewer(t, viewerOpts{storeDir: store, uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens})
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		left, err := authgate.List(context.Background(), keys)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(left) == 1 && left[0].Subject == "ops" {
+			return
+		}
+		if time.Now().After(deadline) {
+			var subjects []string
+			for _, k := range left {
+				subjects = append(subjects, k.Subject)
+			}
+			t.Fatalf("tokens after serve started = %v; want only ops, the expired one deleted", subjects)
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }
