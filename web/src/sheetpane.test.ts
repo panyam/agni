@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { SheetPane, parseTurn, heavyDrawing, HEAVY_DRAWING_BYTES, FOLLOW_SIDE_KEY, type Located, type SheetPaneDeps } from "./sheetpane.js";
+import { SheetPane, parseTurn, heavyDrawing, HEAVY_DRAWING_BYTES, FOLLOW_SIDE_KEY, PARK_AFTER_MS, type Located, type SheetPaneDeps } from "./sheetpane.js";
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
@@ -20,6 +20,19 @@ const SHEETS = [
 ];
 
 let panes = 0;
+
+// built holds every pane a test mounts. Each one is closed after its test, so no park timer outlives
+// the file and fires after jsdom has gone (agni issue 1795).
+const built: SheetPane[] = [];
+
+function mount(p: SheetPane): void {
+  document.body.appendChild(p.element);
+  built.push(p);
+}
+
+afterEach(() => {
+  for (const p of built.splice(0)) p.dispose();
+});
 
 function pane(drawnOn: string[], rows: BoardLayerRow[] = ROWS) {
   const calls = { render: [] as string[], overlay: [] as string[], drawnOn: [] as boolean[] };
@@ -46,7 +59,7 @@ function pane(drawnOn: string[], rows: BoardLayerRow[] = ROWS) {
     onOpened: vi.fn(),
   };
   const p = new SheetPane(`sheetview-${++panes}`, deps);
-  document.body.appendChild(p.element);
+  mount(p);
   return { p, calls, deps };
 }
 
@@ -62,6 +75,20 @@ describe("a sheet view", () => {
     expect(p.title()).toBe("Power");
     expect((p.element.querySelector(".sheetview-sheet") as HTMLSelectElement).value).toBe("s2");
     expect(deps.onOpened).toHaveBeenCalledWith(p);
+  });
+
+  it("never parks its drawing once it is closed", async () => {
+    vi.useFakeTimers();
+    try {
+      const { p } = pane([]);
+      await p.open("s2");
+      p.dispose();
+      await vi.advanceTimersByTimeAsync(PARK_AFTER_MS * 2);
+      expect(p.view.parked).toBe(false);
+      expect(p.element.querySelector("img.svg-parked")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("switches to the sheet that draws a selection its own does not, and lights it", async () => {
@@ -570,7 +597,7 @@ describe("a sheet view in WebGL", () => {
       gl: () => gl as never,
     };
     const p = new SheetPane(`sheetview-${++panes}`, deps);
-    document.body.appendChild(p.element);
+    mount(p);
     return { p, asked, overlays: () => overlays };
   }
 
@@ -810,7 +837,7 @@ describe("stepping a sheet view through the sheets that draw the selection", () 
     const forward = vi.fn();
     const { deps } = pane([]);
     const p = new SheetPane("sheetview-history", { ...deps, history: { back, forward } });
-    document.body.appendChild(p.element);
+    mount(p);
     expect(control(p, "selection-back").style.display).toBe("");
     expect(control(p, "selection-back").disabled).toBe(true);
     p.setHistory(true, false);
@@ -868,7 +895,7 @@ describe("a board view's stack view", () => {
       gl: (_id, canvas) => (canvases.push(canvas), gl as never),
     };
     const p = new SheetPane(`sheetview-${++panes}`, deps);
-    document.body.appendChild(p.element);
+    mount(p);
     return { p, asked };
   }
 
