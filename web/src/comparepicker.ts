@@ -7,6 +7,7 @@
 import type { EventBus } from "@panyam/tsappkit";
 import type { SolidIsland } from "@panyam/tsappkit-solid";
 import { fileTreeIsland } from "./filetree.js";
+import { compareDesignsIsland } from "./comparedesigns.js";
 
 // CompareTarget is a design the user chose to compare against.
 export interface CompareTarget {
@@ -29,12 +30,16 @@ export interface ComparePicker {
 // comparePickerIsland builds the modal over a server-rendered hole, which must contain a backdrop
 // element and a tree host (see ViewerPage.html). The island mounts once at boot (C11) and opening is
 // a CSS toggle, so the file listing is already loaded the first time the user asks for it.
+//
+// designsEl, when given, holds the list of stored designs and their revisions (agni issue 1774), and
+// its island comes back as designs for the host to activate beside the tree's.
 export function comparePickerIsland(
   host: HTMLElement,
   treeEl: HTMLElement,
   eventBus: EventBus | null,
   onPick: (target: CompareTarget) => void,
-): { island: SolidIsland; picker: ComparePicker } {
+  designsEl?: HTMLElement | null,
+): { island: SolidIsland; picker: ComparePicker; designs: SolidIsland | null } {
   const doc = host.ownerDocument;
   let open = false;
   let excluded: CompareTarget | null = null;
@@ -61,6 +66,14 @@ export function comparePickerIsland(
     onSheetSelect: () => {},
   });
 
+  const designs = designsEl
+    ? compareDesignsIsland(designsEl, eventBus, (t) => {
+        if (excluded && excluded.mount === t.mount && excluded.path === t.path) return;
+        setOpen(false);
+        onPick(t);
+      })
+    : null;
+
   host.addEventListener("click", (e) => {
     // A click on the backdrop (the host itself, not the dialog inside it) dismisses.
     if (e.target === host) setOpen(false);
@@ -72,6 +85,7 @@ export function comparePickerIsland(
 
   return {
     island: tree.island,
+    designs,
     picker: {
       open: (exclude) => {
         excluded = exclude;

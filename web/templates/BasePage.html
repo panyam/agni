@@ -44,6 +44,13 @@
     .compare-dialog { display: flex; flex-direction: column; width: 420px; max-width: 90vw; max-height: 70vh; background: #fff; border: 1px solid #bbb; border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3); overflow: hidden; }
     .compare-dialog-head { flex: 0 0 auto; padding: 8px 12px; border-bottom: 1px solid #eee; font-weight: 600; color: #333; }
     .compare-tree { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px; }
+    /* The stored designs and their revisions, above the mounted files (agni issue 1774). */
+    .compare-designs { flex: 0 1 auto; max-height: 40%; overflow: auto; padding: 8px 8px 0; border-bottom: 1px solid #eee; }
+    .compare-designs ul { list-style: none; margin: 0; padding: 0 0 0 4px; }
+    .compare-designs-head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: #888; margin-bottom: 4px; }
+    .compare-designs .compare-revisions { margin-left: 12px; font-size: 12px; }
+    .compare-designs .compare-revisions summary { color: #888; cursor: pointer; }
+    .compare-designs .note { color: #888; }
     /* The open design (side A) is pushed as the tree's active file; in the picker that means
        "already open", not "selected", so it reads as unavailable rather than highlighted. */
     .compare-tree .node.active { background: none; color: #999; font-weight: 400; cursor: default; }
