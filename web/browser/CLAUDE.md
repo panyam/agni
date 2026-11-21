@@ -4,7 +4,7 @@ This file covers the browser specs, the walks they drive, and the `make exercise
 
 ## Running specs
 
-- **`make browser-test` is IN the gate.** It needs a Chromium on the machine (`cd web && pnpm exec playwright-core install chromium`).
+- **`make browser-test` is IN the gate.** It needs a Chromium on the machine (`cd web && pnpm exec playwright-core install chromium`). CI sets `CHROME_PATH` to its own Chrome, so launch through `chromePath()` (agni 1780).
 - It drives a real browser against a real server for assertions that need layout. jsdom has no layout, and a panel can be present in the DOM and invisible to a reader. `docsite/content/build/the-gate.md` says what belongs here, and `build/evidence.md` gives two ways a layout assertion passes while proving nothing.
 - **`HEADED=1` shows any spec in a visible Chrome** (`make browser-test HEADED=1`). `SLOWMO=<ms>` paces it.
 - **One spec run by hand uses the `web/static/agni.wasm` and `bin/agni` on disk** (`cd web && pnpm exec vitest run -c vitest.browser.config.ts browser/<spec>`). `make browser-test` rebuilds both. Run `make wasm agni` after a Go change first (agni 1136).

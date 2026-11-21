@@ -42,6 +42,10 @@ GitHub Release body carries.
 
 ### Changed
 
+- CI uses panyam/ci-actions v0.1.1 (issues 1780 and 1784). The browser jobs run the runner's own
+  Chrome through `setup-browser` and download no Chromium. The vulncheck workflow and the gate's
+  shared setup call `vulncheck` and `setup-go-pnpm` in place of their own copies. The browser suite
+  and scripts launch the browser `CHROME_PATH` names, when it is set.
 - goapplib moves to v0.7.21, oneauth to v0.3.13 and servicekit to v0.2.4 (issue 1727).
 - `ListMounts` and `GetMount` leave out a private mount's root, source, ref and commit for a caller
   who can't read its repo, and set `Mount.source_hidden` (issue 1772). A person's connection reads

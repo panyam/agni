@@ -195,28 +195,14 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      # Chromium for `make browser-test`. The suite drives playwright-core directly rather than
-      # @vitest/browser, and playwright-core ships no browser of its own, so without this step every
-      # layout spec fails with "install one with ..." rather than an assertion. --with-deps pulls the
-      # shared libraries a headless Chromium needs on a bare runner.
-      #
-      # Cached on the lockfile, which holds the playwright-core version: a browser build is ~150MB and
-      # does not change between PRs. A cache miss still installs and still fails loudly.
-      - name: Cache the Chromium build
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # A browser for `make browser-test`. The suite drives playwright-core directly, and
+      # playwright-core ships no browser of its own. The runner image has Google Chrome, so the action
+      # points CHROME_PATH at it and the job downloads nothing and runs no apt (agni issue 1780).
+      # `playwright-core install --with-deps` took 15 seconds to 5 minutes a job, since apt stalled on
+      # font packages. On a runner without Chrome the action installs Playwright's Chromium instead.
+      - uses: panyam/ci-actions/setup-browser@ecf33181dffa847874b7797b0593badea92cd2a4 # v0.1.1
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
-
-      # --with-deps runs apt-get update over every source the runner image configures, and the image's
-      # packages.microsoft.com source answered 403 for a while one evening, failing the install over a
-      # repository nothing here uses. Dropping it first leaves the Ubuntu archive, which has
-      # everything Chromium needs.
-      - name: Install Chromium
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
-          pnpm exec playwright-core install --with-deps chromium
-        working-directory: web
+          working-directory: web
 
       # The samples the specs read, including the 233 files remote pins fetch from their publishers,
       # cached on the samples pin as every other job caches them. Without it each of the ten shards
@@ -292,7 +278,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # The same source drop as browser-test's, for the same 403.
+      # packages.microsoft.com answered 403 for a while one evening, failing apt-get update over a
+      # repository nothing here uses. Dropping it first leaves the Ubuntu archive.
       - name: Install protobuf and gRPC for C++
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources

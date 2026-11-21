@@ -67,15 +67,10 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: .
 
-      # Chromium for the demo's browser spec, as ci.yml installs it for the gate's.
-      - name: Cache the Chromium build
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # A browser for the demo's spec, as ci.yml sets one up for the gate's.
+      - uses: panyam/ci-actions/setup-browser@ecf33181dffa847874b7797b0593badea92cd2a4 # v0.1.1
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
-      - name: Install Chromium
-        run: pnpm exec playwright-core install --with-deps chromium
-        working-directory: web
+          working-directory: web
 
       # The demo's seeds beyond the tutorial come from the samples corpus, cached on its pin as ci.yml
       # caches it.
