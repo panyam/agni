@@ -12,6 +12,10 @@ GitHub Release body carries.
 
 ### Added
 
+- `agnids serve --connections-key` checks each caller's own connection under `--auth`, as agni serve
+  does, so a private mount opens for the people who can read its repo (issue 1778). agnids reads the
+  connection records and sealed tokens and never writes or refreshes them. Without the flag,
+  `--auth` still hides every private mount.
 - `agni reports create bb@1.1.2` checks a design at a revision, and `Report.revision` names the
   revision each report read (issue 1774). The viewer's compare picker offers the server's stored
   designs and each one's revisions beside the mounted files. Move on a linked artifact offers the
@@ -46,6 +50,11 @@ GitHub Release body carries.
 
 ### Changed
 
+- Each person's connection ids are their own (issue 1778). bob can keep an `alice-gh` while alice
+  keeps hers, and `connections/<id>` names the caller's own before the server's. A person can't
+  take a server connection's id. goapplib moves to v0.7.23, which keys a connection by owner and id
+  and reads the old records. A mount reads only through a server connection.
+- agnids under `--auth` leaves each mount's folder out of `ListMounts`, as agni serve does.
 - CI uses panyam/ci-actions v0.1.1 (issues 1780 and 1784). The browser jobs run the runner's own
   Chrome through `setup-browser` and download no Chromium. The vulncheck workflow and the gate's
   shared setup call `vulncheck` and `setup-go-pnpm` in place of their own copies. The browser suite

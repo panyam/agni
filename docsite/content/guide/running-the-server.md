@@ -728,15 +728,26 @@ AGNI_TOKEN=... agni connections add alice-gh --mine --github-token env:GITHUB_TO
   When GitHub can't answer, the read is `unavailable`, and a listing names the design unreachable.
 - Linking an artifact from a private mount needs the same access, so a person can't copy files
   from a repo they can't see into a design of their own.
-- Only alice sees her connection. `agni connections rm alice-gh` deletes it and its sealed token.
+- Only alice sees her connection. Each person's ids are their own, so bob can keep an `alice-gh`
+  too, and neither learns from an error that the other has one (agni issue 1778). An id the
+  server's own connections use is refused, and every caller sees those anyway. `connections/<id>`
+  names the caller's own connection when they keep one by that id, else the server's.
+- `agni connections rm alice-gh` deletes alice's connection and its sealed token.
   The server doesn't ask GitHub to revoke a pasted token, since alice made it there and revokes it
   there.
 - A person's connection reads through the server's `--github-api`, so on GitHub Enterprise it needs
   no `--base-url`.
 - `agni mounts ls` shows bob the board mount by name, with "a private source you can't read" where
   the repo would be. `ListMounts` sets `source_hidden` and leaves out its source, ref and commit.
-- `agnids` with `--auth` can't check anyone's connection, since it reads `--store` without
-  writing it. It serves no mount that reads through a connection.
+- `agnids` with `--auth` and agni serve's `--connections-key` checks each caller's own connection
+  the same way, and serves bob the mount by name with nothing under it (agni issue 1778). It reads
+  the connection records and sealed tokens in `--store` and writes neither. It never refreshes a
+  token either, since GitHub rotates a person's refresh token on each use and agni serve keeps the
+  current one. So an expired signed-in token reads as no on agnids until agni serve refreshes it.
+  A pasted token doesn't expire. Without `--connections-key`, `agnids --auth` serves no mount that
+  reads through a connection.
+- Connections saved before agni moved to per-person ids still read back as their owners'. The
+  store moves each one to its new place on its next write.
 
 A server without `--auth` checks nothing, since it doesn't know who is asking. It still records the
 private repo on each artifact a link reads, so a design linked before `--auth` was on opens only for
