@@ -10,96 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
-### Added
+## [0.10.0] - 2026-11-21
 
-- `agnids serve --connections-key` checks each caller's own connection under `--auth`, as agni serve
-  does, so a private mount opens for the people who can read its repo (issue 1778). agnids reads the
-  connection records and sealed tokens and never writes or refreshes them. Without the flag,
-  `--auth` still hides every private mount.
-- `agni reports create bb@1.1.2` checks a design at a revision, and `Report.revision` names the
-  revision each report read (issue 1774). The viewer's compare picker offers the server's stored
-  designs and each one's revisions beside the mounted files. Move on a linked artifact offers the
-  repo's tags (issue 1781).
-- The designs page links a design from a mount (issue 1727). The new-design form offers "Link from a
-  mount", which picks or adds a GitHub mount, walks it to a file and takes a ref. A linked artifact's
-  row has Sync, Move to another ref, and Unlink, and says who it opens for. The design's page lists
-  its revisions, each opening in the viewer. `ListMounts` names `sign_in_url`, and the add-mount
-  form links a person with no connection there.
-- A linked design reads at any ref of its source as `designs/<id>@<ref>`, for check, diff and query
-  (PR 1773, issue 1725). `agni diff designs/bb@1.1.2 designs/bb@1.1.3 --remote`
-  compares two releases with no second design. The server downloads only the files it lacks and
-  leaves the design as it is. `agni designs revisions` and `DesignService.ListDesignRevisions` list
-  the revisions read, and a report names the commit each artifact was read at
-  (`Report.source_versions`).
-- `agni designs revisions --tags` and `--commits` list the linked repo's tags and a branch's commits
-  as revisions, read or not (issue 1725). Listing tags needs the mount to read through a connection.
-- A push to a branch a linked design follows moves the design with no one running sync (PR 1777,
-  issue 1726). GitHub's push webhook arrives at `/hooks/github`, signed with the secret
-  `agni serve --github-webhook-secret` names, and `--poll 5m` asks each followed branch or folder on a
-  timer instead. `agni designs update --on-source-change mark` keeps a design at its files and notes
-  the newer commit as `ArtifactSource.newer_version` until a person syncs. `agni mounts webhook`
-  makes the repo's push webhook through the mount's connection (`CreateMountWebhook`), and a
-  design's page in the viewer names each artifact's source, with a Sync button beside a newer
-  version.
-- People sign in with GitHub, through a GitHub App (issue 1772). `agni serve --github-client-id`,
-  `--github-client-secret` and `--github-allow org:acme` add "Sign in with GitHub" to `/signin`,
-  and `agni login --remote` signs in from a terminal through GitHub's device flow. The server mints
-  the person a token for `github:<login>` and keeps their GitHub token as their own connection, so a
-  design linked from a private repo they can read opens for them. `--public-url` names where GitHub
-  sends the browser back.
-
-### Changed
-
-- agni builds on Go 1.27.4 (issue 1790). Every module's `go` line and the images' `golang` base move
-  together, and gosec moves to v2.30.0, since v2.29.0 under 1.27 skipped its SSA rules without a
-  word. The image builds cache only their final layers, which keeps them from filling the Actions
-  cache (issue 1789).
-- A public repo's mount with no connection lists its tags, so `designs revisions --tags` and Move's
-  tag list work there (issue 1788). goapplib moves to v0.7.25, which reads them through GitHub's REST
-  API, ten to a page, and oneauth to v0.3.14.
-- Each person's connection ids are their own (issue 1778). bob can keep an `alice-gh` while alice
-  keeps hers, and `connections/<id>` names the caller's own before the server's. A person can't
-  take a server connection's id. goapplib moves to v0.7.23, which keys a connection by owner and id
-  and reads the old records. A mount reads only through a server connection.
-- agnids under `--auth` leaves each mount's folder out of `ListMounts`, as agni serve does.
-- CI uses panyam/ci-actions v0.1.1 (issues 1780 and 1784). The browser jobs run the runner's own
-  Chrome through `setup-browser` and download no Chromium. The vulncheck workflow and the gate's
-  shared setup call `vulncheck` and `setup-go-pnpm` in place of their own copies. The browser suite
-  and scripts launch the browser `CHROME_PATH` names, when it is set.
-- The browser shards restore Go's build cache from main's newest run through
-  `panyam/ci-actions/go-build-cache`, so the wasm build and the agni binary compile only what changed.
-  Every ci-actions step moves to v0.1.2.
-- Go moves to 1.26.11, brotli to v1.2.7 and klauspost/compress to v1.20.2, which fix four advisories
-  govulncheck reached from both shipped modules (issue 1786).
-- A link names its revision by the ref every linked artifact is pinned at, and a ref names one
-  revision. When a write moves a design, the server drops the revisions nothing names: not current,
-  with no ref, and on no report (issue 1774).
-- A server without `--auth` records the private repo on each linked artifact, so the design is
-  guarded once `--auth` is on. A server with `--auth` deletes expired tokens at startup and daily
-  (issue 1778).
-- goapplib moves to v0.7.21, oneauth to v0.3.13 and servicekit to v0.2.4 (issue 1727).
-- `ListMounts` and `GetMount` leave out a private mount's root, source, ref and commit for a caller
-  who can't read its repo, and set `Mount.source_hidden` (issue 1772). A person's connection reads
-  through the server's `--github-api` when it names no `--base-url`.
-- Deleting a person's connection goes through goapplib's `Disconnect`, which revokes a token the
-  server got by signing the person in and deletes a pasted one (issue 1776).
-- goapplib and goapplib storage v0.7.20, and oneauth v0.3.12 (issues 1772, 1776). A person checked
-  before they add their connection is no longer refused for a minute after.
-
-- goapplib and goapplib storage v0.7.18, and oneauth and oneauth grpc v0.3.11 (issues 1775, 1726).
-  A token a person pastes with `agni connections add --mine` is kept as pasted, so a later
-  disconnect doesn't ask GitHub to revoke a token the server didn't issue. A folder mount now names
-  a version from its files' sizes and modification times, so a sync of an unchanged folder reads no
-  file.
-
-### Added
-
-- A design linked from a private repo opens only for a caller whose own GitHub connection reads the
-  repo, on a server with `--auth tokens` (PR 1771, issue 1728). A person keeps their connection
-  with `agni connections add <id> --mine --github-token env:NAME`, and the server seals the token
-  under the new `--connections-key`. Every read is checked: by name, by check, by snapshot, in a
-  listing, and by file path. `Design.access_sources` names the repos that decide it. agnids with
-  `--auth` serves no mount that reads through a connection.
+A design linked from a private GitHub repo opens only for the people who can read the repo. A person
+signs in with GitHub, keeps their token as their own connection, and every read checks it, in agni
+serve and in agnids (PRs 1771, 1779 and 1791). A linked design reads at any tag or commit, follows its
+branch by push webhook or poll, and keeps a report per revision (PRs 1773, 1777 and 1783). The designs
+page links a design from a mount (PR 1782), and agni builds on Go 1.27.4 (PR 1793). It is a minor
+release with no change to an existing API. The full write-up is [RELEASES/v0.10.0.md](RELEASES/v0.10.0.md).
 
 ## [0.9.1] - 2026-11-19
 
