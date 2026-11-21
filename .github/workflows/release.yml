@@ -146,7 +146,10 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.kind }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.kind }}
+          # mode=min caches the final image's layers alone. mode=max cached every build stage too, and
+          # those layers held 6 GB of the repo's 10 GB Actions cache, so GitHub evicted the gate's entries
+          # (agni issue 1789).
+          cache-to: type=gha,mode=min,scope=${{ matrix.kind }}
 
       # One platform, pushed with no tag, so the version tag only ever names a manifest holding both.
       # The amd64 cache keeps the `agnids` scope the images-agnids workflow writes on main.
@@ -164,7 +167,7 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
           outputs: type=image,name=ghcr.io/${{ github.repository_owner }}/${{ matrix.kind }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.arch == 'amd64' && 'agnids' || 'agnids-arm64' }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch == 'amd64' && 'agnids' || 'agnids-arm64' }}
+          cache-to: type=gha,mode=min,scope=${{ matrix.arch == 'amd64' && 'agnids' || 'agnids-arm64' }}
 
       # Proves the published image runs and agrees with its own tag, on the runner's architecture, so
       # agnids' arm64 half is now run before it is published under the tag rather than never.

@@ -1,6 +1,6 @@
 module github.com/panyam/agni/examples/read-and-stats
 
-go 1.26.11
+go 1.27.4
 
 require (
 	github.com/panyam/agni/examples/common v0.0.0

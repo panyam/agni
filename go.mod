@@ -1,6 +1,6 @@
 module github.com/panyam/agni
 
-go 1.26.11
+go 1.27.4
 
 require (
 	connectrpc.com/connect v1.21.1
@@ -9,6 +9,8 @@ require (
 	github.com/klauspost/compress v1.20.2
 	github.com/panyam/goapplib v0.7.25
 	github.com/panyam/goapplib/storage v0.7.25
+	github.com/panyam/goutils v0.1.15
+	github.com/panyam/jaala v0.1.101
 	github.com/panyam/jaala/frontends/mcp v0.1.101
 	github.com/panyam/jaala/frontends/nl v0.1.101
 	github.com/panyam/massrelay v0.3.7
@@ -27,6 +29,7 @@ require (
 	github.com/ulikunitz/xz v0.5.15
 	golang.org/x/oauth2 v0.38.0
 	golang.org/x/text v0.43.0
+	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -42,16 +45,21 @@ require (
 	github.com/buger/jsonparser v1.6.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fernet/fernet-go v0.0.0-20240119011108-303da6aec611 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/panyam/gocurrent v0.1.2 // indirect
 	github.com/panyam/jaala/frontends/cypher v0.1.101 // indirect
+	github.com/panyam/templar v0.1.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
@@ -79,21 +87,10 @@ require (
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/net v0.61.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
-)
-
-require (
-	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/panyam/gocurrent v0.1.2 // indirect
-	github.com/panyam/goutils v0.1.15
-	github.com/panyam/jaala v0.1.101
-	github.com/panyam/templar v0.1.2 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
-	google.golang.org/grpc v1.84.0
 )
 
 tool (

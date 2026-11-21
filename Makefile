@@ -185,7 +185,7 @@ vet:
 # examples are not shipped and stay out of scope.
 STATICCHECK := honnef.co/go/tools/cmd/staticcheck@v0.8.2
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.8.0
-GOSEC := github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+GOSEC := github.com/securego/gosec/v2/cmd/gosec@v2.30.0
 GITLEAKS := github.com/zricethezav/gitleaks/v8@v8.30.1
 SHIPPED_MODULES := . datasheet
 
@@ -204,10 +204,16 @@ vulncheck:
 #
 # It runs under the Go that go.mod names, as CI does. Under a newer Go than gosec's analysis library
 # reads, its SSA-based rules (G115 integer overflow, G703 and G710 taint, G112, G122) skip without a
-# word, so a developer on Go 1.27 saw a clean run where CI on 1.26.4 found 100 more.
+# word. A developer on Go 1.27 saw a clean run where CI on 1.26.4 found 100 more, and gosec v2.29.0
+# under go1.27.4 missed a planted G115 that v2.30.0 reports (agni issue 1790). A Go move checks the
+# pinned gosec against a planted finding first.
+#
+# Each module's own package folders go to gosec by name, from go list. gosec v2.30.0 reads ./... across
+# nested module boundaries into docsite/ and examples/, which agni doesn't ship, and its -exclude-dir
+# doesn't stop it (agni issue 1790).
 GO_MOD_VERSION := $(shell awk '/^go /{print $$2; exit}' go.mod)
 seccheck:
-	@for m in $(SHIPPED_MODULES); do echo "==> gosec $$m (go$(GO_MOD_VERSION))"; (cd $$m && GOTOOLCHAIN=go$(GO_MOD_VERSION) $(GO) run $(GOSEC) -quiet -severity=medium ./...) || exit 1; done
+	@for m in $(SHIPPED_MODULES); do echo "==> gosec $$m (go$(GO_MOD_VERSION))"; (cd $$m && GOTOOLCHAIN=go$(GO_MOD_VERSION) $(GO) run $(GOSEC) -quiet -severity=medium $$(GOTOOLCHAIN=go$(GO_MOD_VERSION) $(GO) list -f '{{.Dir}}' ./...)) || exit 1; done
 
 # Committed secrets, over the whole history. A known-fake value is allowlisted by exact value in
 # .gitleaks.toml, so a real secret of the same shape is still reported.

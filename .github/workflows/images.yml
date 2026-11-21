@@ -71,7 +71,10 @@ jobs:
             VERSION=v0.0.0-ci
           tags: agni-ci/${{ matrix.kind }}:ci
           cache-from: type=gha,scope=${{ matrix.scope }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.scope }}
+          # mode=min caches the final image's layers alone. mode=max cached every build stage too, and
+          # those layers held 6 GB of the repo's 10 GB Actions cache, so GitHub evicted the gate's entries
+          # (agni issue 1789).
+          cache-to: type=gha,mode=min,scope=${{ matrix.scope }}
 
       - name: Smoke test
         env:

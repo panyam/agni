@@ -4,7 +4,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/panyam/agni.svg)](https://pkg.go.dev/github.com/panyam/agni)
 [![Go Report Card](https://goreportcard.com/badge/github.com/panyam/agni)](https://goreportcard.com/report/github.com/panyam/agni)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Go 1.26](https://img.shields.io/badge/go-1.26-00ADD8?logo=go&logoColor=white)](go.mod)
+[![Go 1.27](https://img.shields.io/badge/go-1.27-00ADD8?logo=go&logoColor=white)](go.mod)
 
 Agni checks schematics and boards for design mistakes, such as an I2C bus with no pull-up, a power
 rail with no decoupling, a USB connector with no ESD protection, or a track narrower than the
@@ -215,7 +215,7 @@ growing. Issues and readers for new formats are welcome.
 
 ## Building
 
-`make build` requires Go 1.26.11 and pnpm (for the web viewer bundle). `make testall` also needs
+`make build` requires Go 1.27.4 and pnpm (for the web viewer bundle). `make testall` also needs
 `buf` 1.61 on your PATH, `python3`, a Chromium for the browser tests, and network access to fetch
 the pinned sample corpus. `CONTRIBUTING.md` has the details.
 

@@ -50,6 +50,10 @@ GitHub Release body carries.
 
 ### Changed
 
+- agni builds on Go 1.27.4 (issue 1790). Every module's `go` line and the images' `golang` base move
+  together, and gosec moves to v2.30.0, since v2.29.0 under 1.27 skipped its SSA rules without a
+  word. The image builds cache only their final layers, which keeps them from filling the Actions
+  cache (issue 1789).
 - A public repo's mount with no connection lists its tags, so `designs revisions --tags` and Move's
   tag list work there (issue 1788). goapplib moves to v0.7.25, which reads them through GitHub's REST
   API, ten to a page, and oneauth to v0.3.14.

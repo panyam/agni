@@ -93,6 +93,6 @@ make doc        # render the walkthrough to markdown
 
 ## Prerequisites
 
-- Go 1.26+
+- Go 1.27.4+
 - No network at run time, because the fixtures are embedded and demokit is a normal module
   dependency.

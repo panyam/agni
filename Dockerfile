@@ -61,7 +61,7 @@ RUN pnpm -C web build
 # ---------------------------------------------------------------------------------------------
 # $BUILDPLATFORM with an explicit GOARCH below: the binary is CGO-free, so Go cross-compiles it far
 # faster than emulating the whole toolchain on the target architecture.
-FROM --platform=$BUILDPLATFORM golang:1.26-bookworm@sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.4-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea AS build
 # VERSION stamps the build's identity. It must be passed explicitly here, unlike every other way
 # agni is built, because .dockerignore excludes .git to keep the context small: the toolchain has
 # no repository to read, so it records neither a vcs.revision nor a module version and

@@ -27,8 +27,7 @@ type RunQueryRequest struct {
 	// snapshot names the design to query, "snapshots/{snapshot}" (agni issue 1061).
 	Snapshot string `protobuf:"bytes,10,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// query is the datalog text, the same surface `agni query` accepts:
-	//
-	//	component.mpn(?r,?m), component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
+	//   component.mpn(?r,?m), component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// work_budget caps the work each query in this request may do (agni issue 792). Work counts
 	// candidate comparisons, each row a generator emits, and each connection a circuit walk

@@ -5,7 +5,7 @@ welcome, especially readers for new formats and check rules.
 
 ## Getting set up
 
-`make build` requires Go 1.26.11 and pnpm (for the web viewer bundle). `make testall` also needs
+`make build` requires Go 1.27.4 and pnpm (for the web viewer bundle). `make testall` also needs
 `buf` 1.61 on your PATH, `python3` for the Python client tests, a Chromium for the browser tests
 (`cd web && pnpm exec playwright-core install chromium`), and network access to fetch the pinned
 sample corpus.
@@ -93,11 +93,6 @@ the rules for generated code.
   `python-test`, `tutorial-runs-check` and `docsite-images-check` never run. Run
   `pnpm install --frozen-lockfile` in a new worktree first, or `proto-check` fails on a missing
   `protoc-gen-es`.
-- **Build in a worktree with the default Go, never `GOTOOLCHAIN=go1.26.11`.** Go 1.26 finds a
-  repository only by a `.git` directory. A linked worktree's `.git` is a file, so Go 1.26 runs no git
-  and stamps `(devel)` (golang/go#58218, fixed in go1.27). A `(devel)` wasm has an empty
-  `StoreVersion` and keeps nothing. `browser-test` and rung 12's capture then fail, and a timed walk
-  reports `design=built` where it should read `design=store` (#957).
 - **`tutorial-runs-check` regenerates captures and does not read the prose quoting them.** A
   tutorial can cite numbers that a change moved, and the gate stays green. A capture step that exits
   non-zero and captures nothing is a build error unless its spec sets `exit: true` (agni 825).
