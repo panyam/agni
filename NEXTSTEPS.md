@@ -9,16 +9,16 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-21, at `b65d6f7b`.
+Last pruned 2026-11-21, at `25866e01`.
 
 ## At a glance
 
-**#1722** (link a design to where the team keeps it, and follow its history) is active, at 18 of 21.
+**#1722** (link a design to where the team keeps it, and follow its history) is active, at 19 of 24.
 Its exercise is `make exercise-linked-sources`, which ends with a browser walk of the designs page's
-link form, so it needs `make ui`. PRs #1791 and #1794 merged on 2026-11-21 and closed #1778 and
-#1788. The exercise passes at `3f377b2b`. It doesn't list the Jetson repo's tags yet, so #1788's
-change runs only against the fake GitHub. What remains is #1795 (a web-test flake) and two P3
-sources (#1729, #1730).
+link form, so it needs `make ui`. PR #1797 merged on 2026-11-21 and closed #1795, the park-timer
+flake in web-test. The exercise passes at `25866e01`. It doesn't list the Jetson repo's tags yet, so
+#1788's change runs only against the fake GitHub. What remains is two test flakes (#1798, #1796)
+and two P3 sources (#1729, #1730).
 
 - **#1611 `mission_markup`** is filed and not active. #1612 and #1613 come first.
 - **Four missions filed on 2026-11-17, none active.** Each one's first ticket writes its exercise.
@@ -28,8 +28,9 @@ sources (#1729, #1730).
 
 ## Open, ranked
 
-1. **#1795**, the `XMLSerializer` flake in `web-test`. It fails a run with every test passing. Then
-   #1729 (SharePoint) and #1730 (S3 and GCS), both P3.
+1. **#1798**, a `viewerroom.spec.ts` test that sometimes finds no agreed tab in browser-test shard
+   1/5. Then #1796 (two web test files that depend on test order), #1729 (SharePoint) and #1730
+   (S3 and GCS), all P3.
 2. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
