@@ -54,6 +54,9 @@ GitHub Release body carries.
   together, and gosec moves to v2.30.0, since v2.29.0 under 1.27 skipped its SSA rules without a
   word. The image builds cache only their final layers, which keeps them from filling the Actions
   cache (issue 1789).
+- A public repo's mount with no connection lists its tags, so `designs revisions --tags` and Move's
+  tag list work there (issue 1788). goapplib moves to v0.7.25, which reads them through GitHub's REST
+  API, ten to a page, and oneauth to v0.3.14.
 - Each person's connection ids are their own (issue 1778). bob can keep an `alice-gh` while alice
   keeps hers, and `connections/<id>` names the caller's own before the server's. A person can't
   take a server connection's id. goapplib moves to v0.7.23, which keys a connection by owner and id

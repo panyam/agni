@@ -157,7 +157,7 @@ and each linked artifact's source version. Any of them reads the design at that 
 
   agni diff designs/bb@1.1.2 designs/bb@1.1.3 --remote http://localhost:8080
 
---tags lists the linked repo's tags instead, newest commit first, and --commits a branch's commits,
+--tags lists the linked repo's tags instead, newest first, and --commits a branch's commits,
 whether the server has read them or not. A tag it hasn't read says "not read yet".`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
