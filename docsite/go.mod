@@ -1,6 +1,6 @@
 module github.com/panyam/agni/docsite
 
-go 1.25
+go 1.27.4
 
 require (
 	github.com/panyam/s3gen v0.1.6

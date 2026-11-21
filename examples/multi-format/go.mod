@@ -1,6 +1,6 @@
 module github.com/panyam/agni/examples/multi-format
 
-go 1.26.11
+go 1.27.4
 
 require (
 	github.com/panyam/agni v0.0.0

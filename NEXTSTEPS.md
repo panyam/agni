@@ -59,8 +59,6 @@ Two items are gated, #677 (only the "declare a NEW class" half, gated on the cla
   It pins the client against `GetCheckReport`. It exists to catch drift, and "improving" it would
   hide that drift.
 - **Some failures in a fresh worktree are not yours.** `TestCheckWebAssets` and, in the `datasheet`
-  module, `TestCheckWorkbenchAssets` need a built web bundle, and `TestSampleBoard*` needs the gitignored samples corpus (`make samples`, or an ABSOLUTE symlink to the main checkout's `tools/samples`, since a relative one resolves from `tools/`). The Glasgow oracle tests also need `tools/samples/remote/kicad-models`, which `make samples-oracle` fetches. `proto-check` needs `protoc-gen-es`, so run `make web-install` first. A worktree
-  built under `GOTOOLCHAIN=go1.26.11` carries no VCS stamp, which fails the browser-cache test and rung
-  12's capture in `tutorial-runs-check` (#957); the default Go 1.27 stamps a worktree and passes both.
+  module, `TestCheckWorkbenchAssets` need a built web bundle, and `TestSampleBoard*` needs the gitignored samples corpus (`make samples`, or an ABSOLUTE symlink to the main checkout's `tools/samples`, since a relative one resolves from `tools/`). The Glasgow oracle tests also need `tools/samples/remote/kicad-models`, which `make samples-oracle` fetches. `proto-check` needs `protoc-gen-es`, so run `make web-install` first.
 - **The two `DesignHash` implementations differ on purpose** (see `OUT_OF_SCOPE.md`). Every caller now
   passes a resolved tier, so unifying them would change nothing a caller can observe.
