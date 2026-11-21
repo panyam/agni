@@ -87,7 +87,12 @@ func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir
 	}
 	// The designs are the store's records alone. A folder in a mount becomes a design only when a
 	// person adds it (AddDesigns), so its design.yaml makes none (agni issue 1736).
-	catalog := service.NewDesignCatalog(store).WithGuard(guard)
+	catalog := service.NewDesignCatalog(store)
+	// A link records the private source it read with or without --auth (agni issue 1778).
+	if ms != nil {
+		catalog.WithSources(ms)
+	}
+	catalog.WithGuard(guard)
 	if resolver != nil {
 		// A snapshot may name its design, designs/{d}, and Ingest looks it up here (agni issue 1695).
 		resolver.Designs = catalog

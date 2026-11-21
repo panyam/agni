@@ -64,19 +64,20 @@ func (g *AccessGuard) Sources(arts []*webapi.Artifact) []string {
 	return out
 }
 
-// stamp records on each write the private source its mount reads, so the files stay guarded after
-// an unlink or the mount's deletion.
-func (g *AccessGuard) stamp(writes []ArtifactWrite) {
-	if g == nil {
+// stampSources records on each write the private source its mount reads, so the files stay guarded
+// after an unlink or the mount's deletion. It runs whether or not reads are guarded, so a design
+// linked on a server without --auth is guarded once the server runs with it (agni issue 1778).
+func stampSources(src SourceAccess, writes []ArtifactWrite) {
+	if src == nil {
 		return
 	}
 	for i := range writes {
-		src := writes[i].Source
-		if src == nil || src.GetAccessSource() != "" {
+		w := writes[i].Source
+		if w == nil || w.GetAccessSource() != "" {
 			continue
 		}
-		if s := g.src.Guarding(src.GetMount()); s != "" {
-			c := proto.Clone(src).(*webapi.ArtifactSource)
+		if s := src.Guarding(w.GetMount()); s != "" {
+			c := proto.Clone(w).(*webapi.ArtifactSource)
 			c.AccessSource = s
 			writes[i].Source = c
 		}
