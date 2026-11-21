@@ -1,12 +1,12 @@
 module github.com/panyam/agni
 
-go 1.26.9
+go 1.26.11
 
 require (
 	connectrpc.com/connect v1.21.1
 	github.com/bodgit/sevenzip v1.6.5
 	github.com/ebitengine/purego v0.8.4
-	github.com/klauspost/compress v1.19.1
+	github.com/klauspost/compress v1.20.2
 	github.com/panyam/goapplib v0.7.22
 	github.com/panyam/goapplib/storage v0.7.22
 	github.com/panyam/jaala/frontends/mcp v0.1.101
@@ -34,7 +34,7 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/alexedwards/scs/v2 v2.9.0 // indirect
-	github.com/andybalholm/brotli v1.2.2 // indirect
+	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
