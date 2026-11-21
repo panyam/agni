@@ -428,22 +428,23 @@ downloads only the files it doesn't hold, and leaves the design as it is. An upl
 its files, and so does one linked to a `--mount` folder, which has no history. A tag or a commit
 reads the same files next time with no call to GitHub. A branch is resolved again on each read.
 
-`agni designs revisions bb` lists the revisions the server has read, newest first. A link or a sync
-keeps one each time, so a design that follows a folder still has a history of what it read. Each line
-names the revision, `designs/bb@<id>`, the tags and commits that gave it, and each artifact's commit.
-Here is the exercise's design after it links both artifacts at 1.1.2, moves them to 1.1.3 one at a
-time, and diffs the two commits:
+`agni designs revisions bb` lists the revisions the server keeps, newest first. Each line names the
+revision, `designs/bb@<id>`, the tags and commits that name it, and each artifact's commit. Here is
+the exercise's design after it links both artifacts at 1.1.2, moves them to 1.1.3 one at a time, and
+diffs the two commits:
 
 ```
 designs/bb@c82028f4036a	read 2026-11-20 00:40:17; current; refs 8e087f4f946a925041380699dcde51ae8519f621; board at 8e087f4f946a925041380699dcde51ae8519f621; schematic at 8e087f4f946a925041380699dcde51ae8519f621
-designs/bb@98e7af684fdb	read 2026-11-20 00:40:11; board at 3411086e6d6ad2384d0609c53cd6b96323f97c24; schematic at 8e087f4f946a925041380699dcde51ae8519f621
 designs/bb@584814cd1342	read 2026-11-20 00:40:04; refs 3411086e6d6ad2384d0609c53cd6b96323f97c24; board at 3411086e6d6ad2384d0609c53cd6b96323f97c24; schematic at 3411086e6d6ad2384d0609c53cd6b96323f97c24
-designs/bb@267ee377b594	read 2026-11-20 00:39:58; schematic at 3411086e6d6ad2384d0609c53cd6b96323f97c24
 ```
 
-Each link wrote a revision, so linking the schematic before the board gave one with the schematic
-alone, and moving them one at a time gave one with the two at different commits. A sync moves every
-artifact from one repo together, so it never leaves one half moved.
+Each link writes a revision, and the server keeps the ones something names (agni issue 1774). A link
+names its revision by its ref once every linked artifact is pinned at that ref, so linking both at
+1.1.2 names that revision 1.1.2, and a ref names one revision at a time. A read at a ref names the
+revision it gave. A report keeps the revision it ran on. When a write moves the design, the server
+drops the revisions nothing names, so linking the schematic before the board, or moving them one at a
+time, leaves no half-moved step behind. A sync moves every artifact from one repo together, so it
+never makes one.
 
 `agni designs revisions bb --tags` lists the linked repo's tags instead, newest commit first, whether
 the server has read them or not. `--commits` lists a branch's commits, the branch the design follows
@@ -453,10 +454,12 @@ token, so the mount has to read through a connection. A mount without one answer
 `failed_precondition`, and its revisions are still listed without `--tags`. A design whose artifacts
 link two repos lists the refs of neither, since a tag names a commit in one repo.
 
-A revision keeps its files on the server until the design is deleted. A report names the commit each
-artifact was read at, such as `schematic at 8e087f4f946a`, so it still says what it ran on after a
-sync moves the design. The calls are `DesignService.ListDesignRevisions`, a snapshot naming
-`designs/{design}@{ref}`, and `Report.source_versions`.
+A kept revision keeps its files on the server until it is dropped or the design is deleted. A report
+names the commit each artifact was read at, such as `schematic at 8e087f4f946a`, and the revision it
+read, so it still says what it ran on after a sync moves the design. `agni reports create bb@1.1.2`
+checks the design as of 1.1.2, and its report sits beside the ones on the current files. The calls
+are `DesignService.ListDesignRevisions`, a snapshot naming `designs/{design}@{ref}`, `CreateReport`
+with that name as its parent, and `Report.source_versions` and `Report.revision`.
 
 ### Following a branch without running sync
 
@@ -735,7 +738,9 @@ AGNI_TOKEN=... agni connections add alice-gh --mine --github-token env:GITHUB_TO
 - `agnids` with `--auth` can't check anyone's connection, since it reads `--store` without
   writing it. It serves no mount that reads through a connection.
 
-A server without `--auth` checks nothing, since it doesn't know who is asking.
+A server without `--auth` checks nothing, since it doesn't know who is asking. It still records the
+private repo on each artifact a link reads, so a design linked before `--auth` was on opens only for
+the repo's readers once it is (agni issue 1778).
 
 ### Signing in with GitHub
 
@@ -767,7 +772,8 @@ agni login --remote https://agni.example.com
   `agni/credentials` in their config folder. Every `--remote` call to that server sends it when
   `AGNI_TOKEN` isn't set.
 - A person signed in as `alice` is the caller `github:alice`. The minted token works for 30 days,
-  and `agni token ls` lists it as "github sign-in".
+  and `agni token ls` lists it as "github sign-in". The server deletes expired tokens when it starts
+  and once a day (agni issue 1778).
 - Their GitHub token becomes the connection `github-alice`, owned by `github:alice`, so a design
   linked from a private repo they can read opens for them. The next sign-in replaces the token.
   goapplib refreshes it through the App, since a GitHub App's user token lasts eight hours, and

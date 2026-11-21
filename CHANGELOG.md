@@ -12,6 +12,10 @@ GitHub Release body carries.
 
 ### Added
 
+- `agni reports create bb@1.1.2` checks a design at a revision, and `Report.revision` names the
+  revision each report read (issue 1774). The viewer's compare picker offers the server's stored
+  designs and each one's revisions beside the mounted files. Move on a linked artifact offers the
+  repo's tags (issue 1781).
 - The designs page links a design from a mount (issue 1727). The new-design form offers "Link from a
   mount", which picks or adds a GitHub mount, walks it to a file and takes a ref. A linked artifact's
   row has Sync, Move to another ref, and Unlink, and says who it opens for. The design's page lists
@@ -42,6 +46,12 @@ GitHub Release body carries.
 
 ### Changed
 
+- A link names its revision by the ref every linked artifact is pinned at, and a ref names one
+  revision. When a write moves a design, the server drops the revisions nothing names: not current,
+  with no ref, and on no report (issue 1774).
+- A server without `--auth` records the private repo on each linked artifact, so the design is
+  guarded once `--auth` is on. A server with `--auth` deletes expired tokens at startup and daily
+  (issue 1778).
 - goapplib moves to v0.7.21, oneauth to v0.3.13 and servicekit to v0.2.4 (issue 1727).
 - `ListMounts` and `GetMount` leave out a private mount's root, source, ref and commit for a caller
   who can't read its repo, and set `Mount.source_hidden` (issue 1772). A person's connection reads
