@@ -1,8 +1,8 @@
 // Launches the Chromium playwright already has on disk, and hands a spec one page.
 //
 // playwright-core rather than the full playwright package, and no browser download of its own. The
-// suite runs in `make testall` since PR 629, so CI installs a Chromium as a step and a developer
-// installs one once (the error below names the command).
+// suite runs in `make testall` since PR 629. A developer installs a Chromium once (the error below
+// names the command). CI sets CHROME_PATH to the runner's own Chrome instead (agni issue 1780).
 //
 // HEADED=1 shows the browser instead of running it headless, and SLOWMO=<ms> pauses that long before
 // each action (250 by default when headed), so `make browser-test HEADED=1` or `make
@@ -27,7 +27,12 @@ export async function launch(): Promise<Browser> {
   try {
     // A headed window is left to fit the screen. Asking for 1400x1000 on a shorter laptop screen left
     // the view jumping between two offsets as the walk acted.
-    const browser = await chromium.launch({ headless: !headed, slowMo, args: headed ? ["--start-maximized"] : [] });
+    const browser = await chromium.launch({
+      executablePath: chromePath(),
+      headless: !headed,
+      slowMo,
+      args: headed ? ["--start-maximized"] : [],
+    });
     return reducedMotion(browser);
   } catch (e) {
     const why = e instanceof Error ? e.message : String(e);
@@ -36,6 +41,12 @@ export async function launch(): Promise<Browser> {
         `Install one with:  cd web && pnpm exec playwright-core install chromium`,
     );
   }
+}
+
+// chromePath is the browser CHROME_PATH names, or undefined for the Chromium playwright-core
+// installed. CI's setup-browser action sets it to the runner's Chrome, so no job downloads one.
+export function chromePath(): string | undefined {
+  return process.env.CHROME_PATH || undefined;
 }
 
 // reducedMotion makes every page and context of the suite ask for reduced motion, so a revealed view

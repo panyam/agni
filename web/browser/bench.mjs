@@ -51,7 +51,7 @@ try {
     } catch {}
     await new Promise((r) => setTimeout(r, 200));
   }
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
   // Each configuration in a context of its own, so none restores what another stored in the browser's
   // cache. "reload" is a second page in the lanes run's context, as a visitor reloading the board.
   const SERVE_MAX_BYTES = Number(process.env.SERVE_MAX_MB ?? 700) * (1 << 20);

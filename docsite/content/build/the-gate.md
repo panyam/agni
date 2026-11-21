@@ -326,7 +326,8 @@ now. Like the stamp trap, it came from a check reading the working directory rat
 because its answer changes without the code changing. The advisory database moves on its own, so a
 scan on every pull request would mostly re-answer last week's question and still miss an advisory
 published between pull requests. `.github/workflows/vulncheck.yml` runs it weekly and on each
-release tag and files an issue when it fails, and `make audit` runs it with the three scanners the
+release tag through `panyam/ci-actions/vulncheck`. A failure files an issue titled `vulncheck:`,
+or comments on the open one, and `make audit` runs it with the three scanners the
 gate does run. The three are `lint`, `seccheck` and `secrets`. Each runs its tool through `go run`
 at the version the Makefile pins, so nothing has to be installed. gosec runs under the Go that
 `go.mod` names, because under a newer one its SSA-based rules (G115 and the taint rules) skip
@@ -358,7 +359,10 @@ flowchart LR
 
 The browser suite runs inside `testall`, and in CI as a job of its own beside the rest of the gate
 (agni issue 1147). It needs a Chromium installed per machine (`cd web && pnpm
-exec playwright-core install chromium`), and CI installs and caches one. It starts its own server
+exec playwright-core install chromium`). Set `CHROME_PATH` to use another Chrome. CI points it at
+the runner's own Chrome through `panyam/ci-actions/setup-browser`, so no job downloads a browser
+(agni issue 1780). The runner's Chrome moves with the runner image, not with `playwright-core`, so a
+layout spec can shift on an image update with no change here. It starts its own server
 on a kernel-picked port, so it will not fight a dev server you already have. `make hooks` installs an
 opt-in pre-push hook that runs it before a push leaves your machine.
 

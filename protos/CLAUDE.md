@@ -2,7 +2,7 @@
 
 This file covers the proto toolchain and how to regenerate code after a proto change.
 
-- The toolchain is Go 1.26.9 and `buf` 1.61.
+- The toolchain is Go 1.26.11 and `buf` 1.61.
 - **Both protoc plugins are pinned as `tool` directives in `go.mod` and invoked via `go tool`.** Their versions are data, so only `buf` itself has to be on your PATH.
 - **After ANY proto change run `make proto` (Go), `make proto-web` (the TypeScript client, which the viewer imports, and the datasheets workbench), `make proto-py` (Python), `make proto-java` (Java) AND `make proto-rust` (Rust).** `make proto-check` fails the gate if any of them is stale. The C++ client generates at build time and has nothing to regenerate.
 - `make proto` and `make proto-check` set `GOTOOLCHAIN` to the Go version in `go.mod` for their Go generation. `protoc-gen-go` formats comments with the Go running it, so a newer Go rewrites comments in untouched generated files (agni 994). A `buf generate` typed by hand gets no such pin.

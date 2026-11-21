@@ -77,7 +77,7 @@ or a connection. Never add a free-text field to it.
 - `make build`, `make test`, `make agni`, `make install`. `make agni` writes `bin/agni` and does NOT
   update the `agni` on PATH, which `make install` writes. Verify a CLI fix with the right one.
 - `make testall` is the full gate and CI runs exactly it. From a worktree run `make -k testall`, and
-  build with the default Go, never `GOTOOLCHAIN=go1.26.9` (CONTRIBUTING.md has why).
+  build with the default Go, never `GOTOOLCHAIN=go1.26.11` (CONTRIBUTING.md has why).
 - After any proto change run `make proto`, `make proto-web`, `make proto-py`, `make proto-java` and
   `make proto-rust` (`protos/CLAUDE.md`).
 - A stray `agni serve` can answer instead of yours. `pgrep -af "agni serve"` before trusting a

@@ -48,7 +48,7 @@ try {
     if (i === 300) throw new Error(`agni serve did not answer at ${base} in 30 s`);
     await new Promise((r) => setTimeout(r, 100));
   }
-  browser = await chromium.launch();
+  browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));

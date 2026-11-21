@@ -46,6 +46,12 @@ GitHub Release body carries.
 
 ### Changed
 
+- CI uses panyam/ci-actions v0.1.1 (issues 1780 and 1784). The browser jobs run the runner's own
+  Chrome through `setup-browser` and download no Chromium. The vulncheck workflow and the gate's
+  shared setup call `vulncheck` and `setup-go-pnpm` in place of their own copies. The browser suite
+  and scripts launch the browser `CHROME_PATH` names, when it is set.
+- Go moves to 1.26.11, brotli to v1.2.7 and klauspost/compress to v1.20.2, which fix four advisories
+  govulncheck reached from both shipped modules (issue 1786).
 - A link names its revision by the ref every linked artifact is pinned at, and a ref names one
   revision. When a write moves a design, the server drops the revisions nothing names: not current,
   with no ref, and on no report (issue 1774).

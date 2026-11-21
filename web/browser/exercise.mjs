@@ -69,7 +69,7 @@ if (siteDir) {
 }
 if (!base.endsWith("/")) base += "/";
 const prefix = new URL(base).pathname;
-const browser = await chromium.launch().catch((e) => {
+const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined }).catch((e) => {
   console.error(`could not launch Chromium: ${e.message}\nInstall one with:  cd web && pnpm exec playwright-core install chromium`);
   process.exit(2);
 });
