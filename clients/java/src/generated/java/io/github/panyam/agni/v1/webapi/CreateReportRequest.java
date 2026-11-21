@@ -57,7 +57,8 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object parent_ = "";
   /**
    * <pre>
-   * "designs/{design}"
+   * parent is "designs/{design}", or "designs/{design}&#64;{rev}" for a revision of it, by a tag, a commit
+   * or a revision id (agni issue 1774). The report is kept under the design either way.
    * </pre>
    *
    * <code>string parent = 1 [json_name = "parent"];</code>
@@ -78,7 +79,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * "designs/{design}"
+   * parent is "designs/{design}", or "designs/{design}&#64;{rev}" for a revision of it, by a tag, a commit
+   * or a revision id (agni issue 1774). The report is kept under the design either way.
    * </pre>
    *
    * <code>string parent = 1 [json_name = "parent"];</code>
@@ -627,7 +629,8 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object parent_ = "";
     /**
      * <pre>
-     * "designs/{design}"
+     * parent is "designs/{design}", or "designs/{design}&#64;{rev}" for a revision of it, by a tag, a commit
+     * or a revision id (agni issue 1774). The report is kept under the design either way.
      * </pre>
      *
      * <code>string parent = 1 [json_name = "parent"];</code>
@@ -647,7 +650,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * "designs/{design}"
+     * parent is "designs/{design}", or "designs/{design}&#64;{rev}" for a revision of it, by a tag, a commit
+     * or a revision id (agni issue 1774). The report is kept under the design either way.
      * </pre>
      *
      * <code>string parent = 1 [json_name = "parent"];</code>
@@ -668,7 +672,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * "designs/{design}"
+     * parent is "designs/{design}", or "designs/{design}&#64;{rev}" for a revision of it, by a tag, a commit
+     * or a revision id (agni issue 1774). The report is kept under the design either way.
      * </pre>
      *
      * <code>string parent = 1 [json_name = "parent"];</code>
@@ -685,7 +690,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * "designs/{design}"
+     * parent is "designs/{design}", or "designs/{design}&#64;{rev}" for a revision of it, by a tag, a commit
+     * or a revision id (agni issue 1774). The report is kept under the design either way.
      * </pre>
      *
      * <code>string parent = 1 [json_name = "parent"];</code>
@@ -699,7 +705,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * "designs/{design}"
+     * parent is "designs/{design}", or "designs/{design}&#64;{rev}" for a revision of it, by a tag, a commit
+     * or a revision id (agni issue 1774). The report is kept under the design either way.
      * </pre>
      *
      * <code>string parent = 1 [json_name = "parent"];</code>

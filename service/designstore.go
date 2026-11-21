@@ -322,8 +322,20 @@ func (c *DesignCatalog) DeleteDesign(ctx context.Context, name string) error {
 	return c.store.DeleteDesign(ctx, id)
 }
 
-// Artifacts returns the artifacts of the design named "designs/{design}". A mounted design has none.
+// Artifacts returns the artifacts of the design named "designs/{design}", or of a kept revision of
+// it, "designs/{design}@{rev}" (agni issue 1774). A mounted design has none.
 func (c *DesignCatalog) Artifacts(ctx context.Context, name string) ([]*webapi.Artifact, error) {
+	if base, rev := SplitRevision(name); rev != "" {
+		if _, _, err := c.find(ctx, base); err != nil {
+			return nil, err
+		}
+		rs := c.revisionStore()
+		if rs == nil {
+			return nil, fmt.Errorf("%w: this host keeps no revisions of %s", ErrFailedPrecondition, base)
+		}
+		id, _ := StandaloneDesignID(base)
+		return rs.RevisionArtifacts(ctx, id, rev)
+	}
 	_, r, err := c.find(ctx, name)
 	if err != nil {
 		return nil, err

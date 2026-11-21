@@ -57,6 +57,21 @@ func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir
 		if err != nil {
 			return nil, nil, nil, err
 		}
+		// A revision a report ran on stays while the report does, so the report keeps naming files the
+		// server holds (agni issue 1774).
+		dirStore.WithRevisionPins(func(ctx context.Context, id string) (map[string]bool, error) {
+			kept, err := reports.Reports(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+			pinned := map[string]bool{}
+			for _, r := range kept {
+				if r.GetRevision() != "" {
+					pinned[r.GetRevision()] = true
+				}
+			}
+			return pinned, nil
+		})
 		store, packStore, reportStore = dirStore, packs, reports
 		projectSvc.WithRecords(records)
 		if blobs := dirStore.Blobs(); blobs != nil && resolver != nil {

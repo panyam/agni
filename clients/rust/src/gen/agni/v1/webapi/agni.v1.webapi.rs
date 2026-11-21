@@ -2737,6 +2737,12 @@ pub struct Report {
     /// uploaded, has none. Output only.
     #[prost(map="string, string", tag="11")]
     pub source_versions: ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
+    /// revision is the id of the design revision the run read (agni issue 1774). A report made on
+    /// "designs/{design}@{rev}" read that revision, and one made on "designs/{design}" read the current
+    /// one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+    /// such as one only uploaded to. Output only.
+    #[prost(string, tag="12")]
+    pub revision: ::prost::alloc::string::String,
 }
 /// DesignRevision is a design's files as of one version of each linked source (agni issue 1725). Its
 /// name reads anywhere a design's name does: a snapshot's design, `agni check`, `agni diff`.
@@ -2799,7 +2805,8 @@ pub struct ListDesignRevisionsResponse {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateReportRequest {
-    /// "designs/{design}"
+    /// parent is "designs/{design}", or "designs/{design}@{rev}" for a revision of it, by a tag, a commit
+    /// or a revision id (agni issue 1774). The report is kept under the design either way.
     #[prost(string, tag="1")]
     pub parent: ::prost::alloc::string::String,
     /// report_id is the new report's id, lowercase letters, digits, '.', '_' or '-'. Empty lets the

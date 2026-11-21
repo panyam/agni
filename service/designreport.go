@@ -75,15 +75,20 @@ func (s *DesignService) CreateReport(ctx context.Context, req *webapi.CreateRepo
 	if id := req.GetReportId(); id != "" && !newIDPattern.MatchString(id) {
 		return nil, fmt.Errorf("%w: report id %q must be lowercase letters, digits, '.', '_' or '-', starting with a letter or digit", ErrInvalidArgument, id)
 	}
-	design, err := s.reportable(ctx, req.GetParent())
+	design, revision, err := s.reportable(ctx, req.GetParent())
 	if err != nil {
 		return nil, err
+	}
+	// A report on a revision reads it by its id, which names the same files whatever a ref does next.
+	parent := req.GetParent()
+	if base, rev := SplitRevision(parent); rev != "" {
+		parent = RevisionName(base, revision)
 	}
 	named := req.GetReport().GetPacks()
 	if len(named) == 0 && req.GetProject() == "" {
 		// A report naming neither packs nor a project reads under the design's own packs (agni issue
 		// 1756), as a snapshot naming the design does.
-		if d, err := s.catalog.Design(ctx, req.GetParent()); err == nil {
+		if d, err := s.catalog.Design(ctx, parent); err == nil {
 			named = d.GetPacks()
 		}
 	}
@@ -95,24 +100,24 @@ func (s *DesignService) CreateReport(ctx context.Context, req *webapi.CreateRepo
 	if err != nil {
 		return nil, err
 	}
-	before, err := s.designHash(ctx, req.GetParent())
+	before, err := s.designHash(ctx, parent)
 	if err != nil {
 		return nil, err
 	}
-	results, err := s.runReport(ctx, req.GetParent(), packs)
+	results, err := s.runReport(ctx, parent, packs)
 	if err != nil {
 		return nil, err
 	}
 	// A write between the hash and the read would record the run against files it never read.
-	if after, err := s.designHash(ctx, req.GetParent()); err != nil {
+	if after, err := s.designHash(ctx, parent); err != nil {
 		return nil, err
 	} else if after != before {
-		return nil, fmt.Errorf("%w: %s changed while its report ran; ask again", ErrFailedPrecondition, req.GetParent())
+		return nil, fmt.Errorf("%w: %s changed while its report ran; ask again", ErrFailedPrecondition, parent)
 	}
-	r := &webapi.Report{Packs: packs, Project: req.GetProject(), DesignHash: before, Results: results}
+	r := &webapi.Report{Packs: packs, Project: req.GetProject(), DesignHash: before, Results: results, Revision: revision}
 	// The report names the commit each linked artifact was read at, so it says what it ran on after a
 	// sync moves the design (agni issue 1725).
-	arts, err := s.catalog.Artifacts(ctx, req.GetParent())
+	arts, err := s.catalog.Artifacts(ctx, parent)
 	if err != nil {
 		return nil, err
 	}
@@ -127,21 +132,48 @@ func (s *DesignService) CreateReport(ctx context.Context, req *webapi.CreateRepo
 	return inView(kept, webapi.ReportView_REPORT_VIEW_FULL, webapi.ReportView_REPORT_VIEW_FULL), nil
 }
 
-// reportable returns the id of a design the store holds. A design only a mounted reader holds has
-// no artifacts to hash, so it takes no report.
-func (s *DesignService) reportable(ctx context.Context, name string) (string, error) {
-	id, ok := StandaloneDesignID(name)
+// reportable returns the id of a design the store holds, and the id of the revision a report on
+// name reads (agni issue 1774). name is "designs/{design}", whose current revision it reads, or
+// "designs/{design}@{rev}", which it reads and keeps first. A design only a mounted reader holds has
+// no artifacts to hash, so it takes no report. A design with no revisions reads "".
+func (s *DesignService) reportable(ctx context.Context, name string) (string, string, error) {
+	base, rev := SplitRevision(name)
+	id, ok := StandaloneDesignID(base)
 	if !ok {
-		return "", fmt.Errorf("%w: %q is not a design resource name, designs/{design}", ErrInvalidArgument, name)
+		return "", "", fmt.Errorf("%w: %q is not a design resource name, designs/{design}", ErrInvalidArgument, name)
 	}
-	_, stored, err := s.catalog.holder(ctx, name)
+	_, stored, err := s.catalog.holder(ctx, base)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if !stored {
-		return "", fmt.Errorf("%w: %s is declared in a mounted folder, and a report needs a design the server stores; add it with AddDesigns", ErrFailedPrecondition, name)
+		return "", "", fmt.Errorf("%w: %s is declared in a mounted folder, and a report needs a design the server stores; add it with AddDesigns", ErrFailedPrecondition, base)
 	}
-	return id, nil
+	rs := s.catalog.revisionStore()
+	if rev != "" {
+		// Reading the design at rev keeps the revision when the server hadn't read it yet.
+		if _, err := s.catalog.Design(ctx, name); err != nil {
+			return "", "", err
+		}
+		kept, _, err := rs.Revision(ctx, id, rev)
+		if err != nil {
+			return "", "", err
+		}
+		return id, kept.GetRevisionId(), nil
+	}
+	if rs == nil {
+		return id, "", nil
+	}
+	revs, err := rs.Revisions(ctx, id)
+	if err != nil {
+		return "", "", err
+	}
+	for _, r := range revs {
+		if r.GetCurrent() {
+			return id, r.GetRevisionId(), nil
+		}
+	}
+	return id, "", nil
 }
 
 // reportPacks lists the packs a report applies: the project's default packs, then the request's. A
@@ -187,7 +219,19 @@ func (s *DesignService) runReport(ctx context.Context, design string, packs []st
 // designHash names a stored design's content: its intent and each artifact's files, by path and
 // hash. A change to any file, to the set of artifacts, or to the intent moves it.
 func (s *DesignService) designHash(ctx context.Context, name string) (string, error) {
-	d, err := s.catalog.Design(ctx, name)
+	var d *webapi.Design
+	var err error
+	if base, rev := SplitRevision(name); rev != "" {
+		// Only a kept revision is hashed, so asking whether a report changed never reads a source.
+		rs := s.catalog.revisionStore()
+		if rs == nil {
+			return "", fmt.Errorf("%w: no revision %s", ErrNotFound, name)
+		}
+		id, _ := StandaloneDesignID(base)
+		_, d, err = rs.Revision(ctx, id, rev)
+	} else {
+		d, err = s.catalog.Design(ctx, name)
+	}
 	if err != nil {
 		return "", err
 	}

@@ -44,6 +44,8 @@ changed since it ran.
 		Use:   "create <design>",
 		Short: "Check a stored design against packs, and keep the run",
 		Long: `create checks the design, as <id> or designs/<id>, against the packs named, and keeps the run.
+<id>@<ref> checks the design at a tag, a commit or a revision id instead, and the server keeps that
+revision while the report exists.
 With --project, the project's default packs apply first, then the --pack ones. The run checks the
 whole catalog the packs compose, as agni check with no --rule does.`,
 		Args: cobra.ExactArgs(1),
@@ -155,6 +157,10 @@ func printReport(w io.Writer, r *webapi.Report) {
 			v = v[:12]
 		}
 		note += "; " + id + " at " + v
+	}
+	// It names the revision it read, which the server keeps while the report exists (agni issue 1774).
+	if rev := r.GetRevision(); rev != "" {
+		note += "; revision " + rev
 	}
 	fmt.Fprintf(w, "%s\t%s\t%d findings\t%s\n", r.GetName(), strings.Join(r.GetPacks(), ","), r.GetFindingCount(), note)
 }
