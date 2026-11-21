@@ -397,7 +397,7 @@ class AppRoot extends BaseComponent {
       if (viewerDock) openDiffPanel(viewerDock.dock);
       void diffPresenter.open(openFile, target);
     };
-    const comparePick = comparePickerIsland(pickerEl, compareTreeEl, this._eventBus, compareWith);
+    const comparePick = comparePickerIsland(pickerEl, compareTreeEl, this._eventBus, compareWith, document.getElementById("compare-designs"));
     const compare = compareButton(compareEl, () => comparePick.picker.open(openFile));
     // WS9-049 added the visited-sheet tab strip, and it is the only SheetsView in sheetNavs.
     // Selecting a tab emits the same showSheet intent as the sheet overview.
@@ -1251,6 +1251,7 @@ class AppRoot extends BaseComponent {
     children.push(
       canvas,
       comparePick.island,
+      ...(comparePick.designs ? [comparePick.designs] : []),
       sheetTabs.island,
       controls.island,
       ...(stepBar ? [stepBar.island] : []),

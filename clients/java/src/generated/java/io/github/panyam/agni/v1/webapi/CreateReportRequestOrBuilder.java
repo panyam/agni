@@ -12,7 +12,8 @@ public interface CreateReportRequestOrBuilder extends
 
   /**
    * <pre>
-   * "designs/{design}"
+   * parent is "designs/{design}", or "designs/{design}&#64;{rev}" for a revision of it, by a tag, a commit
+   * or a revision id (agni issue 1774). The report is kept under the design either way.
    * </pre>
    *
    * <code>string parent = 1 [json_name = "parent"];</code>
@@ -21,7 +22,8 @@ public interface CreateReportRequestOrBuilder extends
   java.lang.String getParent();
   /**
    * <pre>
-   * "designs/{design}"
+   * parent is "designs/{design}", or "designs/{design}&#64;{rev}" for a revision of it, by a tag, a commit
+   * or a revision id (agni issue 1774). The report is kept under the design either way.
    * </pre>
    *
    * <code>string parent = 1 [json_name = "parent"];</code>

@@ -6,11 +6,16 @@ import { comparePickerIsland } from "./comparepicker.js";
 
 // The picker's tree builds its own client via workspaceClient(); swap in an in-memory workspace,
 // same shape as filetree.test.tsx.
-const fake = vi.hoisted(() => ({ dirs: {} as Record<string, unknown[]> }));
+const fake = vi.hoisted(() => ({ dirs: {} as Record<string, unknown[]>, designs: [] as unknown[], revisions: {} as Record<string, unknown[]>, entries: {} as Record<string, string> }));
 vi.mock("./api.js", () => ({
   workspaceClient: () => ({
     listMounts: async () => ({ mounts: [{ name: "m", root: "/m" }] }),
     listDir: async ({ uri }: { uri: string }) => ({ entries: fake.dirs[uriPath(uri)] ?? [] }),
+  }),
+  designClient: () => ({
+    listDesigns: async () => ({ designs: fake.designs, nextPageToken: "" }),
+    listDesignRevisions: async ({ parent }: { parent: string }) => ({ revisions: fake.revisions[parent] ?? [], nextPageToken: "" }),
+    getDesign: async ({ name }: { name: string }) => ({ name, entryUri: fake.entries[name] ?? "" }),
   }),
 }));
 
@@ -25,13 +30,15 @@ const file = (name: string, path: string, format = "kicad") => ({
 
 function mountPicker() {
   const host = document.createElement("div");
+  const designsEl = document.createElement("div");
   const treeEl = document.createElement("div");
-  host.appendChild(treeEl);
+  host.append(designsEl, treeEl);
   document.body.appendChild(host);
   const onPick = vi.fn();
-  const built = comparePickerIsland(host, treeEl, null, onPick);
+  const built = comparePickerIsland(host, treeEl, null, onPick, designsEl);
   built.island.activate();
-  return { host, treeEl, onPick, picker: built.picker };
+  built.designs?.activate();
+  return { host, designsEl, treeEl, onPick, picker: built.picker };
 }
 
 // settle lets the tree's listMounts/listDir promises resolve and Solid flush.
@@ -48,6 +55,9 @@ describe("comparePickerIsland", () => {
   beforeEach(() => {
     document.body.replaceChildren();
     fake.dirs = { "": [file("a.kicad_sch", "a.kicad_sch"), file("b.kicad_sch", "b.kicad_sch")] };
+    fake.designs = [];
+    fake.revisions = {};
+    fake.entries = {};
   });
 
   it("starts hidden", () => {
@@ -138,5 +148,57 @@ describe("comparePickerIsland", () => {
 
     buttonFor(treeEl, "a.kicad_sch")?.click();
     expect(onPick).toHaveBeenCalledWith({ mount: "m", path: "a.kicad_sch" });
+  });
+
+  // A stored design and each of its revisions are offered beside the files, and a pick compares
+  // against the entry each names in the uploads mount (agni issue 1774).
+  it("offers the stored designs and their revisions, each picking its entry", async () => {
+    fake.designs = [
+      { name: "designs/bb", title: "Baseboard", series: "board", entryUri: "mount://uploads/bb/r3/schematic/bb.kicad_sch" },
+      { name: "designs/gateway", readOnly: true, entryUri: "mount://tut/designs/gateway/gateway.edn" },
+      { name: "designs/draft", entryUri: "" },
+    ];
+    fake.revisions["designs/bb"] = [
+      { revisionId: "r3", refs: ["1.1.3"], current: true },
+      { revisionId: "r2", refs: [] },
+    ];
+    fake.entries["designs/bb@r2"] = "mount://uploads/bb/r2/schematic/bb.kicad_sch";
+    const { designsEl, onPick, picker } = mountPicker();
+    picker.open({ mount: "m", path: "a.kicad_sch" });
+    await settle();
+
+    // A design declared in a mounted folder is in the tree, and a draft opens nothing yet.
+    expect([...designsEl.querySelectorAll("li[data-design]")].map((li) => li.getAttribute("data-design"))).toEqual(["designs/bb"]);
+    const details = designsEl.querySelector("details") as HTMLDetailsElement;
+    details.open = true;
+    details.dispatchEvent(new Event("toggle"));
+    await settle();
+    expect([...designsEl.querySelectorAll("button[data-revision]")].map((b) => b.textContent)).toEqual(["1.1.3 (current)", "r2"]);
+
+    (designsEl.querySelector('button[data-revision="r2"]') as HTMLButtonElement).click();
+    await settle();
+    expect(onPick).toHaveBeenCalledWith({ mount: "uploads", path: "bb/r2/schematic/bb.kicad_sch" });
+    expect(picker.isOpen()).toBe(false);
+
+    picker.open(null);
+    buttonFor(designsEl, "Baseboard")?.click();
+    expect(onPick).toHaveBeenLastCalledWith({ mount: "uploads", path: "bb/r3/schematic/bb.kicad_sch" });
+  });
+
+  it("ignores a stored design that is the one already open", async () => {
+    fake.designs = [{ name: "designs/bb", title: "Baseboard", entryUri: "mount://uploads/bb/r3/schematic/bb.kicad_sch" }];
+    const { designsEl, onPick, picker } = mountPicker();
+    picker.open({ mount: "uploads", path: "bb/r3/schematic/bb.kicad_sch" });
+    await settle();
+    buttonFor(designsEl, "Baseboard")?.click();
+    expect(onPick).not.toHaveBeenCalled();
+    expect(picker.isOpen()).toBe(true);
+  });
+
+  it("hides the list on a server that keeps no designs", async () => {
+    const { designsEl, picker } = mountPicker();
+    picker.open(null);
+    await settle();
+    expect((designsEl.querySelector('[data-testid="compare-designs"]') as HTMLElement).hidden).toBe(true);
   });
 });

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -121,4 +122,70 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// A design linked from a private repo on a server without --auth records the repo it read, so it
+// opens only for the repo's readers once the same store is served with --auth (agni issue 1778).
+func TestADesignLinkedWithoutAuthIsGuardedOnceAuthIsOn(t *testing.T) {
+	old := authgate.CacheTTL
+	authgate.CacheTTL = time.Millisecond
+	t.Cleanup(func() { authgate.CacheTTL = old })
+
+	gh, _ := privateRepo(t)
+	t.Setenv("AGNI_TEST_GITHUB_TOKEN", secretToken)
+	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("5e", 32))
+	t.Setenv(envToken, "")
+	dir := t.TempDir()
+	store, uploads := filepath.Join(dir, "store"), filepath.Join(dir, "uploads")
+	must := func(out string, err error) string {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("%v\n%s", err, out)
+		}
+		return out
+	}
+
+	open := serveViewer(t, viewerOpts{storeDir: store, uploadsDir: uploads,
+		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	must(runCobra(t, connectionsCmd(), "add", "acme", "--github-token", "env:AGNI_TEST_GITHUB_TOKEN", "--remote", open))
+	must(runMounts(t, "add", "board", "github://acme/board", "--connection", "acme", "--remote", open))
+	must(runDesigns(t, open, "create", "bb"))
+	must(runDesigns(t, open, "link", "bb", "schematic", "board/hw/bb.kicad_sch@main"))
+	// The server reads every design for every caller without --auth, but keeps the repo on the files.
+	if a := artifactJSON(t, open, "designs/bb/artifacts/schematic"); a.Source.AccessSource != "github://acme/board" {
+		t.Errorf("the schematic linked with no --auth records access source %q; want github://acme/board", a.Source.AccessSource)
+	}
+	// Unlinked, and its mount gone, the files are guarded by the repo they recorded and nothing else.
+	must(runDesigns(t, open, "unlink", "bb", "schematic"))
+	must(runMounts(t, "rm", "board", "--remote", open))
+
+	out, err := runCobra(t, tokenCmd(), "create", "bob", "--store", "file:///"+strings.TrimPrefix(filepath.ToSlash(store), "/"))
+	if err != nil {
+		t.Fatalf("agni token create bob: %v", err)
+	}
+	bob, _, _ := strings.Cut(strings.TrimSpace(out), "\n")
+	guarded := serveViewer(t, viewerOpts{storeDir: store, uploadsDir: uploads, auth: authgate.Tokens,
+		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	t.Setenv(envToken, bob)
+	if out, err := runDesigns(t, guarded, "get", "bb"); err == nil || !strings.Contains(err.Error(), "permission_denied") || !strings.Contains(err.Error(), "github://acme/board") {
+		t.Errorf("bob's designs get bb with --auth = %q, %v; want permission_denied naming github://acme/board", out, err)
+	}
+}
+
+// artifactJSON reads an artifact over Connect's JSON codec, with no token.
+func artifactJSON(t *testing.T, server, name string) (a struct {
+	Source struct {
+		AccessSource string `json:"accessSource"`
+	} `json:"source"`
+}) {
+	t.Helper()
+	resp, err := http.Post(server+"/agni.v1.webapi.DesignService/GetArtifact", "application/json", strings.NewReader(`{"name":"`+name+`"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&a); err != nil {
+		t.Fatal(err)
+	}
+	return a
 }

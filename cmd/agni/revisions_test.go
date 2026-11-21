@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -108,5 +109,49 @@ func TestADiffOfTwoRevisionsMatchesADiffOfTheirFiles(t *testing.T) {
 		if l := line(tags, tag); !strings.Contains(l, "; read ") || strings.Contains(l, "not read yet") {
 			t.Errorf("after reading bt at c1, designs revisions bt --tags =\n%s\nwant %s read, since it names c1", tags, tag)
 		}
+	}
+}
+
+// A report can run on a revision of a design, and names the revision it read. The server keeps that
+// revision while the report exists, even an unnamed one the design has moved on from (agni issue
+// 1774).
+func TestAReportKeepsTheRevisionItRanOn(t *testing.T) {
+	gh := githubtest.New(t)
+	repo := gh.AddRepo("acme", "board", false, map[string]string{"hw/bb.kicad_sch": v1Sheet})
+	c1 := repo.Head("main")
+	c2 := repo.Commit("main", map[string]string{"hw/bb.kicad_sch": v2Sheet}, nil)
+	dir := t.TempDir()
+	url := serveViewer(t, viewerOpts{storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	must := func(out string, err error) string {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("%v\n%s", err, out)
+		}
+		return out
+	}
+	must(runMounts(t, "add", "board", repo.Source(), "--remote", url))
+	must(runDesigns(t, url, "create", "bb"))
+	// Following main, the design's revision has no name.
+	must(runDesigns(t, url, "link", "bb", "schematic", "board/hw/bb.kicad_sch@main"))
+	revision := regexp.MustCompile(`; revision ([0-9a-f]{12})`)
+	onMain := must(runReports(t, url, "create", "bb", "--id", "on-main"))
+	m := revision.FindStringSubmatch(onMain)
+	if m == nil || !strings.Contains(onMain, "schematic at "+c2[:12]) {
+		t.Fatalf("reports create bb = %q; want it to name c2 and the revision it read", onMain)
+	}
+	followed := m[1]
+
+	onC1 := must(runReports(t, url, "create", "bb@"+c1, "--id", "on-c1"))
+	if m := revision.FindStringSubmatch(onC1); m == nil || m[1] == followed || !strings.Contains(onC1, "schematic at "+c1[:12]) {
+		t.Errorf("reports create bb@c1 = %q; want it run on c1's revision, not %s", onC1, followed)
+	}
+
+	// Pinning the link at c1 moves the design off the revision the first report ran on.
+	must(runDesigns(t, url, "link", "bb", "schematic", "board/hw/bb.kicad_sch@"+c1))
+	if revs := must(runDesigns(t, url, "revisions", "bb")); !strings.Contains(revs, "@"+followed) {
+		t.Errorf("designs revisions bb after the move =\n%s\nwant %s kept, since the report on-main ran on it", revs, followed)
+	}
+	if got := must(runReports(t, url, "list", "bb")); !strings.Contains(got, "on-c1") || !strings.Contains(got, "on-main") {
+		t.Errorf("reports list bb = %q; want both reports", got)
 	}
 }

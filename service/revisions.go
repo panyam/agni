@@ -54,6 +54,9 @@ type RevisionStore interface {
 	Revision(ctx context.Context, id, rev string) (*webapi.DesignRevision, *webapi.Design, error)
 	// Revisions returns design id's kept revisions, newest first.
 	Revisions(ctx context.Context, id string) ([]*webapi.DesignRevision, error)
+	// RevisionArtifacts returns design id's artifacts as of the kept revision whose id or one of whose
+	// refs is rev (agni issue 1774). A rev it doesn't keep is ErrNotFound.
+	RevisionArtifacts(ctx context.Context, id, rev string) ([]*webapi.Artifact, error)
 }
 
 // validRevision refuses a revision no ref can be: empty, too long, or holding a space or a

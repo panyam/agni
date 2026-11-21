@@ -165,6 +165,9 @@ type DesignCatalog struct {
 	// guard hides a design read from a private source from a caller who can't read the source
 	// (agni issue 1728). Nil shows every design.
 	guard *AccessGuard
+	// sources names the private source each mount reads, which a write records on its artifacts. It
+	// is set by WithSources, or by WithGuard from its guard. Nil records none.
+	sources SourceAccess
 	// revise reads a stored design at a revision (agni issue 1725). The DesignService over this
 	// catalog sets it, since it holds the mounts a revision reads from.
 	revise func(ctx context.Context, name, rev string) (*webapi.Design, error)
@@ -176,11 +179,22 @@ func NewDesignCatalog(store DesignStore, mounted ...DesignReader) *DesignCatalog
 	return &DesignCatalog{store: store, mounted: mounted}
 }
 
+// WithSources makes every write record the private source its mount reads, through src, and
+// returns c (agni issue 1778). A server sets it with or without --auth, so files linked before the
+// server guarded reads are guarded once it does.
+func (c *DesignCatalog) WithSources(src SourceAccess) *DesignCatalog {
+	c.sources = src
+	return c
+}
+
 // WithGuard makes the catalog answer a caller only with the designs g lets them read, and returns c.
 // A design g refuses is ErrPermissionDenied from every call that names it, and left out of Designs.
 func (c *DesignCatalog) WithGuard(g *AccessGuard) *DesignCatalog {
 	c.guard = g
 	if g != nil {
+		if c.sources == nil {
+			c.sources = g.src
+		}
 		g.design = func(ctx context.Context, name string) error {
 			base, _ := SplitRevision(name)
 			_, _, err := c.find(ctx, base)
@@ -308,8 +322,20 @@ func (c *DesignCatalog) DeleteDesign(ctx context.Context, name string) error {
 	return c.store.DeleteDesign(ctx, id)
 }
 
-// Artifacts returns the artifacts of the design named "designs/{design}". A mounted design has none.
+// Artifacts returns the artifacts of the design named "designs/{design}", or of a kept revision of
+// it, "designs/{design}@{rev}" (agni issue 1774). A mounted design has none.
 func (c *DesignCatalog) Artifacts(ctx context.Context, name string) ([]*webapi.Artifact, error) {
+	if base, rev := SplitRevision(name); rev != "" {
+		if _, _, err := c.find(ctx, base); err != nil {
+			return nil, err
+		}
+		rs := c.revisionStore()
+		if rs == nil {
+			return nil, fmt.Errorf("%w: this host keeps no revisions of %s", ErrFailedPrecondition, base)
+		}
+		id, _ := StandaloneDesignID(base)
+		return rs.RevisionArtifacts(ctx, id, rev)
+	}
 	_, r, err := c.find(ctx, name)
 	if err != nil {
 		return nil, err
@@ -327,7 +353,7 @@ func (c *DesignCatalog) WriteArtifacts(ctx context.Context, name string, writes 
 	if err != nil {
 		return nil, err
 	}
-	c.guard.stamp(writes)
+	stampSources(c.sources, writes)
 	return c.store.WriteArtifacts(ctx, id, writes, blobs)
 }
 

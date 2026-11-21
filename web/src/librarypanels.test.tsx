@@ -25,6 +25,8 @@ const fake = vi.hoisted(() => ({
   deletedDesigns: [] as unknown[],
   linkError: undefined as unknown,
   revisions: [] as unknown[],
+  tags: [] as unknown[],
+  tagLists: [] as unknown[],
   mounts: [] as unknown[],
   dirs: {} as Record<string, unknown[]>,
 }));
@@ -40,7 +42,10 @@ vi.mock("./api.js", () => ({
       return { artifacts: [] };
     },
     listArtifacts: async () => ({ artifacts: fake.artifacts, nextPageToken: "" }),
-    listDesignRevisions: async () => ({ revisions: fake.revisions, nextPageToken: "" }),
+    listDesignRevisions: async (req: { source?: number }) => {
+      if (req.source) fake.tagLists.push(req);
+      return { revisions: req.source ? fake.tags : fake.revisions, nextPageToken: "" };
+    },
     createDesign: async (req: { designId: string }) => {
       fake.madeDesigns.push(req);
       return create(DesignSchema, { name: `designs/${req.designId}` });
@@ -100,6 +105,8 @@ beforeEach(() => {
   fake.deletedDesigns = [];
   fake.linkError = undefined;
   fake.revisions = [];
+  fake.tags = [];
+  fake.tagLists = [];
   fake.mounts = [];
   fake.dirs = {};
 });
@@ -204,6 +211,22 @@ describe("linking a design to a mount (agni issue 1727)", () => {
     await vi.waitFor(() => expect(fake.linked).toEqual([{ name: "designs/bb/artifacts/schematic", mount: "board", path: "hw/bb.kicad_sch", ref: "1.1.3", allowMissing: false }]));
     (el.querySelector('[data-testid="unlink-schematic"]') as HTMLButtonElement).click();
     await vi.waitFor(() => expect(fake.unlinked).toEqual([{ name: "designs/bb/artifacts/schematic" }]));
+  });
+
+  it("offers the repo's tags as Move's choices once the field is focused", async () => {
+    fake.design = create(DesignSchema, { name: "designs/bb" });
+    fake.artifacts = [linkedSchematic({ ref: "1.1.2", version: "3411086e6d6ad2384d0609c53cd6b96323f97c24" })];
+    fake.tags = [create(DesignRevisionSchema, { name: "designs/bb@1.1.3", refs: ["1.1.3"] }), create(DesignRevisionSchema, { name: "designs/bb@1.1.2", refs: ["1.1.2"], revisionId: "90deab8dd75e" })];
+    const el = mount((e) => designIsland(e, null, "bb"));
+    await vi.waitFor(() => expect(el.querySelector('[data-testid="ref-schematic"]')).not.toBeNull());
+    const field = el.querySelector('[data-testid="ref-schematic"]') as HTMLInputElement;
+    expect(field.getAttribute("list")).toBe("tags-schematic");
+    // Nothing asks for the tags until a person goes to move the artifact.
+    expect(fake.tagLists).toEqual([]);
+    field.dispatchEvent(new FocusEvent("focus"));
+    field.dispatchEvent(new FocusEvent("focus"));
+    await vi.waitFor(() => expect([...el.querySelectorAll('[data-testid="tags-schematic"] option')].map((o) => o.getAttribute("value"))).toEqual(["1.1.3", "1.1.2"]));
+    expect(fake.tagLists).toEqual([{ parent: "designs/bb", source: 1 }]);
   });
 
   it("offers a sync on a followed artifact, and no link controls on an uploaded one", async () => {

@@ -222,6 +222,28 @@ func loopbackAddr(addr string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
+// Prune deletes the tokens whose expiry is at or before now, and returns how many it deleted (agni
+// issue 1778). Each GitHub sign-in mints a token that expires, so without this the store keeps one
+// file per sign-in for good. A token with no expiry, as `agni token create` makes, stays, and so does
+// a revoked one, which `agni token ls` still lists.
+func Prune(ctx context.Context, store *oafs.FSAPIKeyStore, now time.Time) (int, error) {
+	keys, err := List(ctx, store)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, k := range keys {
+		if k.ExpiresAt == nil || k.ExpiresAt.After(now) {
+			continue
+		}
+		if err := os.Remove(filepath.Join(store.StoragePath, "api_keys", k.KeyID+".json")); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
+}
+
 // List returns every token in the store, newest first, without their hashes.
 func List(ctx context.Context, store *oafs.FSAPIKeyStore) ([]*core.APIKey, error) {
 	entries, err := os.ReadDir(filepath.Join(store.StoragePath, "api_keys"))

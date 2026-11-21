@@ -49,7 +49,7 @@ ARTIFACT_TYPE_OTHER: ArtifactType
 ARTIFACT_TYPE_SYMBOLS: ArtifactType
 
 class Report(_message.Message):
-    __slots__ = ("name", "packs", "project", "design_hash", "pack_hashes", "results", "create_time", "design_changed", "packs_changed", "finding_count", "source_versions")
+    __slots__ = ("name", "packs", "project", "design_hash", "pack_hashes", "results", "create_time", "design_changed", "packs_changed", "finding_count", "source_versions", "revision")
     class SourceVersionsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -68,6 +68,7 @@ class Report(_message.Message):
     PACKS_CHANGED_FIELD_NUMBER: _ClassVar[int]
     FINDING_COUNT_FIELD_NUMBER: _ClassVar[int]
     SOURCE_VERSIONS_FIELD_NUMBER: _ClassVar[int]
+    REVISION_FIELD_NUMBER: _ClassVar[int]
     name: str
     packs: _containers.RepeatedScalarFieldContainer[str]
     project: str
@@ -79,7 +80,8 @@ class Report(_message.Message):
     packs_changed: _containers.RepeatedScalarFieldContainer[str]
     finding_count: int
     source_versions: _containers.ScalarMap[str, str]
-    def __init__(self, name: _Optional[str] = ..., packs: _Optional[_Iterable[str]] = ..., project: _Optional[str] = ..., design_hash: _Optional[str] = ..., pack_hashes: _Optional[_Iterable[str]] = ..., results: _Optional[_Union[_checks_pb2.CheckDesignResponse, _Mapping]] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., design_changed: _Optional[bool] = ..., packs_changed: _Optional[_Iterable[str]] = ..., finding_count: _Optional[int] = ..., source_versions: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    revision: str
+    def __init__(self, name: _Optional[str] = ..., packs: _Optional[_Iterable[str]] = ..., project: _Optional[str] = ..., design_hash: _Optional[str] = ..., pack_hashes: _Optional[_Iterable[str]] = ..., results: _Optional[_Union[_checks_pb2.CheckDesignResponse, _Mapping]] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., design_changed: _Optional[bool] = ..., packs_changed: _Optional[_Iterable[str]] = ..., finding_count: _Optional[int] = ..., source_versions: _Optional[_Mapping[str, str]] = ..., revision: _Optional[str] = ...) -> None: ...
 
 class DesignRevision(_message.Message):
     __slots__ = ("name", "revision_id", "refs", "source_versions", "create_time", "current", "commit_time", "message")

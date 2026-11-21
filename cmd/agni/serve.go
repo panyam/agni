@@ -667,6 +667,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	var handler http.Handler = mux
 	if o.auth != "" {
 		gate := authgate.New(authgate.Store(o.storeDir), o.tlsCert != "")
+		go pruneTokens(life, o.storeDir, cmd.ErrOrStderr())
 		if gs := o.githubSignIn; gs != nil {
 			pub := o.publicURL
 			if pub == "" {
@@ -1182,4 +1183,31 @@ func bindFreePort(addr string) (net.Listener, error) {
 		return nil, nil
 	}
 	return net.Listen("tcp", addr)
+}
+
+// tokenPruneInterval is how often a server with --auth deletes the tokens that have expired.
+var tokenPruneInterval = 24 * time.Hour
+
+// pruneTokens deletes the expired tokens in storeDir now, and every tokenPruneInterval until ctx
+// ends (agni issue 1778). A GitHub sign-in mints a 30-day token each time, and the store would
+// otherwise keep each one after it stops working.
+func pruneTokens(ctx context.Context, storeDir string, log io.Writer) {
+	prune := func() {
+		if n, err := authgate.Prune(ctx, authgate.Store(storeDir), time.Now()); err != nil {
+			fmt.Fprintf(log, "note: deleting expired tokens: %v\n", err)
+		} else if n > 0 {
+			fmt.Fprintf(log, "deleted %d expired tokens\n", n)
+		}
+	}
+	prune()
+	tick := time.NewTicker(tokenPruneInterval)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			prune()
+		}
+	}
 }

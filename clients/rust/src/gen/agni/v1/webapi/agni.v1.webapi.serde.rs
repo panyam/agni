@@ -24266,6 +24266,9 @@ impl serde::Serialize for Report {
         if !self.source_versions.is_empty() {
             len += 1;
         }
+        if !self.revision.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Report", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -24300,6 +24303,9 @@ impl serde::Serialize for Report {
         if !self.source_versions.is_empty() {
             struct_ser.serialize_field("sourceVersions", &self.source_versions)?;
         }
+        if !self.revision.is_empty() {
+            struct_ser.serialize_field("revision", &self.revision)?;
+        }
         struct_ser.end()
     }
 }
@@ -24328,6 +24334,7 @@ impl<'de> serde::Deserialize<'de> for Report {
             "findingCount",
             "source_versions",
             "sourceVersions",
+            "revision",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -24343,6 +24350,7 @@ impl<'de> serde::Deserialize<'de> for Report {
             PacksChanged,
             FindingCount,
             SourceVersions,
+            Revision,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -24375,6 +24383,7 @@ impl<'de> serde::Deserialize<'de> for Report {
                             "packsChanged" | "packs_changed" => Ok(GeneratedField::PacksChanged),
                             "findingCount" | "finding_count" => Ok(GeneratedField::FindingCount),
                             "sourceVersions" | "source_versions" => Ok(GeneratedField::SourceVersions),
+                            "revision" => Ok(GeneratedField::Revision),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -24405,6 +24414,7 @@ impl<'de> serde::Deserialize<'de> for Report {
                 let mut packs_changed__ = None;
                 let mut finding_count__ = None;
                 let mut source_versions__ = None;
+                let mut revision__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -24477,6 +24487,12 @@ impl<'de> serde::Deserialize<'de> for Report {
                                 map_.next_value::<std::collections::HashMap<_, _>>()?
                             );
                         }
+                        GeneratedField::Revision => {
+                            if revision__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("revision"));
+                            }
+                            revision__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Report {
@@ -24491,6 +24507,7 @@ impl<'de> serde::Deserialize<'de> for Report {
                     packs_changed: packs_changed__.unwrap_or_default(),
                     finding_count: finding_count__.unwrap_or_default(),
                     source_versions: source_versions__.unwrap_or_default(),
+                    revision: revision__.unwrap_or_default(),
                 })
             }
         }
