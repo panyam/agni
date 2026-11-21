@@ -9,14 +9,15 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-20, at `b4cd9d6e`.
+Last pruned 2026-11-21, at `25a6511d`.
 
 ## At a glance
 
-**#1722** (link a design to where the team keeps it, and follow its history) is active, at 14 of 20.
-Its exercise is `make exercise-linked-sources`, which now ends with a browser walk of the designs
-page's link form, so it needs `make ui`. PR #1782 merged on 2026-11-20 and closed #1727. The
-exercise passes at `b4cd9d6e`. What remains is leftovers (#1774, #1778, #1781) and two P3 sources.
+**#1722** (link a design to where the team keeps it, and follow its history) is active, at 16 of 20.
+Its exercise is `make exercise-linked-sources`, which ends with a browser walk of the designs page's
+link form, so it needs `make ui`. PR #1783 merged on 2026-11-21 and closed #1774 and #1781. The
+exercise passes at `25a6511d`. What remains is #1778's per-person connection ids and agnids with
+`--auth`, which wait on goapplib #197, and two P3 sources (#1729, #1730).
 
 - **#1611 `mission_markup`** is filed and not active. #1612 and #1613 come first.
 - **Four missions filed on 2026-11-17, none active.** Each one's first ticket writes its exercise.
@@ -26,10 +27,12 @@ exercise passes at `b4cd9d6e`. What remains is leftovers (#1774, #1778, #1781) a
 
 ## Open, ranked
 
-1. **The leftovers of #1722**, in a worktree of the `~/projects/Agni/main` clone. #1774 (from PR
-   #1773), #1778 (from PR #1779) and #1781 (from PR #1782). #1729 (SharePoint) and #1730 (S3 and
-   GCS) are P3.
-2. **#1780** (CI uses the runner's Chrome) is P2 and serves no mission.
+1. **The rest of #1778**, in a worktree of the `~/projects/Agni/main` clone, once goapplib #197
+   ships keying a person's connection by owner and id. #1729 (SharePoint) and #1730 (S3 and GCS)
+   are P3.
+2. **A rolling Go build cache for the browser shards.** Each shard compiles the wasm and agni from a
+   cold build cache, about 35 s with setup-go's cache and 60 s or more without. A ci-actions
+   `go-build-cache` action is on branch `go-build-cache` in `~/newstack/ci-actions-gocache`.
 3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
@@ -57,7 +60,7 @@ Two items are gated, #677 (only the "declare a NEW class" half, gated on the cla
   hide that drift.
 - **Some failures in a fresh worktree are not yours.** `TestCheckWebAssets` and, in the `datasheet`
   module, `TestCheckWorkbenchAssets` need a built web bundle, and `TestSampleBoard*` needs the gitignored samples corpus (`make samples`, or an ABSOLUTE symlink to the main checkout's `tools/samples`, since a relative one resolves from `tools/`). The Glasgow oracle tests also need `tools/samples/remote/kicad-models`, which `make samples-oracle` fetches. `proto-check` needs `protoc-gen-es`, so run `make web-install` first. A worktree
-  built under `GOTOOLCHAIN=go1.26.9` carries no VCS stamp, which fails the browser-cache test and rung
+  built under `GOTOOLCHAIN=go1.26.11` carries no VCS stamp, which fails the browser-cache test and rung
   12's capture in `tutorial-runs-check` (#957); the default Go 1.27 stamps a worktree and passes both.
 - **The two `DesignHash` implementations differ on purpose** (see `OUT_OF_SCOPE.md`). Every caller now
   passes a resolved tier, so unifying them would change nothing a caller can observe.
