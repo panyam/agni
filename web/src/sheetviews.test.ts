@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { SheetViews, type SheetViewDock } from "./sheetviews.js";
 import type { Selection } from "./selection.js";
 
@@ -42,8 +42,17 @@ function setup(drawnOn: string[] = ["s1"], modes: { canvas?: "svg" | "webgl"; bo
     },
     { onPick: vi.fn(), onPickEmpty: vi.fn() },
   );
+  built.push(views);
   return { views, dock, docked, asked, lit, rendered };
 }
+
+// built holds every set of views a test makes. Each is reset after its test, so no park timer outlives
+// the file and fires after jsdom has gone (agni issue 1795).
+const built: SheetViews[] = [];
+
+afterEach(() => {
+  for (const v of built.splice(0)) v.reset();
+});
 
 const U1: Selection = { kind: "component", ref: "U1" };
 
