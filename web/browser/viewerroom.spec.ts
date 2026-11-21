@@ -291,9 +291,16 @@ describe("a peer in the room that is not the bridge", () => {
       ).json()) as { room: string; token: string; relayUrl: string };
       const agent = new Agent(`${server.base}/mcp`, "session");
       await agent.connect();
-      const listed = await agent.call("list_pages", { resource: join.room });
-      const pages = JSON.parse(text(listed)) as { page: string; allowed: boolean }[];
-      const id = pages.find((p) => p.allowed)?.page ?? "";
+      // The bridge has been in this room since the tests above, so it hears of the new tab, and of its
+      // switch, through relay events that can arrive after openTab returns (agni issue 1798). Ask until
+      // it lists a tab that agreed.
+      const agreed = (r: CallResult) => (JSON.parse(text(r)) as { page: string; allowed: boolean }[]).find((p) => p.allowed)?.page ?? "";
+      let listed = await agent.call("list_pages", { resource: join.room });
+      let id = agreed(listed);
+      for (const deadline = Date.now() + 10_000; !id && Date.now() < deadline; id = agreed(listed)) {
+        await new Promise((r) => setTimeout(r, 100));
+        listed = await agent.call("list_pages", { resource: join.room });
+      }
       expect(id, `no agreed tab in ${text(listed)}`).not.toBe("");
 
       const before = await activeTile(tab);
