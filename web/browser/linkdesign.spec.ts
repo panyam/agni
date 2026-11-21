@@ -4,14 +4,14 @@
 // the newer ref. The page then lists two revisions, and each opens in the viewer on its own files.
 //
 // In the gate it reads a fake GitHub (fakegithub/main.go) whose repo holds a small KiCad schematic
-// at two commits, with one net renamed between them. `make exercise-linked-sources` runs it against
+// at two tags, with one net renamed between them. `make exercise-linked-sources` runs it against
 // real GitHub and Antmicro's Jetson baseboard instead, through these variables:
 //
 //	LINK_WALK_SERVER  an agni serve with --store and --uploads that reads GitHub
 //	LINK_WALK_REPO    owner/repo
 //	LINK_WALK_FILE    the schematic's path in the repo
-//	LINK_WALK_OLD     the commit to link first
-//	LINK_WALK_NEW     the commit to move to
+//	LINK_WALK_OLD     the tag or commit to link first
+//	LINK_WALK_NEW     the tag or commit to move to
 //	LINK_WALK_DESIGN  the design id to make, bb when unset
 //	LINK_WALK_MOUNT   the mount to add, board when unset
 //
@@ -32,12 +32,13 @@ const shots = process.env.SCREENSHOT_DIR ?? "";
 const given = process.env.LINK_WALK_SERVER ?? "";
 const repo = process.env.LINK_WALK_REPO ?? "acme/board";
 const file = process.env.LINK_WALK_FILE ?? "hw/board.kicad_sch";
-// The fake's two tags. Its repo resolves a commit but not a tag name, so the walk links each tag's
-// commit, as the Jetson run links Antmicro's untagged revisions.
-const oldTag = "1.1.2";
-const newTag = "1.1.3";
-let oldRef = process.env.LINK_WALK_OLD ?? "";
-let newRef = process.env.LINK_WALK_NEW ?? "";
+// The refs to link and move to: the fake's two tags in the gate (agni issue 1781), and Antmicro's two
+// commits in the Jetson run, since Antmicro tags no revisions.
+const oldRef = process.env.LINK_WALK_OLD ?? "1.1.2";
+const newRef = process.env.LINK_WALK_NEW ?? "1.1.3";
+// commits maps each ref to the commit it names. A commit names itself.
+let commits: Record<string, string> = {};
+const commitOf = (ref: string): string => commits[ref] ?? ref;
 const design = process.env.LINK_WALK_DESIGN ?? "bb";
 const mountName = process.env.LINK_WALK_MOUNT ?? "board";
 
@@ -51,8 +52,8 @@ async function fakeRepo(): Promise<{ api: string; raw: string; commits: Record<s
   const dir = mkdtempSync(join(tmpdir(), "agni-link-walk-"));
   const sch = readFileSync(join(repoRoot, "readers", "kicad", "testdata", "wirenet.kicad_sch"), "utf8");
   for (const [rev, text] of [
-    [oldTag, sch],
-    [newTag, sch.replace('"SIG"', '"DATA"')],
+    [oldRef, sch],
+    [newRef, sch.replace('"SIG"', '"DATA"')],
   ]) {
     mkdirSync(join(dir, rev, dirname(file)), { recursive: true });
     writeFileSync(join(dir, rev, file), text);
@@ -65,7 +66,7 @@ async function fakeRepo(): Promise<{ api: string; raw: string; commits: Record<s
     await start({
       what: "fakegithub",
       command: bin,
-      args: ["--addr", `127.0.0.1:${port}`, "--repo", repo, "--commit", `${oldTag}=${join(dir, oldTag)}`, "--commit", `${newTag}=${join(dir, newTag)}`],
+      args: ["--addr", `127.0.0.1:${port}`, "--repo", repo, "--commit", `${oldRef}=${join(dir, oldRef)}`, "--commit", `${newRef}=${join(dir, newRef)}`],
       cwd: repoRoot,
       base: answer,
       health: answer,
@@ -80,30 +81,29 @@ async function shot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: join(shots, name), fullPage: true });
 }
 
-// readAt matches a source cell's ref and version. A tag names the commit it read. A commit ref is
-// its own version, so the cell names none.
+// readAt matches a source cell's ref and version. A tag names the commit it read, which the cell
+// shortens to 12 digits. A commit ref is its own version, so the cell names none.
 function readAt(ref: string): string {
-  return /^[0-9a-f]{40}$/.test(ref) ? `@${ref}, pinned` : `@${ref} at [0-9a-f]{12}, pinned`;
+  const quoted = ref.replace(/[.]/g, "\\.");
+  return commitOf(ref) === ref ? `@${quoted}, pinned` : `@${quoted} at ${commitOf(ref).slice(0, 12)}, pinned`;
 }
 
-// revisionAt is the revision row holding commit. A link records its commit in the row's versions
-// rather than its refs, so the row is named by the revision's id.
-function revisionAt(page: Page, commit: string) {
-  return page.locator("tr[data-revision]").filter({ has: page.locator(".lb-versions", { hasText: commit.slice(0, 12) }) });
+// revisionAt is the revision row named by ref. A link at a pinned ref names its revision by it.
+function revisionAt(page: Page, ref: string) {
+  return page.locator(`tr[data-revision="${ref}"]`);
 }
 
-// openRevision follows the viewer link on the revision row holding commit, and returns the address
-// the viewer landed on, once it drew a sheet.
-async function openRevision(page: Page, commit: string): Promise<string> {
-  const row = revisionAt(page, commit);
+// openRevision follows the viewer link on the revision row named by ref, after checking the row
+// holds the commit ref names, and returns the address the viewer landed on once it drew a sheet.
+async function openRevision(page: Page, ref: string): Promise<string> {
+  const row = revisionAt(page, ref);
   await row.waitFor({ timeout: 60_000 });
-  const id = await row.getAttribute("data-revision");
-  expect(id).toMatch(/^[0-9a-f]{12}$/);
-  expect(await row.locator("a.lb-open").getAttribute("href")).toBe(`/designs/${design}%40${id}/view`);
+  expect(await row.locator(".lb-versions").textContent()).toBe(commitOf(ref).slice(0, 12));
+  expect(await row.locator("a.lb-open").getAttribute("href")).toBe(`/designs/${design}%40${encodeURIComponent(ref)}/view`);
   await row.locator("a.lb-open").click();
-  await page.waitForURL((u) => u.pathname.startsWith("/mounts/") && u.searchParams.get("design") === `designs/${design}@${id}`, { timeout: 120_000 });
+  await page.waitForURL((u) => u.pathname.startsWith("/mounts/") && u.searchParams.get("design") === `designs/${design}@${ref}`, { timeout: 120_000 });
   await page.locator(".sheet-tile-name").first().waitFor({ state: "attached", timeout: 120_000 });
-  await shot(page, `viewer-${commit.slice(0, 12)}.png`);
+  await shot(page, `viewer-${ref}.png`);
   return new URL(page.url()).pathname;
 }
 
@@ -112,8 +112,7 @@ beforeAll(async () => {
     base = given.replace(/\/$/, "");
   } else {
     const gh = await fakeRepo();
-    oldRef = gh.commits[oldTag];
-    newRef = gh.commits[newTag];
+    commits = gh.commits;
     const port = await freePort();
     base = `http://127.0.0.1:${port}`;
     const store = mkdtempSync(join(tmpdir(), "agni-link-store-"));
@@ -138,7 +137,7 @@ afterAll(async () => {
 });
 
 describe("linking a design from a repo", () => {
-  it(`links ${repo}'s schematic at one commit, moves it to a newer one, and opens both revisions`, async () => {
+  it(`links ${repo}'s schematic at ${oldRef}, moves it to ${newRef}, and opens both revisions`, async () => {
     await withPage(browser, async (page) => {
       await page.goto(`${base}/designs/`);
       const form = page.getByTestId("new-design");
