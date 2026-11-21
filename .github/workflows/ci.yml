@@ -197,11 +197,12 @@ jobs:
 
       # Go's build cache from the newest main run of this job, so the wasm build and the agni
       # binary compile only the packages that changed. setup-go's own cache is keyed on go.sum and
-      # holds whatever the first job to save built, which never includes the GOOS=js build.
+      # holds whatever the first job to save built, which never includes the GOOS=js build. The
+      # wasm build took 22 to 37 s a shard without it and 1 to 6 s with it. Main saves; a pull
+      # request only restores.
       - uses: panyam/ci-actions/go-build-cache@a141bcd8a0a2018743f6e4cfde60bd734237b5cc # v0.1.2
         with:
           key: browser
-          save: "true"
 
       # A browser for `make browser-test`. The suite drives playwright-core directly, and
       # playwright-core ships no browser of its own. The runner image has Google Chrome, so the action
