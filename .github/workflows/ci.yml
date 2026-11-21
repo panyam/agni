@@ -195,6 +195,14 @@ jobs:
 
       - uses: ./.github/actions/setup
 
+      # Go's build cache from the newest main run of this job, so the wasm build and the agni
+      # binary compile only the packages that changed. setup-go's own cache is keyed on go.sum and
+      # holds whatever the first job to save built, which never includes the GOOS=js build.
+      - uses: panyam/ci-actions/go-build-cache@c2db24aa1824482bbece9aab3847bc2272c6e416 # go-build-cache branch
+        with:
+          key: browser
+          save: "true"
+
       # A browser for `make browser-test`. The suite drives playwright-core directly, and
       # playwright-core ships no browser of its own. The runner image has Google Chrome, so the action
       # points CHROME_PATH at it and the job downloads nothing and runs no apt (agni issue 1780).
