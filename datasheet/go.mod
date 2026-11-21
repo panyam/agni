@@ -5,8 +5,8 @@ go 1.26.11
 require (
 	connectrpc.com/connect v1.21.1
 	github.com/panyam/agni v0.0.0
-	github.com/panyam/goapplib v0.7.22
-	github.com/panyam/goapplib/storage v0.7.22
+	github.com/panyam/goapplib v0.7.23
+	github.com/panyam/goapplib/storage v0.7.23
 	github.com/panyam/oneauth v0.3.13
 	github.com/panyam/servicekit v0.2.4
 	github.com/spf13/cobra v1.10.2

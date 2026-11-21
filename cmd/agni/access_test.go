@@ -21,11 +21,15 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	authgate.CacheTTL = time.Millisecond
 	t.Cleanup(func() { authgate.CacheTTL = old })
 
-	gh, _ := privateRepo(t)
+	gh, repo := privateGitHubRepo(t)
 	const aliceGitHub = "ghp_alice_reads_acme"
-	gh.AddToken(aliceGitHub)
+	const bobGitHub = "ghp_bob_reads_nothing"
+	// Only the server's token and alice's read acme/board. bob's is a working token that can't see it.
+	repo.Grant(secretToken, aliceGitHub)
+	gh.AddToken(bobGitHub)
 	t.Setenv("AGNI_TEST_GITHUB_TOKEN", secretToken)
 	t.Setenv("AGNI_TEST_ALICE_GITHUB", aliceGitHub)
+	t.Setenv("AGNI_TEST_BOB_GITHUB", bobGitHub)
 	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("5e", 32))
 	dir := t.TempDir()
 	store := filepath.Join(dir, "store")
@@ -99,8 +103,21 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	if out := must(runMounts(t, "ls", "--remote", url)); strings.Contains(out, "acme/board") || !strings.Contains(out, "board\tgithub\ta private source you can't read") {
 		t.Errorf("bob's mounts ls = %q; want board listed without its repo", out)
 	}
+	// Each person's ids are their own (agni issue 1778), so bob can keep an alice-gh too. His reads
+	// with his token, which can't read acme/board, so bb stays closed to him.
+	if out := must(runCobra(t, connectionsCmd(), "add", "alice-gh", "--mine", "--github-token", "env:AGNI_TEST_BOB_GITHUB", "--remote", url)); out != "alice-gh\tgithub-user\tsealed, for bob\tok\n" {
+		t.Errorf("bob's connections add alice-gh --mine = %q; want his own", out)
+	}
+	if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", url)); !strings.Contains(out, "sealed, for bob") || strings.Contains(out, "for alice") {
+		t.Errorf("bob's connections ls = %q; want his alice-gh and not alice's", out)
+	}
+	out, err = runDesigns(t, url, "get", "bb")
+	denied("designs get bb with his own alice-gh", out, err)
 
 	as("alice")
+	if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", url)); !strings.Contains(out, "sealed, for alice") || strings.Contains(out, "for bob") {
+		t.Errorf("alice's connections ls = %q; want her alice-gh and not bob's", out)
+	}
 	if out := must(runMounts(t, "ls", "--remote", url)); !strings.Contains(out, "board\tgithub\tgithub://acme/board@") {
 		t.Errorf("alice's mounts ls = %q; want board's repo, since she can read it", out)
 	}
@@ -110,6 +127,30 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	} else {
 		resp.Body.Close()
 	}
+
+	// Before goapplib v0.7.23 a person's connection lived beside the server's, as <id>.yaml, and the
+	// store reads one left there as its owner's (agni issue 1778).
+	people, _ := filepath.Glob(filepath.Join(store, "connections", "people", "*", "alice-gh.yaml"))
+	var hers string
+	for _, f := range people {
+		if b, err := os.ReadFile(f); err == nil && strings.Contains(string(b), "owner: alice\n") {
+			hers = f
+		}
+	}
+	if hers == "" {
+		t.Fatalf("no record of alice's alice-gh among %q", people)
+	}
+	if err := os.Rename(hers, filepath.Join(store, "connections", "alice-gh.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", url)); !strings.Contains(out, "alice-gh\tgithub-user\tsealed, for alice") {
+		t.Errorf("alice's connections ls with her record where an older store kept it = %q; want her alice-gh", out)
+	}
+	as("bob")
+	if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", url)); !strings.Contains(out, "sealed, for bob") || strings.Contains(out, "for alice") {
+		t.Errorf("bob's connections ls beside alice's older record = %q; want his alone", out)
+	}
+
 	if err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err

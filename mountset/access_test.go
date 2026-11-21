@@ -3,7 +3,6 @@ package mountset_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -47,11 +46,11 @@ func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 		if err := conns.PutConnection(ctx, connections.Connection{ID: id, Kind: connections.KindGitHubUser, Scope: connections.ScopePerson, Owner: p.who, BaseURL: api, Status: connections.StatusOK}); err != nil {
 			t.Fatal(err)
 		}
-		if err := table.SaveUserToken(ctx, id, p.who, p.token); err != nil {
+		if err := table.SaveUserToken(ctx, p.who, id, p.token); err != nil {
 			t.Fatalf("seal %s's token: %v", p.who, err)
 		}
 		// A person pastes their token, so a later disconnect mustn't ask GitHub to revoke it.
-		if c, err := conns.GetConnection(ctx, id); err != nil || !c.Pasted {
+		if c, err := conns.GetConnection(ctx, p.who, id); err != nil || !c.Pasted {
 			t.Errorf("%s's connection after sealing a pasted token = %+v, %v; want it marked pasted", p.who, c, err)
 		}
 	}
@@ -100,10 +99,10 @@ func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 	if n := sealed(); n != 2 {
 		t.Fatalf("the server holds %d sealed tokens; want alice's and bob's", n)
 	}
-	if err := table.Disconnect(ctx, "alice-gh"); err != nil {
+	if err := table.Disconnect(ctx, "alice", "alice-gh"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := conns.GetConnection(ctx, "alice-gh"); !errors.Is(err, connections.ErrNotFound) {
+	if _, err := conns.GetConnection(ctx, "alice", "alice-gh"); !errors.Is(err, connections.ErrNotFound) {
 		t.Errorf("alice's connection after Disconnect: %v; want it gone", err)
 	}
 	if n := sealed(); n != 1 {
@@ -132,12 +131,14 @@ func TestATableAsksGitHubWithTheCallersOwnConnection(t *testing.T) {
 }
 
 // A GitHub sign-in keeps the person's token as their own connection, named for the login, and a
-// second sign-in replaces the token rather than making another. Another person can't take over that
-// connection by signing in under its login (agni issue 1772).
+// second sign-in replaces the token rather than making another (agni issue 1772). Another person's
+// sign-in under the same id is their own record, and leaves the first person's token alone (agni
+// issue 1778).
 func TestASignInKeepsTheTokenAsThePersonsOwnConnection(t *testing.T) {
 	gh := githubtest.New(t)
 	board := gh.AddRepo("acme", "board", true, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
 	board.Grant("ghp_alice_signin")
+	board.Grant("ghp_alice_again")
 	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("ab", 32))
 	dir := t.TempDir()
 	table, err := mountset.Open(mountset.Config{
@@ -153,7 +154,7 @@ func TestASignInKeepsTheTokenAsThePersonsOwnConnection(t *testing.T) {
 	if err != nil || id != "github-alice" {
 		t.Fatalf("SaveSignedIn for alice = %q, %v; want github-alice", id, err)
 	}
-	c, err := table.Connections().GetConnection(ctx, id)
+	c, err := table.Connections().GetConnection(ctx, "github:alice", id)
 	if err != nil || c.Owner != "github:alice" || c.Kind != connections.KindGitHubUser || c.Pasted || c.BaseURL != gh.URL {
 		t.Errorf("alice's signed-in connection = %+v, %v; want hers, issued by the app, reading through the server's GitHub API", c, err)
 	}
@@ -166,7 +167,18 @@ func TestASignInKeepsTheTokenAsThePersonsOwnConnection(t *testing.T) {
 	if all, _ := table.Connections().ListConnections(ctx, "github:alice"); len(all) != 1 {
 		t.Errorf("after two sign-ins alice has connections %+v; want one", all)
 	}
-	if _, err := table.SaveSignedIn(ctx, "mallory", "alice", &oauth2.Token{AccessToken: "ghp_mallory"}); !errors.Is(err, service.ErrFailedPrecondition) || !strings.Contains(fmt.Sprint(err), "belongs to someone else") {
-		t.Errorf("mallory saving a token under alice's login: %v; want failed precondition, saying it's someone else's", err)
+	// Each person's ids are their own (agni issue 1778), so a second person's github-alice is a
+	// second record, and alice's stays hers.
+	if _, err := table.SaveSignedIn(ctx, "mallory", "alice", &oauth2.Token{AccessToken: "ghp_mallory"}); err != nil {
+		t.Errorf("mallory saving a sign-in under the id github-alice: %v; want her own connection", err)
+	}
+	if c, err := table.Connections().GetConnection(ctx, "mallory", "github-alice"); err != nil || c.Owner != "mallory" {
+		t.Errorf("mallory's github-alice = %+v, %v; want hers", c, err)
+	}
+	if c, err := table.Connections().GetConnection(ctx, "github:alice", "github-alice"); err != nil || c.Owner != "github:alice" {
+		t.Errorf("alice's github-alice after mallory's = %+v, %v; want it still hers", c, err)
+	}
+	if err := table.CanRead(service.WithCaller(ctx, service.Caller{Subject: "github:alice"}), "github://acme/board"); err != nil {
+		t.Errorf("alice reading github://acme/board after mallory's sign-in: %v; want her token still working", err)
 	}
 }

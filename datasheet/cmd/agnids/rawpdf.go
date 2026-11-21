@@ -15,7 +15,7 @@ import (
 // and mountset.Resolve keeps the path inside its mount. Only .pdf files are served, since doc-IR goes
 // structured over DatasheetService. Rendering happens in the browser, so the document goes no
 // further than the local client (C16).
-func rawDatasheetHandler(ms *mountset.Table) http.Handler {
+func rawDatasheetHandler(ms *mountset.Table, guard *service.AccessGuard) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// r.URL.Path is already stripped of the /datasheets/raw/ prefix, leaving "<mount>/<path...>".
 		mountName, rel, ok := strings.Cut(r.URL.Path, "/")
@@ -32,6 +32,11 @@ func rawDatasheetHandler(ms *mountset.Table) http.Handler {
 		uri, err := mounts.NewURI(mountName, rel)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		// A caller who can't read a private mount's repo is told so, as agni serve's /raw/ does.
+		if err := guard.URI(r.Context(), uri); err != nil {
+			http.Error(w, "you can't read the repo this mount reads", http.StatusForbidden)
 			return
 		}
 		abs, err := ms.Resolve(uri)

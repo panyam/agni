@@ -18,6 +18,14 @@ import (
 // secretToken alone.
 func privateRepo(t *testing.T) (*githubtest.Server, string) {
 	t.Helper()
+	gh, repo := privateGitHubRepo(t)
+	return gh, repo.Head("main")
+}
+
+// privateGitHubRepo is privateRepo's fake and its repo, for a test that grants the repo to some
+// tokens alone.
+func privateGitHubRepo(t *testing.T) (*githubtest.Server, *githubtest.Repo) {
+	t.Helper()
 	gh := githubtest.New(t)
 	repo := gh.AddRepo("acme", "board", true, map[string]string{
 		"hw/bb.kicad_sch":    `(kicad_sch (sheet (property "Sheetfile" "power.kicad_sch")))`,
@@ -25,7 +33,7 @@ func privateRepo(t *testing.T) (*githubtest.Server, string) {
 		"hw/bb.kicad_pcb":    "(kicad_pcb)",
 	})
 	gh.AddToken(secretToken)
-	return gh, repo.Head("main")
+	return gh, repo
 }
 
 const secretToken = "ghp_not_in_any_record"

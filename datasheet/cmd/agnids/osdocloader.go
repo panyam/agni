@@ -35,7 +35,7 @@ type osDocLoader struct {
 // An unparseable one returns a parse error, and the service classifies it as invalid.
 func (l *osDocLoader) Document(ctx context.Context, uri mounts.URI) (*docpb.Document, error) {
 	if l.derived.corpus != "" {
-		dir, err := l.derived.dir(uri)
+		dir, err := l.derived.dir(ctx, uri)
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func (l *osDocLoader) Document(ctx context.Context, uri mounts.URI) (*docpb.Docu
 			return d, err
 		}
 	}
-	abs, err := l.derived.legacy(uri, docSibling)
+	abs, err := l.derived.legacy(ctx, uri, docSibling)
 	if err != nil {
 		return nil, err
 	}

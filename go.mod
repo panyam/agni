@@ -7,8 +7,8 @@ require (
 	github.com/bodgit/sevenzip v1.6.5
 	github.com/ebitengine/purego v0.8.4
 	github.com/klauspost/compress v1.20.2
-	github.com/panyam/goapplib v0.7.22
-	github.com/panyam/goapplib/storage v0.7.22
+	github.com/panyam/goapplib v0.7.23
+	github.com/panyam/goapplib/storage v0.7.23
 	github.com/panyam/jaala/frontends/mcp v0.1.101
 	github.com/panyam/jaala/frontends/nl v0.1.101
 	github.com/panyam/massrelay v0.3.7

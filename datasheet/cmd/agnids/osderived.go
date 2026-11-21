@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -26,6 +27,9 @@ const derivedDir = "derived"
 // agnids are still read when the store has none.
 type derived struct {
 	mounts *mountset.Table
+	// guard refuses a caller who can't read a private mount's repo, and is nil on a server that
+	// doesn't ask (agni issue 1778).
+	guard *service.AccessGuard
 	// corpus is the corpus store's folder. Empty means the server has no store, so nothing derived
 	// can be written.
 	corpus string
@@ -33,11 +37,11 @@ type derived struct {
 
 // dir returns the store folder for the datasheet at uri. It hashes the PDF, so a PDF the mount
 // lacks is service.ErrNotFound. A server with no corpus returns dsservice.ErrNoCorpus.
-func (d derived) dir(uri mounts.URI) (string, error) {
+func (d derived) dir(ctx context.Context, uri mounts.URI) (string, error) {
 	if d.corpus == "" {
 		return "", dsservice.ErrNoCorpus
 	}
-	pdf, err := d.mounts.Resolve(uri)
+	pdf, err := d.resolve(ctx, uri)
 	if err != nil {
 		return "", err
 	}
@@ -56,8 +60,19 @@ func (d derived) dir(uri mounts.URI) (string, error) {
 	return filepath.Join(d.corpus, derivedDir, hex.EncodeToString(h.Sum(nil))), nil
 }
 
+// resolve maps uri to its host path once the caller may read its mount.
+func (d derived) resolve(ctx context.Context, uri mounts.URI) (string, error) {
+	if err := d.guard.URI(ctx, uri); err != nil {
+		return "", err
+	}
+	return d.mounts.Resolve(uri)
+}
+
 // legacy resolves a file an older layout derived beside the PDF, such as LM1117.doc.textproto
 // beside LM1117.pdf. It is only read.
-func (d derived) legacy(uri mounts.URI, derive func(string) string) (string, error) {
+func (d derived) legacy(ctx context.Context, uri mounts.URI, derive func(string) string) (string, error) {
+	if err := d.guard.URI(ctx, uri); err != nil {
+		return "", err
+	}
 	return resolveSibling(d.mounts, uri, derive)
 }

@@ -43,13 +43,13 @@ type ConnectionService struct {
 // UserTokenKeeper seals and forgets the token of a person's own connection (agni issue 1728).
 // mountset.Table is the server's.
 type UserTokenKeeper interface {
-	// SaveUserToken seals token as owner's token for connection id. A server that can't seal one
-	// returns ErrFailedPrecondition.
-	SaveUserToken(ctx context.Context, id, owner, token string) error
-	// Disconnect removes connection id and its owner's sealed token. A token the person pasted is
+	// SaveUserToken seals token as owner's token for their connection id. A server that can't seal
+	// one returns ErrFailedPrecondition.
+	SaveUserToken(ctx context.Context, owner, id, token string) error
+	// Disconnect removes owner's connection id and its sealed token. A token the person pasted is
 	// deleted, and one the server got by signing the person in is revoked at GitHub first. A
 	// connection that isn't there is not an error.
-	Disconnect(ctx context.Context, id string) error
+	Disconnect(ctx context.Context, owner, id string) error
 }
 
 // WithUserTokens lets people keep their own connections, sealing each token through k, and returns
@@ -59,17 +59,21 @@ func (s *ConnectionService) WithUserTokens(k UserTokenKeeper) *ConnectionService
 	return s
 }
 
-// visible returns connection id when the caller may see it: a server connection, or one of the
-// caller's own. Another person's is ErrNotFound, so its id says nothing about whose it is.
+// visible returns the connection id names for the caller: their own when they keep one by that id,
+// else the server's (agni issue 1778). Each person's ids are their own, so another person's
+// connection never answers, and its id says nothing about whose it is.
 func (s *ConnectionService) visible(ctx context.Context, id string) (connections.Connection, error) {
-	c, err := s.store.GetConnection(ctx, id)
-	if err != nil {
-		return c, ConnectionErr(err)
+	if me := CallerFrom(ctx).Subject; me != "" {
+		c, err := s.store.GetConnection(ctx, me, id)
+		if err == nil {
+			return c, nil
+		}
+		if !errors.Is(err, connections.ErrNotFound) {
+			return c, ConnectionErr(err)
+		}
 	}
-	if c.Scope == connections.ScopePerson && c.Owner != CallerFrom(ctx).Subject {
-		return connections.Connection{}, fmt.Errorf("%w: no connection %s", ErrNotFound, ConnectionName(c.ID))
-	}
-	return c, nil
+	c, err := s.store.GetConnection(ctx, "", id)
+	return c, ConnectionErr(err)
 }
 
 // WithBaseURL makes url the API a new connection reads through when the request names none, such
@@ -134,21 +138,38 @@ func (s *ConnectionService) CreateConnection(ctx context.Context, req *webapi.Cr
 	if err := c.Validate(); err != nil {
 		return nil, ConnectionErr(err)
 	}
-	if _, err := s.store.GetConnection(ctx, c.ID); err == nil {
-		return nil, fmt.Errorf("%w: %s", ErrAlreadyExists, ConnectionName(c.ID))
-	} else if !errors.Is(err, connections.ErrNotFound) {
-		return nil, ConnectionErr(err)
+	// A person's ids are their own, so only their own connections and the server's can clash. The
+	// server's are listed to every caller, so refusing one of those ids tells a person nothing new.
+	if err := s.taken(ctx, c.Owner, c.ID); err != nil {
+		return nil, err
+	}
+	if person {
+		if err := s.taken(ctx, "", c.ID); err != nil {
+			return nil, fmt.Errorf("%w; a person's connection can't share a server connection's id", err)
+		}
 	}
 	if err := s.store.PutConnection(ctx, c); err != nil {
 		return nil, ConnectionErr(err)
 	}
 	if person {
-		if err := s.users.SaveUserToken(ctx, c.ID, c.Owner, req.GetUserToken()); err != nil {
-			_ = s.store.DeleteConnection(ctx, c.ID)
+		if err := s.users.SaveUserToken(ctx, c.Owner, c.ID, req.GetUserToken()); err != nil {
+			_ = s.store.DeleteConnection(ctx, c.Owner, c.ID)
 			return nil, err
 		}
 	}
 	return connectionProto(c), nil
+}
+
+// taken is ErrAlreadyExists when owner keeps a connection id, where "" is the server.
+func (s *ConnectionService) taken(ctx context.Context, owner, id string) error {
+	_, err := s.store.GetConnection(ctx, owner, id)
+	switch {
+	case err == nil:
+		return fmt.Errorf("%w: %s", ErrAlreadyExists, ConnectionName(id))
+	case errors.Is(err, connections.ErrNotFound):
+		return nil
+	}
+	return ConnectionErr(err)
 }
 
 // GetConnection returns one connection by resource name.
@@ -197,7 +218,8 @@ func (s *ConnectionService) DeleteConnection(ctx context.Context, req *webapi.De
 	if err != nil {
 		return err
 	}
-	if s.usedBy != nil {
+	// Mounts read only through server connections, so only a server connection can be in use.
+	if s.usedBy != nil && c.Owner == "" {
 		mounts, err := s.usedBy(ctx, id)
 		if err != nil {
 			return err
@@ -207,9 +229,9 @@ func (s *ConnectionService) DeleteConnection(ctx context.Context, req *webapi.De
 		}
 	}
 	if c.Kind == connections.KindGitHubUser && s.users != nil {
-		return ConnectionErr(s.users.Disconnect(ctx, id))
+		return ConnectionErr(s.users.Disconnect(ctx, c.Owner, id))
 	}
-	return ConnectionErr(s.store.DeleteConnection(ctx, id))
+	return ConnectionErr(s.store.DeleteConnection(ctx, c.Owner, id))
 }
 
 // ConnectionErr maps an error from goapplib's connections package onto this package's errors, and

@@ -37,6 +37,7 @@ import (
 func serveCmd() *cobra.Command {
 	var addr, webDir, pdf2doc, viewerURL, mountRoot, corpusDir, storeURL, uploadsURL string
 	var auth, tlsCert, tlsKey string
+	var access tableAccess
 	var specs []string
 	c := &cobra.Command{
 		Use:   "serve",
@@ -46,7 +47,11 @@ func serveCmd() *cobra.Command {
 			"holding datasheets, and --web-dir for the built workbench assets.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			table, err := serveTable(specs, mountRoot, storeURL, uploadsURL, auth != "")
+			access.auth = auth != ""
+			if access.connectionsKey != "" && (!access.auth || storeURL == "" || uploadsURL == "") {
+				return fmt.Errorf("--connections-key checks each caller's own connections, so it needs --auth %s, --store and --uploads", authgate.Tokens)
+			}
+			table, err := serveTable(specs, mountRoot, storeURL, uploadsURL, access)
 			if err != nil {
 				return err
 			}
@@ -80,7 +85,13 @@ func serveCmd() *cobra.Command {
 					return fmt.Errorf("--corpus %q: %w", corpusDir, err)
 				}
 			}
-			mux := newWorkbenchMux(table, webDir, strings.Fields(pdf2doc), strings.TrimSuffix(viewerURL, "/"), corpusDir, store)
+			// With --connections-key a caller sees a private mount when their own connection reads its
+			// repo, as on agni serve (agni issue 1778).
+			wa := workbenchAccess{hideRoots: access.auth}
+			if access.checks() {
+				wa.guard = service.NewAccessGuard(table, "")
+			}
+			mux := newWorkbenchMux(table, wa, webDir, strings.Fields(pdf2doc), strings.TrimSuffix(viewerURL, "/"), corpusDir, store)
 			scheme := "http"
 			if tlsCert != "" {
 				scheme = "https"
@@ -102,6 +113,9 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&storeURL, "store", "", "agni serve's --store, as a URL such as file:///srv/agni/meta; with --uploads, the workbench also serves the mounts agni serve made at runtime, such as a GitHub snapshot, and sees a new one within a second. It only reads them")
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "agni serve's --uploads, as a URL such as file:///srv/agni/files, where the runtime mounts' files are. Needs --store")
 	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` keeps in --store, the same ones agni serve accepts, and refuses a call without one (agni issue 1765). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost")
+	c.Flags().StringVar(&access.connectionsKey, "connections-key", "", "agni serve's --connections-key, as env:NAME or file:/abs/path (agni issue 1778). With --auth, a caller sees a private mount when their own connection in --store reads its repo. agnids reads people's tokens and never refreshes or writes one, so a signed-in token that has expired reads as no until agni serve refreshes it. Without it, --auth hides every private mount. Needs --auth, --store and --uploads")
+	c.Flags().StringVar(&access.githubAPI, "github-api", "", "the GitHub REST API a caller's access is checked through; a test or a GitHub Enterprise server names its own")
+	_ = c.Flags().MarkHidden("github-api")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
 	c.Flags().StringVar(&pdf2doc, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 datasheet/tools/pdf2doc/pdf2doc.py\"; empty disables the workbench's Extract (first pass) action")
@@ -111,7 +125,7 @@ func serveCmd() *cobra.Command {
 // newWorkbenchMux routes everything agnids serves: the DatasheetService API, the raw PDFs the
 // workbench renders, its static bundle, the page itself, and a liveness probe. It is separate from
 // serveCmd so a test can drive the real routes without a listener.
-func newWorkbenchMux(ms *mountset.Table, webDir string, pdf2doc []string, viewerURL string, corpusDir string, corpusStore param.Fetcher) *http.ServeMux {
+func newWorkbenchMux(ms *mountset.Table, access workbenchAccess, webDir string, pdf2doc []string, viewerURL string, corpusDir string, corpusStore param.Fetcher) *http.ServeMux {
 	mux := http.NewServeMux()
 	// Drafts live in the published corpus's store, so a server with no --corpus has none, and the
 	// draft rpcs say to start it with one.
@@ -121,13 +135,20 @@ func newWorkbenchMux(ms *mountset.Table, webDir string, pdf2doc []string, viewer
 	}
 	// A datasheet's doc-IR and annotations live in the corpus store, keyed by the PDF's hash, so the
 	// mounts are only read (agni issue 1734).
-	d := derived{mounts: ms, corpus: corpusDir}
+	guard := access.guard
+	d := derived{mounts: ms, guard: guard, corpus: corpusDir}
 	svc := dsservice.NewDatasheetService(&osDocLoader{derived: d}, drafts,
 		&osDocExtractor{derived: d, cmd: pdf2doc}, &osAnnotationStore{derived: d})
 	path, handler := dsapiconnect.NewDatasheetServiceHandler(dsserver.NewDatasheet(svc))
 	mux.Handle(path, handler)
 	// The workbench lists its folders through the engine's own WorkspaceService, over these mounts.
-	wpath, whandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(mountset.NewWorkspace(ms))))
+	workspace := service.NewWorkspaceService(mountset.NewWorkspace(ms)).WithGuard(guard)
+	if access.hideRoots {
+		// A caller on another machine has no business with the server's folder layout, as on agni
+		// serve (agni issue 1627).
+		workspace.WithHiddenRoots()
+	}
+	wpath, whandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(workspace))
 	mux.Handle(wpath, whandler)
 	// The published corpus's read side, for `agni serve --params-url`. Registered with no corpus too,
 	// so a caller is told to start agnids with --corpus rather than getting a 404.
@@ -135,7 +156,7 @@ func newWorkbenchMux(ms *mountset.Table, webDir string, pdf2doc []string, viewer
 	mux.Handle(ppath, phandler)
 	// The workbench renders the source PDF with pdf.js, so its raw bytes are served from the mounts.
 	// The prefix is more specific than the page's, so ServeMux routes it here.
-	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(ms)))
+	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(ms, guard)))
 	// A workbench link from when datasheets lived under /datasheets/files/ redirects to the same path
 	// under /datasheets/mounts/, query and all (agni issue 1734).
 	mux.HandleFunc("/datasheets/files/", func(w http.ResponseWriter, r *http.Request) {
@@ -234,9 +255,11 @@ func serveMounts(specs []string, root string) ([]mounts.Mount, error) {
 // with agni serve's --store and --uploads, the mounts agni serve made at runtime, read from their
 // records (agni issue 1735). agnids only reads the records, and sees a new one within a second.
 //
-// With private, as under --auth, it serves no mount that reads a private repo through a connection.
-// agnids can't check a caller's own connections, so it can't tell who may read one (agni issue 1728).
-func serveTable(specs []string, root, storeURL, uploadsURL string, private bool) (*mountset.Table, error) {
+// Under --auth with no --connections-key it serves no mount that reads a private repo through a
+// connection, since it can't tell who may read one (agni issue 1728). With --connections-key it
+// opens agni serve's connections and people's sealed tokens for reading, and the caller's own
+// connection decides (agni issue 1778).
+func serveTable(specs []string, root, storeURL, uploadsURL string, access tableAccess) (*mountset.Table, error) {
 	ms, err := serveMounts(specs, root)
 	if err != nil {
 		return nil, err
@@ -245,12 +268,35 @@ func serveTable(specs []string, root, storeURL, uploadsURL string, private bool)
 	if err != nil {
 		return nil, err
 	}
-	cfg := mountset.Config{Fixed: ms, ReadOnly: true, HidePrivate: private}
+	cfg := mountset.Config{Fixed: ms, ReadOnly: true, HidePrivate: access.auth && !access.checks(), GitHubAPI: access.githubAPI}
 	if storeDir != "" && uploadsDir != "" {
 		cfg.Uploads, cfg.Records = uploadsDir, filepath.Join(storeDir, mountset.RecordsDir)
+		if access.checks() {
+			cfg.Connections, cfg.UserTokens = filepath.Join(storeDir, mountset.ConnectionsDir), filepath.Join(storeDir, mountset.UserTokensDir)
+			cfg.ConnectionsKey = access.connectionsKey
+		}
 	}
 	return mountset.Open(cfg)
 }
+
+// workbenchAccess is what newWorkbenchMux checks for each caller. guard refuses a private mount the
+// caller's own connections can't read, and is nil when the server doesn't check (agni issue 1778).
+// hideRoots leaves each mount's folder out of ListMounts, for a server under --auth.
+type workbenchAccess struct {
+	guard     *service.AccessGuard
+	hideRoots bool
+}
+
+// tableAccess is how serveTable decides who sees a private mount: auth is --auth, connectionsKey
+// is --connections-key, and githubAPI is the hidden --github-api.
+type tableAccess struct {
+	auth                      bool
+	connectionsKey, githubAPI string
+}
+
+// checks reports whether the server checks each caller's own connections, rather than hiding every
+// private mount from everyone.
+func (a tableAccess) checks() bool { return a.auth && a.connectionsKey != "" }
 
 // displayAddr turns a listen address into one a browser can open, since ":8090" listens on every
 // interface and is not a host.
