@@ -59,6 +59,9 @@ GitHub Release body carries.
   Chrome through `setup-browser` and download no Chromium. The vulncheck workflow and the gate's
   shared setup call `vulncheck` and `setup-go-pnpm` in place of their own copies. The browser suite
   and scripts launch the browser `CHROME_PATH` names, when it is set.
+- The browser shards restore Go's build cache from main's newest run through
+  `panyam/ci-actions/go-build-cache`, so the wasm build and the agni binary compile only what changed.
+  Every ci-actions step moves to v0.1.2.
 - Go moves to 1.26.11, brotli to v1.2.7 and klauspost/compress to v1.20.2, which fix four advisories
   govulncheck reached from both shipped modules (issue 1786).
 - A link names its revision by the ref every linked artifact is pinned at, and a ref names one
