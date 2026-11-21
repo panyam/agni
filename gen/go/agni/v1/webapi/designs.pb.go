@@ -234,8 +234,13 @@ type Report struct {
 	// SHA on a github mount (agni issue 1725). An artifact read from a source with no history, or
 	// uploaded, has none. Output only.
 	SourceVersions map[string]string `protobuf:"bytes,11,rep,name=source_versions,json=sourceVersions,proto3" json:"source_versions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// revision is the id of the design revision the run read (agni issue 1774). A report made on
+	// "designs/{design}@{rev}" read that revision, and one made on "designs/{design}" read the current
+	// one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+	// such as one only uploaded to. Output only.
+	Revision      string `protobuf:"bytes,12,opt,name=revision,proto3" json:"revision,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Report) Reset() {
@@ -343,6 +348,13 @@ func (x *Report) GetSourceVersions() map[string]string {
 		return x.SourceVersions
 	}
 	return nil
+}
+
+func (x *Report) GetRevision() string {
+	if x != nil {
+		return x.Revision
+	}
+	return ""
 }
 
 // DesignRevision is a design's files as of one version of each linked source (agni issue 1725). Its
@@ -593,8 +605,10 @@ func (x *ListDesignRevisionsResponse) GetNextPageToken() string {
 }
 
 type CreateReportRequest struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	Parent string                 `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"` // "designs/{design}"
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// parent is "designs/{design}", or "designs/{design}@{rev}" for a revision of it, by a tag, a commit
+	// or a revision id (agni issue 1774). The report is kept under the design either way.
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	// report_id is the new report's id, lowercase letters, digits, '.', '_' or '-'. Empty lets the
 	// server assign one that sorts by creation time.
 	ReportId string `protobuf:"bytes,2,opt,name=report_id,json=reportId,proto3" json:"report_id,omitempty"`
@@ -2452,7 +2466,7 @@ var File_agni_v1_webapi_designs_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\n" +
-	"\x1cagni/v1/webapi/designs.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1cagni/v1/webapi/project.proto\x1a\x1dagni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x93\x04\n" +
+	"\x1cagni/v1/webapi/designs.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1cagni/v1/webapi/project.proto\x1a\x1dagni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaf\x04\n" +
 	"\x06Report\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05packs\x18\x02 \x03(\tR\x05packs\x12\x18\n" +
@@ -2468,7 +2482,8 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\rpacks_changed\x18\t \x03(\tR\fpacksChanged\x12#\n" +
 	"\rfinding_count\x18\n" +
 	" \x01(\x05R\ffindingCount\x12S\n" +
-	"\x0fsource_versions\x18\v \x03(\v2*.agni.v1.webapi.Report.SourceVersionsEntryR\x0esourceVersions\x1aA\n" +
+	"\x0fsource_versions\x18\v \x03(\v2*.agni.v1.webapi.Report.SourceVersionsEntryR\x0esourceVersions\x12\x1a\n" +
+	"\brevision\x18\f \x01(\tR\brevision\x1aA\n" +
 	"\x13SourceVersionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa7\x03\n" +

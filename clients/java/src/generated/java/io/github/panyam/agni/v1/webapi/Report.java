@@ -43,6 +43,7 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.LazyStringArrayList.emptyList();
     packsChanged_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    revision_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -604,6 +605,59 @@ java.lang.String defaultValue) {
     return map.get(key);
   }
 
+  public static final int REVISION_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object revision_ = "";
+  /**
+   * <pre>
+   * revision is the id of the design revision the run read (agni issue 1774). A report made on
+   * "designs/{design}&#64;{rev}" read that revision, and one made on "designs/{design}" read the current
+   * one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+   * such as one only uploaded to. Output only.
+   * </pre>
+   *
+   * <code>string revision = 12 [json_name = "revision"];</code>
+   * @return The revision.
+   */
+  @java.lang.Override
+  public java.lang.String getRevision() {
+    java.lang.Object ref = revision_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      revision_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * revision is the id of the design revision the run read (agni issue 1774). A report made on
+   * "designs/{design}&#64;{rev}" read that revision, and one made on "designs/{design}" read the current
+   * one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+   * such as one only uploaded to. Output only.
+   * </pre>
+   *
+   * <code>string revision = 12 [json_name = "revision"];</code>
+   * @return The bytes for revision.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRevisionBytes() {
+    java.lang.Object ref = revision_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      revision_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -654,6 +708,9 @@ java.lang.String defaultValue) {
         internalGetSourceVersions(),
         SourceVersionsDefaultEntryHolder.defaultEntry,
         11);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revision_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, revision_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -717,6 +774,9 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(11, sourceVersions__);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revision_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, revision_);
+    }
     return size;
   }
   @java.lang.Override
@@ -769,6 +829,8 @@ java.lang.String defaultValue) {
         != other.getFindingCount()) return false;
     if (!internalGetSourceVersions().equals(
         other.internalGetSourceVersions())) return false;
+    if (!getRevision()
+        .equals(other.getRevision())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -815,6 +877,8 @@ java.lang.String defaultValue) {
       hash = (37 * hash) + SOURCE_VERSIONS_FIELD_NUMBER;
       hash = (53 * hash) + internalGetSourceVersions().hashCode();
     }
+    hash = (37 * hash) + REVISION_FIELD_NUMBER;
+    hash = (53 * hash) + getRevision().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1003,6 +1067,7 @@ java.lang.String defaultValue) {
           com.google.protobuf.LazyStringArrayList.emptyList();
       findingCount_ = 0;
       internalGetMutableSourceVersions().clear();
+      revision_ = "";
       return this;
     }
 
@@ -1080,6 +1145,9 @@ java.lang.String defaultValue) {
         result.sourceVersions_ = internalGetSourceVersions();
         result.sourceVersions_.makeImmutable();
       }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.revision_ = revision_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1155,6 +1223,11 @@ java.lang.String defaultValue) {
       internalGetMutableSourceVersions().mergeFrom(
           other.internalGetSourceVersions());
       bitField0_ |= 0x00000400;
+      if (!other.getRevision().isEmpty()) {
+        revision_ = other.revision_;
+        bitField0_ |= 0x00000800;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1242,6 +1315,11 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000400;
               break;
             } // case 90
+            case 98: {
+              revision_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2587,6 +2665,113 @@ java.lang.String defaultValue) {
       internalGetMutableSourceVersions().getMutableMap()
           .putAll(values);
       bitField0_ |= 0x00000400;
+      return this;
+    }
+
+    private java.lang.Object revision_ = "";
+    /**
+     * <pre>
+     * revision is the id of the design revision the run read (agni issue 1774). A report made on
+     * "designs/{design}&#64;{rev}" read that revision, and one made on "designs/{design}" read the current
+     * one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+     * such as one only uploaded to. Output only.
+     * </pre>
+     *
+     * <code>string revision = 12 [json_name = "revision"];</code>
+     * @return The revision.
+     */
+    public java.lang.String getRevision() {
+      java.lang.Object ref = revision_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        revision_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * revision is the id of the design revision the run read (agni issue 1774). A report made on
+     * "designs/{design}&#64;{rev}" read that revision, and one made on "designs/{design}" read the current
+     * one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+     * such as one only uploaded to. Output only.
+     * </pre>
+     *
+     * <code>string revision = 12 [json_name = "revision"];</code>
+     * @return The bytes for revision.
+     */
+    public com.google.protobuf.ByteString
+        getRevisionBytes() {
+      java.lang.Object ref = revision_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        revision_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * revision is the id of the design revision the run read (agni issue 1774). A report made on
+     * "designs/{design}&#64;{rev}" read that revision, and one made on "designs/{design}" read the current
+     * one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+     * such as one only uploaded to. Output only.
+     * </pre>
+     *
+     * <code>string revision = 12 [json_name = "revision"];</code>
+     * @param value The revision to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRevision(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      revision_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * revision is the id of the design revision the run read (agni issue 1774). A report made on
+     * "designs/{design}&#64;{rev}" read that revision, and one made on "designs/{design}" read the current
+     * one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+     * such as one only uploaded to. Output only.
+     * </pre>
+     *
+     * <code>string revision = 12 [json_name = "revision"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRevision() {
+      revision_ = getDefaultInstance().getRevision();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * revision is the id of the design revision the run read (agni issue 1774). A report made on
+     * "designs/{design}&#64;{rev}" read that revision, and one made on "designs/{design}" read the current
+     * one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+     * such as one only uploaded to. Output only.
+     * </pre>
+     *
+     * <code>string revision = 12 [json_name = "revision"];</code>
+     * @param value The bytes for revision to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRevisionBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      revision_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
       return this;
     }
 

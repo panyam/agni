@@ -10,7 +10,7 @@ import { SolidIsland } from "@panyam/tsappkit-solid";
 import { filesFromDrop, filesFromFileList } from "@panyam/tsappkit/wasmhost";
 import type { Design } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 import { create } from "@bufbuild/protobuf";
-import { ArtifactSourceSchema, ArtifactType, type Artifact, type ArtifactSource, type DesignRevision, type Report } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
+import { ArtifactSourceSchema, ArtifactType, type Artifact, type ArtifactSource, DesignRevisionSource, type DesignRevision, type Report } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
 import type { Pack } from "@panyam/agni-client/gen/agni/v1/webapi/packs_pb";
 import type { Project } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 import { uriMount } from "@agni/web-shared/uri.js";
@@ -738,6 +738,18 @@ function Revisions(props: { design: string; version: Artifact[] }) {
 function LinkControls(props: { design: string; name: string; short: string; source: ArtifactSource; act: (what: string, run: () => Promise<unknown>) => void }) {
   const [ref, setRef] = createSignal("");
   const src = props.source;
+  // The repo's tags, offered as Move's choices once the field is first focused (agni issue 1781). A
+  // source that can't list them, such as a folder or a repo read with no connection, offers none,
+  // and the field still takes any ref typed.
+  const [tags, setTags] = createSignal<string[] | null>(null);
+  const loadTags = () => {
+    if (tags() !== null) return;
+    setTags([]);
+    designClient()
+      .listDesignRevisions({ parent: props.design, source: DesignRevisionSource.TAGS })
+      .then((r) => setTags(r.revisions.map((t) => t.name.slice(t.name.indexOf("@") + 1)).filter(Boolean)))
+      .catch(() => setTags([]));
+  };
   return (
     <span class="lb-link-controls">
       <Show when={src.follow || src.newerVersion}>
@@ -746,7 +758,20 @@ function LinkControls(props: { design: string; name: string; short: string; sour
           Sync
         </button>
       </Show>{" "}
-      <input class="lb-ref" name={`ref-${props.short}`} data-testid={`ref-${props.short}`} placeholder="another ref" aria-label={`Move ${props.short} to a tag, branch or commit`} value={ref()} onInput={(e) => setRef(e.currentTarget.value)} />
+      <input
+        class="lb-ref"
+        name={`ref-${props.short}`}
+        data-testid={`ref-${props.short}`}
+        list={`tags-${props.short}`}
+        placeholder="another ref"
+        aria-label={`Move ${props.short} to a tag, branch or commit`}
+        value={ref()}
+        onFocus={loadTags}
+        onInput={(e) => setRef(e.currentTarget.value)}
+      />
+      <datalist id={`tags-${props.short}`} data-testid={`tags-${props.short}`}>
+        <For each={tags() ?? []}>{(t) => <option value={t} />}</For>
+      </datalist>
       <button
         type="button"
         data-testid={`move-${props.short}`}

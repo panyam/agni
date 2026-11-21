@@ -141,25 +141,46 @@ func (s *DirStore) keepRevision(id string, rec recordYAML, ref string) (revision
 	if ref != "" {
 		r.Refs = append(r.Refs, ref)
 		slices.Sort(r.Refs)
+		// A ref names one revision, so it moves here from any other that held it (agni issue 1774).
+		// Linking a design's artifacts one at a time names each step, and the last one keeps it.
+		others, err := s.loadRevisions(id)
+		if err != nil {
+			return revisionYAML{}, err
+		}
+		for name, o := range others {
+			if name == rec.Rev || !slices.Contains(o.Refs, ref) {
+				continue
+			}
+			o.Refs = slices.DeleteFunc(o.Refs, func(x string) bool { return x == ref })
+			if err := writeRevision(dir, name, o); err != nil {
+				return revisionYAML{}, err
+			}
+		}
 	}
+	return r, writeRevision(dir, rec.Rev, r)
+}
+
+// writeRevision writes r as revision name in dir, through a temporary file, so a reader never sees
+// half of it.
+func writeRevision(dir, name string, r revisionYAML) error {
 	out, err := yaml.Marshal(&r)
 	if err != nil {
-		return revisionYAML{}, err
+		return err
 	}
 	tmp, err := os.CreateTemp(dir, ".put-*")
 	if err != nil {
-		return revisionYAML{}, err
+		return err
 	}
 	if _, err := tmp.Write(out); err != nil {
 		tmp.Close()
 		os.Remove(tmp.Name())
-		return revisionYAML{}, err
+		return err
 	}
 	if err := tmp.Close(); err != nil {
 		os.Remove(tmp.Name())
-		return revisionYAML{}, err
+		return err
 	}
-	return r, os.Rename(tmp.Name(), p)
+	return os.Rename(tmp.Name(), filepath.Join(dir, name+".yaml"))
 }
 
 // loadRevisions reads design id's kept revisions by id. None is an empty map. Callers hold s.mu.
@@ -236,4 +257,76 @@ func (s *DirStore) revisionRefs(ids []string, refs map[string]bool) (map[string]
 		}
 	}
 	return views, nil
+}
+
+// RevisionArtifacts returns design id's artifacts as of the kept revision whose id or one of whose
+// refs is rev (agni issue 1774). A rev it doesn't keep is ErrNotFound.
+func (s *DirStore) RevisionArtifacts(_ context.Context, id, rev string) ([]*webapi.Artifact, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	all, err := s.loadRevisions(id)
+	if err != nil {
+		return nil, err
+	}
+	for name, r := range all {
+		if name == rev || slices.Contains(r.Refs, rev) {
+			out := make([]*webapi.Artifact, 0, len(r.Record.Artifacts))
+			for _, a := range r.Record.Artifacts {
+				out = append(out, s.artifactOf(id, a))
+			}
+			return out, nil
+		}
+	}
+	return nil, fmt.Errorf("%w: no kept revision %s", service.ErrNotFound, service.RevisionName(service.StandaloneDesignName(id), rev))
+}
+
+// WithRevisionPins makes a prune keep the revisions pins names for a design, and returns s (agni
+// issue 1774). The server pins the revisions its reports ran on, so a report always opens its files.
+func (s *DirStore) WithRevisionPins(pins func(ctx context.Context, id string) (map[string]bool, error)) *DirStore {
+	s.pins = pins
+	return s
+}
+
+// namedRef is the ref every linked artifact of rec with history is pinned at, or "" when one
+// follows a branch, two are at different refs, or none has history. A link one artifact at a time
+// then names the revision only once every artifact reached the ref (agni issue 1774).
+func namedRef(rec recordYAML) string {
+	ref := ""
+	for _, a := range rec.Artifacts {
+		src := a.Source
+		if src == nil || src.Version == "" {
+			continue
+		}
+		if src.Follow || src.Ref == "" || (ref != "" && src.Ref != ref) {
+			return ""
+		}
+		ref = src.Ref
+	}
+	return ref
+}
+
+// pruneRevisions deletes design id's kept revisions that nothing names: not current, with no ref a
+// read named, and not pinned (agni issue 1774). A link that moves artifacts one at a time keeps a
+// revision after each, and this drops the half-moved ones once the design moves on. Their files go
+// at the next sweep of the uploads. Callers hold s.mu.
+func (s *DirStore) pruneRevisions(ctx context.Context, id, current string) error {
+	all, err := s.loadRevisions(id)
+	if err != nil || len(all) == 0 {
+		return err
+	}
+	pinned := map[string]bool{}
+	if s.pins != nil {
+		if pinned, err = s.pins(ctx, id); err != nil {
+			return err
+		}
+	}
+	for name, r := range all {
+		if name == current || len(r.Refs) > 0 || pinned[name] {
+			continue
+		}
+		if err := os.Remove(filepath.Join(s.revisionsOf(id), name+".yaml")); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	}
+	return nil
 }

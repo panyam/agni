@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -113,5 +114,96 @@ func TestARevisionKeepsItsFilesBesideTheDesign(t *testing.T) {
 	}
 	if views, _, err := ds.Sweep(nil, 0); err != nil || views != 2 {
 		t.Errorf("a sweep after the delete removed %d views, %v; want the design's and the revision's", views, err)
+	}
+}
+
+// pinnedWrite is a write of artifact id, sch a schematic or brd a board, read from the mount "repo"
+// at ref, pinned there.
+func pinnedWrite(id, ref, edif string) (service.ArtifactWrite, service.BlobSource) {
+	ext := map[string]string{"sch": ".kicad_sch", "brd": ".kicad_pcb"}[id]
+	u := uploadOf(map[string]string{"bb" + ext: edif})
+	return service.ArtifactWrite{ID: id, Files: u.files, AllowMissing: true,
+		Source: &webapi.ArtifactSource{Mount: "repo", Path: id, Ref: ref, Version: "v-" + ref, ReadHash: "sha256:" + id + ref}}, u.source
+}
+
+// Linking a design's artifacts one at a time keeps a revision after each link. A revision is named
+// by the ref every artifact is pinned at, the name moves to the last step that holds it, and the
+// unnamed steps go once the design moves on, unless something pins them (agni issue 1774).
+func TestUnnamedRevisionsGoOnceTheDesignMovesOn(t *testing.T) {
+	ctx := context.Background()
+	ds, _ := dirStore(t)
+	t0 := time.Date(2026, 11, 21, 9, 0, 0, 0, time.UTC)
+	step := 0
+	ds.now = func() time.Time { return t0.Add(time.Duration(step) * time.Minute) }
+	var pinned string
+	ds.WithRevisionPins(func(context.Context, string) (map[string]bool, error) {
+		return map[string]bool{pinned: pinned != ""}, nil
+	})
+	if _, err := ds.CreateDesign(ctx, "bb", service.DesignRecord{}); err != nil {
+		t.Fatal(err)
+	}
+	link := func(id, ref string) {
+		t.Helper()
+		step++
+		w, blobs := pinnedWrite(id, ref, "(kicad "+id+" "+ref+")")
+		if _, err := ds.WriteArtifacts(ctx, "bb", []service.ArtifactWrite{w}, blobs); err != nil {
+			t.Fatal(err)
+		}
+	}
+	kept := func() []string {
+		t.Helper()
+		all, err := ds.Revisions(ctx, "bb")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, r := range all {
+			name := r.GetRevisionId()
+			if len(r.GetRefs()) > 0 {
+				name = strings.Join(r.GetRefs(), ",")
+			}
+			if r.GetCurrent() {
+				name += "*"
+			}
+			out = append(out, name)
+		}
+		return out
+	}
+
+	link("sch", "1.1.2")
+	link("brd", "1.1.2")
+	if got := kept(); !slices.Equal(got, []string{"1.1.2*"}) {
+		t.Errorf("after linking both at 1.1.2, revisions = %v; want the step with both, named 1.1.2 and current", got)
+	}
+	link("sch", "1.1.3")
+	half, err := ds.Revisions(ctx, "bb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := kept(); len(got) != 2 || got[1] != "1.1.2" || !strings.HasSuffix(got[0], "*") || strings.Contains(got[0], ".") {
+		t.Errorf("halfway to 1.1.3, revisions = %v; want the unnamed current step, then 1.1.2", got)
+	}
+	pinned = half[0].GetRevisionId()
+	link("brd", "1.1.3")
+	if got := kept(); !slices.Equal(got, []string{"1.1.3*", pinned, "1.1.2"}) {
+		t.Errorf("at 1.1.3 with the halfway step pinned, revisions = %v; want 1.1.3, the pinned step, then 1.1.2", got)
+	}
+	pinned = ""
+	link("sch", "1.1.2")
+	link("sch", "1.1.3")
+	if got := kept(); !slices.Equal(got, []string{"1.1.3*", "1.1.2"}) {
+		t.Errorf("after the pin went, revisions = %v; want 1.1.3 and 1.1.2 alone", got)
+	}
+	arts, err := ds.RevisionArtifacts(ctx, "bb", "1.1.2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var versions []string
+	for _, a := range arts {
+		versions = append(versions, a.GetName()+"@"+a.GetSource().GetVersion())
+	}
+	slices.Sort(versions)
+	if !slices.Equal(versions, []string{"designs/bb/artifacts/brd@v-1.1.2", "designs/bb/artifacts/sch@v-1.1.2"}) {
+		t.Errorf("RevisionArtifacts(1.1.2) = %v; want both artifacts at 1.1.2", versions)
 	}
 }

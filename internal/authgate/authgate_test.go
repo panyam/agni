@@ -1,10 +1,15 @@
 package authgate
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/panyam/oneauth/core"
 )
 
 func TestCheckAuthFlags(t *testing.T) {
@@ -58,5 +63,49 @@ func TestTheGateLetsAWebhookThroughWithNoToken(t *testing.T) {
 		if w.Code != want {
 			t.Errorf("POST %s with no token = %d; want %d", path, w.Code, want)
 		}
+	}
+}
+
+// Prune deletes the tokens that have expired, and keeps one with no expiry, one still valid and a
+// revoked one (agni issue 1778).
+func TestPruneDeletesOnlyExpiredTokens(t *testing.T) {
+	ctx := context.Background()
+	store := Store(t.TempDir())
+	now := time.Now()
+	mint := func(subject string, expires *time.Time) string {
+		t.Helper()
+		resp, err := store.CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: subject, Name: subject, ExpiresAt: expires})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp.APIKey.KeyID
+	}
+	past, future := now.Add(-time.Hour), now.Add(time.Hour)
+	mint("github:old", &past)
+	mint("github:fresh", &future)
+	mint("ops", nil)
+	revoked := mint("gone", nil)
+	if _, err := store.RevokeAPIKey(ctx, &core.RevokeAPIKeyRequest{KeyID: revoked}); err != nil {
+		t.Fatal(err)
+	}
+
+	n, err := Prune(ctx, store, now)
+	if err != nil || n != 1 {
+		t.Fatalf("Prune = %d, %v; want the one expired token deleted", n, err)
+	}
+	keys, err := List(ctx, store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var left []string
+	for _, k := range keys {
+		left = append(left, k.Subject)
+	}
+	sort.Strings(left)
+	if got := strings.Join(left, ","); got != "github:fresh,gone,ops" {
+		t.Errorf("tokens left = %s; want github:fresh, the revoked gone, and ops", got)
+	}
+	if n, err := Prune(ctx, store, now); err != nil || n != 0 {
+		t.Errorf("a second Prune = %d, %v; want nothing left to delete", n, err)
 	}
 }

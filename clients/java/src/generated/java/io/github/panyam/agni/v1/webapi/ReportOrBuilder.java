@@ -349,4 +349,30 @@ java.lang.String defaultValue);
    */
   java.lang.String getSourceVersionsOrThrow(
       java.lang.String key);
+
+  /**
+   * <pre>
+   * revision is the id of the design revision the run read (agni issue 1774). A report made on
+   * "designs/{design}&#64;{rev}" read that revision, and one made on "designs/{design}" read the current
+   * one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+   * such as one only uploaded to. Output only.
+   * </pre>
+   *
+   * <code>string revision = 12 [json_name = "revision"];</code>
+   * @return The revision.
+   */
+  java.lang.String getRevision();
+  /**
+   * <pre>
+   * revision is the id of the design revision the run read (agni issue 1774). A report made on
+   * "designs/{design}&#64;{rev}" read that revision, and one made on "designs/{design}" read the current
+   * one. The server keeps a revision while a report names it. Empty for a design with no revisions,
+   * such as one only uploaded to. Output only.
+   * </pre>
+   *
+   * <code>string revision = 12 [json_name = "revision"];</code>
+   * @return The bytes for revision.
+   */
+  com.google.protobuf.ByteString
+      getRevisionBytes();
 }

@@ -52,6 +52,9 @@ type DirStore struct {
 	mount   string
 	mu      sync.Mutex
 	now     func() time.Time // the clock writes are stamped with; time.Now when nil
+	// pins names the revisions of a design something still refers to, such as a report, so a prune
+	// keeps them (agni issue 1774). Set by WithRevisionPins; nil pins none.
+	pins func(ctx context.Context, id string) (map[string]bool, error)
 }
 
 func (s *DirStore) clock() time.Time {
@@ -451,8 +454,15 @@ func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []servi
 		return nil, err
 	}
 	// A link or a sync read a source, so the files it read are kept as a revision (agni issue 1725).
+	// The revision is named by the ref every linked artifact is pinned at, when they share one.
 	if slices.ContainsFunc(writes, func(w service.ArtifactWrite) bool { return w.Source.GetReadHash() != "" }) && next.Rev != "" {
-		if _, err := s.keepRevision(id, next, ""); err != nil {
+		if _, err := s.keepRevision(id, next, namedRef(next)); err != nil {
+			return nil, err
+		}
+	}
+	// A write that moves the design leaves its unnamed revisions behind for good (agni issue 1774).
+	if next.Rev != rec.Rev {
+		if err := s.pruneRevisions(ctx, id, next.Rev); err != nil {
 			return nil, err
 		}
 	}
