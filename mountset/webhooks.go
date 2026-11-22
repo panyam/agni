@@ -17,13 +17,23 @@ var _ service.WebhookMaker = (*Table)(nil)
 // through the mount's connection as the caller, so a connection that is one person's own works only
 // for that person. GitHub lets a token manage a repo's hooks only with admin rights on the repo, or
 // a fine-grained token's webhooks permission, and answers any other token with PERMISSION_DENIED.
-func (t *Table) CreateWebhook(ctx context.Context, name, url string, secret []byte) (service.Webhook, error) {
+//
+// On a SharePoint mount it subscribes to the drive's changes instead (subscribe, agni issue 1729).
+func (t *Table) CreateWebhook(ctx context.Context, name, url string, secrets service.WebhookSecrets) (service.Webhook, error) {
 	m, err := t.reg.Get(ctx, name)
 	if err != nil {
 		return service.Webhook{}, Err(err)
 	}
-	if m.Kind != mounts.KindGitHub {
-		return service.Webhook{}, fmt.Errorf("%w: the mount %q isn't a GitHub repo, so it has no webhooks", service.ErrFailedPrecondition, name)
+	switch m.Kind {
+	case mounts.KindMSGraph:
+		return t.subscribe(ctx, m, url, secrets.Graph)
+	case mounts.KindGitHub:
+	default:
+		return service.Webhook{}, fmt.Errorf("%w: the mount %q is a %s mount, which sends no change events; --poll follows it", service.ErrFailedPrecondition, name, m.Kind)
+	}
+	secret := secrets.GitHub
+	if len(secret) == 0 {
+		return service.Webhook{}, fmt.Errorf("%w: this server takes no GitHub webhooks; start it with --github-webhook-secret", service.ErrFailedPrecondition)
 	}
 	if m.Connection == "" || t.svc == nil {
 		return service.Webhook{}, fmt.Errorf("%w: the mount %q reads with no connection, and a webhook needs a token allowed to manage the repo's hooks; mount it again with --connection", service.ErrFailedPrecondition, name)

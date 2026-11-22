@@ -41,6 +41,9 @@ type SourceMove struct {
 // whose link names c.Ref, or names no ref when c.Ref is the default branch. A deleted ref moves
 // nothing.
 //
+// A source with no refs, such as a SharePoint drive, reports a change with Default set and no Ref
+// (agni issue 1729). It moves every artifact that links through a mount in that source with no ref.
+//
 // The change only says that something moved. Each matching mount and ref is resolved again, once,
 // and an artifact moves to what the source names now. So a late delivery of an older push, or a
 // forged one, can't move or mark a design backward. An artifact the push names a version it already
@@ -53,7 +56,7 @@ func (s *DesignService) SourceChanged(ctx context.Context, c mounts.Change) ([]S
 	if s.readers == nil || s.mountsOf == nil {
 		return nil, fmt.Errorf("%w: %s", ErrFailedPrecondition, noLinks)
 	}
-	if c.Deleted || c.Ref == "" {
+	if !changeMoves(c) {
 		return nil, nil
 	}
 	names, err := s.mountsOf(ctx, c.Source)
@@ -61,10 +64,26 @@ func (s *DesignService) SourceChanged(ctx context.Context, c mounts.Change) ([]S
 		return nil, err
 	}
 	return s.catchUp(unguarded(ctx), c.Version, func(src *webapi.ArtifactSource) bool {
-		follows := src.GetRef() == c.Ref || src.GetRef() == "" && c.Default && c.RefKind == mounts.RefBranch
+		follows := followsChange(src, c)
 		seen := c.Version != "" && (src.GetVersion() == c.Version || src.GetNewerVersion() == c.Version)
 		return slices.Contains(names, src.GetMount()) && follows && !seen
 	})
+}
+
+// changeMoves reports whether c can move a link: it isn't a deleted ref, and it names a ref or comes
+// from a source with no refs, such as a SharePoint drive, which reports Default and no Ref (agni
+// issue 1729).
+func changeMoves(c mounts.Change) bool {
+	return !c.Deleted && (c.Ref != "" || c.Default)
+}
+
+// followsChange reports whether a link at src follows the ref c moved: it names c.Ref, or names no
+// ref and c is the source's default branch or a change in a source with no refs.
+func followsChange(src *webapi.ArtifactSource, c mounts.Change) bool {
+	if src.GetRef() == c.Ref && c.Ref != "" {
+		return true
+	}
+	return src.GetRef() == "" && c.Default && (c.RefKind == mounts.RefBranch || c.Ref == "")
 }
 
 // PollSources makes one pass over every stored design that follows a branch or a folder, for a

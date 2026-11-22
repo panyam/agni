@@ -12,6 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/panyam/agni/internal/records"
+	"github.com/panyam/goapplib/storage/drivers/gcs"
+	"github.com/panyam/goapplib/storage/drivers/msgraph"
+	"github.com/panyam/goapplib/storage/drivers/s3"
+
 	"github.com/panyam/goapplib/storage/blobs"
 	"github.com/panyam/goapplib/storage/connections"
 	connstore "github.com/panyam/goapplib/storage/connections/fsstore"
@@ -88,6 +93,14 @@ type Config struct {
 	// UserTokens and ConnectionsKey, a reader checks callers through CanRead instead (agni issue
 	// 1778).
 	HidePrivate bool
+	// S3Endpoint, GCSEndpoint and GraphAPI point the S3, Cloud Storage and Microsoft Graph drivers
+	// at another host: an S3-compatible store such as MinIO, a national cloud, or a test's fake.
+	// Empty takes each service's public endpoint (agni issues 1729, 1730).
+	S3Endpoint, GCSEndpoint, GraphAPI string
+	// Subscriptions keeps the Graph change-notification subscriptions CreateWebhook makes on
+	// SharePoint mounts, one record per mount, so RenewSubscriptions finds them after a restart.
+	// Nil keeps none, and CreateWebhook refuses a SharePoint mount.
+	Subscriptions records.Store
 }
 
 // Stores are the record stores a Table reads and writes in place of folders under --store. A nil
@@ -99,8 +112,8 @@ type Stores struct {
 }
 
 // Table is a server's live mount list over goapplib's mounts registry (agni issues 1735, 1759). The
-// mounts from its flags are fixed. With Records and Uploads it also serves the GitHub mounts
-// CreateMount made, each a record in --store, and every process sharing the store sees them within
+// mounts from its flags are fixed. With Records and Uploads it also serves the GitHub, S3, Cloud
+// Storage and SharePoint mounts CreateMount made (agni issues 1729, 1730), each a record in --store, and every process sharing the store sees them within
 // a second. Every OS-backed adapter resolves through a Table, so a mount made at runtime is
 // reachable at once.
 type Table struct {
@@ -118,6 +131,11 @@ type Table struct {
 	hidePrivate bool
 	// gh is the GitHub driver, nil without Uploads. MountsOf asks it whether two sources match.
 	gh *github.Driver
+	// graph is the Microsoft Graph driver, nil without Uploads. MountsOf asks it whether a
+	// notification's drive holds a mount, and CreateWebhook subscribes through it.
+	graph *msgraph.Driver
+	// subs is Config.Subscriptions.
+	subs records.Store
 	// githubAPI is Config.GitHubAPI, the API a signed-in person's connection reads through.
 	githubAPI string
 }
@@ -160,6 +178,24 @@ func Open(cfg Config) (*Table, error) {
 		}
 		gh = github.New(b, ghOpts...)
 		drivers = append(drivers, gh)
+		// A bucket or drive snapshot downloads every listed file into the blobs and gets a view
+		// beside the GitHub snapshots', so the engine reads it through a folder (agni issues 1729,
+		// 1730). Mount names are unique, so their views never meet.
+		views := filepath.Join(cfg.Uploads, SnapshotsDir)
+		s3Opts := []s3.Option{s3.WithViews(views), s3.WithLimits(cfg.Limits)}
+		if cfg.S3Endpoint != "" {
+			s3Opts = append(s3Opts, s3.WithEndpoint(cfg.S3Endpoint))
+		}
+		gcsOpts := []gcs.Option{gcs.WithViews(views), gcs.WithLimits(cfg.Limits)}
+		if cfg.GCSEndpoint != "" {
+			gcsOpts = append(gcsOpts, gcs.WithEndpoint(cfg.GCSEndpoint))
+		}
+		graphOpts := []msgraph.Option{msgraph.WithViews(views), msgraph.WithLimits(cfg.Limits), msgraph.WithHTTPClient(&http.Client{Timeout: 5 * time.Minute})}
+		if cfg.GraphAPI != "" {
+			graphOpts = append(graphOpts, msgraph.WithBaseURL(cfg.GraphAPI))
+		}
+		t.graph = msgraph.New(b, graphOpts...)
+		drivers = append(drivers, s3.New(b, s3Opts...), gcs.New(b, gcsOpts...), t.graph)
 		if cfg.Stores != nil {
 			store = cfg.Stores.Mounts
 		} else if cfg.Records != "" && cfg.ReadOnly {
@@ -225,6 +261,7 @@ func Open(cfg Config) (*Table, error) {
 		opts = append(opts, mounts.WithCredentials(t.svc.Credentials))
 	}
 	t.gh = gh
+	t.subs = cfg.Subscriptions
 	t.githubAPI = cfg.GitHubAPI
 	t.reg = mounts.NewRegistry(store, drivers, opts...)
 	if store != nil {
@@ -236,7 +273,7 @@ func Open(cfg Config) (*Table, error) {
 		// uploads read-only, such as agnids, finds it. A view whose blobs are lost is reported, and
 		// the other mounts still serve.
 		for _, m := range all {
-			if cfg.ReadOnly || t.Fixed(m.Name) || m.Kind != mounts.KindGitHub {
+			if cfg.ReadOnly || t.Fixed(m.Name) || !snapshotKind(m.Kind) {
 				continue
 			}
 			if _, err := t.reg.HostPath(context.Background(), mounts.URI{Mount: m.Name}); err != nil && cfg.Log != nil {
@@ -277,8 +314,13 @@ func (t *Table) MountsOf(ctx context.Context, source string) ([]string, error) {
 	var out []string
 	for _, m := range all {
 		same := m.Source == source
-		if m.Kind == mounts.KindGitHub && t.gh != nil {
+		switch {
+		case m.Kind == mounts.KindGitHub && t.gh != nil:
 			same = t.gh.SameSource(m.Source, source)
+		case m.Kind == mounts.KindMSGraph && t.graph != nil:
+			// Graph notifies per drive, so a change names the drive's root and holds every mount in
+			// that drive.
+			same = t.graph.ContainsSource(m.Source, source)
 		}
 		if same {
 			out = append(out, m.Name)
@@ -342,18 +384,46 @@ func (t *Table) Root(m mounts.Mount) string {
 // noMaker is why a table with no store refuses CreateMount and DeleteMount.
 const noMaker = "this server makes no mounts at runtime; start it with --store and --uploads"
 
-// CreateMount snapshots a github://<owner>/<repo> source at ref and serves it as name. A file://
-// source is refused, because a client must not choose which folder on the server's disk is served.
+// sourceKinds is the mount kind each runtime source scheme makes (agni issues 1729, 1730).
+var sourceKinds = map[string]mounts.Kind{
+	"github":  mounts.KindGitHub,
+	"s3":      mounts.KindS3,
+	"gs":      mounts.KindGCS,
+	"msgraph": mounts.KindMSGraph,
+}
+
+// snapshotKind reports whether a mount of kind k is a snapshot CreateMount makes, with a view under
+// --uploads.
+func snapshotKind(k mounts.Kind) bool {
+	for _, sk := range sourceKinds {
+		if k == sk {
+			return true
+		}
+	}
+	return false
+}
+
+// CreateMount snapshots a source and serves it as name: a github://<owner>/<repo> at ref, or an
+// s3://, gs:// or msgraph:// folder with each file pinned at the version it has now (agni issues
+// 1729, 1730). A bucket or a drive has no refs, so ref must be empty for one, and a Graph source
+// always reads through a connection. A file:// source is refused, because a client must not choose
+// which folder on the server's disk is served.
 func (t *Table) CreateMount(ctx context.Context, name, source, ref, connection string) (service.MountInfo, error) {
 	ctx = viewing(ctx)
 	if t.blobs == nil {
 		return service.MountInfo{}, fmt.Errorf("%w: %s", service.ErrFailedPrecondition, noMaker)
 	}
-	if scheme, _, ok := strings.Cut(source, "://"); !ok || scheme != "github" {
-		if ok && scheme == "file" {
-			return service.MountInfo{}, fmt.Errorf("%w: a folder on the server is mounted with --mount, not at runtime", service.ErrInvalidArgument)
-		}
-		return service.MountInfo{}, fmt.Errorf("%w: source %q: this build makes github://<owner>/<repo> mounts", service.ErrInvalidArgument, source)
+	scheme, _, _ := strings.Cut(source, "://")
+	kind, ok := sourceKinds[scheme]
+	switch {
+	case scheme == "file":
+		return service.MountInfo{}, fmt.Errorf("%w: a folder on the server is mounted with --mount, not at runtime", service.ErrInvalidArgument)
+	case !ok:
+		return service.MountInfo{}, fmt.Errorf("%w: source %q: this build makes github://<owner>/<repo>, s3://<bucket>/<prefix>, gs://<bucket>/<prefix> and msgraph://sites/<site>/drives/<drive>/root/<folder> mounts", service.ErrInvalidArgument, source)
+	case kind != mounts.KindGitHub && ref != "":
+		return service.MountInfo{}, fmt.Errorf("%w: a %s:// source has no refs; leave ref empty, and the snapshot pins each file's version", service.ErrInvalidArgument, scheme)
+	case kind == mounts.KindMSGraph && connection == "":
+		return service.MountInfo{}, fmt.Errorf("%w: Microsoft Graph reads through a connection; make a CONNECTION_KIND_ENTRA one and name it", service.ErrInvalidArgument)
 	}
 	if t.Fixed(name) {
 		return service.MountInfo{}, fmt.Errorf("%w: a mount named %q is already served", service.ErrAlreadyExists, name)
@@ -368,7 +438,7 @@ func (t *Table) CreateMount(ctx context.Context, name, source, ref, connection s
 			return service.MountInfo{}, service.ConnectionErr(err)
 		}
 	}
-	m, err := t.reg.Create(ctx, mounts.Mount{Name: name, Kind: mounts.KindGitHub, Source: strings.TrimSuffix(source, "/"), Ref: ref, Mode: mounts.ModeSnapshot, Connection: connection})
+	m, err := t.reg.Create(ctx, mounts.Mount{Name: name, Kind: kind, Source: strings.TrimSuffix(source, "/"), Ref: ref, Mode: mounts.ModeSnapshot, Connection: connection})
 	if err != nil {
 		return service.MountInfo{}, service.ConnectionErr(Err(err))
 	}
@@ -385,8 +455,13 @@ func (t *Table) DeleteMount(ctx context.Context, name string) error {
 	if t.blobs == nil {
 		return fmt.Errorf("%w: %s", service.ErrFailedPrecondition, noMaker)
 	}
+	m, getErr := t.reg.Get(ctx, name)
 	if err := t.reg.Delete(ctx, name); err != nil {
 		return Err(err)
+	}
+	// A SharePoint mount's subscription goes with it (agni issue 1729).
+	if getErr == nil && m.Kind == mounts.KindMSGraph {
+		t.unsubscribe(ctx, m)
 	}
 	if err := os.RemoveAll(filepath.Join(t.uploads, SnapshotsDir, name)); err != nil {
 		return fmt.Errorf("%w: %s", service.ErrInternal, err)

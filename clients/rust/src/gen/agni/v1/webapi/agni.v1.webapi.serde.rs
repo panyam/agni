@@ -2916,6 +2916,27 @@ impl serde::Serialize for Connection {
         if !self.owner.is_empty() {
             len += 1;
         }
+        if !self.access_key_id.is_empty() {
+            len += 1;
+        }
+        if !self.role_arn.is_empty() {
+            len += 1;
+        }
+        if !self.region.is_empty() {
+            len += 1;
+        }
+        if !self.tenant_id.is_empty() {
+            len += 1;
+        }
+        if !self.client_id.is_empty() {
+            len += 1;
+        }
+        if self.entra_auth != 0 {
+            len += 1;
+        }
+        if !self.cert_source.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Connection", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -2967,6 +2988,29 @@ impl serde::Serialize for Connection {
         if !self.owner.is_empty() {
             struct_ser.serialize_field("owner", &self.owner)?;
         }
+        if !self.access_key_id.is_empty() {
+            struct_ser.serialize_field("accessKeyId", &self.access_key_id)?;
+        }
+        if !self.role_arn.is_empty() {
+            struct_ser.serialize_field("roleArn", &self.role_arn)?;
+        }
+        if !self.region.is_empty() {
+            struct_ser.serialize_field("region", &self.region)?;
+        }
+        if !self.tenant_id.is_empty() {
+            struct_ser.serialize_field("tenantId", &self.tenant_id)?;
+        }
+        if !self.client_id.is_empty() {
+            struct_ser.serialize_field("clientId", &self.client_id)?;
+        }
+        if self.entra_auth != 0 {
+            let v = EntraAuth::try_from(self.entra_auth)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", self.entra_auth)))?;
+            struct_ser.serialize_field("entraAuth", &v)?;
+        }
+        if !self.cert_source.is_empty() {
+            struct_ser.serialize_field("certSource", &self.cert_source)?;
+        }
         struct_ser.end()
     }
 }
@@ -3000,6 +3044,19 @@ impl<'de> serde::Deserialize<'de> for Connection {
             "lastUseTime",
             "scope",
             "owner",
+            "access_key_id",
+            "accessKeyId",
+            "role_arn",
+            "roleArn",
+            "region",
+            "tenant_id",
+            "tenantId",
+            "client_id",
+            "clientId",
+            "entra_auth",
+            "entraAuth",
+            "cert_source",
+            "certSource",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -3018,6 +3075,13 @@ impl<'de> serde::Deserialize<'de> for Connection {
             LastUseTime,
             Scope,
             Owner,
+            AccessKeyId,
+            RoleArn,
+            Region,
+            TenantId,
+            ClientId,
+            EntraAuth,
+            CertSource,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -3053,6 +3117,13 @@ impl<'de> serde::Deserialize<'de> for Connection {
                             "lastUseTime" | "last_use_time" => Ok(GeneratedField::LastUseTime),
                             "scope" => Ok(GeneratedField::Scope),
                             "owner" => Ok(GeneratedField::Owner),
+                            "accessKeyId" | "access_key_id" => Ok(GeneratedField::AccessKeyId),
+                            "roleArn" | "role_arn" => Ok(GeneratedField::RoleArn),
+                            "region" => Ok(GeneratedField::Region),
+                            "tenantId" | "tenant_id" => Ok(GeneratedField::TenantId),
+                            "clientId" | "client_id" => Ok(GeneratedField::ClientId),
+                            "entraAuth" | "entra_auth" => Ok(GeneratedField::EntraAuth),
+                            "certSource" | "cert_source" => Ok(GeneratedField::CertSource),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -3086,6 +3157,13 @@ impl<'de> serde::Deserialize<'de> for Connection {
                 let mut last_use_time__ = None;
                 let mut scope__ = None;
                 let mut owner__ = None;
+                let mut access_key_id__ = None;
+                let mut role_arn__ = None;
+                let mut region__ = None;
+                let mut tenant_id__ = None;
+                let mut client_id__ = None;
+                let mut entra_auth__ = None;
+                let mut cert_source__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -3174,6 +3252,48 @@ impl<'de> serde::Deserialize<'de> for Connection {
                             }
                             owner__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::AccessKeyId => {
+                            if access_key_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("accessKeyId"));
+                            }
+                            access_key_id__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::RoleArn => {
+                            if role_arn__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("roleArn"));
+                            }
+                            role_arn__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Region => {
+                            if region__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("region"));
+                            }
+                            region__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::TenantId => {
+                            if tenant_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("tenantId"));
+                            }
+                            tenant_id__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ClientId => {
+                            if client_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("clientId"));
+                            }
+                            client_id__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::EntraAuth => {
+                            if entra_auth__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("entraAuth"));
+                            }
+                            entra_auth__ = Some(map_.next_value::<EntraAuth>()? as i32);
+                        }
+                        GeneratedField::CertSource => {
+                            if cert_source__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("certSource"));
+                            }
+                            cert_source__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Connection {
@@ -3191,6 +3311,13 @@ impl<'de> serde::Deserialize<'de> for Connection {
                     last_use_time: last_use_time__,
                     scope: scope__.unwrap_or_default(),
                     owner: owner__.unwrap_or_default(),
+                    access_key_id: access_key_id__.unwrap_or_default(),
+                    role_arn: role_arn__.unwrap_or_default(),
+                    region: region__.unwrap_or_default(),
+                    tenant_id: tenant_id__.unwrap_or_default(),
+                    client_id: client_id__.unwrap_or_default(),
+                    entra_auth: entra_auth__.unwrap_or_default(),
+                    cert_source: cert_source__.unwrap_or_default(),
                 })
             }
         }
@@ -3208,6 +3335,9 @@ impl serde::Serialize for ConnectionKind {
             Self::GithubApp => "CONNECTION_KIND_GITHUB_APP",
             Self::GithubToken => "CONNECTION_KIND_GITHUB_TOKEN",
             Self::GithubUser => "CONNECTION_KIND_GITHUB_USER",
+            Self::Aws => "CONNECTION_KIND_AWS",
+            Self::Gcp => "CONNECTION_KIND_GCP",
+            Self::Entra => "CONNECTION_KIND_ENTRA",
         };
         serializer.serialize_str(variant)
     }
@@ -3223,6 +3353,9 @@ impl<'de> serde::Deserialize<'de> for ConnectionKind {
             "CONNECTION_KIND_GITHUB_APP",
             "CONNECTION_KIND_GITHUB_TOKEN",
             "CONNECTION_KIND_GITHUB_USER",
+            "CONNECTION_KIND_AWS",
+            "CONNECTION_KIND_GCP",
+            "CONNECTION_KIND_ENTRA",
         ];
 
         struct GeneratedVisitor;
@@ -3267,6 +3400,9 @@ impl<'de> serde::Deserialize<'de> for ConnectionKind {
                     "CONNECTION_KIND_GITHUB_APP" => Ok(ConnectionKind::GithubApp),
                     "CONNECTION_KIND_GITHUB_TOKEN" => Ok(ConnectionKind::GithubToken),
                     "CONNECTION_KIND_GITHUB_USER" => Ok(ConnectionKind::GithubUser),
+                    "CONNECTION_KIND_AWS" => Ok(ConnectionKind::Aws),
+                    "CONNECTION_KIND_GCP" => Ok(ConnectionKind::Gcp),
+                    "CONNECTION_KIND_ENTRA" => Ok(ConnectionKind::Entra),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -8749,6 +8885,86 @@ impl<'de> serde::Deserialize<'de> for EntityQuery {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.EntityQuery", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for EntraAuth {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unspecified => "ENTRA_AUTH_UNSPECIFIED",
+            Self::Secret => "ENTRA_AUTH_SECRET",
+            Self::Certificate => "ENTRA_AUTH_CERTIFICATE",
+            Self::ManagedIdentity => "ENTRA_AUTH_MANAGED_IDENTITY",
+            Self::WorkloadIdentity => "ENTRA_AUTH_WORKLOAD_IDENTITY",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for EntraAuth {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "ENTRA_AUTH_UNSPECIFIED",
+            "ENTRA_AUTH_SECRET",
+            "ENTRA_AUTH_CERTIFICATE",
+            "ENTRA_AUTH_MANAGED_IDENTITY",
+            "ENTRA_AUTH_WORKLOAD_IDENTITY",
+        ];
+
+        struct GeneratedVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = EntraAuth;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", &FIELDS)
+            }
+
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                    })
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                    })
+            }
+
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "ENTRA_AUTH_UNSPECIFIED" => Ok(EntraAuth::Unspecified),
+                    "ENTRA_AUTH_SECRET" => Ok(EntraAuth::Secret),
+                    "ENTRA_AUTH_CERTIFICATE" => Ok(EntraAuth::Certificate),
+                    "ENTRA_AUTH_MANAGED_IDENTITY" => Ok(EntraAuth::ManagedIdentity),
+                    "ENTRA_AUTH_WORKLOAD_IDENTITY" => Ok(EntraAuth::WorkloadIdentity),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
     }
 }
 impl serde::Serialize for ExampleQuery {
@@ -19607,6 +19823,9 @@ impl serde::Serialize for MountKind {
             Self::File => "MOUNT_KIND_FILE",
             Self::Uploads => "MOUNT_KIND_UPLOADS",
             Self::Github => "MOUNT_KIND_GITHUB",
+            Self::S3 => "MOUNT_KIND_S3",
+            Self::Gcs => "MOUNT_KIND_GCS",
+            Self::Msgraph => "MOUNT_KIND_MSGRAPH",
         };
         serializer.serialize_str(variant)
     }
@@ -19622,6 +19841,9 @@ impl<'de> serde::Deserialize<'de> for MountKind {
             "MOUNT_KIND_FILE",
             "MOUNT_KIND_UPLOADS",
             "MOUNT_KIND_GITHUB",
+            "MOUNT_KIND_S3",
+            "MOUNT_KIND_GCS",
+            "MOUNT_KIND_MSGRAPH",
         ];
 
         struct GeneratedVisitor;
@@ -19666,6 +19888,9 @@ impl<'de> serde::Deserialize<'de> for MountKind {
                     "MOUNT_KIND_FILE" => Ok(MountKind::File),
                     "MOUNT_KIND_UPLOADS" => Ok(MountKind::Uploads),
                     "MOUNT_KIND_GITHUB" => Ok(MountKind::Github),
+                    "MOUNT_KIND_S3" => Ok(MountKind::S3),
+                    "MOUNT_KIND_GCS" => Ok(MountKind::Gcs),
+                    "MOUNT_KIND_MSGRAPH" => Ok(MountKind::Msgraph),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

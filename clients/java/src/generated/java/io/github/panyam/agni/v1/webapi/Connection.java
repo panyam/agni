@@ -43,6 +43,13 @@ private static final long serialVersionUID = 0L;
     lastError_ = "";
     scope_ = 0;
     owner_ = "";
+    accessKeyId_ = "";
+    roleArn_ = "";
+    region_ = "";
+    tenantId_ = "";
+    clientId_ = "";
+    entraAuth_ = 0;
+    certSource_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -288,8 +295,11 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object keySource_ = "";
   /**
    * <pre>
-   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-   * CONNECTION_KIND_GITHUB_APP.
+   * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+   * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+   * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+   * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+   * AWS, GCP and an Entra managed identity takes the host's own credentials.
    * </pre>
    *
    * <code>string key_source = 7 [json_name = "keySource"];</code>
@@ -310,8 +320,11 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-   * CONNECTION_KIND_GITHUB_APP.
+   * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+   * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+   * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+   * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+   * AWS, GCP and an Entra managed identity takes the host's own credentials.
    * </pre>
    *
    * <code>string key_source = 7 [json_name = "keySource"];</code>
@@ -589,6 +602,316 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int ACCESS_KEY_ID_FIELD_NUMBER = 15;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object accessKeyId_ = "";
+  /**
+   * <pre>
+   * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+   * key_source names the secret access key. AWS doesn't treat it as a secret.
+   * </pre>
+   *
+   * <code>string access_key_id = 15 [json_name = "accessKeyId"];</code>
+   * @return The accessKeyId.
+   */
+  @java.lang.Override
+  public java.lang.String getAccessKeyId() {
+    java.lang.Object ref = accessKeyId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      accessKeyId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+   * key_source names the secret access key. AWS doesn't treat it as a secret.
+   * </pre>
+   *
+   * <code>string access_key_id = 15 [json_name = "accessKeyId"];</code>
+   * @return The bytes for accessKeyId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAccessKeyIdBytes() {
+    java.lang.Object ref = accessKeyId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      accessKeyId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int ROLE_ARN_FIELD_NUMBER = 16;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object roleArn_ = "";
+  /**
+   * <pre>
+   * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+   * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+   * </pre>
+   *
+   * <code>string role_arn = 16 [json_name = "roleArn"];</code>
+   * @return The roleArn.
+   */
+  @java.lang.Override
+  public java.lang.String getRoleArn() {
+    java.lang.Object ref = roleArn_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      roleArn_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+   * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+   * </pre>
+   *
+   * <code>string role_arn = 16 [json_name = "roleArn"];</code>
+   * @return The bytes for roleArn.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRoleArnBytes() {
+    java.lang.Object ref = roleArn_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      roleArn_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REGION_FIELD_NUMBER = 17;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object region_ = "";
+  /**
+   * <pre>
+   * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+   * </pre>
+   *
+   * <code>string region = 17 [json_name = "region"];</code>
+   * @return The region.
+   */
+  @java.lang.Override
+  public java.lang.String getRegion() {
+    java.lang.Object ref = region_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      region_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+   * </pre>
+   *
+   * <code>string region = 17 [json_name = "region"];</code>
+   * @return The bytes for region.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRegionBytes() {
+    java.lang.Object ref = region_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      region_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int TENANT_ID_FIELD_NUMBER = 18;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object tenantId_ = "";
+  /**
+   * <pre>
+   * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+   * GUID or a domain, and its application id. For a managed identity, client_id picks a
+   * user-assigned identity and may be empty.
+   * </pre>
+   *
+   * <code>string tenant_id = 18 [json_name = "tenantId"];</code>
+   * @return The tenantId.
+   */
+  @java.lang.Override
+  public java.lang.String getTenantId() {
+    java.lang.Object ref = tenantId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      tenantId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+   * GUID or a domain, and its application id. For a managed identity, client_id picks a
+   * user-assigned identity and may be empty.
+   * </pre>
+   *
+   * <code>string tenant_id = 18 [json_name = "tenantId"];</code>
+   * @return The bytes for tenantId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTenantIdBytes() {
+    java.lang.Object ref = tenantId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      tenantId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int CLIENT_ID_FIELD_NUMBER = 19;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object clientId_ = "";
+  /**
+   * <code>string client_id = 19 [json_name = "clientId"];</code>
+   * @return The clientId.
+   */
+  @java.lang.Override
+  public java.lang.String getClientId() {
+    java.lang.Object ref = clientId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      clientId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string client_id = 19 [json_name = "clientId"];</code>
+   * @return The bytes for clientId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getClientIdBytes() {
+    java.lang.Object ref = clientId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      clientId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int ENTRA_AUTH_FIELD_NUMBER = 20;
+  private int entraAuth_ = 0;
+  /**
+   * <pre>
+   * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.EntraAuth entra_auth = 20 [json_name = "entraAuth"];</code>
+   * @return The enum numeric value on the wire for entraAuth.
+   */
+  @java.lang.Override public int getEntraAuthValue() {
+    return entraAuth_;
+  }
+  /**
+   * <pre>
+   * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.EntraAuth entra_auth = 20 [json_name = "entraAuth"];</code>
+   * @return The entraAuth.
+   */
+  @java.lang.Override public io.github.panyam.agni.v1.webapi.EntraAuth getEntraAuth() {
+    io.github.panyam.agni.v1.webapi.EntraAuth result = io.github.panyam.agni.v1.webapi.EntraAuth.forNumber(entraAuth_);
+    return result == null ? io.github.panyam.agni.v1.webapi.EntraAuth.UNRECOGNIZED : result;
+  }
+
+  public static final int CERT_SOURCE_FIELD_NUMBER = 21;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object certSource_ = "";
+  /**
+   * <pre>
+   * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+   * "file:/abs/path". Its private key is at key_source.
+   * </pre>
+   *
+   * <code>string cert_source = 21 [json_name = "certSource"];</code>
+   * @return The certSource.
+   */
+  @java.lang.Override
+  public java.lang.String getCertSource() {
+    java.lang.Object ref = certSource_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      certSource_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+   * "file:/abs/path". Its private key is at key_source.
+   * </pre>
+   *
+   * <code>string cert_source = 21 [json_name = "certSource"];</code>
+   * @return The bytes for certSource.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCertSourceBytes() {
+    java.lang.Object ref = certSource_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      certSource_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -645,6 +968,27 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(owner_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 14, owner_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(accessKeyId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 15, accessKeyId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(roleArn_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 16, roleArn_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(region_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 17, region_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 18, tenantId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(clientId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 19, clientId_);
+    }
+    if (entraAuth_ != io.github.panyam.agni.v1.webapi.EntraAuth.ENTRA_AUTH_UNSPECIFIED.getNumber()) {
+      output.writeEnum(20, entraAuth_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(certSource_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 21, certSource_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -696,6 +1040,28 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(owner_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(14, owner_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(accessKeyId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(15, accessKeyId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(roleArn_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(16, roleArn_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(region_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(17, region_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(18, tenantId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(clientId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(19, clientId_);
+    }
+    if (entraAuth_ != io.github.panyam.agni.v1.webapi.EntraAuth.ENTRA_AUTH_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(20, entraAuth_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(certSource_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(21, certSource_);
     }
     return size;
   }
@@ -752,6 +1118,19 @@ private static final long serialVersionUID = 0L;
     if (scope_ != other.scope_) return false;
     if (!getOwner()
         .equals(other.getOwner())) return false;
+    if (!getAccessKeyId()
+        .equals(other.getAccessKeyId())) return false;
+    if (!getRoleArn()
+        .equals(other.getRoleArn())) return false;
+    if (!getRegion()
+        .equals(other.getRegion())) return false;
+    if (!getTenantId()
+        .equals(other.getTenantId())) return false;
+    if (!getClientId()
+        .equals(other.getClientId())) return false;
+    if (entraAuth_ != other.entraAuth_) return false;
+    if (!getCertSource()
+        .equals(other.getCertSource())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -796,6 +1175,20 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + scope_;
     hash = (37 * hash) + OWNER_FIELD_NUMBER;
     hash = (53 * hash) + getOwner().hashCode();
+    hash = (37 * hash) + ACCESS_KEY_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getAccessKeyId().hashCode();
+    hash = (37 * hash) + ROLE_ARN_FIELD_NUMBER;
+    hash = (53 * hash) + getRoleArn().hashCode();
+    hash = (37 * hash) + REGION_FIELD_NUMBER;
+    hash = (53 * hash) + getRegion().hashCode();
+    hash = (37 * hash) + TENANT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getTenantId().hashCode();
+    hash = (37 * hash) + CLIENT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getClientId().hashCode();
+    hash = (37 * hash) + ENTRA_AUTH_FIELD_NUMBER;
+    hash = (53 * hash) + entraAuth_;
+    hash = (37 * hash) + CERT_SOURCE_FIELD_NUMBER;
+    hash = (53 * hash) + getCertSource().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -960,6 +1353,13 @@ private static final long serialVersionUID = 0L;
       }
       scope_ = 0;
       owner_ = "";
+      accessKeyId_ = "";
+      roleArn_ = "";
+      region_ = "";
+      tenantId_ = "";
+      clientId_ = "";
+      entraAuth_ = 0;
+      certSource_ = "";
       return this;
     }
 
@@ -1042,6 +1442,27 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00002000) != 0)) {
         result.owner_ = owner_;
       }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.accessKeyId_ = accessKeyId_;
+      }
+      if (((from_bitField0_ & 0x00008000) != 0)) {
+        result.roleArn_ = roleArn_;
+      }
+      if (((from_bitField0_ & 0x00010000) != 0)) {
+        result.region_ = region_;
+      }
+      if (((from_bitField0_ & 0x00020000) != 0)) {
+        result.tenantId_ = tenantId_;
+      }
+      if (((from_bitField0_ & 0x00040000) != 0)) {
+        result.clientId_ = clientId_;
+      }
+      if (((from_bitField0_ & 0x00080000) != 0)) {
+        result.entraAuth_ = entraAuth_;
+      }
+      if (((from_bitField0_ & 0x00100000) != 0)) {
+        result.certSource_ = certSource_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1113,6 +1534,39 @@ private static final long serialVersionUID = 0L;
       if (!other.getOwner().isEmpty()) {
         owner_ = other.owner_;
         bitField0_ |= 0x00002000;
+        onChanged();
+      }
+      if (!other.getAccessKeyId().isEmpty()) {
+        accessKeyId_ = other.accessKeyId_;
+        bitField0_ |= 0x00004000;
+        onChanged();
+      }
+      if (!other.getRoleArn().isEmpty()) {
+        roleArn_ = other.roleArn_;
+        bitField0_ |= 0x00008000;
+        onChanged();
+      }
+      if (!other.getRegion().isEmpty()) {
+        region_ = other.region_;
+        bitField0_ |= 0x00010000;
+        onChanged();
+      }
+      if (!other.getTenantId().isEmpty()) {
+        tenantId_ = other.tenantId_;
+        bitField0_ |= 0x00020000;
+        onChanged();
+      }
+      if (!other.getClientId().isEmpty()) {
+        clientId_ = other.clientId_;
+        bitField0_ |= 0x00040000;
+        onChanged();
+      }
+      if (other.entraAuth_ != 0) {
+        setEntraAuthValue(other.getEntraAuthValue());
+      }
+      if (!other.getCertSource().isEmpty()) {
+        certSource_ = other.certSource_;
+        bitField0_ |= 0x00100000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1213,6 +1667,41 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00002000;
               break;
             } // case 114
+            case 122: {
+              accessKeyId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 122
+            case 130: {
+              roleArn_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00008000;
+              break;
+            } // case 130
+            case 138: {
+              region_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00010000;
+              break;
+            } // case 138
+            case 146: {
+              tenantId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00020000;
+              break;
+            } // case 146
+            case 154: {
+              clientId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00040000;
+              break;
+            } // case 154
+            case 160: {
+              entraAuth_ = input.readEnum();
+              bitField0_ |= 0x00080000;
+              break;
+            } // case 160
+            case 170: {
+              certSource_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00100000;
+              break;
+            } // case 170
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1690,8 +2179,11 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object keySource_ = "";
     /**
      * <pre>
-     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-     * CONNECTION_KIND_GITHUB_APP.
+     * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+     * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+     * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+     * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+     * AWS, GCP and an Entra managed identity takes the host's own credentials.
      * </pre>
      *
      * <code>string key_source = 7 [json_name = "keySource"];</code>
@@ -1711,8 +2203,11 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-     * CONNECTION_KIND_GITHUB_APP.
+     * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+     * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+     * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+     * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+     * AWS, GCP and an Entra managed identity takes the host's own credentials.
      * </pre>
      *
      * <code>string key_source = 7 [json_name = "keySource"];</code>
@@ -1733,8 +2228,11 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-     * CONNECTION_KIND_GITHUB_APP.
+     * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+     * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+     * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+     * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+     * AWS, GCP and an Entra managed identity takes the host's own credentials.
      * </pre>
      *
      * <code>string key_source = 7 [json_name = "keySource"];</code>
@@ -1751,8 +2249,11 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-     * CONNECTION_KIND_GITHUB_APP.
+     * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+     * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+     * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+     * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+     * AWS, GCP and an Entra managed identity takes the host's own credentials.
      * </pre>
      *
      * <code>string key_source = 7 [json_name = "keySource"];</code>
@@ -1766,8 +2267,11 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-     * CONNECTION_KIND_GITHUB_APP.
+     * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+     * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+     * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+     * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+     * AWS, GCP and an Entra managed identity takes the host's own credentials.
      * </pre>
      *
      * <code>string key_source = 7 [json_name = "keySource"];</code>
@@ -2474,6 +2978,635 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       owner_ = value;
       bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object accessKeyId_ = "";
+    /**
+     * <pre>
+     * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+     * key_source names the secret access key. AWS doesn't treat it as a secret.
+     * </pre>
+     *
+     * <code>string access_key_id = 15 [json_name = "accessKeyId"];</code>
+     * @return The accessKeyId.
+     */
+    public java.lang.String getAccessKeyId() {
+      java.lang.Object ref = accessKeyId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        accessKeyId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+     * key_source names the secret access key. AWS doesn't treat it as a secret.
+     * </pre>
+     *
+     * <code>string access_key_id = 15 [json_name = "accessKeyId"];</code>
+     * @return The bytes for accessKeyId.
+     */
+    public com.google.protobuf.ByteString
+        getAccessKeyIdBytes() {
+      java.lang.Object ref = accessKeyId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        accessKeyId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+     * key_source names the secret access key. AWS doesn't treat it as a secret.
+     * </pre>
+     *
+     * <code>string access_key_id = 15 [json_name = "accessKeyId"];</code>
+     * @param value The accessKeyId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAccessKeyId(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      accessKeyId_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+     * key_source names the secret access key. AWS doesn't treat it as a secret.
+     * </pre>
+     *
+     * <code>string access_key_id = 15 [json_name = "accessKeyId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAccessKeyId() {
+      accessKeyId_ = getDefaultInstance().getAccessKeyId();
+      bitField0_ = (bitField0_ & ~0x00004000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+     * key_source names the secret access key. AWS doesn't treat it as a secret.
+     * </pre>
+     *
+     * <code>string access_key_id = 15 [json_name = "accessKeyId"];</code>
+     * @param value The bytes for accessKeyId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAccessKeyIdBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      accessKeyId_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object roleArn_ = "";
+    /**
+     * <pre>
+     * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+     * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+     * </pre>
+     *
+     * <code>string role_arn = 16 [json_name = "roleArn"];</code>
+     * @return The roleArn.
+     */
+    public java.lang.String getRoleArn() {
+      java.lang.Object ref = roleArn_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        roleArn_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+     * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+     * </pre>
+     *
+     * <code>string role_arn = 16 [json_name = "roleArn"];</code>
+     * @return The bytes for roleArn.
+     */
+    public com.google.protobuf.ByteString
+        getRoleArnBytes() {
+      java.lang.Object ref = roleArn_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        roleArn_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+     * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+     * </pre>
+     *
+     * <code>string role_arn = 16 [json_name = "roleArn"];</code>
+     * @param value The roleArn to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRoleArn(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      roleArn_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+     * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+     * </pre>
+     *
+     * <code>string role_arn = 16 [json_name = "roleArn"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRoleArn() {
+      roleArn_ = getDefaultInstance().getRoleArn();
+      bitField0_ = (bitField0_ & ~0x00008000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+     * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+     * </pre>
+     *
+     * <code>string role_arn = 16 [json_name = "roleArn"];</code>
+     * @param value The bytes for roleArn to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRoleArnBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      roleArn_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object region_ = "";
+    /**
+     * <pre>
+     * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+     * </pre>
+     *
+     * <code>string region = 17 [json_name = "region"];</code>
+     * @return The region.
+     */
+    public java.lang.String getRegion() {
+      java.lang.Object ref = region_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        region_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+     * </pre>
+     *
+     * <code>string region = 17 [json_name = "region"];</code>
+     * @return The bytes for region.
+     */
+    public com.google.protobuf.ByteString
+        getRegionBytes() {
+      java.lang.Object ref = region_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        region_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+     * </pre>
+     *
+     * <code>string region = 17 [json_name = "region"];</code>
+     * @param value The region to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRegion(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      region_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+     * </pre>
+     *
+     * <code>string region = 17 [json_name = "region"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRegion() {
+      region_ = getDefaultInstance().getRegion();
+      bitField0_ = (bitField0_ & ~0x00010000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+     * </pre>
+     *
+     * <code>string region = 17 [json_name = "region"];</code>
+     * @param value The bytes for region to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRegionBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      region_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object tenantId_ = "";
+    /**
+     * <pre>
+     * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+     * GUID or a domain, and its application id. For a managed identity, client_id picks a
+     * user-assigned identity and may be empty.
+     * </pre>
+     *
+     * <code>string tenant_id = 18 [json_name = "tenantId"];</code>
+     * @return The tenantId.
+     */
+    public java.lang.String getTenantId() {
+      java.lang.Object ref = tenantId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        tenantId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+     * GUID or a domain, and its application id. For a managed identity, client_id picks a
+     * user-assigned identity and may be empty.
+     * </pre>
+     *
+     * <code>string tenant_id = 18 [json_name = "tenantId"];</code>
+     * @return The bytes for tenantId.
+     */
+    public com.google.protobuf.ByteString
+        getTenantIdBytes() {
+      java.lang.Object ref = tenantId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        tenantId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+     * GUID or a domain, and its application id. For a managed identity, client_id picks a
+     * user-assigned identity and may be empty.
+     * </pre>
+     *
+     * <code>string tenant_id = 18 [json_name = "tenantId"];</code>
+     * @param value The tenantId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTenantId(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      tenantId_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+     * GUID or a domain, and its application id. For a managed identity, client_id picks a
+     * user-assigned identity and may be empty.
+     * </pre>
+     *
+     * <code>string tenant_id = 18 [json_name = "tenantId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTenantId() {
+      tenantId_ = getDefaultInstance().getTenantId();
+      bitField0_ = (bitField0_ & ~0x00020000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+     * GUID or a domain, and its application id. For a managed identity, client_id picks a
+     * user-assigned identity and may be empty.
+     * </pre>
+     *
+     * <code>string tenant_id = 18 [json_name = "tenantId"];</code>
+     * @param value The bytes for tenantId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTenantIdBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      tenantId_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object clientId_ = "";
+    /**
+     * <code>string client_id = 19 [json_name = "clientId"];</code>
+     * @return The clientId.
+     */
+    public java.lang.String getClientId() {
+      java.lang.Object ref = clientId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        clientId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string client_id = 19 [json_name = "clientId"];</code>
+     * @return The bytes for clientId.
+     */
+    public com.google.protobuf.ByteString
+        getClientIdBytes() {
+      java.lang.Object ref = clientId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        clientId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string client_id = 19 [json_name = "clientId"];</code>
+     * @param value The clientId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setClientId(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      clientId_ = value;
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string client_id = 19 [json_name = "clientId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearClientId() {
+      clientId_ = getDefaultInstance().getClientId();
+      bitField0_ = (bitField0_ & ~0x00040000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string client_id = 19 [json_name = "clientId"];</code>
+     * @param value The bytes for clientId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setClientIdBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      clientId_ = value;
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+
+    private int entraAuth_ = 0;
+    /**
+     * <pre>
+     * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.EntraAuth entra_auth = 20 [json_name = "entraAuth"];</code>
+     * @return The enum numeric value on the wire for entraAuth.
+     */
+    @java.lang.Override public int getEntraAuthValue() {
+      return entraAuth_;
+    }
+    /**
+     * <pre>
+     * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.EntraAuth entra_auth = 20 [json_name = "entraAuth"];</code>
+     * @param value The enum numeric value on the wire for entraAuth to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEntraAuthValue(int value) {
+      entraAuth_ = value;
+      bitField0_ |= 0x00080000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.EntraAuth entra_auth = 20 [json_name = "entraAuth"];</code>
+     * @return The entraAuth.
+     */
+    @java.lang.Override
+    public io.github.panyam.agni.v1.webapi.EntraAuth getEntraAuth() {
+      io.github.panyam.agni.v1.webapi.EntraAuth result = io.github.panyam.agni.v1.webapi.EntraAuth.forNumber(entraAuth_);
+      return result == null ? io.github.panyam.agni.v1.webapi.EntraAuth.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.EntraAuth entra_auth = 20 [json_name = "entraAuth"];</code>
+     * @param value The entraAuth to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setEntraAuth(io.github.panyam.agni.v1.webapi.EntraAuth value) {
+      java.util.Objects.requireNonNull(value);
+      bitField0_ |= 0x00080000;
+      entraAuth_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.EntraAuth entra_auth = 20 [json_name = "entraAuth"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEntraAuth() {
+      bitField0_ = (bitField0_ & ~0x00080000);
+      entraAuth_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object certSource_ = "";
+    /**
+     * <pre>
+     * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+     * "file:/abs/path". Its private key is at key_source.
+     * </pre>
+     *
+     * <code>string cert_source = 21 [json_name = "certSource"];</code>
+     * @return The certSource.
+     */
+    public java.lang.String getCertSource() {
+      java.lang.Object ref = certSource_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        certSource_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+     * "file:/abs/path". Its private key is at key_source.
+     * </pre>
+     *
+     * <code>string cert_source = 21 [json_name = "certSource"];</code>
+     * @return The bytes for certSource.
+     */
+    public com.google.protobuf.ByteString
+        getCertSourceBytes() {
+      java.lang.Object ref = certSource_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        certSource_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+     * "file:/abs/path". Its private key is at key_source.
+     * </pre>
+     *
+     * <code>string cert_source = 21 [json_name = "certSource"];</code>
+     * @param value The certSource to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCertSource(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      certSource_ = value;
+      bitField0_ |= 0x00100000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+     * "file:/abs/path". Its private key is at key_source.
+     * </pre>
+     *
+     * <code>string cert_source = 21 [json_name = "certSource"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCertSource() {
+      certSource_ = getDefaultInstance().getCertSource();
+      bitField0_ = (bitField0_ & ~0x00100000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+     * "file:/abs/path". Its private key is at key_source.
+     * </pre>
+     *
+     * <code>string cert_source = 21 [json_name = "certSource"];</code>
+     * @param value The bytes for certSource to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCertSourceBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      certSource_ = value;
+      bitField0_ |= 0x00100000;
       onChanged();
       return this;
     }

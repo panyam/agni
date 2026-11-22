@@ -138,7 +138,7 @@ func TestSafeNext(t *testing.T) {
 func TestTheGateLetsAWebhookThroughWithNoToken(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusAccepted) })
 	h := New(testKeys(t), nil).Wrap(next)
-	for path, want := range map[string]int{"/hooks/github": http.StatusAccepted, "/hooks/gitlab": http.StatusUnauthorized, "/hooks/github/x": http.StatusUnauthorized} {
+	for path, want := range map[string]int{"/hooks/github": http.StatusAccepted, "/hooks/msgraph": http.StatusAccepted, "/hooks/gitlab": http.StatusUnauthorized, "/hooks/github/x": http.StatusUnauthorized, "/hooks/msgraph/x": http.StatusUnauthorized} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}")))
 		if w.Code != want {

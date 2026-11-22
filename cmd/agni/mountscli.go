@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -65,8 +66,17 @@ connections).`,
 	var ref, connection string
 	add := &cobra.Command{
 		Use:   "add <name> <source>",
-		Short: "Mount a GitHub repo, github://<owner>/<repo>, at a ref, snapshotted on the server",
-		Args:  cobra.ExactArgs(2),
+		Short: "Mount a GitHub repo, a bucket or a SharePoint folder, snapshotted on the server",
+		Long: `add snapshots a source on the server and serves it as a mount. The source is one of:
+
+  github://<owner>/<repo>                          a GitHub repo, at --ref
+  s3://<bucket>/<prefix>                           an S3 bucket prefix (agni issue 1730)
+  gs://<bucket>/<prefix>                           a Cloud Storage bucket prefix (agni issue 1730)
+  msgraph://sites/<site>/drives/<drive>/root/<dir> a SharePoint or OneDrive folder (agni issue 1729)
+
+A bucket or a drive has no refs, so the snapshot pins each file at the version it has now. A
+private repo or bucket reads through --connection, and Microsoft Graph always does.`,
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := client(cmd)
 			if err != nil {
@@ -80,8 +90,8 @@ connections).`,
 			return nil
 		},
 	}
-	add.Flags().StringVar(&ref, "ref", "", "the tag, branch or commit to snapshot; the repo's default branch when empty")
-	add.Flags().StringVar(&connection, "connection", "", "the connection to read a private repo through, as <id> or connections/<id>; see agni connections")
+	add.Flags().StringVar(&ref, "ref", "", "the tag, branch or commit to snapshot, for a repo; the repo's default branch when empty")
+	add.Flags().StringVar(&connection, "connection", "", "the connection to read a private source through, as <id> or connections/<id>; see agni connections")
 
 	rm := &cobra.Command{
 		Use:   "rm <name>",
@@ -103,12 +113,18 @@ connections).`,
 	var hookURL string
 	webhook := &cobra.Command{
 		Use:   "webhook <name> --url https://<server>/hooks/github",
-		Short: "Ask GitHub to send a mounted repo's pushes to this server",
+		Short: "Ask GitHub or Microsoft Graph to send a mount's changes to this server",
 		Long: `webhook makes the push webhook on a github mount's repo, so a push to a branch a linked design
 follows syncs the design (agni issue 1726). GitHub signs each delivery with the server's
 --github-webhook-secret. --url is the server's /hooks/github as GitHub reaches it, since the server
 can't tell its own public address. The mount's connection needs a token allowed to manage the repo's
-webhooks. Running it again updates the hook rather than making a second one.`,
+webhooks. Running it again updates the hook rather than making a second one.
+
+On a SharePoint or OneDrive mount it subscribes to the drive's changes instead, with --url the
+server's /hooks/msgraph, which Graph requires to be https (agni issue 1729). Graph checks the URL at
+once, so the server must already answer there with --msgraph-client-state. The server renews the
+subscription before Graph ends it, about 29 days on. An S3 or GCS mount sends no events; --poll
+follows it.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if hookURL == "" {
@@ -126,11 +142,15 @@ webhooks. Running it again updates the hook rather than making a second one.`,
 			if h.GetCreated() {
 				did = "made"
 			}
+			if id := h.GetSubscriptionId(); id != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s Graph subscription %s on %s, sending changes to %s until %s\n", h.GetMount(), did, id, h.GetSource(), h.GetUrl(), h.GetExpireTime().AsTime().UTC().Format(time.RFC3339))
+				return nil
+			}
 			fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s webhook %d on %s, sending %s to %s\n", h.GetMount(), did, h.GetId(), h.GetSource(), strings.Join(h.GetEvents(), ", "), h.GetUrl())
 			return nil
 		},
 	}
-	webhook.Flags().StringVar(&hookURL, "url", "", "where GitHub sends the pushes: this server's /hooks/github as GitHub reaches it")
+	webhook.Flags().StringVar(&hookURL, "url", "", "where the host sends the changes: this server's /hooks/github or /hooks/msgraph as the host reaches it")
 
 	cmd.AddCommand(ls, add, rm, webhook)
 	return cmd

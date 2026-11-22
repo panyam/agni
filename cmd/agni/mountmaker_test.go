@@ -132,7 +132,11 @@ func TestCreateMountRefusesWhatItCannotServe(t *testing.T) {
 	}{
 		{"boards", "github://antmicro/jetson-orin-baseboard", "", service.ErrAlreadyExists},
 		{"etc", "file:///etc", "", service.ErrInvalidArgument},
-		{"s3", "s3://bucket/boards", "", service.ErrInvalidArgument},
+		// A bucket or a drive mounts now (agni issues 1729, 1730), and these are refused before any
+		// request leaves the server.
+		{"ftp", "ftp://host/boards", "", service.ErrInvalidArgument},
+		{"s3", "s3://bucket/boards", "main", service.ErrInvalidArgument},
+		{"sp", "msgraph://drives/d1/root/hw", "", service.ErrInvalidArgument},
 		{"Bad Name", "github://antmicro/jetson-orin-baseboard", "", service.ErrInvalidArgument},
 		{"x", "github://antmicro/../etc", "", service.ErrInvalidArgument},
 		{"x", "github://antmicro/no-such-repo", "", service.ErrNotFound},

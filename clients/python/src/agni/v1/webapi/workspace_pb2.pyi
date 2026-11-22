@@ -14,6 +14,9 @@ class MountKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     MOUNT_KIND_FILE: _ClassVar[MountKind]
     MOUNT_KIND_UPLOADS: _ClassVar[MountKind]
     MOUNT_KIND_GITHUB: _ClassVar[MountKind]
+    MOUNT_KIND_S3: _ClassVar[MountKind]
+    MOUNT_KIND_GCS: _ClassVar[MountKind]
+    MOUNT_KIND_MSGRAPH: _ClassVar[MountKind]
 
 class FileKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -24,6 +27,9 @@ MOUNT_KIND_UNSPECIFIED: MountKind
 MOUNT_KIND_FILE: MountKind
 MOUNT_KIND_UPLOADS: MountKind
 MOUNT_KIND_GITHUB: MountKind
+MOUNT_KIND_S3: MountKind
+MOUNT_KIND_GCS: MountKind
+MOUNT_KIND_MSGRAPH: MountKind
 FILE_KIND_UNSPECIFIED: FileKind
 FILE_KIND_DESIGN: FileKind
 FILE_KIND_DATASHEET: FileKind

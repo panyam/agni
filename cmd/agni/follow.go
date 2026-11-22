@@ -10,6 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/panyam/agni/mountset"
+	"github.com/panyam/goapplib/storage/drivers/msgraph"
+
 	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/goapplib/storage/mounts/github"
 	"github.com/panyam/oneauth/outbound"
@@ -88,6 +91,72 @@ func (f *follower) githubHook(secret []byte) http.Handler {
 		})
 		w.WriteHeader(http.StatusAccepted)
 	})
+}
+
+// graphHookPath is where Microsoft Graph sends a SharePoint mount's drive notifications (agni issue
+// 1729). The auth gate lets it through without a token, since each notification's clientState
+// proves it came from a subscription the server made.
+const graphHookPath = "/hooks/msgraph"
+
+// graphHook answers Microsoft Graph. A validation request, which Graph sends when a subscription is
+// made, gets its token back. A notification gets 202 whatever it holds, as Graph asks, and one whose
+// clientState is the server's moves the designs and packs that follow a folder in the changed drive.
+func (f *follower) graphHook(clientState []byte) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if msgraph.AnswerValidation(w, r) {
+			return
+		}
+		changes, err := msgraph.ParseNotification(r, string(clientState))
+		switch {
+		case errors.Is(err, msgraph.ErrBadClientState):
+			w.WriteHeader(http.StatusAccepted)
+			return
+		case err != nil:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		for _, c := range changes {
+			what := "change in " + c.Source
+			f.run(what, func(ctx context.Context) ([]service.SourceMove, error) {
+				if f.packs != nil {
+					moves, err := f.packs.SourceChanged(ctx, c)
+					f.reportPacks(what, moves, err)
+				}
+				return f.designs.SourceChanged(ctx, c)
+			})
+		}
+		w.WriteHeader(http.StatusAccepted)
+	})
+}
+
+// renewEvery is how often the server looks for Graph subscriptions near their end, and renewWithin
+// is how near. Graph keeps a drive subscription about 29 days.
+var (
+	renewEvery  = 6 * time.Hour
+	renewWithin = 3 * 24 * time.Hour
+)
+
+// renewSubscriptions renews the SharePoint mounts' Graph subscriptions now and every renewEvery
+// until ctx ends (agni issue 1729).
+func renewSubscriptions(ctx context.Context, t *mountset.Table, clientState []byte, log io.Writer) {
+	renew := func() {
+		if n, err := t.RenewSubscriptions(ctx, renewWithin, clientState, log); err != nil {
+			fmt.Fprintf(log, "note: renewing Graph subscriptions: %v\n", err)
+		} else if n > 0 {
+			fmt.Fprintf(log, "renewed %d Graph subscriptions\n", n)
+		}
+	}
+	renew()
+	tick := time.NewTicker(renewEvery)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			renew()
+		}
+	}
 }
 
 // poll runs PollSources every interval until the server stops.
