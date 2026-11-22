@@ -4661,13 +4661,15 @@ pub struct CreateMountWebhookRequest {
     /// name is the mount's handle.
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
-    /// url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-    /// "<https://agni.example.com/hooks/github".> The server can't tell its own public address, so the
-    /// caller names it.
+    /// url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+    /// as "<https://agni.example.com/hooks/github",> or its /hooks/msgraph for a SharePoint mount, which
+    /// Graph requires to be https. The server can't tell its own public address, so the caller names
+    /// it.
     #[prost(string, tag="2")]
     pub url: ::prost::alloc::string::String,
 }
-/// MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server.
+/// MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server, or a Microsoft
+/// Graph subscription that sends a SharePoint mount's drive changes (agni issue 1729).
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MountWebhook {
     /// mount is the mount's handle.
@@ -4676,7 +4678,7 @@ pub struct MountWebhook {
     /// source is the repo the hook is on, such as "github://acme/board".
     #[prost(string, tag="2")]
     pub source: ::prost::alloc::string::String,
-    /// id is GitHub's id for the hook.
+    /// id is GitHub's id for the hook, and 0 for a Graph subscription.
     #[prost(int64, tag="3")]
     pub id: i64,
     /// url is where the hook sends its deliveries.
@@ -4689,6 +4691,13 @@ pub struct MountWebhook {
     /// was updated.
     #[prost(bool, tag="6")]
     pub created: bool,
+    /// subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+    /// drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+    /// it does on its own.
+    #[prost(string, tag="7")]
+    pub subscription_id: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="8")]
+    pub expire_time: ::core::option::Option<::pbjson_types::Timestamp>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetMountRequest {

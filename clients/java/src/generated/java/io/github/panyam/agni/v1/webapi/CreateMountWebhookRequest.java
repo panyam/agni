@@ -102,9 +102,10 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object url_ = "";
   /**
    * <pre>
-   * url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-   * "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
-   * caller names it.
+   * url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+   * as "https://agni.example.com/hooks/github", or its /hooks/msgraph for a SharePoint mount, which
+   * Graph requires to be https. The server can't tell its own public address, so the caller names
+   * it.
    * </pre>
    *
    * <code>string url = 2 [json_name = "url"];</code>
@@ -125,9 +126,10 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-   * "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
-   * caller names it.
+   * url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+   * as "https://agni.example.com/hooks/github", or its /hooks/msgraph for a SharePoint mount, which
+   * Graph requires to be https. The server can't tell its own public address, so the caller names
+   * it.
    * </pre>
    *
    * <code>string url = 2 [json_name = "url"];</code>
@@ -563,9 +565,10 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object url_ = "";
     /**
      * <pre>
-     * url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-     * "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
-     * caller names it.
+     * url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+     * as "https://agni.example.com/hooks/github", or its /hooks/msgraph for a SharePoint mount, which
+     * Graph requires to be https. The server can't tell its own public address, so the caller names
+     * it.
      * </pre>
      *
      * <code>string url = 2 [json_name = "url"];</code>
@@ -585,9 +588,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-     * "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
-     * caller names it.
+     * url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+     * as "https://agni.example.com/hooks/github", or its /hooks/msgraph for a SharePoint mount, which
+     * Graph requires to be https. The server can't tell its own public address, so the caller names
+     * it.
      * </pre>
      *
      * <code>string url = 2 [json_name = "url"];</code>
@@ -608,9 +612,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-     * "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
-     * caller names it.
+     * url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+     * as "https://agni.example.com/hooks/github", or its /hooks/msgraph for a SharePoint mount, which
+     * Graph requires to be https. The server can't tell its own public address, so the caller names
+     * it.
      * </pre>
      *
      * <code>string url = 2 [json_name = "url"];</code>
@@ -627,9 +632,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-     * "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
-     * caller names it.
+     * url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+     * as "https://agni.example.com/hooks/github", or its /hooks/msgraph for a SharePoint mount, which
+     * Graph requires to be https. The server can't tell its own public address, so the caller names
+     * it.
      * </pre>
      *
      * <code>string url = 2 [json_name = "url"];</code>
@@ -643,9 +649,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-     * "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
-     * caller names it.
+     * url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+     * as "https://agni.example.com/hooks/github", or its /hooks/msgraph for a SharePoint mount, which
+     * Graph requires to be https. The server can't tell its own public address, so the caller names
+     * it.
      * </pre>
      *
      * <code>string url = 2 [json_name = "url"];</code>
