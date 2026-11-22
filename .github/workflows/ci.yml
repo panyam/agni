@@ -335,3 +335,28 @@ jobs:
         env:
           AGNI_BIN: ${{ runner.temp }}/agni
         run: ./gradlew build
+
+  # The enterprise mission's exercise (agni issues 1799, 1800). It runs agni serve with TLS, tokens
+  # and sign-in through a GitHub App against a fake GitHub Enterprise Server, so it needs no network.
+  # A step that waits on an open ticket doesn't fail the job, and any other failing step does.
+  exercise-enterprise:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+
+      - name: make exercise-enterprise
+        env:
+          EXERCISE_ALLOW_WAITS: "1"
+          EXERCISE_OUT: ${{ runner.temp }}/exercise
+        run: make exercise-enterprise
+
+      - name: Keep the run's logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: exercise-enterprise
+          path: ${{ runner.temp }}/exercise/enterprise/*.log

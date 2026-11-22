@@ -9,11 +9,19 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/panyam/agni/internal/teamca"
 )
 
 // loginClient has no timeout of its own. The server holds each poll for up to devicePoll, and the
-// caller's context ends the wait.
-var loginClient = &http.Client{}
+// caller's context ends the wait. It trusts the CA in AGNI_CA_FILE too (agni issue 1800).
+func loginClient() (*http.Client, error) {
+	tr, err := teamca.Transport()
+	if err != nil {
+		return nil, err
+	}
+	return &http.Client{Transport: tr}, nil
+}
 
 // DeviceLogin signs in to the agni server at server through GitHub's device flow, which the server
 // runs (agni issue 1772). It calls show with the code the person types at GitHub, then waits until
@@ -56,7 +64,11 @@ func postJSON(ctx context.Context, target string, in, out any) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := loginClient.Do(req)
+	client, err := loginClient()
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("could not reach %s: %w", target, err)
 	}

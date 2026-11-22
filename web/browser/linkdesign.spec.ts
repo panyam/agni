@@ -3,7 +3,7 @@
 // the repo to the schematic, and links it at the older ref. The design's page moves the schematic to
 // the newer ref. The page then lists two revisions, and each opens in the viewer on its own files.
 //
-// In the gate it reads a fake GitHub (fakegithub/main.go) whose repo holds a small KiCad schematic
+// In the gate it reads a fake GitHub (tools/fakegithub/main.go) whose repo holds a small KiCad schematic
 // at two tags, with one net renamed between them. `make exercise-linked-sources` runs it against
 // real GitHub and Antmicro's Jetson baseboard instead, through these variables:
 //
@@ -59,7 +59,7 @@ async function fakeRepo(): Promise<{ api: string; raw: string; commits: Record<s
     writeFileSync(join(dir, rev, file), text);
   }
   const bin = join(dir, "fakegithub");
-  execFileSync("go", ["build", "-o", bin, "./web/browser/fakegithub"], { cwd: repoRoot, stdio: "inherit" });
+  execFileSync("go", ["build", "-o", bin, "./tools/fakegithub"], { cwd: repoRoot, stdio: "inherit" });
   const port = await freePort();
   const answer = `http://127.0.0.1:${port}`;
   servers.push(

@@ -18,6 +18,7 @@ import (
 
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
+	"github.com/panyam/agni/internal/teamca"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/goapplib/storage/mounts"
@@ -55,11 +56,17 @@ func dialRemote(ctx context.Context, raw string) (*remoteServer, error) {
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return nil, fmt.Errorf("--remote %q: want a URL like http://localhost:8080", raw)
 	}
-	r := &remoteServer{url: strings.TrimRight(raw, "/"), http: http.DefaultClient}
+	// A server whose certificate comes from the team's own CA verifies through AGNI_CA_FILE (agni
+	// issue 1800).
+	tr, err := teamca.Transport()
+	if err != nil {
+		return nil, fmt.Errorf("--remote %s: %w", raw, err)
+	}
+	r := &remoteServer{url: strings.TrimRight(raw, "/"), http: &http.Client{Transport: tr}}
 	// A shared server asks every call for a token (agni issue 1627). `agni token create` made it on
 	// the server and the caller passes it in AGNI_TOKEN, or `agni login` kept it (agni issue 1772).
 	if token := remoteToken(r.url); token != "" {
-		r.http = &http.Client{Transport: bearerTransport{token: token, next: http.DefaultTransport}}
+		r.http = &http.Client{Transport: bearerTransport{token: token, next: tr}}
 	}
 	ctx, cancel := context.WithTimeout(ctx, remoteMountTimeout)
 	defer cancel()

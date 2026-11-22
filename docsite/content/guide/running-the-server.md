@@ -697,7 +697,14 @@ with `--params-url` pointing at an `agnids` that asks for tokens sends the one i
 
 A team whose certificate comes from its own CA hands each client the CA's file. The TypeScript client
 on Node takes it as `ca`, Rust as `connect_with_ca`, Java as `AgniClient.create`'s `caFile`, and C++
-as `agni::Client`'s `ca_file`. Each client's README says more.
+as `agni::Client`'s `ca_file`. Each client's README says more. The CLI reads it from `AGNI_CA_FILE`
+for every `--remote` call and for `agni login`, and trusts the system's roots beside it (agni issue
+1800). On macOS that's the only way short of the Keychain, since Go there ignores `SSL_CERT_FILE`.
+
+```bash
+export AGNI_CA_FILE=/etc/agni/team-ca.pem
+agni login --remote https://agni.example.com
+```
 
 ### Who can open a design linked from a private repo
 

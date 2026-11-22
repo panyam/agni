@@ -11,6 +11,7 @@ import (
 
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
+	"github.com/panyam/agni/internal/teamca"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/goapplib/storage/mounts"
 
@@ -58,7 +59,11 @@ func linkTarget(ws *cliWorkspace, designURI string, selfServed bool) (path, why 
 func verifyServerMount(ctx context.Context, urlBase string, want mounts.Mount) (ok bool, why string) {
 	ctx, cancel := context.WithTimeout(ctx, serverMountTimeout)
 	defer cancel()
-	client := webapiconnect.NewWorkspaceServiceClient(&http.Client{Timeout: serverMountTimeout}, urlBase)
+	tr, err := teamca.Transport()
+	if err != nil {
+		return true, fmt.Sprintf("could not check that %s serves mount %q, so the links are unverified: %v", urlBase, want.Name, err)
+	}
+	client := webapiconnect.NewWorkspaceServiceClient(&http.Client{Timeout: serverMountTimeout, Transport: tr}, urlBase)
 	resp, err := client.ListMounts(ctx, connect.NewRequest(&webapi.ListMountsRequest{}))
 	if err != nil {
 		return true, fmt.Sprintf("could not reach %s to confirm it serves mount %q, so the links are unverified", urlBase, want.Name)
