@@ -589,6 +589,23 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SEALED_FIELD_NUMBER = 15;
+  private boolean sealed_ = false;
+  /**
+   * <pre>
+   * sealed says a server connection keeps its secret sealed in --store under --connections-key,
+   * as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
+   * token_source or key_source is then empty. Output only.
+   * </pre>
+   *
+   * <code>bool sealed = 15 [json_name = "sealed"];</code>
+   * @return The sealed.
+   */
+  @java.lang.Override
+  public boolean getSealed() {
+    return sealed_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -645,6 +662,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(owner_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 14, owner_);
     }
+    if (sealed_ != false) {
+      output.writeBool(15, sealed_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -696,6 +716,10 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(owner_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(14, owner_);
+    }
+    if (sealed_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(15, sealed_);
     }
     return size;
   }
@@ -752,6 +776,8 @@ private static final long serialVersionUID = 0L;
     if (scope_ != other.scope_) return false;
     if (!getOwner()
         .equals(other.getOwner())) return false;
+    if (getSealed()
+        != other.getSealed()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -796,6 +822,9 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + scope_;
     hash = (37 * hash) + OWNER_FIELD_NUMBER;
     hash = (53 * hash) + getOwner().hashCode();
+    hash = (37 * hash) + SEALED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getSealed());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -960,6 +989,7 @@ private static final long serialVersionUID = 0L;
       }
       scope_ = 0;
       owner_ = "";
+      sealed_ = false;
       return this;
     }
 
@@ -1042,6 +1072,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00002000) != 0)) {
         result.owner_ = owner_;
       }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.sealed_ = sealed_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1114,6 +1147,9 @@ private static final long serialVersionUID = 0L;
         owner_ = other.owner_;
         bitField0_ |= 0x00002000;
         onChanged();
+      }
+      if (other.getSealed() != false) {
+        setSealed(other.getSealed());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1213,6 +1249,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00002000;
               break;
             } // case 114
+            case 120: {
+              sealed_ = input.readBool();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 120
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2474,6 +2515,56 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       owner_ = value;
       bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private boolean sealed_ ;
+    /**
+     * <pre>
+     * sealed says a server connection keeps its secret sealed in --store under --connections-key,
+     * as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
+     * token_source or key_source is then empty. Output only.
+     * </pre>
+     *
+     * <code>bool sealed = 15 [json_name = "sealed"];</code>
+     * @return The sealed.
+     */
+    @java.lang.Override
+    public boolean getSealed() {
+      return sealed_;
+    }
+    /**
+     * <pre>
+     * sealed says a server connection keeps its secret sealed in --store under --connections-key,
+     * as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
+     * token_source or key_source is then empty. Output only.
+     * </pre>
+     *
+     * <code>bool sealed = 15 [json_name = "sealed"];</code>
+     * @param value The sealed to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSealed(boolean value) {
+
+      sealed_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * sealed says a server connection keeps its secret sealed in --store under --connections-key,
+     * as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
+     * token_source or key_source is then empty. Output only.
+     * </pre>
+     *
+     * <code>bool sealed = 15 [json_name = "sealed"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSealed() {
+      bitField0_ = (bitField0_ & ~0x00004000);
+      sealed_ = false;
       onChanged();
       return this;
     }

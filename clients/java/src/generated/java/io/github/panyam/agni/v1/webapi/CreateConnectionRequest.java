@@ -30,6 +30,7 @@ private static final long serialVersionUID = 0L;
   private CreateConnectionRequest() {
     connectionId_ = "";
     userToken_ = "";
+    serverSecret_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -187,6 +188,63 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SERVER_SECRET_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object serverSecret_ = "";
+  /**
+   * <pre>
+   * server_secret is a server connection's secret itself: the token for
+   * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
+   * issue 1802). The server seals it under --connections-key and never sends it back, and the
+   * connection's token_source or key_source stays empty. It suits a server in a container, whose
+   * environment and files the caller can't reach. A server started without --connections-key
+   * answers FAILED_PRECONDITION.
+   * </pre>
+   *
+   * <code>string server_secret = 4 [json_name = "serverSecret"];</code>
+   * @return The serverSecret.
+   */
+  @java.lang.Override
+  public java.lang.String getServerSecret() {
+    java.lang.Object ref = serverSecret_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      serverSecret_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * server_secret is a server connection's secret itself: the token for
+   * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
+   * issue 1802). The server seals it under --connections-key and never sends it back, and the
+   * connection's token_source or key_source stays empty. It suits a server in a container, whose
+   * environment and files the caller can't reach. A server started without --connections-key
+   * answers FAILED_PRECONDITION.
+   * </pre>
+   *
+   * <code>string server_secret = 4 [json_name = "serverSecret"];</code>
+   * @return The bytes for serverSecret.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getServerSecretBytes() {
+    java.lang.Object ref = serverSecret_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      serverSecret_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -210,6 +268,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userToken_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 3, userToken_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(serverSecret_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, serverSecret_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -223,6 +284,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userToken_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(3, userToken_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(serverSecret_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, serverSecret_);
     }
     return size;
   }
@@ -257,6 +321,8 @@ private static final long serialVersionUID = 0L;
     }
     if (!getUserToken()
         .equals(other.getUserToken())) return false;
+    if (!getServerSecret()
+        .equals(other.getServerSecret())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -276,6 +342,8 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + USER_TOKEN_FIELD_NUMBER;
     hash = (53 * hash) + getUserToken().hashCode();
+    hash = (37 * hash) + SERVER_SECRET_FIELD_NUMBER;
+    hash = (53 * hash) + getServerSecret().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -420,6 +488,7 @@ private static final long serialVersionUID = 0L;
         connectionBuilder_ = null;
       }
       userToken_ = "";
+      serverSecret_ = "";
       return this;
     }
 
@@ -466,6 +535,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.userToken_ = userToken_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.serverSecret_ = serverSecret_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -492,6 +564,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getUserToken().isEmpty()) {
         userToken_ = other.userToken_;
         bitField0_ |= 0x00000004;
+        onChanged();
+      }
+      if (!other.getServerSecret().isEmpty()) {
+        serverSecret_ = other.serverSecret_;
+        bitField0_ |= 0x00000008;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -535,6 +612,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 34: {
+              serverSecret_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -897,6 +979,123 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       userToken_ = value;
       bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object serverSecret_ = "";
+    /**
+     * <pre>
+     * server_secret is a server connection's secret itself: the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
+     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * connection's token_source or key_source stays empty. It suits a server in a container, whose
+     * environment and files the caller can't reach. A server started without --connections-key
+     * answers FAILED_PRECONDITION.
+     * </pre>
+     *
+     * <code>string server_secret = 4 [json_name = "serverSecret"];</code>
+     * @return The serverSecret.
+     */
+    public java.lang.String getServerSecret() {
+      java.lang.Object ref = serverSecret_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        serverSecret_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * server_secret is a server connection's secret itself: the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
+     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * connection's token_source or key_source stays empty. It suits a server in a container, whose
+     * environment and files the caller can't reach. A server started without --connections-key
+     * answers FAILED_PRECONDITION.
+     * </pre>
+     *
+     * <code>string server_secret = 4 [json_name = "serverSecret"];</code>
+     * @return The bytes for serverSecret.
+     */
+    public com.google.protobuf.ByteString
+        getServerSecretBytes() {
+      java.lang.Object ref = serverSecret_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        serverSecret_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * server_secret is a server connection's secret itself: the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
+     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * connection's token_source or key_source stays empty. It suits a server in a container, whose
+     * environment and files the caller can't reach. A server started without --connections-key
+     * answers FAILED_PRECONDITION.
+     * </pre>
+     *
+     * <code>string server_secret = 4 [json_name = "serverSecret"];</code>
+     * @param value The serverSecret to set.
+     * @return This builder for chaining.
+     */
+    public Builder setServerSecret(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      serverSecret_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * server_secret is a server connection's secret itself: the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
+     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * connection's token_source or key_source stays empty. It suits a server in a container, whose
+     * environment and files the caller can't reach. A server started without --connections-key
+     * answers FAILED_PRECONDITION.
+     * </pre>
+     *
+     * <code>string server_secret = 4 [json_name = "serverSecret"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearServerSecret() {
+      serverSecret_ = getDefaultInstance().getServerSecret();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * server_secret is a server connection's secret itself: the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
+     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * connection's token_source or key_source stays empty. It suits a server in a container, whose
+     * environment and files the caller can't reach. A server started without --connections-key
+     * answers FAILED_PRECONDITION.
+     * </pre>
+     *
+     * <code>string server_secret = 4 [json_name = "serverSecret"];</code>
+     * @param value The bytes for serverSecret to set.
+     * @return This builder for chaining.
+     */
+    public Builder setServerSecretBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      serverSecret_ = value;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }

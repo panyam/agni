@@ -36,6 +36,21 @@ func (k *fakeKeeper) Disconnect(ctx context.Context, owner, id string) error {
 	return k.store.DeleteConnection(ctx, owner, id)
 }
 
+func (k *fakeKeeper) SaveServerSecret(ctx context.Context, id, secret string) error {
+	if k.fail != nil {
+		return k.fail
+	}
+	c, err := k.store.GetConnection(ctx, "", id)
+	if err != nil {
+		return err
+	}
+	if !c.Sealed {
+		return connections.ErrInvalid
+	}
+	k.tokens[id+"/"] = secret
+	return nil
+}
+
 func connectionIDs(resp *webapi.ListConnectionsResponse) []string {
 	var out []string
 	for _, c := range resp.GetConnections() {
@@ -195,5 +210,71 @@ func TestTwoPeopleKeepConnectionsByOneID(t *testing.T) {
 	}
 	if c, err := svc.GetConnection(bob, &webapi.GetConnectionRequest{Name: "connections/alice-gh"}); err != nil || c.GetOwner() != "" {
 		t.Errorf("after deleting his own, bob reads connections/alice-gh = %v, %v; want the server's", c, err)
+	}
+}
+
+// A server connection can send its secret to be sealed rather than name where it is, for a server
+// in a container whose environment the caller can't reach (agni issue 1802). The connection names
+// no reference and says it is sealed, rotating replaces the secret, and deleting it deletes the
+// secret too. A reference beside a secret, a person's connection with one, and a server with no
+// key to seal with are each refused.
+func TestAServerConnectionKeepsItsSecretSealed(t *testing.T) {
+	store, err := fsstore.New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := &fakeKeeper{store: store, tokens: map[string]string{}}
+	svc := service.NewConnectionService(store, nil).WithUserTokens(keeper)
+	ops := as("ops")
+	token := func(id, ref, secret string) (*webapi.Connection, error) {
+		return svc.CreateConnection(ops, &webapi.CreateConnectionRequest{ConnectionId: id, ServerSecret: secret,
+			Connection: &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN, TokenSource: ref}})
+	}
+
+	c, err := token("hw", "", "ghp_server")
+	if err != nil {
+		t.Fatalf("a sealed server connection: %v", err)
+	}
+	if !c.GetSealed() || c.GetTokenSource() != "" || c.GetScope() != webapi.ConnectionScope_CONNECTION_SCOPE_SERVER || c.GetOwner() != "" {
+		t.Errorf("the sealed connection = %v; want a server connection, sealed, naming no token source", c)
+	}
+	if keeper.tokens["hw/"] != "ghp_server" {
+		t.Errorf("the keeper holds %q for hw; want the secret sealed through it", keeper.tokens["hw/"])
+	}
+	if got, err := svc.GetConnection(as("alice"), &webapi.GetConnectionRequest{Name: "connections/hw"}); err != nil || !got.GetSealed() {
+		t.Errorf("another caller's GetConnection hw = %v, %v; want it listed as sealed", got, err)
+	}
+
+	if _, err := svc.RotateConnection(ops, &webapi.RotateConnectionRequest{Name: "connections/hw", ServerSecret: "ghp_next"}); err != nil || keeper.tokens["hw/"] != "ghp_next" {
+		t.Errorf("rotating hw = %v, and the keeper holds %q; want the new secret", err, keeper.tokens["hw/"])
+	}
+	if _, err := svc.RotateConnection(ops, &webapi.RotateConnectionRequest{Name: "connections/hw"}); !errors.Is(err, service.ErrInvalidArgument) {
+		t.Errorf("rotating with no secret = %v; want ErrInvalidArgument", err)
+	}
+	if _, err := token("byref", "env:HW_TOKEN", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RotateConnection(ops, &webapi.RotateConnectionRequest{Name: "connections/byref", ServerSecret: "x"}); !errors.Is(err, service.ErrFailedPrecondition) {
+		t.Errorf("rotating a connection that names its secret = %v; want ErrFailedPrecondition", err)
+	}
+
+	if _, err := token("both", "env:HW_TOKEN", "ghp_x"); !errors.Is(err, service.ErrInvalidArgument) {
+		t.Errorf("a reference and a sealed secret = %v; want ErrInvalidArgument", err)
+	}
+	if _, err := svc.CreateConnection(ops, &webapi.CreateConnectionRequest{ConnectionId: "mine", ServerSecret: "ghp_x", UserToken: "ghp_y",
+		Connection: &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER, Scope: webapi.ConnectionScope_CONNECTION_SCOPE_PERSON}}); !errors.Is(err, service.ErrInvalidArgument) {
+		t.Errorf("a person's connection with server_secret = %v; want ErrInvalidArgument", err)
+	}
+	noKey := service.NewConnectionService(store, nil)
+	if _, err := noKey.CreateConnection(ops, &webapi.CreateConnectionRequest{ConnectionId: "nokey", ServerSecret: "ghp_x",
+		Connection: &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN}}); !errors.Is(err, service.ErrFailedPrecondition) {
+		t.Errorf("a sealed connection on a server with no connections key = %v; want ErrFailedPrecondition", err)
+	}
+
+	if err := svc.DeleteConnection(ops, &webapi.DeleteConnectionRequest{Name: "connections/hw"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, kept := keeper.tokens["hw/"]; kept {
+		t.Errorf("deleting hw left its sealed secret in the keeper")
 	}
 }

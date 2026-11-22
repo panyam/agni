@@ -19,6 +19,13 @@ GitHub Release body carries.
   documented flag on both servers, and `agni healthcheck --tls` probes a server that ends TLS
   itself. The release runs the enterprise exercise against the bundle over the published image.
 
+- A server connection can keep its secret sealed (issue 1802). `agni connections add --seal` reads a
+  token, or a GitHub App's key, where the CLI runs, and the server seals it under `--connections-key`,
+  so a server in a container needs no reference into its own environment. `agni connections rotate`
+  replaces it while mounts read through the connection. The calls are
+  `CreateConnectionRequest.server_secret`, `Connection.sealed` and
+  `ConnectionService.RotateConnection`.
+
 - `agni serve` and `agnids` run `--auth tokens` behind a proxy that ends TLS, such as a Kubernetes
   ingress or a cloud load balancer (issue 1810). `--trusted-proxy 10.0.0.0/8` names the proxy. The
   server then serves plain HTTP on any address, and a request the proxy took over HTTPS gets Secure
@@ -39,10 +46,10 @@ GitHub Release body carries.
 
 ### Changed
 
-- agni builds on goapplib v0.7.28 and oneauth v0.3.17 in every module (issue 1802). goapplib's fake
+- agni builds on goapplib v0.7.29 and oneauth v0.3.18 in every module (issue 1802). goapplib's fake
   GitHub listens on a chosen address and names it in every URL it hands out, so the enterprise
-  exercise runs against agni in a container. In oneauth v0.3.17 a GitHub sign-in callback with a bad
-  state answers 400.
+  exercise runs against agni in a container, and goapplib seals a server connection's secret. A
+  GitHub sign-in callback with a bad state now answers 400.
 
 - agni builds on goapplib v0.7.27 in every module (issue 1820). A GitHub mount now reads a Git LFS
   file whose object is smaller than its pointer, or whose repo has no `.gitattributes`, as the

@@ -7,9 +7,9 @@
 #   docker compose up -d           then open AGNI_PUBLIC_URL and sign in with GitHub
 #   docker compose exec agni agni token create ops --store file:///var/lib/agni/meta
 #                                  a token for a script or a CI job, printed once
-#   agni connections add hw --github-token file:/run/agni/connections/hw --remote AGNI_PUBLIC_URL
-#                                  a connection the server reads repos through, its token in
-#                                  AGNI_CONNECTION_SECRETS/hw on this machine
+#   agni connections add hw --seal --github-token env:HW_TOKEN --remote AGNI_PUBLIC_URL
+#                                  a connection the server reads repos through; the CLI reads the
+#                                  token where it runs, and the server seals it in the data volume
 #   docker compose --profile datasheets up -d
 #                                  also the datasheet workbench, on AGNI_DATASHEETS_PORT
 #

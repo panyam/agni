@@ -149,6 +149,37 @@ public final class ConnectionServiceGrpc {
     return getDeleteConnectionMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.RotateConnectionRequest,
+      io.github.panyam.agni.v1.webapi.Connection> getRotateConnectionMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RotateConnection",
+      requestType = io.github.panyam.agni.v1.webapi.RotateConnectionRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Connection.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.RotateConnectionRequest,
+      io.github.panyam.agni.v1.webapi.Connection> getRotateConnectionMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.RotateConnectionRequest, io.github.panyam.agni.v1.webapi.Connection> getRotateConnectionMethod;
+    if ((getRotateConnectionMethod = ConnectionServiceGrpc.getRotateConnectionMethod) == null) {
+      synchronized (ConnectionServiceGrpc.class) {
+        if ((getRotateConnectionMethod = ConnectionServiceGrpc.getRotateConnectionMethod) == null) {
+          ConnectionServiceGrpc.getRotateConnectionMethod = getRotateConnectionMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.RotateConnectionRequest, io.github.panyam.agni.v1.webapi.Connection>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RotateConnection"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.RotateConnectionRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Connection.getDefaultInstance()))
+              .setSchemaDescriptor(new ConnectionServiceMethodDescriptorSupplier("RotateConnection"))
+              .build();
+        }
+      }
+    }
+    return getRotateConnectionMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -272,6 +303,20 @@ public final class ConnectionServiceGrpc {
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteConnectionMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * RotateConnection replaces the sealed secret of a server connection created with
+     * server_secret, so a token is rotated while mounts read through the connection (agni issue
+     * 1802). Each server process sharing the store uses the new secret on its next read. A
+     * connection that names its secret by reference is FAILED_PRECONDITION, since its secret is the
+     * file or variable it names. A person's connection, or an empty secret, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    default void rotateConnection(io.github.panyam.agni.v1.webapi.RotateConnectionRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Connection> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRotateConnectionMethod(), responseObserver);
+    }
   }
 
   /**
@@ -378,6 +423,21 @@ public final class ConnectionServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getDeleteConnectionMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * RotateConnection replaces the sealed secret of a server connection created with
+     * server_secret, so a token is rotated while mounts read through the connection (agni issue
+     * 1802). Each server process sharing the store uses the new secret on its next read. A
+     * connection that names its secret by reference is FAILED_PRECONDITION, since its secret is the
+     * file or variable it names. A person's connection, or an empty secret, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public void rotateConnection(io.github.panyam.agni.v1.webapi.RotateConnectionRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Connection> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRotateConnectionMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -456,6 +516,20 @@ public final class ConnectionServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getDeleteConnectionMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * RotateConnection replaces the sealed secret of a server connection created with
+     * server_secret, so a token is rotated while mounts read through the connection (agni issue
+     * 1802). Each server process sharing the store uses the new secret on its next read. A
+     * connection that names its secret by reference is FAILED_PRECONDITION, since its secret is the
+     * file or variable it names. A person's connection, or an empty secret, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Connection rotateConnection(io.github.panyam.agni.v1.webapi.RotateConnectionRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRotateConnectionMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -533,6 +607,20 @@ public final class ConnectionServiceGrpc {
     public com.google.protobuf.Empty deleteConnection(io.github.panyam.agni.v1.webapi.DeleteConnectionRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getDeleteConnectionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * RotateConnection replaces the sealed secret of a server connection created with
+     * server_secret, so a token is rotated while mounts read through the connection (agni issue
+     * 1802). Each server process sharing the store uses the new secret on its next read. A
+     * connection that names its secret by reference is FAILED_PRECONDITION, since its secret is the
+     * file or variable it names. A person's connection, or an empty secret, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Connection rotateConnection(io.github.panyam.agni.v1.webapi.RotateConnectionRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRotateConnectionMethod(), getCallOptions(), request);
     }
   }
 
@@ -616,12 +704,28 @@ public final class ConnectionServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getDeleteConnectionMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * RotateConnection replaces the sealed secret of a server connection created with
+     * server_secret, so a token is rotated while mounts read through the connection (agni issue
+     * 1802). Each server process sharing the store uses the new secret on its next read. A
+     * connection that names its secret by reference is FAILED_PRECONDITION, since its secret is the
+     * file or variable it names. A person's connection, or an empty secret, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Connection> rotateConnection(
+        io.github.panyam.agni.v1.webapi.RotateConnectionRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRotateConnectionMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_CONNECTION = 0;
   private static final int METHODID_GET_CONNECTION = 1;
   private static final int METHODID_LIST_CONNECTIONS = 2;
   private static final int METHODID_DELETE_CONNECTION = 3;
+  private static final int METHODID_ROTATE_CONNECTION = 4;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -655,6 +759,10 @@ public final class ConnectionServiceGrpc {
         case METHODID_DELETE_CONNECTION:
           serviceImpl.deleteConnection((io.github.panyam.agni.v1.webapi.DeleteConnectionRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_ROTATE_CONNECTION:
+          serviceImpl.rotateConnection((io.github.panyam.agni.v1.webapi.RotateConnectionRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Connection>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -702,6 +810,13 @@ public final class ConnectionServiceGrpc {
               io.github.panyam.agni.v1.webapi.DeleteConnectionRequest,
               com.google.protobuf.Empty>(
                 service, METHODID_DELETE_CONNECTION)))
+        .addMethod(
+          getRotateConnectionMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.RotateConnectionRequest,
+              io.github.panyam.agni.v1.webapi.Connection>(
+                service, METHODID_ROTATE_CONNECTION)))
         .build();
   }
 
@@ -754,6 +869,7 @@ public final class ConnectionServiceGrpc {
               .addMethod(getGetConnectionMethod())
               .addMethod(getListConnectionsMethod())
               .addMethod(getDeleteConnectionMethod())
+              .addMethod(getRotateConnectionMethod())
               .build();
         }
       }

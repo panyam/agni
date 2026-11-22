@@ -602,6 +602,18 @@ expires:
 agni connections add acme-app --github-app 12345 --installation 678 --key file:/run/secrets/app.pem --remote http://localhost:8080
 ```
 
+A server in a container, or on a machine the operator can't log in to, has no environment or files
+the CLI can name. `--seal` sends the secret instead (agni issue 1802). The CLI reads the token, or
+the App's `--key`, from the reference on its own machine and sends it once. The server seals it in
+the store under `--connections-key`, as it does a person's own token, and never sends it back.
+`agni connections ls` shows the connection as `sealed`. `agni connections rotate` replaces the
+secret while mounts keep reading through the connection:
+
+```bash
+agni connections add acme --seal --github-token env:GITHUB_TOKEN --remote https://agni.example.com
+agni connections rotate acme --github-token env:GITHUB_TOKEN_NEXT --remote https://agni.example.com
+```
+
 Several mounts can read through one connection. `agni mounts ls` names a mount's connection after
 its source, and `agni connections ls` lists each connection with where its secret is and whether its
 last token request worked. A connection a mount reads through can't be removed until the mount is.
@@ -781,11 +793,12 @@ docker compose up -d             # then open AGNI_PUBLIC_URL and sign in with Gi
 - Each secret is a file on the machine that `.env` names. Compose mounts it read-only under
   `/run/secrets`, and no secret value sits in `compose.yaml` or `.env`. The server runs as uid
   10001, so each file must be readable by it, for example with `chown 10001` and `chmod 0400`.
-- A connection the server reads repos through names its token as a file the server reads.
-  `AGNI_CONNECTION_SECRETS` is a folder on the machine, mounted read-only at
-  `/run/agni/connections`, so `agni connections add hw --github-token file:/run/agni/connections/hw`
-  reads the file `hw` there. A token sealed in the store, as a person's own connection is kept, waits
-  on panyam/goapplib#231.
+- A connection the server reads repos through can't name a variable or file on your own machine,
+  since the server runs in a container. `agni connections add hw --seal --github-token env:HW_TOKEN`
+  reads the token where the CLI runs, and the server seals it in the store under the connections key.
+  `agni connections rotate hw --github-token env:HW_TOKEN_NEXT` replaces it while mounts read through
+  the connection. A token the server should read itself goes in `AGNI_CONNECTION_SECRETS`, a folder
+  mounted read-only at `/run/agni/connections`, named as `--github-token file:/run/agni/connections/hw`.
 - `AGNI_GITHUB_API` is your server's REST API, `https://<host>/api/v3` on GitHub Enterprise Server.
   `agni serve` reads mounts, signs people in and checks access through it, as its `--github-api` flag.
 - `AGNI_CA_DIR` is a folder of CA certificates both servers trust beside the system's, such as the

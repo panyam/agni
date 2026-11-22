@@ -41,7 +41,7 @@ CONNECTION_STATUS_OK: ConnectionStatus
 CONNECTION_STATUS_FAILED: ConnectionStatus
 
 class Connection(_message.Message):
-    __slots__ = ("name", "kind", "display_name", "base_url", "app_id", "installation_id", "key_source", "token_source", "status", "last_error", "create_time", "last_use_time", "scope", "owner")
+    __slots__ = ("name", "kind", "display_name", "base_url", "app_id", "installation_id", "key_source", "token_source", "status", "last_error", "create_time", "last_use_time", "scope", "owner", "sealed")
     NAME_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -56,6 +56,7 @@ class Connection(_message.Message):
     LAST_USE_TIME_FIELD_NUMBER: _ClassVar[int]
     SCOPE_FIELD_NUMBER: _ClassVar[int]
     OWNER_FIELD_NUMBER: _ClassVar[int]
+    SEALED_FIELD_NUMBER: _ClassVar[int]
     name: str
     kind: ConnectionKind
     display_name: str
@@ -70,17 +71,28 @@ class Connection(_message.Message):
     last_use_time: _timestamp_pb2.Timestamp
     scope: ConnectionScope
     owner: str
-    def __init__(self, name: _Optional[str] = ..., kind: _Optional[_Union[ConnectionKind, str]] = ..., display_name: _Optional[str] = ..., base_url: _Optional[str] = ..., app_id: _Optional[str] = ..., installation_id: _Optional[int] = ..., key_source: _Optional[str] = ..., token_source: _Optional[str] = ..., status: _Optional[_Union[ConnectionStatus, str]] = ..., last_error: _Optional[str] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_use_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., scope: _Optional[_Union[ConnectionScope, str]] = ..., owner: _Optional[str] = ...) -> None: ...
+    sealed: bool
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[_Union[ConnectionKind, str]] = ..., display_name: _Optional[str] = ..., base_url: _Optional[str] = ..., app_id: _Optional[str] = ..., installation_id: _Optional[int] = ..., key_source: _Optional[str] = ..., token_source: _Optional[str] = ..., status: _Optional[_Union[ConnectionStatus, str]] = ..., last_error: _Optional[str] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_use_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., scope: _Optional[_Union[ConnectionScope, str]] = ..., owner: _Optional[str] = ..., sealed: _Optional[bool] = ...) -> None: ...
 
 class CreateConnectionRequest(_message.Message):
-    __slots__ = ("connection_id", "connection", "user_token")
+    __slots__ = ("connection_id", "connection", "user_token", "server_secret")
     CONNECTION_ID_FIELD_NUMBER: _ClassVar[int]
     CONNECTION_FIELD_NUMBER: _ClassVar[int]
     USER_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    SERVER_SECRET_FIELD_NUMBER: _ClassVar[int]
     connection_id: str
     connection: Connection
     user_token: str
-    def __init__(self, connection_id: _Optional[str] = ..., connection: _Optional[_Union[Connection, _Mapping]] = ..., user_token: _Optional[str] = ...) -> None: ...
+    server_secret: str
+    def __init__(self, connection_id: _Optional[str] = ..., connection: _Optional[_Union[Connection, _Mapping]] = ..., user_token: _Optional[str] = ..., server_secret: _Optional[str] = ...) -> None: ...
+
+class RotateConnectionRequest(_message.Message):
+    __slots__ = ("name", "server_secret")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SERVER_SECRET_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    server_secret: str
+    def __init__(self, name: _Optional[str] = ..., server_secret: _Optional[str] = ...) -> None: ...
 
 class GetConnectionRequest(_message.Message):
     __slots__ = ("name",)

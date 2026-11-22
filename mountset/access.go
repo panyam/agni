@@ -111,6 +111,16 @@ func (t *Table) SaveSignedIn(ctx context.Context, owner, login string, tok *oaut
 	return id, service.ConnectionErr(t.svc.SaveUserToken(connections.WithViewer(ctx, owner), owner, id, tok))
 }
 
+// SaveServerSecret seals secret as server connection id's token or App key, for
+// service.UserTokenKeeper, through goapplib's Service.SaveServerSecret (agni issue 1802). Saving again
+// rotates it.
+func (t *Table) SaveServerSecret(ctx context.Context, id, secret string) error {
+	if t.svc == nil || t.users == nil {
+		return fmt.Errorf("%w: this server seals no secret; start it with --connections-key env:NAME", service.ErrFailedPrecondition)
+	}
+	return t.svc.SaveServerSecret(ctx, id, secret)
+}
+
 var _ service.UserTokenKeeper = (*Table)(nil)
 
 // viewing is ctx carrying the caller as goapplib's viewer, so a person's own connection gives its

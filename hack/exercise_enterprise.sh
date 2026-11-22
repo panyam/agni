@@ -207,8 +207,7 @@ if [ "$mode" = bundle ]; then
   cp "$out/ca.pem" "$out/ca-dir/exercise-ca.pem"
   chmod 0644 "$out/ca-dir/exercise-ca.pem"
   mkdir -p "$out/connection-secrets"
-  printf '%s' "$HW_TOKEN" >"$out/connection-secrets/hw"
-  chmod 0644 "$out/secrets/"* "$out/connection-secrets/hw"
+  chmod 0644 "$out/secrets/"*
   cat >"$out/bundle.env" <<ENV
 AGNI_IMAGE=$AGNI_IMAGE
 AGNI_VERSION=$AGNI_VERSION
@@ -300,15 +299,19 @@ for who in alice mallory; do
 done
 
 step "the admin adds a server connection and mounts hw/baseboard through it"
-# The server reads a server connection's token itself: from its own environment here, and from the
-# bundle's mounted folder of connection secrets there.
-hw_ref=env:HW_TOKEN
-[ "$mode" = bundle ] && hw_ref=file:/run/agni/connections/hw
-admin connections add hw --github-token "$hw_ref" >/dev/null
-if admin mounts add board github://hw/baseboard --ref rev-b --connection hw | tee "$out/mount.txt" | grep -q "via hw"; then
-  pass "hw/baseboard mounted at rev-b through the server connection"
+# The local server reads the connection's token from its own environment. The bundle's server can't
+# reach this machine's environment, so the admin's CLI reads the token here and the server seals it.
+if [ "$mode" = bundle ]; then
+  admin connections add hw --seal --github-token env:HW_TOKEN >"$out/connection.txt"
 else
-  no "mounting hw/baseboard; see $out/mount.txt and $out/serve.log"
+  admin connections add hw --github-token env:HW_TOKEN >"$out/connection.txt"
+fi
+sealed_ok=1
+[ "$mode" = bundle ] && ! grep -q "^hw$(printf '\t')github-token$(printf '\t')sealed" "$out/connection.txt" && sealed_ok=
+if [ -n "$sealed_ok" ] && admin mounts add board github://hw/baseboard --ref rev-b --connection hw | tee "$out/mount.txt" | grep -q "via hw"; then
+  pass "hw/baseboard mounted at rev-b through the server connection$([ "$mode" = bundle ] && echo ", its token sealed")"
+else
+  no "mounting hw/baseboard; see $out/connection.txt, $out/mount.txt and $out/serve.log"
 fi
 if [ "$mode" = bundle ]; then
   store=$out/store-copy

@@ -5,9 +5,9 @@ go 1.27.4
 require (
 	connectrpc.com/connect v1.21.1
 	github.com/panyam/agni v0.0.0
-	github.com/panyam/goapplib v0.7.28
-	github.com/panyam/goapplib/storage v0.7.28
-	github.com/panyam/oneauth v0.3.17
+	github.com/panyam/goapplib v0.7.29
+	github.com/panyam/goapplib/storage v0.7.29
+	github.com/panyam/oneauth v0.3.18
 	github.com/panyam/servicekit v0.2.4
 	github.com/spf13/cobra v1.10.2
 	google.golang.org/protobuf v1.36.12
@@ -49,15 +49,15 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/klauspost/compress v1.20.2 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/panyam/goapplib/storage/backends/gae v0.7.28 // indirect
-	github.com/panyam/goapplib/storage/backends/gorm v0.7.28 // indirect
+	github.com/panyam/goapplib/storage/backends/gae v0.7.29 // indirect
+	github.com/panyam/goapplib/storage/backends/gorm v0.7.29 // indirect
 	github.com/panyam/gocurrent v0.1.3 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
-	github.com/panyam/oneauth/grpc v0.3.17 // indirect
-	github.com/panyam/oneauth/oauth2 v0.3.17 // indirect
-	github.com/panyam/oneauth/stores/gae v0.3.17 // indirect
-	github.com/panyam/oneauth/stores/gorm v0.3.17 // indirect
+	github.com/panyam/oneauth/grpc v0.3.18 // indirect
+	github.com/panyam/oneauth/oauth2 v0.3.18 // indirect
+	github.com/panyam/oneauth/stores/gae v0.3.18 // indirect
+	github.com/panyam/oneauth/stores/gorm v0.3.18 // indirect
 	github.com/panyam/templar v0.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect

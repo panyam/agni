@@ -46,6 +46,9 @@ const (
 	// ConnectionServiceDeleteConnectionProcedure is the fully-qualified name of the ConnectionService's
 	// DeleteConnection RPC.
 	ConnectionServiceDeleteConnectionProcedure = "/agni.v1.webapi.ConnectionService/DeleteConnection"
+	// ConnectionServiceRotateConnectionProcedure is the fully-qualified name of the ConnectionService's
+	// RotateConnection RPC.
+	ConnectionServiceRotateConnectionProcedure = "/agni.v1.webapi.ConnectionService/RotateConnection"
 )
 
 // ConnectionServiceClient is a client for the agni.v1.webapi.ConnectionService service.
@@ -66,6 +69,12 @@ type ConnectionServiceClient interface {
 	// naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
 	// token too. Another person's connection is NOT_FOUND.
 	DeleteConnection(context.Context, *connect.Request[webapi.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error)
+	// RotateConnection replaces the sealed secret of a server connection created with
+	// server_secret, so a token is rotated while mounts read through the connection (agni issue
+	// 1802). Each server process sharing the store uses the new secret on its next read. A
+	// connection that names its secret by reference is FAILED_PRECONDITION, since its secret is the
+	// file or variable it names. A person's connection, or an empty secret, is INVALID_ARGUMENT.
+	RotateConnection(context.Context, *connect.Request[webapi.RotateConnectionRequest]) (*connect.Response[webapi.Connection], error)
 }
 
 // NewConnectionServiceClient constructs a client for the agni.v1.webapi.ConnectionService service.
@@ -103,6 +112,12 @@ func NewConnectionServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(connectionServiceMethods.ByName("DeleteConnection")),
 			connect.WithClientOptions(opts...),
 		),
+		rotateConnection: connect.NewClient[webapi.RotateConnectionRequest, webapi.Connection](
+			httpClient,
+			baseURL+ConnectionServiceRotateConnectionProcedure,
+			connect.WithSchema(connectionServiceMethods.ByName("RotateConnection")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -112,6 +127,7 @@ type connectionServiceClient struct {
 	getConnection    *connect.Client[webapi.GetConnectionRequest, webapi.Connection]
 	listConnections  *connect.Client[webapi.ListConnectionsRequest, webapi.ListConnectionsResponse]
 	deleteConnection *connect.Client[webapi.DeleteConnectionRequest, emptypb.Empty]
+	rotateConnection *connect.Client[webapi.RotateConnectionRequest, webapi.Connection]
 }
 
 // CreateConnection calls agni.v1.webapi.ConnectionService.CreateConnection.
@@ -134,6 +150,11 @@ func (c *connectionServiceClient) DeleteConnection(ctx context.Context, req *con
 	return c.deleteConnection.CallUnary(ctx, req)
 }
 
+// RotateConnection calls agni.v1.webapi.ConnectionService.RotateConnection.
+func (c *connectionServiceClient) RotateConnection(ctx context.Context, req *connect.Request[webapi.RotateConnectionRequest]) (*connect.Response[webapi.Connection], error) {
+	return c.rotateConnection.CallUnary(ctx, req)
+}
+
 // ConnectionServiceHandler is an implementation of the agni.v1.webapi.ConnectionService service.
 type ConnectionServiceHandler interface {
 	// CreateConnection keeps a new connection. Each person's ids are their own (agni issue 1778), so
@@ -152,6 +173,12 @@ type ConnectionServiceHandler interface {
 	// naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
 	// token too. Another person's connection is NOT_FOUND.
 	DeleteConnection(context.Context, *connect.Request[webapi.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error)
+	// RotateConnection replaces the sealed secret of a server connection created with
+	// server_secret, so a token is rotated while mounts read through the connection (agni issue
+	// 1802). Each server process sharing the store uses the new secret on its next read. A
+	// connection that names its secret by reference is FAILED_PRECONDITION, since its secret is the
+	// file or variable it names. A person's connection, or an empty secret, is INVALID_ARGUMENT.
+	RotateConnection(context.Context, *connect.Request[webapi.RotateConnectionRequest]) (*connect.Response[webapi.Connection], error)
 }
 
 // NewConnectionServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -185,6 +212,12 @@ func NewConnectionServiceHandler(svc ConnectionServiceHandler, opts ...connect.H
 		connect.WithSchema(connectionServiceMethods.ByName("DeleteConnection")),
 		connect.WithHandlerOptions(opts...),
 	)
+	connectionServiceRotateConnectionHandler := connect.NewUnaryHandler(
+		ConnectionServiceRotateConnectionProcedure,
+		svc.RotateConnection,
+		connect.WithSchema(connectionServiceMethods.ByName("RotateConnection")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.ConnectionService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ConnectionServiceCreateConnectionProcedure:
@@ -195,6 +228,8 @@ func NewConnectionServiceHandler(svc ConnectionServiceHandler, opts ...connect.H
 			connectionServiceListConnectionsHandler.ServeHTTP(w, r)
 		case ConnectionServiceDeleteConnectionProcedure:
 			connectionServiceDeleteConnectionHandler.ServeHTTP(w, r)
+		case ConnectionServiceRotateConnectionProcedure:
+			connectionServiceRotateConnectionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -218,4 +253,8 @@ func (UnimplementedConnectionServiceHandler) ListConnections(context.Context, *c
 
 func (UnimplementedConnectionServiceHandler) DeleteConnection(context.Context, *connect.Request[webapi.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ConnectionService.DeleteConnection is not implemented"))
+}
+
+func (UnimplementedConnectionServiceHandler) RotateConnection(context.Context, *connect.Request[webapi.RotateConnectionRequest]) (*connect.Response[webapi.Connection], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ConnectionService.RotateConnection is not implemented"))
 }

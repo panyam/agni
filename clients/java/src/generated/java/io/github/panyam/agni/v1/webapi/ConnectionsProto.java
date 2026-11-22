@@ -37,6 +37,11 @@ public final class ConnectionsProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_agni_v1_webapi_CreateConnectionRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_RotateConnectionRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_RotateConnectionRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_agni_v1_webapi_GetConnectionRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -67,7 +72,7 @@ public final class ConnectionsProto extends com.google.protobuf.GeneratedFile {
     java.lang.String[] descriptorData = {
       "\n agni/v1/webapi/connections.proto\022\016agni" +
       ".v1.webapi\032\033google/protobuf/empty.proto\032" +
-      "\037google/protobuf/timestamp.proto\"\267\004\n\nCon" +
+      "\037google/protobuf/timestamp.proto\"\317\004\n\nCon" +
       "nection\022\022\n\004name\030\001 \001(\tR\004name\0222\n\004kind\030\002 \001(" +
       "\0162\036.agni.v1.webapi.ConnectionKindR\004kind\022" +
       "!\n\014display_name\030\003 \001(\tR\013displayName\022\031\n\010ba" +
@@ -82,39 +87,45 @@ public final class ConnectionsProto extends com.google.protobuf.GeneratedFile {
       " \001(\0132\032.google.protobuf.TimestampR\013lastUs" +
       "eTime\0225\n\005scope\030\r \001(\0162\037.agni.v1.webapi.Co" +
       "nnectionScopeR\005scope\022\024\n\005owner\030\016 \001(\tR\005own" +
-      "er\"\231\001\n\027CreateConnectionRequest\022#\n\rconnec" +
-      "tion_id\030\001 \001(\tR\014connectionId\022:\n\nconnectio" +
-      "n\030\002 \001(\0132\032.agni.v1.webapi.ConnectionR\ncon" +
-      "nection\022\035\n\nuser_token\030\003 \001(\tR\tuserToken\"*" +
-      "\n\024GetConnectionRequest\022\022\n\004name\030\001 \001(\tR\004na" +
-      "me\"\030\n\026ListConnectionsRequest\"W\n\027ListConn" +
-      "ectionsResponse\022<\n\013connections\030\001 \003(\0132\032.a" +
-      "gni.v1.webapi.ConnectionR\013connections\"-\n" +
-      "\027DeleteConnectionRequest\022\022\n\004name\030\001 \001(\tR\004" +
-      "name*m\n\017ConnectionScope\022 \n\034CONNECTION_SC" +
-      "OPE_UNSPECIFIED\020\000\022\033\n\027CONNECTION_SCOPE_SE" +
-      "RVER\020\001\022\033\n\027CONNECTION_SCOPE_PERSON\020\002*\224\001\n\016" +
-      "ConnectionKind\022\037\n\033CONNECTION_KIND_UNSPEC" +
-      "IFIED\020\000\022\036\n\032CONNECTION_KIND_GITHUB_APP\020\001\022" +
-      " \n\034CONNECTION_KIND_GITHUB_TOKEN\020\002\022\037\n\033CON" +
-      "NECTION_KIND_GITHUB_USER\020\003*m\n\020Connection" +
-      "Status\022!\n\035CONNECTION_STATUS_UNSPECIFIED\020" +
-      "\000\022\030\n\024CONNECTION_STATUS_OK\020\001\022\034\n\030CONNECTIO" +
-      "N_STATUS_FAILED\020\0022\370\002\n\021ConnectionService\022" +
-      "W\n\020CreateConnection\022\'.agni.v1.webapi.Cre" +
-      "ateConnectionRequest\032\032.agni.v1.webapi.Co" +
-      "nnection\022Q\n\rGetConnection\022$.agni.v1.weba" +
-      "pi.GetConnectionRequest\032\032.agni.v1.webapi" +
-      ".Connection\022b\n\017ListConnections\022&.agni.v1" +
-      ".webapi.ListConnectionsRequest\032\'.agni.v1" +
-      ".webapi.ListConnectionsResponse\022S\n\020Delet" +
-      "eConnection\022\'.agni.v1.webapi.DeleteConne" +
-      "ctionRequest\032\026.google.protobuf.EmptyB\273\001\n" +
-      "\037io.github.panyam.agni.v1.webapiB\020Connec" +
-      "tionsProtoP\001Z,github.com/panyam/agni/gen" +
-      "/go/agni/v1/webapi\242\002\003AVW\252\002\016Agni.V1.Webap" +
-      "i\312\002\016Agni\\V1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBM" +
-      "etadata\352\002\020Agni::V1::Webapib\006proto3"
+      "er\022\026\n\006sealed\030\017 \001(\010R\006sealed\"\276\001\n\027CreateCon" +
+      "nectionRequest\022#\n\rconnection_id\030\001 \001(\tR\014c" +
+      "onnectionId\022:\n\nconnection\030\002 \001(\0132\032.agni.v" +
+      "1.webapi.ConnectionR\nconnection\022\035\n\nuser_" +
+      "token\030\003 \001(\tR\tuserToken\022#\n\rserver_secret\030" +
+      "\004 \001(\tR\014serverSecret\"R\n\027RotateConnectionR" +
+      "equest\022\022\n\004name\030\001 \001(\tR\004name\022#\n\rserver_sec" +
+      "ret\030\002 \001(\tR\014serverSecret\"*\n\024GetConnection" +
+      "Request\022\022\n\004name\030\001 \001(\tR\004name\"\030\n\026ListConne" +
+      "ctionsRequest\"W\n\027ListConnectionsResponse" +
+      "\022<\n\013connections\030\001 \003(\0132\032.agni.v1.webapi.C" +
+      "onnectionR\013connections\"-\n\027DeleteConnecti" +
+      "onRequest\022\022\n\004name\030\001 \001(\tR\004name*m\n\017Connect" +
+      "ionScope\022 \n\034CONNECTION_SCOPE_UNSPECIFIED" +
+      "\020\000\022\033\n\027CONNECTION_SCOPE_SERVER\020\001\022\033\n\027CONNE" +
+      "CTION_SCOPE_PERSON\020\002*\224\001\n\016ConnectionKind\022" +
+      "\037\n\033CONNECTION_KIND_UNSPECIFIED\020\000\022\036\n\032CONN" +
+      "ECTION_KIND_GITHUB_APP\020\001\022 \n\034CONNECTION_K" +
+      "IND_GITHUB_TOKEN\020\002\022\037\n\033CONNECTION_KIND_GI" +
+      "THUB_USER\020\003*m\n\020ConnectionStatus\022!\n\035CONNE" +
+      "CTION_STATUS_UNSPECIFIED\020\000\022\030\n\024CONNECTION" +
+      "_STATUS_OK\020\001\022\034\n\030CONNECTION_STATUS_FAILED" +
+      "\020\0022\321\003\n\021ConnectionService\022W\n\020CreateConnec" +
+      "tion\022\'.agni.v1.webapi.CreateConnectionRe" +
+      "quest\032\032.agni.v1.webapi.Connection\022Q\n\rGet" +
+      "Connection\022$.agni.v1.webapi.GetConnectio" +
+      "nRequest\032\032.agni.v1.webapi.Connection\022b\n\017" +
+      "ListConnections\022&.agni.v1.webapi.ListCon" +
+      "nectionsRequest\032\'.agni.v1.webapi.ListCon" +
+      "nectionsResponse\022S\n\020DeleteConnection\022\'.a" +
+      "gni.v1.webapi.DeleteConnectionRequest\032\026." +
+      "google.protobuf.Empty\022W\n\020RotateConnectio" +
+      "n\022\'.agni.v1.webapi.RotateConnectionReque" +
+      "st\032\032.agni.v1.webapi.ConnectionB\273\001\n\037io.gi" +
+      "thub.panyam.agni.v1.webapiB\020ConnectionsP" +
+      "rotoP\001Z,github.com/panyam/agni/gen/go/ag" +
+      "ni/v1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Ag" +
+      "ni\\V1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetadat" +
+      "a\352\002\020Agni::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -127,33 +138,39 @@ public final class ConnectionsProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_webapi_Connection_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_Connection_descriptor,
-        new java.lang.String[] { "Name", "Kind", "DisplayName", "BaseUrl", "AppId", "InstallationId", "KeySource", "TokenSource", "Status", "LastError", "CreateTime", "LastUseTime", "Scope", "Owner", });
+        new java.lang.String[] { "Name", "Kind", "DisplayName", "BaseUrl", "AppId", "InstallationId", "KeySource", "TokenSource", "Status", "LastError", "CreateTime", "LastUseTime", "Scope", "Owner", "Sealed", });
     internal_static_agni_v1_webapi_CreateConnectionRequest_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_agni_v1_webapi_CreateConnectionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_CreateConnectionRequest_descriptor,
-        new java.lang.String[] { "ConnectionId", "Connection", "UserToken", });
-    internal_static_agni_v1_webapi_GetConnectionRequest_descriptor =
+        new java.lang.String[] { "ConnectionId", "Connection", "UserToken", "ServerSecret", });
+    internal_static_agni_v1_webapi_RotateConnectionRequest_descriptor =
       getDescriptor().getMessageType(2);
+    internal_static_agni_v1_webapi_RotateConnectionRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_RotateConnectionRequest_descriptor,
+        new java.lang.String[] { "Name", "ServerSecret", });
+    internal_static_agni_v1_webapi_GetConnectionRequest_descriptor =
+      getDescriptor().getMessageType(3);
     internal_static_agni_v1_webapi_GetConnectionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_GetConnectionRequest_descriptor,
         new java.lang.String[] { "Name", });
     internal_static_agni_v1_webapi_ListConnectionsRequest_descriptor =
-      getDescriptor().getMessageType(3);
+      getDescriptor().getMessageType(4);
     internal_static_agni_v1_webapi_ListConnectionsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListConnectionsRequest_descriptor,
         new java.lang.String[] { });
     internal_static_agni_v1_webapi_ListConnectionsResponse_descriptor =
-      getDescriptor().getMessageType(4);
+      getDescriptor().getMessageType(5);
     internal_static_agni_v1_webapi_ListConnectionsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListConnectionsResponse_descriptor,
         new java.lang.String[] { "Connections", });
     internal_static_agni_v1_webapi_DeleteConnectionRequest_descriptor =
-      getDescriptor().getMessageType(5);
+      getDescriptor().getMessageType(6);
     internal_static_agni_v1_webapi_DeleteConnectionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_DeleteConnectionRequest_descriptor,

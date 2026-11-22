@@ -34,7 +34,15 @@ With --mine the connection is the caller's own. The CLI reads the token from the
 machine and sends it once, and the server seals it under --connections-key. A design linked from a
 private repo opens only for a caller whose own connection can read the repo (agni issue 1728).
 
-  AGNI_TOKEN=... agni connections add my-github --mine --github-token env:GITHUB_TOKEN --remote https://agni.example`,
+  AGNI_TOKEN=... agni connections add my-github --mine --github-token env:GITHUB_TOKEN --remote https://agni.example
+
+With --seal a server connection keeps its secret sealed too, for a server whose environment and
+files this machine can't reach, such as one in a container (agni issue 1802). The CLI reads the token
+or the App's key on this machine and sends it once. agni connections rotate replaces it, while mounts
+keep reading through the connection.
+
+  agni connections add hw --seal --github-token env:HW_TOKEN --remote https://agni.example
+  agni connections rotate hw --github-token env:HW_TOKEN_NEXT --remote https://agni.example`,
 	}
 	cmd.PersistentFlags().StringVar(&remoteURL, "remote", "", "the agni serve whose connections these are, such as http://localhost:8080 (required)")
 	client := func(cmd *cobra.Command) (webapiconnect.ConnectionServiceClient, error) {
@@ -70,7 +78,7 @@ private repo opens only for a caller whose own connection can read the repo (agn
 
 	var token, app, key, title, baseURL string
 	var installation int64
-	var mine bool
+	var mine, seal bool
 	add := &cobra.Command{
 		Use:   "add <id>",
 		Short: "Keep a connection: a token with --github-token, or an App installation with --github-app",
@@ -83,6 +91,8 @@ private repo opens only for a caller whose own connection can read the repo (agn
 				return fmt.Errorf("--mine keeps your own GitHub token; name where it is with --github-token env:NAME or file:/abs/path")
 			case mine && app != "":
 				return fmt.Errorf("a GitHub App installation signs in as the server, so it can't be --mine")
+			case mine && seal:
+				return fmt.Errorf("--mine already seals your token; --seal is for a server connection")
 			case mine:
 				ref, err := outbound.ParseSecretRef(token)
 				if err != nil {
@@ -95,8 +105,20 @@ private repo opens only for a caller whose own connection can read the repo (agn
 				conn.Kind, conn.Scope, req.UserToken = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER, webapi.ConnectionScope_CONNECTION_SCOPE_PERSON, strings.TrimSpace(secret)
 			case token != "" && app != "":
 				return fmt.Errorf("--github-token and --github-app make different kinds of connection; pass one")
+			case token != "" && seal:
+				secret, err := readSecret("--github-token", token)
+				if err != nil {
+					return err
+				}
+				conn.Kind, req.ServerSecret = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN, strings.TrimSpace(secret)
 			case token != "":
 				conn.Kind, conn.TokenSource = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN, token
+			case app != "" && seal:
+				secret, err := readSecret("--key", key)
+				if err != nil {
+					return err
+				}
+				conn.Kind, conn.AppId, conn.InstallationId, req.ServerSecret = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP, app, installation, secret
 			case app != "":
 				conn.Kind, conn.AppId, conn.InstallationId, conn.KeySource = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP, app, installation, key
 			default:
@@ -116,6 +138,7 @@ private repo opens only for a caller whose own connection can read the repo (agn
 	}
 	add.Flags().StringVar(&token, "github-token", "", "where a GitHub token is, env:NAME or file:/abs/path; the server reads it, or with --mine this command does")
 	add.Flags().BoolVar(&mine, "mine", false, "keep the connection as your own: the server seals your token and checks it before it shows you a design linked from a private repo")
+	add.Flags().BoolVar(&seal, "seal", false, "keep a server connection's secret sealed: this command reads the token or the App's --key, and the server seals it under --connections-key rather than reading it from its own environment or files")
 	add.Flags().StringVar(&app, "github-app", "", "a GitHub App's id, for an installation of it")
 	add.Flags().Int64Var(&installation, "installation", 0, "the GitHub App installation's id, with --github-app")
 	add.Flags().StringVar(&key, "key", "", "where the GitHub App's private key is, env:NAME or file:/abs/path, with --github-app")
@@ -139,18 +162,78 @@ private repo opens only for a caller whose own connection can read the repo (agn
 		},
 	}
 
-	cmd.AddCommand(ls, add, rm)
+	var nextToken, nextKey string
+	rotate := &cobra.Command{
+		Use:   "rotate <id>",
+		Short: "Replace a sealed server connection's token, or its App's key, while mounts read through it",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var secret string
+			var err error
+			switch {
+			case (nextToken == "") == (nextKey == ""):
+				return fmt.Errorf("name the new secret: --github-token env:NAME for a token, or --key file:/path for an App's key")
+			case nextToken != "":
+				if secret, err = readSecret("--github-token", nextToken); err != nil {
+					return err
+				}
+				secret = strings.TrimSpace(secret)
+			default:
+				if secret, err = readSecret("--key", nextKey); err != nil {
+					return err
+				}
+			}
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			out, err := unary(cmd.Context(), c.RotateConnection, &webapi.RotateConnectionRequest{
+				Name: service.ConnectionName(service.ConnectionID(args[0])), ServerSecret: secret,
+			})
+			if err != nil {
+				return err
+			}
+			printConnection(cmd.OutOrStdout(), out)
+			return nil
+		},
+	}
+	rotate.Flags().StringVar(&nextToken, "github-token", "", "where the new GitHub token is on this machine, env:NAME or file:/abs/path")
+	rotate.Flags().StringVar(&nextKey, "key", "", "where the GitHub App's new private key is on this machine, env:NAME or file:/abs/path")
+
+	cmd.AddCommand(ls, add, rm, rotate)
 	return cmd
+}
+
+// readSecret reads the secret ref names on this machine, for a connection the server seals.
+func readSecret(flag, ref string) (string, error) {
+	if ref == "" {
+		return "", fmt.Errorf("%s: name where the secret is, env:NAME or file:/abs/path", flag)
+	}
+	r, err := outbound.ParseSecretRef(ref)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", flag, err)
+	}
+	secret, err := r.Resolve()
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", flag, err)
+	}
+	if strings.TrimSpace(secret) == "" {
+		return "", fmt.Errorf("%s %s is empty", flag, ref)
+	}
+	return secret, nil
 }
 
 // printConnection writes one connection as a tab-separated line: its id, its kind, where its secret
 // is, and its status. A person's connection says whose it is in place of where its secret is.
 func printConnection(w io.Writer, c *webapi.Connection) {
 	kind := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(c.GetKind().String(), "CONNECTION_KIND_"), "_", "-"))
-	secret := c.GetTokenSource()
+	secret, keySource := c.GetTokenSource(), c.GetKeySource()
+	if c.GetSealed() {
+		secret, keySource = "sealed", "sealed"
+	}
 	switch {
 	case c.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP:
-		secret = fmt.Sprintf("app %s installation %d key %s", c.GetAppId(), c.GetInstallationId(), c.GetKeySource())
+		secret = fmt.Sprintf("app %s installation %d key %s", c.GetAppId(), c.GetInstallationId(), keySource)
 	case c.GetScope() == webapi.ConnectionScope_CONNECTION_SCOPE_PERSON:
 		secret = "sealed, for " + c.GetOwner()
 	}

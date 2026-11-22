@@ -80,4 +80,34 @@ public interface CreateConnectionRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getUserTokenBytes();
+
+  /**
+   * <pre>
+   * server_secret is a server connection's secret itself: the token for
+   * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
+   * issue 1802). The server seals it under --connections-key and never sends it back, and the
+   * connection's token_source or key_source stays empty. It suits a server in a container, whose
+   * environment and files the caller can't reach. A server started without --connections-key
+   * answers FAILED_PRECONDITION.
+   * </pre>
+   *
+   * <code>string server_secret = 4 [json_name = "serverSecret"];</code>
+   * @return The serverSecret.
+   */
+  java.lang.String getServerSecret();
+  /**
+   * <pre>
+   * server_secret is a server connection's secret itself: the token for
+   * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
+   * issue 1802). The server seals it under --connections-key and never sends it back, and the
+   * connection's token_source or key_source stays empty. It suits a server in a container, whose
+   * environment and files the caller can't reach. A server started without --connections-key
+   * answers FAILED_PRECONDITION.
+   * </pre>
+   *
+   * <code>string server_secret = 4 [json_name = "serverSecret"];</code>
+   * @return The bytes for serverSecret.
+   */
+  com.google.protobuf.ByteString
+      getServerSecretBytes();
 }
