@@ -28,6 +28,7 @@ import (
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
 	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/oneauth/core"
 	skhttp "github.com/panyam/servicekit/http"
 )
 
@@ -37,6 +38,7 @@ import (
 func serveCmd() *cobra.Command {
 	var addr, webDir, pdf2doc, viewerURL, mountRoot, corpusDir, storeURL, uploadsURL string
 	var auth, tlsCert, tlsKey string
+	var trustedProxy []string
 	var access tableAccess
 	var specs []string
 	c := &cobra.Command{
@@ -60,7 +62,11 @@ func serveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := authgate.CheckFlags(auth, storeURL, tlsCert, tlsKey, addr); err != nil {
+			proxies, err := authgate.ParseProxies(trustedProxy)
+			if err != nil {
+				return err
+			}
+			if err := authgate.CheckFlags(auth, storeURL, tlsCert, tlsKey, addr, proxies); err != nil {
 				return err
 			}
 			var tokens authgate.Keys
@@ -106,7 +112,7 @@ func serveCmd() *cobra.Command {
 			} else {
 				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at %s://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, scheme, displayAddr(addr), len(table.List()))
 			}
-			return listen(&http.Server{Addr: addr, Handler: guard(mux, tokens, tlsCert != ""), ReadHeaderTimeout: 10 * time.Second}, tlsCert, tlsKey)
+			return listen(&http.Server{Addr: addr, Handler: guard(mux, tokens, proxies), ReadHeaderTimeout: 10 * time.Second}, tlsCert, tlsKey)
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8090", "address to listen on")
@@ -117,12 +123,13 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&corpusDir, "corpus", "", "the corpus store: published PartSpecs with their corpus.index.json, served over PartSpecService for `agni serve --params-url`, and the workbench's drafts under drafts/. It is indexed at start when the index is missing or stale. Empty serves neither, and the workbench cannot save")
 	c.Flags().StringVar(&storeURL, "store", "", "agni serve's --store, as a URL such as file:///srv/agni/meta, sqlite:///srv/agni.db, postgres://agni@db/agni or datastore://project?namespace=agni; with --uploads, the workbench also serves the mounts agni serve made at runtime, such as a GitHub snapshot, and sees a new one within a second. It only reads them")
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "agni serve's --uploads, as a URL such as file:///srv/agni/files, where the runtime mounts' files are. Needs --store")
-	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` keeps in --store, the same ones agni serve accepts, and refuses a call without one (agni issue 1765). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost")
+	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` keeps in --store, the same ones agni serve accepts, and refuses a call without one (agni issue 1765). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost or --trusted-proxy names the proxy that ends TLS")
 	c.Flags().StringVar(&access.connectionsKey, "connections-key", "", "agni serve's --connections-key, as env:NAME or file:/abs/path (agni issue 1778). With --auth, a caller sees a private mount when their own connection in --store reads its repo. agnids reads people's tokens and never refreshes or writes one, so a signed-in token that has expired reads as no until agni serve refreshes it. Without it, --auth hides every private mount. Needs --auth, --store and --uploads")
 	c.Flags().StringVar(&access.githubAPI, "github-api", "", "the GitHub REST API a caller's access is checked through; a test or a GitHub Enterprise server names its own")
 	_ = c.Flags().MarkHidden("github-api")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
+	c.Flags().StringSliceVar(&trustedProxy, "trusted-proxy", nil, "the proxy that ends TLS in front of agnids, as an address or a CIDR range such as 10.0.0.0/8, comma-separated or repeated, as agni serve takes it (agni issue 1810). With it, --auth serves plain HTTP on any address, and a request from one of these that says X-Forwarded-Proto: https gets Secure cookies")
 	c.Flags().StringVar(&pdf2doc, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 datasheet/tools/pdf2doc/pdf2doc.py\"; empty disables the workbench's Extract (first pass) action")
 	return c
 }
@@ -359,12 +366,13 @@ func (p *DatasheetsPage) Load(r *http.Request, w http.ResponseWriter, app *goal.
 }
 
 // guard puts the token check in front of h, checking tokens against tokens (agni issue 1765). Nil
-// tokens, for a server without --auth, checks nothing.
-func guard(h http.Handler, tokens authgate.Keys, secure bool) http.Handler {
+// tokens, for a server without --auth, checks nothing. proxies are the proxies that end TLS in front
+// of agnids (agni issue 1810).
+func guard(h http.Handler, tokens authgate.Keys, proxies core.TrustedProxies) http.Handler {
 	if tokens == nil {
 		return h
 	}
-	return authgate.New(tokens, secure).Wrap(h)
+	return authgate.New(tokens, proxies).Wrap(h)
 }
 
 // listen serves srv until a signal, over TLS when certFile names a certificate.

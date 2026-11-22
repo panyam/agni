@@ -48,16 +48,20 @@ func Store(storeDir string) Keys {
 // static assets, the sign-in pages and GitHub's push webhook. It puts the token's subject in the request's context as a
 // service.Caller.
 type Gate struct {
-	store  core.APIKeyStore
-	mw     *apiauth.APIMiddleware
-	secure bool // the server speaks TLS, so the session cookie is marked Secure
+	store core.APIKeyStore
+	mw    *apiauth.APIMiddleware
+	// proxies are the proxies in front of the server that end TLS for it (agni issue 1810). A request
+	// they pass on as HTTPS gets Secure cookies, as one the server took over TLS itself does.
+	proxies core.TrustedProxies
 	// github signs people in through a GitHub App, and is set by WithGitHub (agni issue 1772).
 	github *githubSignIns
 }
 
-// New checks tokens against store. secure says the server speaks TLS.
-func New(store core.APIKeyStore, secure bool) *Gate {
-	g := &Gate{store: store, secure: secure}
+// New checks tokens against store. proxies are the proxies that end TLS in front of the server, as
+// ParseProxies reads them from --trusted-proxy. Empty trusts no forwarded header, so a cookie is
+// Secure only on a request the server took over TLS itself.
+func New(store core.APIKeyStore, proxies core.TrustedProxies) *Gate {
+	g := &Gate{store: store, proxies: proxies}
 	g.mw = &apiauth.APIMiddleware{APIKeyStore: store, APIKeyCache: &apiauth.APIKeyCacheConfig{TTL: CacheTTL}}
 	rpc := connectauth.OnAuthError(g.mw)
 	g.mw.OnAuthError = func(w http.ResponseWriter, r *http.Request, err error) {
@@ -148,10 +152,11 @@ func (g *Gate) signIn(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		token := strings.TrimSpace(r.PostFormValue("token"))
 		if _, err := g.store.ValidateAPIKey(r.Context(), &core.ValidateAPIKeyRequest{FullKey: token}); err == nil {
-			// Secure is set whenever the server speaks TLS. Without TLS the server listens on localhost
-			// only (CheckFlags), where a Secure cookie would never come back.
-			http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteStrictMode}) // #nosec G124 -- Secure follows TLS, as above
-			http.Redirect(w, r, next, http.StatusSeeOther)                                                                                                     // #nosec G710 -- next came through safeNext, so it is a path on this server
+			// Secure is set whenever the browser reached the server over HTTPS, directly or through a
+			// trusted proxy. Otherwise the server listens on localhost only (CheckFlags), where a Secure
+			// cookie would never come back.
+			http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: g.https(r), SameSite: http.SameSiteStrictMode}) // #nosec G124 -- Secure follows HTTPS, as above
+			http.Redirect(w, r, next, http.StatusSeeOther)                                                                                                       // #nosec G710 -- next came through safeNext, so it is a path on this server
 			return
 		}
 		page.Error = "That token isn't one this server knows, or it was revoked."
@@ -173,9 +178,14 @@ func (g *Gate) signOut(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteStrictMode}) // #nosec G124 -- Secure follows TLS, as in signIn
+	http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: g.https(r), SameSite: http.SameSiteStrictMode}) // #nosec G124 -- Secure follows HTTPS, as in signIn
 	http.Redirect(w, r, "/signin", http.StatusSeeOther)
 }
+
+// https says the browser reached the server over HTTPS: the server took the request over TLS, or a
+// trusted proxy took it over TLS and says so in X-Forwarded-Proto or Forwarded. A forwarded header
+// from any other peer is ignored, so a client can't claim HTTPS for itself.
+func (g *Gate) https(r *http.Request) bool { return g.proxies.IsHTTPS(r) }
 
 // safeNext is where a sign-in goes on to: a path on this server, or "/". A full URL or a
 // scheme-relative "//host" would send a person off the server.
@@ -186,8 +196,19 @@ func safeNext(next string) string {
 	return next
 }
 
-// CheckFlags refuses a combination of --auth and the TLS flags that would serve tokens badly.
-func CheckFlags(auth, store, tlsCert, tlsKey, addr string) error {
+// ParseProxies reads --trusted-proxy, each an address or a CIDR range such as 10.0.0.0/8.
+func ParseProxies(entries []string) (core.TrustedProxies, error) {
+	out, err := core.ParseTrustedProxies(entries)
+	if err != nil {
+		return nil, fmt.Errorf("--trusted-proxy: %w", err)
+	}
+	return out, nil
+}
+
+// CheckFlags refuses a combination of --auth and the TLS flags that would serve tokens badly. A
+// server with trusted proxies may serve plain HTTP on any address, since the proxies end TLS in front
+// of it (agni issue 1810).
+func CheckFlags(auth, store, tlsCert, tlsKey, addr string, proxies core.TrustedProxies) error {
 	if (tlsCert == "") != (tlsKey == "") {
 		return fmt.Errorf("--tls-cert and --tls-key go together; pass both or neither")
 	}
@@ -201,8 +222,8 @@ func CheckFlags(auth, store, tlsCert, tlsKey, addr string) error {
 	if store == "" {
 		return fmt.Errorf("--auth %s needs --store, where the tokens agni token create makes are kept", Tokens)
 	}
-	if tlsCert == "" && !loopbackAddr(addr) {
-		return fmt.Errorf("--auth %s on %s would send tokens over the network in the clear; pass --tls-cert and --tls-key, or listen on localhost only with --addr localhost:8080", Tokens, addr)
+	if tlsCert == "" && len(proxies) == 0 && !loopbackAddr(addr) {
+		return fmt.Errorf("--auth %s on %s would send tokens over the network in the clear; pass --tls-cert and --tls-key, name the proxy that ends TLS in front of the server with --trusted-proxy, or listen on localhost only with --addr localhost:8080", Tokens, addr)
 	}
 	return nil
 }

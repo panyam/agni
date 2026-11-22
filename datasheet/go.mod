@@ -5,8 +5,8 @@ go 1.27.4
 require (
 	connectrpc.com/connect v1.21.1
 	github.com/panyam/agni v0.0.0
-	github.com/panyam/goapplib v0.7.26
-	github.com/panyam/goapplib/storage v0.7.26
+	github.com/panyam/goapplib v0.7.27
+	github.com/panyam/goapplib/storage v0.7.27
 	github.com/panyam/oneauth v0.3.16
 	github.com/panyam/servicekit v0.2.4
 	github.com/spf13/cobra v1.10.2
@@ -49,8 +49,8 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/klauspost/compress v1.20.2 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/panyam/goapplib/storage/backends/gae v0.7.26 // indirect
-	github.com/panyam/goapplib/storage/backends/gorm v0.7.26 // indirect
+	github.com/panyam/goapplib/storage/backends/gae v0.7.27 // indirect
+	github.com/panyam/goapplib/storage/backends/gorm v0.7.27 // indirect
 	github.com/panyam/gocurrent v0.1.3 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect

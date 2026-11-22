@@ -73,8 +73,6 @@ func sha(s string) string {
 func TestALinkFromGitHubReadsAGitLFSFileAsItsObject(t *testing.T) {
 	gh := githubtest.New(t)
 	repo := gh.AddRepo("acme", "lfs", false, map[string]string{"hw/bb.kicad_pro": "{}", ".gitattributes": "*.kicad_sch filter=lfs diff=lfs merge=lfs -text\n"})
-	// An LFS object is larger than its pointer in practice. goapplib#218 tracks the case of one
-	// smaller than its pointer.
 	schematic := strings.Repeat("(kicad_sch (version 20231120) (generator eeschema))\n", 40)
 	repo.CommitLFS("main", "hw/bb.kicad_sch", schematic)
 	table := lfsTable(t, gh, t.TempDir())
@@ -84,6 +82,28 @@ func TestALinkFromGitHubReadsAGitLFSFileAsItsObject(t *testing.T) {
 		t.Fatalf("read hw at main: %v", err)
 	}
 	pointer, _ := githubtest.LFSPointer(schematic)
+	if got["hw/bb.kicad_sch"] != sha(schematic) {
+		t.Errorf("hw/bb.kicad_sch read as %s; want the object's hash and size %s, not the pointer's %s", got["hw/bb.kicad_sch"], sha(schematic), sha(pointer))
+	}
+}
+
+// A repo with no .gitattributes still has its LFS files found, and an object smaller than its
+// pointer is read whole, so its size matches the hash (goapplib v0.7.27, agni issue 1820).
+func TestALinkReadsASmallLFSObjectFromARepoWithNoGitattributes(t *testing.T) {
+	gh := githubtest.New(t)
+	repo := gh.AddRepo("acme", "lfs", false, map[string]string{"hw/bb.kicad_pro": "{}"})
+	schematic := "(kicad_sch)\n"
+	pointer, _ := githubtest.LFSPointer(schematic)
+	if len(schematic) >= len(pointer) {
+		t.Fatalf("the object is %d bytes and its pointer %d; want the object smaller", len(schematic), len(pointer))
+	}
+	repo.CommitLFS("main", "hw/bb.kicad_sch", schematic)
+	table := lfsTable(t, gh, t.TempDir())
+
+	got, err := fetchAll(t, table, "gh", "main", "hw")
+	if err != nil {
+		t.Fatalf("read hw at main: %v", err)
+	}
 	if got["hw/bb.kicad_sch"] != sha(schematic) {
 		t.Errorf("hw/bb.kicad_sch read as %s; want the object's hash and size %s, not the pointer's %s", got["hw/bb.kicad_sch"], sha(schematic), sha(pointer))
 	}

@@ -743,7 +743,8 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files \
   token it checked for a minute, so a revoked token stops working within a minute.
 
 `--auth tokens` needs `--store`. Without `--tls-cert` and `--tls-key` it starts only on a localhost
-address, with a warning. People can also sign in with GitHub, as
+address, with a warning, or behind a proxy that ends TLS, as
+[Behind a proxy that ends TLS](#behind-a-proxy-that-ends-tls) says. People can also sign in with GitHub, as
 [Signing in with GitHub](#signing-in-with-github) says. Per-person viewer tabs are agni issue 1176.
 
 `agnids` takes the same three flags and checks the same tokens, read from the `--store` it shares
@@ -762,6 +763,33 @@ for every `--remote` call and for `agni login`, and trusts the system's roots be
 export AGNI_CA_FILE=/etc/agni/team-ca.pem
 agni login --remote https://agni.example.com
 ```
+
+### Behind a proxy that ends TLS
+
+Say the team runs agni on Kubernetes. The ingress holds the certificate, takes each browser's HTTPS,
+and passes the request on to the pod as plain HTTP. `--auth tokens` refuses to start like that on its
+own, since a token would cross the network in the clear. `--trusted-proxy` names the proxy instead
+(agni issue 1810):
+
+```bash
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files \
+  --auth tokens --addr :8080 --trusted-proxy 10.0.0.0/8 \
+  --public-url https://agni.example.com
+```
+
+- The server serves plain HTTP on any address. Each value is an address or a CIDR range, and the
+  flag takes several, comma-separated or repeated.
+- A request from a trusted proxy that says `X-Forwarded-Proto: https`, or `Forwarded: proto=https`,
+  counts as HTTPS. Its session cookie is marked Secure, so the browser sends it back over HTTPS only.
+- The server ignores those headers from any other peer, so a client that reaches the pod directly
+  can't claim HTTPS. Its request is served as plain HTTP, and the network policy keeps such clients
+  off the port.
+- The proxy must set `X-Forwarded-Proto` itself rather than pass on what the client sent. Most
+  ingress controllers do this already.
+- Signing in with GitHub needs `--public-url`, the URL a browser reaches the proxy at. GitHub sends
+  the browser back there, and the server refuses to start without it.
+
+`agnids` takes the same flag.
 
 ### Who can open a design linked from a private repo
 

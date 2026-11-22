@@ -21,6 +21,7 @@ import (
 	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/wasmengine"
 	"github.com/panyam/goapplib/storage/mounts"
+	"github.com/panyam/oneauth/core"
 	"golang.org/x/oauth2"
 
 	"connectrpc.com/connect"
@@ -89,7 +90,7 @@ func serveCmd() *cobra.Command {
 	var auth, tlsCert, tlsKey, connectionsKey string
 	var webhookSecretRef string
 	var githubClientID, githubSecretRef, publicURL string
-	var githubAllow []string
+	var githubAllow, trustedProxy []string
 	var pollEvery time.Duration
 	c := &cobra.Command{
 		Use:   "serve",
@@ -116,7 +117,11 @@ func serveCmd() *cobra.Command {
 				return err
 			}
 			defer store.Close()
-			if err := authgate.CheckFlags(auth, storeURL, tlsCert, tlsKey, addr); err != nil {
+			proxies, err := authgate.ParseProxies(trustedProxy)
+			if err != nil {
+				return err
+			}
+			if err := authgate.CheckFlags(auth, storeURL, tlsCert, tlsKey, addr, proxies); err != nil {
 				return err
 			}
 			if connectionsKey != "" && (store == nil || uploadsDir == "") {
@@ -145,6 +150,9 @@ func serveCmd() *cobra.Command {
 				if len(githubAllow) == 0 {
 					return fmt.Errorf("signing in with GitHub needs --github-allow, such as org:acme, or anyone with a GitHub account could sign in")
 				}
+				if len(proxies) > 0 && publicURL == "" {
+					return fmt.Errorf("signing in with GitHub behind --trusted-proxy needs --public-url, the URL a browser reaches the proxy at, since GitHub sends the browser back there and not to the address the server listens on")
+				}
 				secret, err := secretFlag("--github-client-secret", githubSecretRef)
 				if err != nil {
 					return err
@@ -152,7 +160,7 @@ func serveCmd() *cobra.Command {
 				signIn = &githubSignIn{clientID: githubClientID, clientSecret: string(secret), allow: githubAllow}
 			}
 			return runViewer(cmd, viewerOpts{
-				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, connectionsKey: connectionsKey,
+				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey,
 				webhookSecret: hookSecret, poll: pollEvery, githubSignIn: signIn, publicURL: publicURL,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
@@ -204,7 +212,7 @@ func serveCmd() *cobra.Command {
 	_ = c.Flags().MarkHidden("github-api")
 	c.Flags().StringVar(&githubRaw, "github-raw", "", "the host a linked github:// artifact's files are downloaded from; a test names its own")
 	_ = c.Flags().MarkHidden("github-raw")
-	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` makes in --store, and refuses a call without one (agni issue 1627). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost. Empty asks nobody")
+	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` makes in --store, and refuses a call without one (agni issue 1627). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost or --trusted-proxy names the proxy that ends TLS. Empty asks nobody")
 	c.Flags().StringVar(&connectionsKey, "connections-key", "", "where the key that seals people's own GitHub tokens is, as env:NAME or file:/abs/path holding 64 hex characters (agni issue 1728). With it, a caller keeps their own connection with agni connections add --mine, and a design linked from a private repo opens for them when their token can read the repo. Needs --store and --uploads")
 	c.Flags().StringVar(&webhookSecretRef, "github-webhook-secret", "", "where the secret GitHub signs push webhooks with is, as env:NAME or file:/abs/path (agni issue 1726). With it, the server takes deliveries at "+githubHookPath+", and a push to a branch a linked design follows syncs the design, or marks it when the design is set to mark. Give every repo's webhook this one secret. It proves a delivery came from GitHub and grants no access to any repo. Needs --store and --uploads")
 	c.Flags().StringVar(&githubClientID, "github-client-id", "", "the client id of the GitHub App people sign in through (agni issue 1772). With --github-client-secret and --github-allow, /signin offers Sign in with GitHub and agni login signs in from a terminal. Either one keeps the person's GitHub token as their own connection. Needs --auth tokens and --connections-key")
@@ -214,6 +222,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().DurationVar(&pollEvery, "poll", 0, "ask every source a linked design follows whether it moved, this often, such as 5m (agni issue 1726). It resolves each branch or folder once per pass, one request to GitHub for a repo, and syncs or marks the designs behind it. 0 polls nothing. Needs --store and --uploads")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with, HTTP/2 included, so gRPC clients reach the server over TLS; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
+	c.Flags().StringSliceVar(&trustedProxy, "trusted-proxy", nil, "the proxy that ends TLS in front of the server, as an address or a CIDR range such as 10.0.0.0/8, comma-separated or repeated (agni issue 1810). With it, --auth serves plain HTTP on any address, and a request from one of these that says X-Forwarded-Proto: https gets Secure cookies. A forwarded header from any other peer is ignored. The proxy must set X-Forwarded-Proto itself rather than pass on the client's")
 	return c
 }
 
@@ -304,6 +313,9 @@ type viewerOpts struct {
 	// tlsCert and tlsKey are --tls-cert and --tls-key, the files the server speaks HTTPS with. Both
 	// empty serves cleartext.
 	tlsCert, tlsKey string
+	// trustedProxies are --trusted-proxy, the proxies that end TLS in front of the server (agni issue
+	// 1810).
+	trustedProxies core.TrustedProxies
 	// connectionsKey is --connections-key, where the key sealing people's own tokens is.
 	connectionsKey string
 	// githubSignIn is the GitHub App people sign in through, nil for none (agni issue 1772).
@@ -317,6 +329,15 @@ type viewerOpts struct {
 	poll time.Duration
 	// follow, when non-nil, receives the server's follower, for a test to wait on its moves.
 	follow func(*follower)
+}
+
+// proxyList names the trusted proxies for the startup note.
+func proxyList(p core.TrustedProxies) string {
+	out := make([]string, len(p))
+	for i, x := range p {
+		out[i] = x.String()
+	}
+	return strings.Join(out, ",")
 }
 
 const (
@@ -687,7 +708,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		if err != nil {
 			return err
 		}
-		gate := authgate.New(tokens, o.tlsCert != "")
+		gate := authgate.New(tokens, o.trustedProxies)
 		go pruneTokens(life, tokens, cmd.ErrOrStderr())
 		if gs := o.githubSignIn; gs != nil {
 			pub := o.publicURL
@@ -731,7 +752,11 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 	}
 	if o.auth != "" && o.tlsCert == "" {
-		fmt.Fprintf(os.Stderr, "warning: --auth without --tls-cert sends tokens in the clear; this is safe on localhost only\n")
+		if len(o.trustedProxies) > 0 {
+			fmt.Fprintf(os.Stderr, "note: --auth serves plain HTTP, and --trusted-proxy %s ends TLS in front of it; keep anything else off this port\n", proxyList(o.trustedProxies))
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: --auth without --tls-cert sends tokens in the clear; this is safe on localhost only\n")
+		}
 	}
 	// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.
 	var listen []skhttp.GracefulOption

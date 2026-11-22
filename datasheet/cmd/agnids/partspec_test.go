@@ -163,7 +163,7 @@ func TestAnAgnidsWithAuthAsksForAToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(guard(newWorkbenchMux(nil, workbenchAccess{}, "", nil, "", dir, corpus), authgate.Store(storeDir), false))
+	srv := httptest.NewServer(guard(newWorkbenchMux(nil, workbenchAccess{}, "", nil, "", dir, corpus), authgate.Store(storeDir), nil))
 	defer srv.Close()
 	for _, bad := range []string{"", "oa_0_wrong"} {
 		if _, err := paramclient.New(srv.URL, bad).Generation(context.Background()); connect.CodeOf(err) != connect.CodeUnauthenticated {
