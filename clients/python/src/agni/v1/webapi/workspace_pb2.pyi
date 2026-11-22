@@ -1,3 +1,6 @@
+import datetime
+
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from agni.v1.webapi import project_pb2 as _project_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
@@ -14,6 +17,9 @@ class MountKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     MOUNT_KIND_FILE: _ClassVar[MountKind]
     MOUNT_KIND_UPLOADS: _ClassVar[MountKind]
     MOUNT_KIND_GITHUB: _ClassVar[MountKind]
+    MOUNT_KIND_S3: _ClassVar[MountKind]
+    MOUNT_KIND_GCS: _ClassVar[MountKind]
+    MOUNT_KIND_MSGRAPH: _ClassVar[MountKind]
 
 class FileKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -24,6 +30,9 @@ MOUNT_KIND_UNSPECIFIED: MountKind
 MOUNT_KIND_FILE: MountKind
 MOUNT_KIND_UPLOADS: MountKind
 MOUNT_KIND_GITHUB: MountKind
+MOUNT_KIND_S3: MountKind
+MOUNT_KIND_GCS: MountKind
+MOUNT_KIND_MSGRAPH: MountKind
 FILE_KIND_UNSPECIFIED: FileKind
 FILE_KIND_DESIGN: FileKind
 FILE_KIND_DATASHEET: FileKind
@@ -85,20 +94,24 @@ class CreateMountWebhookRequest(_message.Message):
     def __init__(self, name: _Optional[str] = ..., url: _Optional[str] = ...) -> None: ...
 
 class MountWebhook(_message.Message):
-    __slots__ = ("mount", "source", "id", "url", "events", "created")
+    __slots__ = ("mount", "source", "id", "url", "events", "created", "subscription_id", "expire_time")
     MOUNT_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
     ID_FIELD_NUMBER: _ClassVar[int]
     URL_FIELD_NUMBER: _ClassVar[int]
     EVENTS_FIELD_NUMBER: _ClassVar[int]
     CREATED_FIELD_NUMBER: _ClassVar[int]
+    SUBSCRIPTION_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPIRE_TIME_FIELD_NUMBER: _ClassVar[int]
     mount: str
     source: str
     id: int
     url: str
     events: _containers.RepeatedScalarFieldContainer[str]
     created: bool
-    def __init__(self, mount: _Optional[str] = ..., source: _Optional[str] = ..., id: _Optional[int] = ..., url: _Optional[str] = ..., events: _Optional[_Iterable[str]] = ..., created: _Optional[bool] = ...) -> None: ...
+    subscription_id: str
+    expire_time: _timestamp_pb2.Timestamp
+    def __init__(self, mount: _Optional[str] = ..., source: _Optional[str] = ..., id: _Optional[int] = ..., url: _Optional[str] = ..., events: _Optional[_Iterable[str]] = ..., created: _Optional[bool] = ..., subscription_id: _Optional[str] = ..., expire_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class GetMountRequest(_message.Message):
     __slots__ = ("name",)

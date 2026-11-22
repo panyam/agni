@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/connections.proto.
  */
 export const file_agni_v1_webapi_connections: GenFile = /*@__PURE__*/
-  fileDesc("CiBhZ25pL3YxL3dlYmFwaS9jb25uZWN0aW9ucy5wcm90bxIOYWduaS52MS53ZWJhcGkivAMKCkNvbm5lY3Rpb24SDAoEbmFtZRgBIAEoCRIsCgRraW5kGAIgASgOMh4uYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbktpbmQSFAoMZGlzcGxheV9uYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEg4KBmFwcF9pZBgFIAEoCRIXCg9pbnN0YWxsYXRpb25faWQYBiABKAMSEgoKa2V5X3NvdXJjZRgHIAEoCRIUCgx0b2tlbl9zb3VyY2UYCCABKAkSMAoGc3RhdHVzGAkgASgOMiAuYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvblN0YXR1cxISCgpsYXN0X2Vycm9yGAogASgJEi8KC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCg1sYXN0X3VzZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgVzY29wZRgNIAEoDjIfLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb25TY29wZRINCgVvd25lchgOIAEoCRIOCgZzZWFsZWQYDyABKAgiiwEKF0NyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0EhUKDWNvbm5lY3Rpb25faWQYASABKAkSLgoKY29ubmVjdGlvbhgCIAEoCzIaLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb24SEgoKdXNlcl90b2tlbhgDIAEoCRIVCg1zZXJ2ZXJfc2VjcmV0GAQgASgJIj4KF1JvdGF0ZUNvbm5lY3Rpb25SZXF1ZXN0EgwKBG5hbWUYASABKAkSFQoNc2VydmVyX3NlY3JldBgCIAEoCSIkChRHZXRDb25uZWN0aW9uUmVxdWVzdBIMCgRuYW1lGAEgASgJIhgKFkxpc3RDb25uZWN0aW9uc1JlcXVlc3QiSgoXTGlzdENvbm5lY3Rpb25zUmVzcG9uc2USLwoLY29ubmVjdGlvbnMYASADKAsyGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uIicKF0RlbGV0ZUNvbm5lY3Rpb25SZXF1ZXN0EgwKBG5hbWUYASABKAkqbQoPQ29ubmVjdGlvblNjb3BlEiAKHENPTk5FQ1RJT05fU0NPUEVfVU5TUEVDSUZJRUQQABIbChdDT05ORUNUSU9OX1NDT1BFX1NFUlZFUhABEhsKF0NPTk5FQ1RJT05fU0NPUEVfUEVSU09OEAIqlAEKDkNvbm5lY3Rpb25LaW5kEh8KG0NPTk5FQ1RJT05fS0lORF9VTlNQRUNJRklFRBAAEh4KGkNPTk5FQ1RJT05fS0lORF9HSVRIVUJfQVBQEAESIAocQ09OTkVDVElPTl9LSU5EX0dJVEhVQl9UT0tFThACEh8KG0NPTk5FQ1RJT05fS0lORF9HSVRIVUJfVVNFUhADKm0KEENvbm5lY3Rpb25TdGF0dXMSIQodQ09OTkVDVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIYChRDT05ORUNUSU9OX1NUQVRVU19PSxABEhwKGENPTk5FQ1RJT05fU1RBVFVTX0ZBSUxFRBACMtEDChFDb25uZWN0aW9uU2VydmljZRJXChBDcmVhdGVDb25uZWN0aW9uEicuYWduaS52MS53ZWJhcGkuQ3JlYXRlQ29ubmVjdGlvblJlcXVlc3QaGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uElEKDUdldENvbm5lY3Rpb24SJC5hZ25pLnYxLndlYmFwaS5HZXRDb25uZWN0aW9uUmVxdWVzdBoaLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb24SYgoPTGlzdENvbm5lY3Rpb25zEiYuYWduaS52MS53ZWJhcGkuTGlzdENvbm5lY3Rpb25zUmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkxpc3RDb25uZWN0aW9uc1Jlc3BvbnNlElMKEERlbGV0ZUNvbm5lY3Rpb24SJy5hZ25pLnYxLndlYmFwaS5EZWxldGVDb25uZWN0aW9uUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJXChBSb3RhdGVDb25uZWN0aW9uEicuYWduaS52MS53ZWJhcGkuUm90YXRlQ29ubmVjdGlvblJlcXVlc3QaGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_google_protobuf_empty, file_google_protobuf_timestamp]);
+  fileDesc("CiBhZ25pL3YxL3dlYmFwaS9jb25uZWN0aW9ucy5wcm90bxIOYWduaS52MS53ZWJhcGki3wQKCkNvbm5lY3Rpb24SDAoEbmFtZRgBIAEoCRIsCgRraW5kGAIgASgOMh4uYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbktpbmQSFAoMZGlzcGxheV9uYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEg4KBmFwcF9pZBgFIAEoCRIXCg9pbnN0YWxsYXRpb25faWQYBiABKAMSEgoKa2V5X3NvdXJjZRgHIAEoCRIUCgx0b2tlbl9zb3VyY2UYCCABKAkSMAoGc3RhdHVzGAkgASgOMiAuYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvblN0YXR1cxISCgpsYXN0X2Vycm9yGAogASgJEi8KC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCg1sYXN0X3VzZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgVzY29wZRgNIAEoDjIfLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb25TY29wZRINCgVvd25lchgOIAEoCRIVCg1hY2Nlc3Nfa2V5X2lkGA8gASgJEhAKCHJvbGVfYXJuGBAgASgJEg4KBnJlZ2lvbhgRIAEoCRIRCgl0ZW5hbnRfaWQYEiABKAkSEQoJY2xpZW50X2lkGBMgASgJEi0KCmVudHJhX2F1dGgYFCABKA4yGS5hZ25pLnYxLndlYmFwaS5FbnRyYUF1dGgSEwoLY2VydF9zb3VyY2UYFSABKAkSDgoGc2VhbGVkGBYgASgIIosBChdDcmVhdGVDb25uZWN0aW9uUmVxdWVzdBIVCg1jb25uZWN0aW9uX2lkGAEgASgJEi4KCmNvbm5lY3Rpb24YAiABKAsyGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uEhIKCnVzZXJfdG9rZW4YAyABKAkSFQoNc2VydmVyX3NlY3JldBgEIAEoCSI+ChdSb3RhdGVDb25uZWN0aW9uUmVxdWVzdBIMCgRuYW1lGAEgASgJEhUKDXNlcnZlcl9zZWNyZXQYAiABKAkiJAoUR2V0Q29ubmVjdGlvblJlcXVlc3QSDAoEbmFtZRgBIAEoCSIYChZMaXN0Q29ubmVjdGlvbnNSZXF1ZXN0IkoKF0xpc3RDb25uZWN0aW9uc1Jlc3BvbnNlEi8KC2Nvbm5lY3Rpb25zGAEgAygLMhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbiInChdEZWxldGVDb25uZWN0aW9uUmVxdWVzdBIMCgRuYW1lGAEgASgJKp0BCglFbnRyYUF1dGgSGgoWRU5UUkFfQVVUSF9VTlNQRUNJRklFRBAAEhUKEUVOVFJBX0FVVEhfU0VDUkVUEAESGgoWRU5UUkFfQVVUSF9DRVJUSUZJQ0FURRACEh8KG0VOVFJBX0FVVEhfTUFOQUdFRF9JREVOVElUWRADEiAKHEVOVFJBX0FVVEhfV09SS0xPQURfSURFTlRJVFkQBCptCg9Db25uZWN0aW9uU2NvcGUSIAocQ09OTkVDVElPTl9TQ09QRV9VTlNQRUNJRklFRBAAEhsKF0NPTk5FQ1RJT05fU0NPUEVfU0VSVkVSEAESGwoXQ09OTkVDVElPTl9TQ09QRV9QRVJTT04QAirhAQoOQ29ubmVjdGlvbktpbmQSHwobQ09OTkVDVElPTl9LSU5EX1VOU1BFQ0lGSUVEEAASHgoaQ09OTkVDVElPTl9LSU5EX0dJVEhVQl9BUFAQARIgChxDT05ORUNUSU9OX0tJTkRfR0lUSFVCX1RPS0VOEAISHwobQ09OTkVDVElPTl9LSU5EX0dJVEhVQl9VU0VSEAMSFwoTQ09OTkVDVElPTl9LSU5EX0FXUxAEEhcKE0NPTk5FQ1RJT05fS0lORF9HQ1AQBRIZChVDT05ORUNUSU9OX0tJTkRfRU5UUkEQBiptChBDb25uZWN0aW9uU3RhdHVzEiEKHUNPTk5FQ1RJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASGAoUQ09OTkVDVElPTl9TVEFUVVNfT0sQARIcChhDT05ORUNUSU9OX1NUQVRVU19GQUlMRUQQAjLRAwoRQ29ubmVjdGlvblNlcnZpY2USVwoQQ3JlYXRlQ29ubmVjdGlvbhInLmFnbmkudjEud2ViYXBpLkNyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0GhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbhJRCg1HZXRDb25uZWN0aW9uEiQuYWduaS52MS53ZWJhcGkuR2V0Q29ubmVjdGlvblJlcXVlc3QaGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uEmIKD0xpc3RDb25uZWN0aW9ucxImLmFnbmkudjEud2ViYXBpLkxpc3RDb25uZWN0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0Q29ubmVjdGlvbnNSZXNwb25zZRJTChBEZWxldGVDb25uZWN0aW9uEicuYWduaS52MS53ZWJhcGkuRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSVwoQUm90YXRlQ29ubmVjdGlvbhInLmFnbmkudjEud2ViYXBpLlJvdGF0ZUNvbm5lY3Rpb25SZXF1ZXN0GhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbkIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_google_protobuf_empty, file_google_protobuf_timestamp]);
 
 /**
  * Connection is one sign-in the server reads a source through, named "connections/{connection}".
@@ -60,8 +60,11 @@ export type Connection = Message<"agni.v1.webapi.Connection"> & {
   installationId: bigint;
 
   /**
-   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-   * CONNECTION_KIND_GITHUB_APP.
+   * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+   * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+   * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+   * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+   * AWS, GCP and an Entra managed identity takes the host's own credentials.
    *
    * @generated from field: string key_source = 7;
    */
@@ -117,11 +120,63 @@ export type Connection = Message<"agni.v1.webapi.Connection"> & {
   owner: string;
 
   /**
+   * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+   * key_source names the secret access key. AWS doesn't treat it as a secret.
+   *
+   * @generated from field: string access_key_id = 15;
+   */
+  accessKeyId: string;
+
+  /**
+   * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+   * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+   *
+   * @generated from field: string role_arn = 16;
+   */
+  roleArn: string;
+
+  /**
+   * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+   *
+   * @generated from field: string region = 17;
+   */
+  region: string;
+
+  /**
+   * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+   * GUID or a domain, and its application id. For a managed identity, client_id picks a
+   * user-assigned identity and may be empty.
+   *
+   * @generated from field: string tenant_id = 18;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string client_id = 19;
+   */
+  clientId: string;
+
+  /**
+   * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+   *
+   * @generated from field: agni.v1.webapi.EntraAuth entra_auth = 20;
+   */
+  entraAuth: EntraAuth;
+
+  /**
+   * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+   * "file:/abs/path". Its private key is at key_source.
+   *
+   * @generated from field: string cert_source = 21;
+   */
+  certSource: string;
+
+  /**
    * sealed says a server connection keeps its secret sealed in --store under --connections-key,
    * as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
    * token_source or key_source is then empty. Output only.
    *
-   * @generated from field: bool sealed = 15;
+   * @generated from field: bool sealed = 22;
    */
   sealed: boolean;
 };
@@ -161,9 +216,11 @@ export type CreateConnectionRequest = Message<"agni.v1.webapi.CreateConnectionRe
   userToken: string;
 
   /**
-   * server_secret is a server connection's secret itself: the token for
-   * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-   * issue 1802). The server seals it under --connections-key and never sends it back, and the
+   * server_secret is a server connection's secret itself (agni issue 1802): the token for
+   * CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+   * secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+   * the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+   * holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
    * connection's token_source or key_source stays empty. It suits a server in a container, whose
    * environment and files the caller can't reach. A server started without --connections-key
    * answers FAILED_PRECONDITION.
@@ -275,6 +332,55 @@ export const DeleteConnectionRequestSchema: GenMessage<DeleteConnectionRequest> 
   messageDesc(file_agni_v1_webapi_connections, 6);
 
 /**
+ * EntraAuth says how a CONNECTION_KIND_ENTRA connection signs in.
+ *
+ * @generated from enum agni.v1.webapi.EntraAuth
+ */
+export enum EntraAuth {
+  /**
+   * @generated from enum value: ENTRA_AUTH_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * ENTRA_AUTH_SECRET sends the client secret at key_source.
+   *
+   * @generated from enum value: ENTRA_AUTH_SECRET = 1;
+   */
+  SECRET = 1,
+
+  /**
+   * ENTRA_AUTH_CERTIFICATE signs with the private key at key_source and names the certificate at
+   * cert_source.
+   *
+   * @generated from enum value: ENTRA_AUTH_CERTIFICATE = 2;
+   */
+  CERTIFICATE = 2,
+
+  /**
+   * ENTRA_AUTH_MANAGED_IDENTITY asks the Azure host's managed identity for a token, so the
+   * connection holds no secret.
+   *
+   * @generated from enum value: ENTRA_AUTH_MANAGED_IDENTITY = 3;
+   */
+  MANAGED_IDENTITY = 3,
+
+  /**
+   * ENTRA_AUTH_WORKLOAD_IDENTITY sends the Kubernetes service account token in the file at
+   * key_source, as AKS workload identity does.
+   *
+   * @generated from enum value: ENTRA_AUTH_WORKLOAD_IDENTITY = 4;
+   */
+  WORKLOAD_IDENTITY = 4,
+}
+
+/**
+ * Describes the enum agni.v1.webapi.EntraAuth.
+ */
+export const EntraAuthSchema: GenEnum<EntraAuth> = /*@__PURE__*/
+  enumDesc(file_agni_v1_webapi_connections, 0);
+
+/**
  * @generated from enum agni.v1.webapi.ConnectionScope
  */
 export enum ConnectionScope {
@@ -304,7 +410,7 @@ export enum ConnectionScope {
  * Describes the enum agni.v1.webapi.ConnectionScope.
  */
 export const ConnectionScopeSchema: GenEnum<ConnectionScope> = /*@__PURE__*/
-  enumDesc(file_agni_v1_webapi_connections, 0);
+  enumDesc(file_agni_v1_webapi_connections, 1);
 
 /**
  * @generated from enum agni.v1.webapi.ConnectionKind
@@ -337,13 +443,38 @@ export enum ConnectionKind {
    * @generated from enum value: CONNECTION_KIND_GITHUB_USER = 3;
    */
   GITHUB_USER = 3,
+
+  /**
+   * CONNECTION_KIND_AWS signs S3 requests: with the key pair access_key_id and key_source, or with
+   * the AWS SDK's default chain, such as an instance or IRSA role. It is a server connection only
+   * (agni issue 1730).
+   *
+   * @generated from enum value: CONNECTION_KIND_AWS = 4;
+   */
+  AWS = 4,
+
+  /**
+   * CONNECTION_KIND_GCP signs Cloud Storage requests with a service account key at key_source, or
+   * with Application Default Credentials. It is a server connection only (agni issue 1730).
+   *
+   * @generated from enum value: CONNECTION_KIND_GCP = 5;
+   */
+  GCP = 5,
+
+  /**
+   * CONNECTION_KIND_ENTRA signs Microsoft Graph requests as an Entra app registration, for
+   * SharePoint and OneDrive. It is a server connection only (agni issue 1729).
+   *
+   * @generated from enum value: CONNECTION_KIND_ENTRA = 6;
+   */
+  ENTRA = 6,
 }
 
 /**
  * Describes the enum agni.v1.webapi.ConnectionKind.
  */
 export const ConnectionKindSchema: GenEnum<ConnectionKind> = /*@__PURE__*/
-  enumDesc(file_agni_v1_webapi_connections, 1);
+  enumDesc(file_agni_v1_webapi_connections, 2);
 
 /**
  * @generated from enum agni.v1.webapi.ConnectionStatus
@@ -371,7 +502,7 @@ export enum ConnectionStatus {
  * Describes the enum agni.v1.webapi.ConnectionStatus.
  */
 export const ConnectionStatusSchema: GenEnum<ConnectionStatus> = /*@__PURE__*/
-  enumDesc(file_agni_v1_webapi_connections, 2);
+  enumDesc(file_agni_v1_webapi_connections, 3);
 
 /**
  * This file defines ConnectionService, which keeps the sign-ins a server reads private sources

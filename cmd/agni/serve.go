@@ -89,7 +89,8 @@ func serveCmd() *cobra.Command {
 	var mcp bool
 	var viewerRooms bool
 	var auth, tlsCert, tlsKey, connectionsKey string
-	var webhookSecretRef string
+	var webhookSecretRef, graphStateRef string
+	var s3Endpoint, gcsEndpoint, graphAPI string
 	var githubClientID, githubSecretRef, publicURL string
 	var githubAllow, trustedProxy []string
 	var pollEvery time.Duration
@@ -128,13 +129,18 @@ func serveCmd() *cobra.Command {
 			if connectionsKey != "" && (store == nil || uploadsDir == "") {
 				return fmt.Errorf("--connections-key seals people's tokens in --store, so it needs --store and --uploads")
 			}
-			if (webhookSecretRef != "" || pollEvery != 0) && (store == nil || uploadsDir == "") {
+			if (webhookSecretRef != "" || graphStateRef != "" || pollEvery != 0) && (store == nil || uploadsDir == "") {
 				return fmt.Errorf("--github-webhook-secret and --poll move linked designs, so they need --store and --uploads")
 			}
 			if pollEvery < 0 {
 				return fmt.Errorf("--poll %s: want a positive duration, such as 5m", pollEvery)
 			}
-			var hookSecret []byte
+			var hookSecret, graphState []byte
+			if graphStateRef != "" {
+				if graphState, err = secretFlag("--msgraph-client-state", graphStateRef); err != nil {
+					return err
+				}
+			}
 			if webhookSecretRef != "" {
 				if hookSecret, err = secretFlag("--github-webhook-secret", webhookSecretRef); err != nil {
 					return err
@@ -162,7 +168,7 @@ func serveCmd() *cobra.Command {
 			}
 			return runViewer(cmd, viewerOpts{
 				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey,
-				webhookSecret: hookSecret, poll: pollEvery, githubSignIn: signIn, publicURL: publicURL,
+				webhookSecret: hookSecret, graphState: graphState, s3Endpoint: s3Endpoint, gcsEndpoint: gcsEndpoint, graphAPI: graphAPI, poll: pollEvery, githubSignIn: signIn, publicURL: publicURL,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
@@ -219,6 +225,10 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&githubSecretRef, "github-client-secret", "", "where the GitHub App's client secret is, as env:NAME or file:/abs/path; with --github-client-id")
 	c.Flags().StringSliceVar(&githubAllow, "github-allow", nil, "who may sign in with GitHub, as org:<org> for an org's members or user:<login>, comma-separated or repeated; with --github-client-id")
 	c.Flags().StringVar(&publicURL, "public-url", "", "the server's URL as a browser reaches it, such as https://agni.example.com. GitHub sends a signed-in browser back to <public-url>/signin/github/callback/, which the GitHub App must list. Empty takes the address the server listens on, which works on localhost only")
+	c.Flags().StringVar(&graphStateRef, "msgraph-client-state", "", "where the secret Microsoft Graph echoes in each change notification is, as env:NAME or file:/abs/path (agni issue 1729). With it, the server takes notifications at "+graphHookPath+", agni mounts webhook subscribes a SharePoint mount's drive there, and the server renews each subscription before Graph ends it. A change in the drive syncs or marks the designs that follow a folder in it. Graph sends notifications only to a public https address. Needs --store and --uploads")
+	c.Flags().StringVar(&s3Endpoint, "s3-endpoint", "", "the S3 API an s3:// mount reads, for an S3-compatible store such as MinIO. Empty is AWS (agni issue 1730)")
+	c.Flags().StringVar(&gcsEndpoint, "gcs-endpoint", "", "the Cloud Storage API a gs:// mount reads. Empty is Google's (agni issue 1730)")
+	c.Flags().StringVar(&graphAPI, "graph-api", "", "the Microsoft Graph API a msgraph:// mount reads, for a national cloud. Empty is https://graph.microsoft.com/v1.0 (agni issue 1729)")
 	c.Flags().DurationVar(&pollEvery, "poll", 0, "ask every source a linked design follows whether it moved, this often, such as 5m (agni issue 1726). It resolves each branch or folder once per pass, one request to GitHub for a repo, and syncs or marks the designs behind it. 0 polls nothing. Needs --store and --uploads")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with, HTTP/2 included, so gRPC clients reach the server over TLS; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
@@ -325,6 +335,11 @@ type viewerOpts struct {
 	publicURL string
 	// webhookSecret is --github-webhook-secret resolved. Empty serves no webhook (agni issue 1726).
 	webhookSecret []byte
+	// graphState is --msgraph-client-state resolved. Empty serves no Graph notifications (agni
+	// issue 1729).
+	graphState []byte
+	// s3Endpoint, gcsEndpoint and graphAPI are --s3-endpoint, --gcs-endpoint and --graph-api.
+	s3Endpoint, gcsEndpoint, graphAPI string
 	// poll is --poll, how often the server asks followed sources whether they moved. 0 never asks.
 	poll time.Duration
 	// follow, when non-nil, receives the server's follower, for a test to wait on its moves.
@@ -428,10 +443,15 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	}
 	// The table serves the fixed mounts and, with --store and --uploads, the GitHub mounts
 	// CreateMount made, read back from --store so they outlive a restart (agni issues 1735, 1759).
-	cfg := mountset.Config{Fixed: fixed, UploadsMount: uploadsMount, GitHubAPI: o.githubAPI, GitHubRaw: o.githubRaw, Log: cmd.ErrOrStderr()}
+	cfg := mountset.Config{Fixed: fixed, UploadsMount: uploadsMount, GitHubAPI: o.githubAPI, GitHubRaw: o.githubRaw, Log: cmd.ErrOrStderr(),
+		S3Endpoint: o.s3Endpoint, GCSEndpoint: o.gcsEndpoint, GraphAPI: o.graphAPI}
 	runtime := o.store != nil && o.uploadsDir != ""
 	if runtime {
 		cfg.Uploads, cfg.ConnectionsKey = o.uploadsDir, o.connectionsKey
+		// A SharePoint mount's Graph subscription is a record in --store (agni issue 1729).
+		if cfg.Subscriptions, err = storeRecords(o.store, storeSubscriptionsDir); err != nil {
+			return err
+		}
 		if cfg.Stores, err = o.store.TableStores(); err != nil {
 			return err
 		}
@@ -594,7 +614,13 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		f := &follower{designs: designSvc, packs: packSvc, life: life, log: cmd.ErrOrStderr()}
 		if len(o.webhookSecret) > 0 {
 			mux.Handle("POST "+githubHookPath, f.githubHook(o.webhookSecret))
-			workspace.WithWebhooks(table, o.webhookSecret)
+		}
+		if len(o.graphState) > 0 {
+			mux.Handle("POST "+graphHookPath, f.graphHook(o.graphState))
+			go renewSubscriptions(life, table, o.graphState, cmd.ErrOrStderr())
+		}
+		if len(o.webhookSecret) > 0 || len(o.graphState) > 0 {
+			workspace.WithWebhooks(table, service.WebhookSecrets{GitHub: o.webhookSecret, Graph: o.graphState})
 		}
 		if o.poll > 0 {
 			f.poll(o.poll)
@@ -796,6 +822,9 @@ const (
 	storeReportsDir   = "reports"
 	storeReviewsDir   = "reviews"
 	storeMountsDir    = mountset.RecordsDir
+	// storeSubscriptionsDir holds one record per SharePoint mount's Graph subscription (agni issue
+	// 1729).
+	storeSubscriptionsDir = "subscriptions"
 )
 
 // withUploadsMount adds --uploads' design views as the mount "uploads", creating the folder (agni

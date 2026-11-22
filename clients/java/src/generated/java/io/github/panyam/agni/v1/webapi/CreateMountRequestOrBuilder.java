@@ -32,8 +32,12 @@ public interface CreateMountRequestOrBuilder extends
 
   /**
    * <pre>
-   * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-   * makes. A public repo needs no sign-in, and a private one reads through a connection.
+   * source names what to mount, as a URL: github://&lt;owner&gt;/&lt;repo&gt;, s3://&lt;bucket&gt;/&lt;prefix&gt;,
+   * gs://&lt;bucket&gt;/&lt;prefix&gt;, or msgraph://sites/&lt;site&gt;/drives/&lt;drive&gt;/root/&lt;folder&gt; (also
+   * msgraph://drives/&lt;drive&gt;/root/&lt;folder&gt;) for SharePoint and OneDrive (agni issues 1729, 1730).
+   * A public repo or bucket needs no sign-in. A private one reads through a connection: a GitHub
+   * kind for a repo, CONNECTION_KIND_AWS for S3, CONNECTION_KIND_GCP for Cloud Storage, and
+   * CONNECTION_KIND_ENTRA for Graph, which always needs one.
    * </pre>
    *
    * <code>string source = 2 [json_name = "source"];</code>
@@ -42,8 +46,12 @@ public interface CreateMountRequestOrBuilder extends
   java.lang.String getSource();
   /**
    * <pre>
-   * source names what to mount, as a URL. github://&lt;owner&gt;/&lt;repo&gt; is the one source this build
-   * makes. A public repo needs no sign-in, and a private one reads through a connection.
+   * source names what to mount, as a URL: github://&lt;owner&gt;/&lt;repo&gt;, s3://&lt;bucket&gt;/&lt;prefix&gt;,
+   * gs://&lt;bucket&gt;/&lt;prefix&gt;, or msgraph://sites/&lt;site&gt;/drives/&lt;drive&gt;/root/&lt;folder&gt; (also
+   * msgraph://drives/&lt;drive&gt;/root/&lt;folder&gt;) for SharePoint and OneDrive (agni issues 1729, 1730).
+   * A public repo or bucket needs no sign-in. A private one reads through a connection: a GitHub
+   * kind for a repo, CONNECTION_KIND_AWS for S3, CONNECTION_KIND_GCP for Cloud Storage, and
+   * CONNECTION_KIND_ENTRA for Graph, which always needs one.
    * </pre>
    *
    * <code>string source = 2 [json_name = "source"];</code>
@@ -54,7 +62,8 @@ public interface CreateMountRequestOrBuilder extends
 
   /**
    * <pre>
-   * ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
+   * ref is the tag, branch or commit to snapshot, for a repo. Empty means the repo's default branch.
+   * A bucket or a drive has no refs, so ref stays empty and the snapshot pins each file's version.
    * </pre>
    *
    * <code>string ref = 3 [json_name = "ref"];</code>
@@ -63,7 +72,8 @@ public interface CreateMountRequestOrBuilder extends
   java.lang.String getRef();
   /**
    * <pre>
-   * ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
+   * ref is the tag, branch or commit to snapshot, for a repo. Empty means the repo's default branch.
+   * A bucket or a drive has no refs, so ref stays empty and the snapshot pins each file's version.
    * </pre>
    *
    * <code>string ref = 3 [json_name = "ref"];</code>

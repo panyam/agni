@@ -41,6 +41,34 @@ public enum ConnectionKind
    * <code>CONNECTION_KIND_GITHUB_USER = 3;</code>
    */
   CONNECTION_KIND_GITHUB_USER(3),
+  /**
+   * <pre>
+   * CONNECTION_KIND_AWS signs S3 requests: with the key pair access_key_id and key_source, or with
+   * the AWS SDK's default chain, such as an instance or IRSA role. It is a server connection only
+   * (agni issue 1730).
+   * </pre>
+   *
+   * <code>CONNECTION_KIND_AWS = 4;</code>
+   */
+  CONNECTION_KIND_AWS(4),
+  /**
+   * <pre>
+   * CONNECTION_KIND_GCP signs Cloud Storage requests with a service account key at key_source, or
+   * with Application Default Credentials. It is a server connection only (agni issue 1730).
+   * </pre>
+   *
+   * <code>CONNECTION_KIND_GCP = 5;</code>
+   */
+  CONNECTION_KIND_GCP(5),
+  /**
+   * <pre>
+   * CONNECTION_KIND_ENTRA signs Microsoft Graph requests as an Entra app registration, for
+   * SharePoint and OneDrive. It is a server connection only (agni issue 1729).
+   * </pre>
+   *
+   * <code>CONNECTION_KIND_ENTRA = 6;</code>
+   */
+  CONNECTION_KIND_ENTRA(6),
   UNRECOGNIZED(-1),
   ;
 
@@ -83,6 +111,34 @@ public enum ConnectionKind
    * <code>CONNECTION_KIND_GITHUB_USER = 3;</code>
    */
   public static final int CONNECTION_KIND_GITHUB_USER_VALUE = 3;
+  /**
+   * <pre>
+   * CONNECTION_KIND_AWS signs S3 requests: with the key pair access_key_id and key_source, or with
+   * the AWS SDK's default chain, such as an instance or IRSA role. It is a server connection only
+   * (agni issue 1730).
+   * </pre>
+   *
+   * <code>CONNECTION_KIND_AWS = 4;</code>
+   */
+  public static final int CONNECTION_KIND_AWS_VALUE = 4;
+  /**
+   * <pre>
+   * CONNECTION_KIND_GCP signs Cloud Storage requests with a service account key at key_source, or
+   * with Application Default Credentials. It is a server connection only (agni issue 1730).
+   * </pre>
+   *
+   * <code>CONNECTION_KIND_GCP = 5;</code>
+   */
+  public static final int CONNECTION_KIND_GCP_VALUE = 5;
+  /**
+   * <pre>
+   * CONNECTION_KIND_ENTRA signs Microsoft Graph requests as an Entra app registration, for
+   * SharePoint and OneDrive. It is a server connection only (agni issue 1729).
+   * </pre>
+   *
+   * <code>CONNECTION_KIND_ENTRA = 6;</code>
+   */
+  public static final int CONNECTION_KIND_ENTRA_VALUE = 6;
 
 
   public final int getNumber() {
@@ -113,6 +169,9 @@ public enum ConnectionKind
       case 1: return CONNECTION_KIND_GITHUB_APP;
       case 2: return CONNECTION_KIND_GITHUB_TOKEN;
       case 3: return CONNECTION_KIND_GITHUB_USER;
+      case 4: return CONNECTION_KIND_AWS;
+      case 5: return CONNECTION_KIND_GCP;
+      case 6: return CONNECTION_KIND_ENTRA;
       default: return null;
     }
   }
@@ -143,7 +202,7 @@ public enum ConnectionKind
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return io.github.panyam.agni.v1.webapi.ConnectionsProto.getDescriptor().getEnumType(1);
+    return io.github.panyam.agni.v1.webapi.ConnectionsProto.getDescriptor().getEnumType(2);
   }
 
   private static final ConnectionKind[] VALUES = values();

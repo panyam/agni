@@ -380,10 +380,35 @@ missing object. A `--mount` folder refuses a pointer the same way, so a checkout
 
 `DeleteMount` forgets a mount `CreateMount` made. A mount from `--mount` or `--mount-root` comes from
 the server's flags, and deleting one is refused. So is deleting a mount that an artifact is linked
-to, as the next section describes. A runtime mount can only come from GitHub, since a
-client must not choose which folder on the server's disk is served. `--mount` names a folder. A
-private repo reads through a connection, as "Connections" below describes. S3 and SharePoint wait on
-agni issues 1729 and 1730.
+to, as the next section describes. A runtime mount can't name a folder on the server's disk, since a
+client must not choose which folder is served. `--mount` names a folder. A private repo reads through
+a connection, as "Connections" below describes.
+
+### Buckets and SharePoint
+
+A runtime mount can also come from an S3 bucket, a Cloud Storage bucket, or a SharePoint or OneDrive
+folder (agni issues 1729, 1730). Say the team drops its exports into `s3://acme-boards/jetson`, or
+keeps them in a SharePoint document library. The server lists the folder, downloads every file into
+the uploads, and serves it from a view as it does a repo:
+
+```bash
+agni mounts add boards s3://acme-boards/jetson --connection aws --remote http://localhost:8080
+agni mounts add exports gs://acme-exports/hw --connection gcs --remote http://localhost:8080
+agni mounts add sp msgraph://sites/<site-id>/drives/<drive-id>/root/hw --connection sp --remote http://localhost:8080
+```
+
+A bucket or a drive has no refs, so `--ref` stays empty. The snapshot pins each file at the version
+it had: an S3 or Cloud Storage object version when the bucket keeps them, else its ETag, and a
+SharePoint item's content tag. An object overwritten later leaves the mount as it was. A link that
+follows the folder moves on the next `designs sync`, or on its own with `--poll` or a Graph
+notification. A public bucket needs no connection, and Microsoft Graph always does. `--s3-endpoint`
+points the S3 mounts at an S3-compatible store such as MinIO, `--gcs-endpoint` does the same for
+Cloud Storage, and `--graph-api` names a national cloud's Graph.
+
+On a shared server every caller the server lets in can open a bucket or SharePoint mount, as they
+can a folder from `--mount`. The server reads it through its own connection, and AWS and Cloud
+Storage know no viewer to check. A private GitHub repo is different, as "Who can open a design
+linked from a private repo" below says.
 
 `ListMounts` and `GetMount` say how each mount is reached in `kind`, where it came from in `source`,
 `ref` and `commit`, and whether it is `fixed`. `ListMounts` also says in `can_create_mounts` whether
@@ -533,6 +558,24 @@ request to GitHub for a repo, and a walk of the file times for a folder. It sync
 whose source moved. The two flags work together, and a webhook answers in seconds where a poll waits
 for its next pass.
 
+A SharePoint or OneDrive mount can follow its drive through Microsoft Graph's change notifications
+(agni issue 1729). `--msgraph-client-state` names a secret, the server takes notifications at
+`/hooks/msgraph`, and `agni mounts webhook` subscribes the mount's drive there:
+
+```bash
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --msgraph-client-state env:AGNI_GRAPH_STATE
+agni mounts webhook sp --url https://agni.example.com/hooks/msgraph --remote http://localhost:8080
+```
+
+Graph checks the URL before it makes the subscription, by sending it a validation request the server
+answers. So the server must already be reachable there, over https. Graph echoes the secret in each
+notification, and the server checks it and drops any notification that doesn't carry it. A
+notification names only the drive that changed, so the server finds every mount in that drive and
+moves the designs that follow a folder there, as a push does. Graph ends a drive subscription after
+about 29 days. The server keeps each one in `subscriptions/` under `--store` and renews it three
+days before it ends, and `agni mounts rm` ends it. A server Graph can't reach uses `--poll`. S3 and
+Cloud Storage send no events agni takes, so `--poll` follows them.
+
 A design syncs when its source moves, unless someone set it to mark:
 
 ```bash
@@ -602,9 +645,28 @@ expires:
 agni connections add acme-app --github-app 12345 --installation 678 --key file:/run/secrets/app.pem --remote http://localhost:8080
 ```
 
+A bucket or a SharePoint folder reads through a cloud connection (agni issues 1729, 1730). Each signs
+in as the server, never as a person:
+
+```bash
+agni connections add aws --aws --role-arn arn:aws:iam::123456789012:role/agni-reader --region us-east-1 --remote http://localhost:8080
+agni connections add aws-keys --aws --access-key-id AKIA... --key env:AWS_SECRET_ACCESS_KEY --remote http://localhost:8080
+agni connections add gcs --gcp --key file:/run/secrets/sa.json --remote http://localhost:8080
+agni connections add sp --entra-tenant contoso.onmicrosoft.com --entra-client <app-id> --entra-auth secret --key env:ENTRA_SECRET --remote http://localhost:8080
+```
+
+`--aws` with no key uses the AWS default chain, such as an instance role or an IRSA role on
+Kubernetes, and `--role-arn` assumes a role first. `--gcp` with no key uses Application Default
+Credentials, such as GKE workload identity. An Entra connection signs in as an app registration, with
+`--entra-auth` set to `secret`, `certificate` (its key at `--key`, the certificate at `--cert`),
+`managed-identity` on an Azure host, or `workload-identity` on AKS, with `--key` naming the federated
+token file. The app registration needs Graph's `Sites.Read.All` or `Files.Read.All` application
+permission.
+
 A server in a container, or on a machine the operator can't log in to, has no environment or files
 the CLI can name. `--seal` sends the secret instead (agni issue 1802). The CLI reads the token, or
-the App's `--key`, from the reference on its own machine and sends it once. The server seals it in
+the secret `--key` names, from the reference on its own machine and sends it once. That covers an
+App's key, an AWS secret key, a GCP service account key and an Entra secret or certificate key. The server seals it in
 the store under `--connections-key`, as it does a person's own token, and never sends it back.
 `agni connections ls` shows the connection as `sealed`. `agni connections rotate` replaces the
 secret while mounts keep reading through the connection:

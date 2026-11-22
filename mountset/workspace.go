@@ -43,6 +43,12 @@ func (t *Table) Info(m mounts.Mount) service.MountInfo {
 		kind, source = webapi.MountKind_MOUNT_KIND_UPLOADS, ""
 	case m.Kind == mounts.KindGitHub:
 		kind = webapi.MountKind_MOUNT_KIND_GITHUB
+	case m.Kind == mounts.KindS3:
+		kind = webapi.MountKind_MOUNT_KIND_S3
+	case m.Kind == mounts.KindGCS:
+		kind = webapi.MountKind_MOUNT_KIND_GCS
+	case m.Kind == mounts.KindMSGraph:
+		kind = webapi.MountKind_MOUNT_KIND_MSGRAPH
 	case m.Kind == mounts.KindFolder:
 		source = "file:///" + strings.TrimPrefix(filepath.ToSlash(m.Source), "/")
 	}

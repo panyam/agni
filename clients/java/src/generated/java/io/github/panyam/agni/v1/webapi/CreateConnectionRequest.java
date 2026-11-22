@@ -193,9 +193,11 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object serverSecret_ = "";
   /**
    * <pre>
-   * server_secret is a server connection's secret itself: the token for
-   * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-   * issue 1802). The server seals it under --connections-key and never sends it back, and the
+   * server_secret is a server connection's secret itself (agni issue 1802): the token for
+   * CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+   * secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+   * the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+   * holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
    * connection's token_source or key_source stays empty. It suits a server in a container, whose
    * environment and files the caller can't reach. A server started without --connections-key
    * answers FAILED_PRECONDITION.
@@ -219,9 +221,11 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * server_secret is a server connection's secret itself: the token for
-   * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-   * issue 1802). The server seals it under --connections-key and never sends it back, and the
+   * server_secret is a server connection's secret itself (agni issue 1802): the token for
+   * CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+   * secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+   * the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+   * holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
    * connection's token_source or key_source stays empty. It suits a server in a container, whose
    * environment and files the caller can't reach. A server started without --connections-key
    * answers FAILED_PRECONDITION.
@@ -986,9 +990,11 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object serverSecret_ = "";
     /**
      * <pre>
-     * server_secret is a server connection's secret itself: the token for
-     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * server_secret is a server connection's secret itself (agni issue 1802): the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+     * secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+     * the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+     * holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
      * connection's token_source or key_source stays empty. It suits a server in a container, whose
      * environment and files the caller can't reach. A server started without --connections-key
      * answers FAILED_PRECONDITION.
@@ -1011,9 +1017,11 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * server_secret is a server connection's secret itself: the token for
-     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * server_secret is a server connection's secret itself (agni issue 1802): the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+     * secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+     * the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+     * holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
      * connection's token_source or key_source stays empty. It suits a server in a container, whose
      * environment and files the caller can't reach. A server started without --connections-key
      * answers FAILED_PRECONDITION.
@@ -1037,9 +1045,11 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * server_secret is a server connection's secret itself: the token for
-     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * server_secret is a server connection's secret itself (agni issue 1802): the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+     * secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+     * the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+     * holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
      * connection's token_source or key_source stays empty. It suits a server in a container, whose
      * environment and files the caller can't reach. A server started without --connections-key
      * answers FAILED_PRECONDITION.
@@ -1059,9 +1069,11 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * server_secret is a server connection's secret itself: the token for
-     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * server_secret is a server connection's secret itself (agni issue 1802): the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+     * secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+     * the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+     * holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
      * connection's token_source or key_source stays empty. It suits a server in a container, whose
      * environment and files the caller can't reach. A server started without --connections-key
      * answers FAILED_PRECONDITION.
@@ -1078,9 +1090,11 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * server_secret is a server connection's secret itself: the token for
-     * CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-     * issue 1802). The server seals it under --connections-key and never sends it back, and the
+     * server_secret is a server connection's secret itself (agni issue 1802): the token for
+     * CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+     * secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+     * the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+     * holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
      * connection's token_source or key_source stays empty. It suits a server in a container, whose
      * environment and files the caller can't reach. A server started without --connections-key
      * answers FAILED_PRECONDITION.

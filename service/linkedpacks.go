@@ -201,7 +201,7 @@ func (s *PackService) SourceChanged(ctx context.Context, c mounts.Change) ([]Pac
 	if s.readers == nil || s.mountsOf == nil || s.store == nil {
 		return nil, nil
 	}
-	if c.Deleted || c.Ref == "" {
+	if !changeMoves(c) {
 		return nil, nil
 	}
 	names, err := s.mountsOf(ctx, c.Source)
@@ -209,7 +209,7 @@ func (s *PackService) SourceChanged(ctx context.Context, c mounts.Change) ([]Pac
 		return nil, err
 	}
 	return s.catchUp(unguarded(ctx), func(src *webapi.ArtifactSource) bool {
-		follows := src.GetRef() == c.Ref || src.GetRef() == "" && c.Default && c.RefKind == mounts.RefBranch
+		follows := followsChange(src, c)
 		seen := c.Version != "" && src.GetVersion() == c.Version
 		return slices.Contains(names, src.GetMount()) && follows && !seen
 	})

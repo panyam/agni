@@ -44,6 +44,32 @@ public enum MountKind
    * <code>MOUNT_KIND_GITHUB = 3;</code>
    */
   MOUNT_KIND_GITHUB(3),
+  /**
+   * <pre>
+   * MOUNT_KIND_S3 is a snapshot of an S3 bucket prefix, each object at the version it had, kept in
+   * --uploads (agni issue 1730).
+   * </pre>
+   *
+   * <code>MOUNT_KIND_S3 = 4;</code>
+   */
+  MOUNT_KIND_S3(4),
+  /**
+   * <pre>
+   * MOUNT_KIND_GCS is the same for a Google Cloud Storage bucket prefix (agni issue 1730).
+   * </pre>
+   *
+   * <code>MOUNT_KIND_GCS = 5;</code>
+   */
+  MOUNT_KIND_GCS(5),
+  /**
+   * <pre>
+   * MOUNT_KIND_MSGRAPH is a snapshot of a SharePoint or OneDrive folder through Microsoft Graph,
+   * each file at the version it had, kept in --uploads (agni issue 1729).
+   * </pre>
+   *
+   * <code>MOUNT_KIND_MSGRAPH = 6;</code>
+   */
+  MOUNT_KIND_MSGRAPH(6),
   UNRECOGNIZED(-1),
   ;
 
@@ -84,6 +110,32 @@ public enum MountKind
    * <code>MOUNT_KIND_GITHUB = 3;</code>
    */
   public static final int MOUNT_KIND_GITHUB_VALUE = 3;
+  /**
+   * <pre>
+   * MOUNT_KIND_S3 is a snapshot of an S3 bucket prefix, each object at the version it had, kept in
+   * --uploads (agni issue 1730).
+   * </pre>
+   *
+   * <code>MOUNT_KIND_S3 = 4;</code>
+   */
+  public static final int MOUNT_KIND_S3_VALUE = 4;
+  /**
+   * <pre>
+   * MOUNT_KIND_GCS is the same for a Google Cloud Storage bucket prefix (agni issue 1730).
+   * </pre>
+   *
+   * <code>MOUNT_KIND_GCS = 5;</code>
+   */
+  public static final int MOUNT_KIND_GCS_VALUE = 5;
+  /**
+   * <pre>
+   * MOUNT_KIND_MSGRAPH is a snapshot of a SharePoint or OneDrive folder through Microsoft Graph,
+   * each file at the version it had, kept in --uploads (agni issue 1729).
+   * </pre>
+   *
+   * <code>MOUNT_KIND_MSGRAPH = 6;</code>
+   */
+  public static final int MOUNT_KIND_MSGRAPH_VALUE = 6;
 
 
   public final int getNumber() {
@@ -114,6 +166,9 @@ public enum MountKind
       case 1: return MOUNT_KIND_FILE;
       case 2: return MOUNT_KIND_UPLOADS;
       case 3: return MOUNT_KIND_GITHUB;
+      case 4: return MOUNT_KIND_S3;
+      case 5: return MOUNT_KIND_GCS;
+      case 6: return MOUNT_KIND_MSGRAPH;
       default: return null;
     }
   }

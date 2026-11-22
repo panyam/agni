@@ -11,6 +11,14 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class EntraAuth(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ENTRA_AUTH_UNSPECIFIED: _ClassVar[EntraAuth]
+    ENTRA_AUTH_SECRET: _ClassVar[EntraAuth]
+    ENTRA_AUTH_CERTIFICATE: _ClassVar[EntraAuth]
+    ENTRA_AUTH_MANAGED_IDENTITY: _ClassVar[EntraAuth]
+    ENTRA_AUTH_WORKLOAD_IDENTITY: _ClassVar[EntraAuth]
+
 class ConnectionScope(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     CONNECTION_SCOPE_UNSPECIFIED: _ClassVar[ConnectionScope]
@@ -23,12 +31,20 @@ class ConnectionKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONNECTION_KIND_GITHUB_APP: _ClassVar[ConnectionKind]
     CONNECTION_KIND_GITHUB_TOKEN: _ClassVar[ConnectionKind]
     CONNECTION_KIND_GITHUB_USER: _ClassVar[ConnectionKind]
+    CONNECTION_KIND_AWS: _ClassVar[ConnectionKind]
+    CONNECTION_KIND_GCP: _ClassVar[ConnectionKind]
+    CONNECTION_KIND_ENTRA: _ClassVar[ConnectionKind]
 
 class ConnectionStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     CONNECTION_STATUS_UNSPECIFIED: _ClassVar[ConnectionStatus]
     CONNECTION_STATUS_OK: _ClassVar[ConnectionStatus]
     CONNECTION_STATUS_FAILED: _ClassVar[ConnectionStatus]
+ENTRA_AUTH_UNSPECIFIED: EntraAuth
+ENTRA_AUTH_SECRET: EntraAuth
+ENTRA_AUTH_CERTIFICATE: EntraAuth
+ENTRA_AUTH_MANAGED_IDENTITY: EntraAuth
+ENTRA_AUTH_WORKLOAD_IDENTITY: EntraAuth
 CONNECTION_SCOPE_UNSPECIFIED: ConnectionScope
 CONNECTION_SCOPE_SERVER: ConnectionScope
 CONNECTION_SCOPE_PERSON: ConnectionScope
@@ -36,12 +52,15 @@ CONNECTION_KIND_UNSPECIFIED: ConnectionKind
 CONNECTION_KIND_GITHUB_APP: ConnectionKind
 CONNECTION_KIND_GITHUB_TOKEN: ConnectionKind
 CONNECTION_KIND_GITHUB_USER: ConnectionKind
+CONNECTION_KIND_AWS: ConnectionKind
+CONNECTION_KIND_GCP: ConnectionKind
+CONNECTION_KIND_ENTRA: ConnectionKind
 CONNECTION_STATUS_UNSPECIFIED: ConnectionStatus
 CONNECTION_STATUS_OK: ConnectionStatus
 CONNECTION_STATUS_FAILED: ConnectionStatus
 
 class Connection(_message.Message):
-    __slots__ = ("name", "kind", "display_name", "base_url", "app_id", "installation_id", "key_source", "token_source", "status", "last_error", "create_time", "last_use_time", "scope", "owner", "sealed")
+    __slots__ = ("name", "kind", "display_name", "base_url", "app_id", "installation_id", "key_source", "token_source", "status", "last_error", "create_time", "last_use_time", "scope", "owner", "access_key_id", "role_arn", "region", "tenant_id", "client_id", "entra_auth", "cert_source", "sealed")
     NAME_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -56,6 +75,13 @@ class Connection(_message.Message):
     LAST_USE_TIME_FIELD_NUMBER: _ClassVar[int]
     SCOPE_FIELD_NUMBER: _ClassVar[int]
     OWNER_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_KEY_ID_FIELD_NUMBER: _ClassVar[int]
+    ROLE_ARN_FIELD_NUMBER: _ClassVar[int]
+    REGION_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    CLIENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ENTRA_AUTH_FIELD_NUMBER: _ClassVar[int]
+    CERT_SOURCE_FIELD_NUMBER: _ClassVar[int]
     SEALED_FIELD_NUMBER: _ClassVar[int]
     name: str
     kind: ConnectionKind
@@ -71,8 +97,15 @@ class Connection(_message.Message):
     last_use_time: _timestamp_pb2.Timestamp
     scope: ConnectionScope
     owner: str
+    access_key_id: str
+    role_arn: str
+    region: str
+    tenant_id: str
+    client_id: str
+    entra_auth: EntraAuth
+    cert_source: str
     sealed: bool
-    def __init__(self, name: _Optional[str] = ..., kind: _Optional[_Union[ConnectionKind, str]] = ..., display_name: _Optional[str] = ..., base_url: _Optional[str] = ..., app_id: _Optional[str] = ..., installation_id: _Optional[int] = ..., key_source: _Optional[str] = ..., token_source: _Optional[str] = ..., status: _Optional[_Union[ConnectionStatus, str]] = ..., last_error: _Optional[str] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_use_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., scope: _Optional[_Union[ConnectionScope, str]] = ..., owner: _Optional[str] = ..., sealed: _Optional[bool] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[_Union[ConnectionKind, str]] = ..., display_name: _Optional[str] = ..., base_url: _Optional[str] = ..., app_id: _Optional[str] = ..., installation_id: _Optional[int] = ..., key_source: _Optional[str] = ..., token_source: _Optional[str] = ..., status: _Optional[_Union[ConnectionStatus, str]] = ..., last_error: _Optional[str] = ..., create_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_use_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., scope: _Optional[_Union[ConnectionScope, str]] = ..., owner: _Optional[str] = ..., access_key_id: _Optional[str] = ..., role_arn: _Optional[str] = ..., region: _Optional[str] = ..., tenant_id: _Optional[str] = ..., client_id: _Optional[str] = ..., entra_auth: _Optional[_Union[EntraAuth, str]] = ..., cert_source: _Optional[str] = ..., sealed: _Optional[bool] = ...) -> None: ...
 
 class CreateConnectionRequest(_message.Message):
     __slots__ = ("connection_id", "connection", "user_token", "server_secret")

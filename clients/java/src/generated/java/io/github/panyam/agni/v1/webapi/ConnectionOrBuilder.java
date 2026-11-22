@@ -111,8 +111,11 @@ public interface ConnectionOrBuilder extends
 
   /**
    * <pre>
-   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-   * CONNECTION_KIND_GITHUB_APP.
+   * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+   * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+   * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+   * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+   * AWS, GCP and an Entra managed identity takes the host's own credentials.
    * </pre>
    *
    * <code>string key_source = 7 [json_name = "keySource"];</code>
@@ -121,8 +124,11 @@ public interface ConnectionOrBuilder extends
   java.lang.String getKeySource();
   /**
    * <pre>
-   * key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-   * CONNECTION_KIND_GITHUB_APP.
+   * key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+   * CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+   * key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+   * certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+   * AWS, GCP and an Entra managed identity takes the host's own credentials.
    * </pre>
    *
    * <code>string key_source = 7 [json_name = "keySource"];</code>
@@ -273,12 +279,153 @@ public interface ConnectionOrBuilder extends
 
   /**
    * <pre>
+   * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+   * key_source names the secret access key. AWS doesn't treat it as a secret.
+   * </pre>
+   *
+   * <code>string access_key_id = 15 [json_name = "accessKeyId"];</code>
+   * @return The accessKeyId.
+   */
+  java.lang.String getAccessKeyId();
+  /**
+   * <pre>
+   * access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+   * key_source names the secret access key. AWS doesn't treat it as a secret.
+   * </pre>
+   *
+   * <code>string access_key_id = 15 [json_name = "accessKeyId"];</code>
+   * @return The bytes for accessKeyId.
+   */
+  com.google.protobuf.ByteString
+      getAccessKeyIdBytes();
+
+  /**
+   * <pre>
+   * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+   * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+   * </pre>
+   *
+   * <code>string role_arn = 16 [json_name = "roleArn"];</code>
+   * @return The roleArn.
+   */
+  java.lang.String getRoleArn();
+  /**
+   * <pre>
+   * role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+   * "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+   * </pre>
+   *
+   * <code>string role_arn = 16 [json_name = "roleArn"];</code>
+   * @return The bytes for roleArn.
+   */
+  com.google.protobuf.ByteString
+      getRoleArnBytes();
+
+  /**
+   * <pre>
+   * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+   * </pre>
+   *
+   * <code>string region = 17 [json_name = "region"];</code>
+   * @return The region.
+   */
+  java.lang.String getRegion();
+  /**
+   * <pre>
+   * region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+   * </pre>
+   *
+   * <code>string region = 17 [json_name = "region"];</code>
+   * @return The bytes for region.
+   */
+  com.google.protobuf.ByteString
+      getRegionBytes();
+
+  /**
+   * <pre>
+   * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+   * GUID or a domain, and its application id. For a managed identity, client_id picks a
+   * user-assigned identity and may be empty.
+   * </pre>
+   *
+   * <code>string tenant_id = 18 [json_name = "tenantId"];</code>
+   * @return The tenantId.
+   */
+  java.lang.String getTenantId();
+  /**
+   * <pre>
+   * tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+   * GUID or a domain, and its application id. For a managed identity, client_id picks a
+   * user-assigned identity and may be empty.
+   * </pre>
+   *
+   * <code>string tenant_id = 18 [json_name = "tenantId"];</code>
+   * @return The bytes for tenantId.
+   */
+  com.google.protobuf.ByteString
+      getTenantIdBytes();
+
+  /**
+   * <code>string client_id = 19 [json_name = "clientId"];</code>
+   * @return The clientId.
+   */
+  java.lang.String getClientId();
+  /**
+   * <code>string client_id = 19 [json_name = "clientId"];</code>
+   * @return The bytes for clientId.
+   */
+  com.google.protobuf.ByteString
+      getClientIdBytes();
+
+  /**
+   * <pre>
+   * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.EntraAuth entra_auth = 20 [json_name = "entraAuth"];</code>
+   * @return The enum numeric value on the wire for entraAuth.
+   */
+  int getEntraAuthValue();
+  /**
+   * <pre>
+   * entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.EntraAuth entra_auth = 20 [json_name = "entraAuth"];</code>
+   * @return The entraAuth.
+   */
+  io.github.panyam.agni.v1.webapi.EntraAuth getEntraAuth();
+
+  /**
+   * <pre>
+   * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+   * "file:/abs/path". Its private key is at key_source.
+   * </pre>
+   *
+   * <code>string cert_source = 21 [json_name = "certSource"];</code>
+   * @return The certSource.
+   */
+  java.lang.String getCertSource();
+  /**
+   * <pre>
+   * cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+   * "file:/abs/path". Its private key is at key_source.
+   * </pre>
+   *
+   * <code>string cert_source = 21 [json_name = "certSource"];</code>
+   * @return The bytes for certSource.
+   */
+  com.google.protobuf.ByteString
+      getCertSourceBytes();
+
+  /**
+   * <pre>
    * sealed says a server connection keeps its secret sealed in --store under --connections-key,
    * as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
    * token_source or key_source is then empty. Output only.
    * </pre>
    *
-   * <code>bool sealed = 15 [json_name = "sealed"];</code>
+   * <code>bool sealed = 22 [json_name = "sealed"];</code>
    * @return The sealed.
    */
   boolean getSealed();

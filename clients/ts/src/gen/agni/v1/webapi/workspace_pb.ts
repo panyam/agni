@@ -4,6 +4,8 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Design } from "./project_pb.js";
 import { file_agni_v1_webapi_project } from "./project_pb.js";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpItIBCgVNb3VudBIMCgRuYW1lGAEgASgJEgwKBHJvb3QYAiABKAkSCwoDdXJpGAMgASgJEicKBGtpbmQYBCABKA4yGS5hZ25pLnYxLndlYmFwaS5Nb3VudEtpbmQSDgoGc291cmNlGAUgASgJEgsKA3JlZhgGIAEoCRIOCgZjb21taXQYByABKAkSDQoFZml4ZWQYCCABKAgSEAoId3JpdGFibGUYCSABKAgSEgoKY29ubmVjdGlvbhgKIAEoCRIVCg1zb3VyY2VfaGlkZGVuGAsgASgIIlMKEkNyZWF0ZU1vdW50UmVxdWVzdBIMCgRuYW1lGAEgASgJEg4KBnNvdXJjZRgCIAEoCRILCgNyZWYYAyABKAkSEgoKY29ubmVjdGlvbhgEIAEoCSIiChJEZWxldGVNb3VudFJlcXVlc3QSDAoEbmFtZRgBIAEoCSIVChNEZWxldGVNb3VudFJlc3BvbnNlIjYKGUNyZWF0ZU1vdW50V2ViaG9va1JlcXVlc3QSDAoEbmFtZRgBIAEoCRILCgN1cmwYAiABKAkiZwoMTW91bnRXZWJob29rEg0KBW1vdW50GAEgASgJEg4KBnNvdXJjZRgCIAEoCRIKCgJpZBgDIAEoAxILCgN1cmwYBCABKAkSDgoGZXZlbnRzGAUgAygJEg8KB2NyZWF0ZWQYBiABKAgiHwoPR2V0TW91bnRSZXF1ZXN0EgwKBG5hbWUYASABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiKCAQoSTGlzdE1vdW50c1Jlc3BvbnNlEiUKBm1vdW50cxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLk1vdW50EhUKDXBydW5lZF9tb3VudHMYAiABKAUSGQoRY2FuX2NyZWF0ZV9tb3VudHMYAyABKAgSEwoLc2lnbl9pbl91cmwYBCABKAkigAEKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAIgASgIEg4KBmZvcm1hdBgDIAEoCRILCgN1cmkYBCABKAkSJgoEa2luZBgFIAEoDjIYLmFnbmkudjEud2ViYXBpLkZpbGVLaW5kEhEKCWJvYXJkX3VyaRgGIAEoCSJhCg5MaXN0RGlyUmVxdWVzdBILCgN1cmkYASABKAkSJwoFb3BlbnMYAyADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZBITCgttYXJrX2JvYXJkcxgEIAEoCEoECAIQAyI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5IiUKFkxpc3REZXNpZ25GaWxlc1JlcXVlc3QSCwoDdXJpGAEgASgJImcKF0xpc3REZXNpZ25GaWxlc1Jlc3BvbnNlEg0KBW1vdW50GAEgASgJEikKBWZpbGVzGAIgAygLMhouYWduaS52MS53ZWJhcGkuRGVzaWduRmlsZRISCgp0b3RhbF9zaXplGAMgASgDIkcKCkRlc2lnbkZpbGUSDAoEcGF0aBgBIAEoCRIMCgRzaXplGAIgASgDEg4KBnNoYTI1NhgDIAEoCRINCgVib2FyZBgEIAEoCCJEChdEZWNsYXJlQ29tcGFuaW9uUmVxdWVzdBISCgpkZXNpZ25fdXJpGAEgASgJEhUKDWNvbXBhbmlvbl91cmkYAiABKAkiaQoYRGVjbGFyZUNvbXBhbmlvblJlc3BvbnNlEhYKDmRlc2NyaXB0b3JfdXJpGAEgASgJEhMKC2Rlc2lnbl95YW1sGAIgASgJEg8KB2V4aXN0ZWQYAyABKAgSDwoHY2hhbmdlZBgEIAEoCCIkChVQcm9wb3NlRGVzaWduc1JlcXVlc3QSCwoDdXJpGAEgASgJIoYBChZQcm9wb3NlRGVzaWduc1Jlc3BvbnNlEi8KB2Rlc2lnbnMYASADKAsyHi5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlZERlc2lnbhIqCgZ1bnJlYWQYAiADKAsyGi5hZ25pLnYxLndlYmFwaS5VbnJlYWRGaWxlEg8KB3N1cHBvcnQYAyADKAkijAEKDlByb3Bvc2VkRGVzaWduEg4KBmZvbGRlchgBIAEoCRImCgZkZXNpZ24YAiABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SEwoLZGVzaWduX3lhbWwYAyABKAkSDQoFZmlsZXMYBCADKAkSDAoEbm90ZRgFIAEoCRIQCghkZWNsYXJlZBgGIAEoCCIqCgpVbnJlYWRGaWxlEgwKBHBhdGgYASABKAkSDgoGcmVhc29uGAIgASgJKmsKCU1vdW50S2luZBIaChZNT1VOVF9LSU5EX1VOU1BFQ0lGSUVEEAASEwoPTU9VTlRfS0lORF9GSUxFEAESFgoSTU9VTlRfS0lORF9VUExPQURTEAISFQoRTU9VTlRfS0lORF9HSVRIVUIQAypUCghGaWxlS2luZBIZChVGSUxFX0tJTkRfVU5TUEVDSUZJRUQQABIUChBGSUxFX0tJTkRfREVTSUdOEAESFwoTRklMRV9LSU5EX0RBVEFTSEVFVBACMqQGChBXb3Jrc3BhY2VTZXJ2aWNlElMKCkxpc3RNb3VudHMSIS5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXNwb25zZRJCCghHZXRNb3VudBIfLmFnbmkudjEud2ViYXBpLkdldE1vdW50UmVxdWVzdBoVLmFnbmkudjEud2ViYXBpLk1vdW50EkgKC0NyZWF0ZU1vdW50EiIuYWduaS52MS53ZWJhcGkuQ3JlYXRlTW91bnRSZXF1ZXN0GhUuYWduaS52MS53ZWJhcGkuTW91bnQSVgoLRGVsZXRlTW91bnQSIi5hZ25pLnYxLndlYmFwaS5EZWxldGVNb3VudFJlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5EZWxldGVNb3VudFJlc3BvbnNlEl0KEkNyZWF0ZU1vdW50V2ViaG9vaxIpLmFnbmkudjEud2ViYXBpLkNyZWF0ZU1vdW50V2ViaG9va1JlcXVlc3QaHC5hZ25pLnYxLndlYmFwaS5Nb3VudFdlYmhvb2sSSgoHTGlzdERpchIeLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXF1ZXN0Gh8uYWduaS52MS53ZWJhcGkuTGlzdERpclJlc3BvbnNlEmIKD0xpc3REZXNpZ25GaWxlcxImLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25GaWxlc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduRmlsZXNSZXNwb25zZRJfCg5Qcm9wb3NlRGVzaWducxIlLmFnbmkudjEud2ViYXBpLlByb3Bvc2VEZXNpZ25zUmVxdWVzdBomLmFnbmkudjEud2ViYXBpLlByb3Bvc2VEZXNpZ25zUmVzcG9uc2USZQoQRGVjbGFyZUNvbXBhbmlvbhInLmFnbmkudjEud2ViYXBpLkRlY2xhcmVDb21wYW5pb25SZXF1ZXN0GiguYWduaS52MS53ZWJhcGkuRGVjbGFyZUNvbXBhbmlvblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_project]);
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpItIBCgVNb3VudBIMCgRuYW1lGAEgASgJEgwKBHJvb3QYAiABKAkSCwoDdXJpGAMgASgJEicKBGtpbmQYBCABKA4yGS5hZ25pLnYxLndlYmFwaS5Nb3VudEtpbmQSDgoGc291cmNlGAUgASgJEgsKA3JlZhgGIAEoCRIOCgZjb21taXQYByABKAkSDQoFZml4ZWQYCCABKAgSEAoId3JpdGFibGUYCSABKAgSEgoKY29ubmVjdGlvbhgKIAEoCRIVCg1zb3VyY2VfaGlkZGVuGAsgASgIIlMKEkNyZWF0ZU1vdW50UmVxdWVzdBIMCgRuYW1lGAEgASgJEg4KBnNvdXJjZRgCIAEoCRILCgNyZWYYAyABKAkSEgoKY29ubmVjdGlvbhgEIAEoCSIiChJEZWxldGVNb3VudFJlcXVlc3QSDAoEbmFtZRgBIAEoCSIVChNEZWxldGVNb3VudFJlc3BvbnNlIjYKGUNyZWF0ZU1vdW50V2ViaG9va1JlcXVlc3QSDAoEbmFtZRgBIAEoCRILCgN1cmwYAiABKAkisQEKDE1vdW50V2ViaG9vaxINCgVtb3VudBgBIAEoCRIOCgZzb3VyY2UYAiABKAkSCgoCaWQYAyABKAMSCwoDdXJsGAQgASgJEg4KBmV2ZW50cxgFIAMoCRIPCgdjcmVhdGVkGAYgASgIEhcKD3N1YnNjcmlwdGlvbl9pZBgHIAEoCRIvCgtleHBpcmVfdGltZRgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiHwoPR2V0TW91bnRSZXF1ZXN0EgwKBG5hbWUYASABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiKCAQoSTGlzdE1vdW50c1Jlc3BvbnNlEiUKBm1vdW50cxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLk1vdW50EhUKDXBydW5lZF9tb3VudHMYAiABKAUSGQoRY2FuX2NyZWF0ZV9tb3VudHMYAyABKAgSEwoLc2lnbl9pbl91cmwYBCABKAkigAEKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAIgASgIEg4KBmZvcm1hdBgDIAEoCRILCgN1cmkYBCABKAkSJgoEa2luZBgFIAEoDjIYLmFnbmkudjEud2ViYXBpLkZpbGVLaW5kEhEKCWJvYXJkX3VyaRgGIAEoCSJhCg5MaXN0RGlyUmVxdWVzdBILCgN1cmkYASABKAkSJwoFb3BlbnMYAyADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZBITCgttYXJrX2JvYXJkcxgEIAEoCEoECAIQAyI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5IiUKFkxpc3REZXNpZ25GaWxlc1JlcXVlc3QSCwoDdXJpGAEgASgJImcKF0xpc3REZXNpZ25GaWxlc1Jlc3BvbnNlEg0KBW1vdW50GAEgASgJEikKBWZpbGVzGAIgAygLMhouYWduaS52MS53ZWJhcGkuRGVzaWduRmlsZRISCgp0b3RhbF9zaXplGAMgASgDIkcKCkRlc2lnbkZpbGUSDAoEcGF0aBgBIAEoCRIMCgRzaXplGAIgASgDEg4KBnNoYTI1NhgDIAEoCRINCgVib2FyZBgEIAEoCCJEChdEZWNsYXJlQ29tcGFuaW9uUmVxdWVzdBISCgpkZXNpZ25fdXJpGAEgASgJEhUKDWNvbXBhbmlvbl91cmkYAiABKAkiaQoYRGVjbGFyZUNvbXBhbmlvblJlc3BvbnNlEhYKDmRlc2NyaXB0b3JfdXJpGAEgASgJEhMKC2Rlc2lnbl95YW1sGAIgASgJEg8KB2V4aXN0ZWQYAyABKAgSDwoHY2hhbmdlZBgEIAEoCCIkChVQcm9wb3NlRGVzaWduc1JlcXVlc3QSCwoDdXJpGAEgASgJIoYBChZQcm9wb3NlRGVzaWduc1Jlc3BvbnNlEi8KB2Rlc2lnbnMYASADKAsyHi5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlZERlc2lnbhIqCgZ1bnJlYWQYAiADKAsyGi5hZ25pLnYxLndlYmFwaS5VbnJlYWRGaWxlEg8KB3N1cHBvcnQYAyADKAkijAEKDlByb3Bvc2VkRGVzaWduEg4KBmZvbGRlchgBIAEoCRImCgZkZXNpZ24YAiABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SEwoLZGVzaWduX3lhbWwYAyABKAkSDQoFZmlsZXMYBCADKAkSDAoEbm90ZRgFIAEoCRIQCghkZWNsYXJlZBgGIAEoCCIqCgpVbnJlYWRGaWxlEgwKBHBhdGgYASABKAkSDgoGcmVhc29uGAIgASgJKqoBCglNb3VudEtpbmQSGgoWTU9VTlRfS0lORF9VTlNQRUNJRklFRBAAEhMKD01PVU5UX0tJTkRfRklMRRABEhYKEk1PVU5UX0tJTkRfVVBMT0FEUxACEhUKEU1PVU5UX0tJTkRfR0lUSFVCEAMSEQoNTU9VTlRfS0lORF9TMxAEEhIKDk1PVU5UX0tJTkRfR0NTEAUSFgoSTU9VTlRfS0lORF9NU0dSQVBIEAYqVAoIRmlsZUtpbmQSGQoVRklMRV9LSU5EX1VOU1BFQ0lGSUVEEAASFAoQRklMRV9LSU5EX0RFU0lHThABEhcKE0ZJTEVfS0lORF9EQVRBU0hFRVQQAjKkBgoQV29ya3NwYWNlU2VydmljZRJTCgpMaXN0TW91bnRzEiEuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVzcG9uc2USQgoIR2V0TW91bnQSHy5hZ25pLnYxLndlYmFwaS5HZXRNb3VudFJlcXVlc3QaFS5hZ25pLnYxLndlYmFwaS5Nb3VudBJICgtDcmVhdGVNb3VudBIiLmFnbmkudjEud2ViYXBpLkNyZWF0ZU1vdW50UmVxdWVzdBoVLmFnbmkudjEud2ViYXBpLk1vdW50ElYKC0RlbGV0ZU1vdW50EiIuYWduaS52MS53ZWJhcGkuRGVsZXRlTW91bnRSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuRGVsZXRlTW91bnRSZXNwb25zZRJdChJDcmVhdGVNb3VudFdlYmhvb2sSKS5hZ25pLnYxLndlYmFwaS5DcmVhdGVNb3VudFdlYmhvb2tSZXF1ZXN0GhwuYWduaS52MS53ZWJhcGkuTW91bnRXZWJob29rEkoKB0xpc3REaXISHi5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVxdWVzdBofLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXNwb25zZRJiCg9MaXN0RGVzaWduRmlsZXMSJi5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduRmlsZXNSZXF1ZXN0GicuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbkZpbGVzUmVzcG9uc2USXwoOUHJvcG9zZURlc2lnbnMSJS5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlRGVzaWduc1JlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlRGVzaWduc1Jlc3BvbnNlEmUKEERlY2xhcmVDb21wYW5pb24SJy5hZ25pLnYxLndlYmFwaS5EZWNsYXJlQ29tcGFuaW9uUmVxdWVzdBooLmFnbmkudjEud2ViYXBpLkRlY2xhcmVDb21wYW5pb25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_google_protobuf_timestamp, file_agni_v1_webapi_project]);
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls. root is a
@@ -126,15 +128,20 @@ export type CreateMountRequest = Message<"agni.v1.webapi.CreateMountRequest"> & 
   name: string;
 
   /**
-   * source names what to mount, as a URL. github://<owner>/<repo> is the one source this build
-   * makes. A public repo needs no sign-in, and a private one reads through a connection.
+   * source names what to mount, as a URL: github://<owner>/<repo>, s3://<bucket>/<prefix>,
+   * gs://<bucket>/<prefix>, or msgraph://sites/<site>/drives/<drive>/root/<folder> (also
+   * msgraph://drives/<drive>/root/<folder>) for SharePoint and OneDrive (agni issues 1729, 1730).
+   * A public repo or bucket needs no sign-in. A private one reads through a connection: a GitHub
+   * kind for a repo, CONNECTION_KIND_AWS for S3, CONNECTION_KIND_GCP for Cloud Storage, and
+   * CONNECTION_KIND_ENTRA for Graph, which always needs one.
    *
    * @generated from field: string source = 2;
    */
   source: string;
 
   /**
-   * ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
+   * ref is the tag, branch or commit to snapshot, for a repo. Empty means the repo's default branch.
+   * A bucket or a drive has no refs, so ref stays empty and the snapshot pins each file's version.
    *
    * @generated from field: string ref = 3;
    */
@@ -200,9 +207,10 @@ export type CreateMountWebhookRequest = Message<"agni.v1.webapi.CreateMountWebho
   name: string;
 
   /**
-   * url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-   * "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
-   * caller names it.
+   * url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+   * as "https://agni.example.com/hooks/github", or its /hooks/msgraph for a SharePoint mount, which
+   * Graph requires to be https. The server can't tell its own public address, so the caller names
+   * it.
    *
    * @generated from field: string url = 2;
    */
@@ -217,7 +225,8 @@ export const CreateMountWebhookRequestSchema: GenMessage<CreateMountWebhookReque
   messageDesc(file_agni_v1_webapi_workspace, 4);
 
 /**
- * MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server.
+ * MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server, or a Microsoft
+ * Graph subscription that sends a SharePoint mount's drive changes (agni issue 1729).
  *
  * @generated from message agni.v1.webapi.MountWebhook
  */
@@ -237,7 +246,7 @@ export type MountWebhook = Message<"agni.v1.webapi.MountWebhook"> & {
   source: string;
 
   /**
-   * id is GitHub's id for the hook.
+   * id is GitHub's id for the hook, and 0 for a Graph subscription.
    *
    * @generated from field: int64 id = 3;
    */
@@ -264,6 +273,20 @@ export type MountWebhook = Message<"agni.v1.webapi.MountWebhook"> & {
    * @generated from field: bool created = 6;
    */
   created: boolean;
+
+  /**
+   * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+   * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+   * it does on its own.
+   *
+   * @generated from field: string subscription_id = 7;
+   */
+  subscriptionId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expire_time = 8;
+   */
+  expireTime?: Timestamp | undefined;
 };
 
 /**
@@ -831,6 +854,29 @@ export enum MountKind {
    * @generated from enum value: MOUNT_KIND_GITHUB = 3;
    */
   GITHUB = 3,
+
+  /**
+   * MOUNT_KIND_S3 is a snapshot of an S3 bucket prefix, each object at the version it had, kept in
+   * --uploads (agni issue 1730).
+   *
+   * @generated from enum value: MOUNT_KIND_S3 = 4;
+   */
+  S3 = 4,
+
+  /**
+   * MOUNT_KIND_GCS is the same for a Google Cloud Storage bucket prefix (agni issue 1730).
+   *
+   * @generated from enum value: MOUNT_KIND_GCS = 5;
+   */
+  GCS = 5,
+
+  /**
+   * MOUNT_KIND_MSGRAPH is a snapshot of a SharePoint or OneDrive folder through Microsoft Graph,
+   * each file at the version it had, kept in --uploads (agni issue 1729).
+   *
+   * @generated from enum value: MOUNT_KIND_MSGRAPH = 6;
+   */
+  MSGRAPH = 6,
 }
 
 /**
@@ -948,6 +994,11 @@ export const WorkspaceService: GenService<{
    * server's secret and the push event again, so a second call changes nothing else. A server with
    * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
    * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+   *
+   * On a SharePoint or OneDrive mount it asks Microsoft Graph to send the drive's changes to url
+   * instead, with the server's --msgraph-client-state, and the server renews the subscription
+   * before Graph ends it (agni issue 1729). Graph checks url at once, so the server must already be
+   * reachable there over https. A second call for the same url renews the one subscription.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.CreateMountWebhook
    */

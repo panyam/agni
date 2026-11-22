@@ -1132,8 +1132,11 @@ pub struct Connection {
     pub app_id: ::prost::alloc::string::String,
     #[prost(int64, tag="6")]
     pub installation_id: i64,
-    /// key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-    /// CONNECTION_KIND_GITHUB_APP.
+    /// key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+    /// CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+    /// key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+    /// certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+    /// AWS, GCP and an Entra managed identity takes the host's own credentials.
     #[prost(string, tag="7")]
     pub key_source: ::prost::alloc::string::String,
     /// token_source is where the token is, "env:NAME" or "file:/abs/path", for
@@ -1159,10 +1162,35 @@ pub struct Connection {
     /// who made it. It is empty for a server connection. Output only.
     #[prost(string, tag="14")]
     pub owner: ::prost::alloc::string::String,
+    /// access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+    /// key_source names the secret access key. AWS doesn't treat it as a secret.
+    #[prost(string, tag="15")]
+    pub access_key_id: ::prost::alloc::string::String,
+    /// role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+    /// "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+    #[prost(string, tag="16")]
+    pub role_arn: ::prost::alloc::string::String,
+    /// region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+    #[prost(string, tag="17")]
+    pub region: ::prost::alloc::string::String,
+    /// tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+    /// GUID or a domain, and its application id. For a managed identity, client_id picks a
+    /// user-assigned identity and may be empty.
+    #[prost(string, tag="18")]
+    pub tenant_id: ::prost::alloc::string::String,
+    #[prost(string, tag="19")]
+    pub client_id: ::prost::alloc::string::String,
+    /// entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+    #[prost(enumeration="EntraAuth", tag="20")]
+    pub entra_auth: i32,
+    /// cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+    /// "file:/abs/path". Its private key is at key_source.
+    #[prost(string, tag="21")]
+    pub cert_source: ::prost::alloc::string::String,
     /// sealed says a server connection keeps its secret sealed in --store under --connections-key,
     /// as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
     /// token_source or key_source is then empty. Output only.
-    #[prost(bool, tag="15")]
+    #[prost(bool, tag="22")]
     pub sealed: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -1178,9 +1206,11 @@ pub struct CreateConnectionRequest {
     /// token_source, since a reference would let a caller name a secret of the server's.
     #[prost(string, tag="3")]
     pub user_token: ::prost::alloc::string::String,
-    /// server_secret is a server connection's secret itself: the token for
-    /// CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-    /// issue 1802). The server seals it under --connections-key and never sends it back, and the
+    /// server_secret is a server connection's secret itself (agni issue 1802): the token for
+    /// CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+    /// secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+    /// the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+    /// holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
     /// connection's token_source or key_source stays empty. It suits a server in a container, whose
     /// environment and files the caller can't reach. A server started without --connections-key
     /// answers FAILED_PRECONDITION.
@@ -1215,6 +1245,49 @@ pub struct DeleteConnectionRequest {
     /// "connections/{connection}"
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
+}
+/// EntraAuth says how a CONNECTION_KIND_ENTRA connection signs in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum EntraAuth {
+    Unspecified = 0,
+    /// ENTRA_AUTH_SECRET sends the client secret at key_source.
+    Secret = 1,
+    /// ENTRA_AUTH_CERTIFICATE signs with the private key at key_source and names the certificate at
+    /// cert_source.
+    Certificate = 2,
+    /// ENTRA_AUTH_MANAGED_IDENTITY asks the Azure host's managed identity for a token, so the
+    /// connection holds no secret.
+    ManagedIdentity = 3,
+    /// ENTRA_AUTH_WORKLOAD_IDENTITY sends the Kubernetes service account token in the file at
+    /// key_source, as AKS workload identity does.
+    WorkloadIdentity = 4,
+}
+impl EntraAuth {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "ENTRA_AUTH_UNSPECIFIED",
+            Self::Secret => "ENTRA_AUTH_SECRET",
+            Self::Certificate => "ENTRA_AUTH_CERTIFICATE",
+            Self::ManagedIdentity => "ENTRA_AUTH_MANAGED_IDENTITY",
+            Self::WorkloadIdentity => "ENTRA_AUTH_WORKLOAD_IDENTITY",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "ENTRA_AUTH_UNSPECIFIED" => Some(Self::Unspecified),
+            "ENTRA_AUTH_SECRET" => Some(Self::Secret),
+            "ENTRA_AUTH_CERTIFICATE" => Some(Self::Certificate),
+            "ENTRA_AUTH_MANAGED_IDENTITY" => Some(Self::ManagedIdentity),
+            "ENTRA_AUTH_WORKLOAD_IDENTITY" => Some(Self::WorkloadIdentity),
+            _ => None,
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -1261,6 +1334,16 @@ pub enum ConnectionKind {
     /// CONNECTION_KIND_GITHUB_USER signs in as one person with their own GitHub token. It is always
     /// CONNECTION_SCOPE_PERSON, and the server keeps the token sealed rather than naming where it is.
     GithubUser = 3,
+    /// CONNECTION_KIND_AWS signs S3 requests: with the key pair access_key_id and key_source, or with
+    /// the AWS SDK's default chain, such as an instance or IRSA role. It is a server connection only
+    /// (agni issue 1730).
+    Aws = 4,
+    /// CONNECTION_KIND_GCP signs Cloud Storage requests with a service account key at key_source, or
+    /// with Application Default Credentials. It is a server connection only (agni issue 1730).
+    Gcp = 5,
+    /// CONNECTION_KIND_ENTRA signs Microsoft Graph requests as an Entra app registration, for
+    /// SharePoint and OneDrive. It is a server connection only (agni issue 1729).
+    Entra = 6,
 }
 impl ConnectionKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1273,6 +1356,9 @@ impl ConnectionKind {
             Self::GithubApp => "CONNECTION_KIND_GITHUB_APP",
             Self::GithubToken => "CONNECTION_KIND_GITHUB_TOKEN",
             Self::GithubUser => "CONNECTION_KIND_GITHUB_USER",
+            Self::Aws => "CONNECTION_KIND_AWS",
+            Self::Gcp => "CONNECTION_KIND_GCP",
+            Self::Entra => "CONNECTION_KIND_ENTRA",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1282,6 +1368,9 @@ impl ConnectionKind {
             "CONNECTION_KIND_GITHUB_APP" => Some(Self::GithubApp),
             "CONNECTION_KIND_GITHUB_TOKEN" => Some(Self::GithubToken),
             "CONNECTION_KIND_GITHUB_USER" => Some(Self::GithubUser),
+            "CONNECTION_KIND_AWS" => Some(Self::Aws),
+            "CONNECTION_KIND_GCP" => Some(Self::Gcp),
+            "CONNECTION_KIND_ENTRA" => Some(Self::Entra),
             _ => None,
         }
     }
@@ -4565,11 +4654,16 @@ pub struct CreateMountRequest {
     /// name is the new mount's handle. It follows the rules of a mount:// authority.
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
-    /// source names what to mount, as a URL. github://<owner>/<repo> is the one source this build
-    /// makes. A public repo needs no sign-in, and a private one reads through a connection.
+    /// source names what to mount, as a URL: github://<owner>/<repo>, s3://<bucket>/<prefix>,
+    /// gs://<bucket>/<prefix>, or msgraph://sites/<site>/drives/<drive>/root/<folder> (also
+    /// msgraph://drives/<drive>/root/<folder>) for SharePoint and OneDrive (agni issues 1729, 1730).
+    /// A public repo or bucket needs no sign-in. A private one reads through a connection: a GitHub
+    /// kind for a repo, CONNECTION_KIND_AWS for S3, CONNECTION_KIND_GCP for Cloud Storage, and
+    /// CONNECTION_KIND_ENTRA for Graph, which always needs one.
     #[prost(string, tag="2")]
     pub source: ::prost::alloc::string::String,
-    /// ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
+    /// ref is the tag, branch or commit to snapshot, for a repo. Empty means the repo's default branch.
+    /// A bucket or a drive has no refs, so ref stays empty and the snapshot pins each file's version.
     #[prost(string, tag="3")]
     pub r#ref: ::prost::alloc::string::String,
     /// connection is the connection the server reads the source through, "connections/{connection}"
@@ -4591,13 +4685,15 @@ pub struct CreateMountWebhookRequest {
     /// name is the mount's handle.
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
-    /// url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-    /// "<https://agni.example.com/hooks/github".> The server can't tell its own public address, so the
-    /// caller names it.
+    /// url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+    /// as "<https://agni.example.com/hooks/github",> or its /hooks/msgraph for a SharePoint mount, which
+    /// Graph requires to be https. The server can't tell its own public address, so the caller names
+    /// it.
     #[prost(string, tag="2")]
     pub url: ::prost::alloc::string::String,
 }
-/// MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server.
+/// MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server, or a Microsoft
+/// Graph subscription that sends a SharePoint mount's drive changes (agni issue 1729).
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MountWebhook {
     /// mount is the mount's handle.
@@ -4606,7 +4702,7 @@ pub struct MountWebhook {
     /// source is the repo the hook is on, such as "github://acme/board".
     #[prost(string, tag="2")]
     pub source: ::prost::alloc::string::String,
-    /// id is GitHub's id for the hook.
+    /// id is GitHub's id for the hook, and 0 for a Graph subscription.
     #[prost(int64, tag="3")]
     pub id: i64,
     /// url is where the hook sends its deliveries.
@@ -4619,6 +4715,13 @@ pub struct MountWebhook {
     /// was updated.
     #[prost(bool, tag="6")]
     pub created: bool,
+    /// subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+    /// drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+    /// it does on its own.
+    #[prost(string, tag="7")]
+    pub subscription_id: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="8")]
+    pub expire_time: ::core::option::Option<::pbjson_types::Timestamp>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetMountRequest {
@@ -4855,6 +4958,14 @@ pub enum MountKind {
     Uploads = 2,
     /// MOUNT_KIND_GITHUB is a snapshot of a GitHub repo at one commit, kept in --uploads.
     Github = 3,
+    /// MOUNT_KIND_S3 is a snapshot of an S3 bucket prefix, each object at the version it had, kept in
+    /// --uploads (agni issue 1730).
+    S3 = 4,
+    /// MOUNT_KIND_GCS is the same for a Google Cloud Storage bucket prefix (agni issue 1730).
+    Gcs = 5,
+    /// MOUNT_KIND_MSGRAPH is a snapshot of a SharePoint or OneDrive folder through Microsoft Graph,
+    /// each file at the version it had, kept in --uploads (agni issue 1729).
+    Msgraph = 6,
 }
 impl MountKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -4867,6 +4978,9 @@ impl MountKind {
             Self::File => "MOUNT_KIND_FILE",
             Self::Uploads => "MOUNT_KIND_UPLOADS",
             Self::Github => "MOUNT_KIND_GITHUB",
+            Self::S3 => "MOUNT_KIND_S3",
+            Self::Gcs => "MOUNT_KIND_GCS",
+            Self::Msgraph => "MOUNT_KIND_MSGRAPH",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -4876,6 +4990,9 @@ impl MountKind {
             "MOUNT_KIND_FILE" => Some(Self::File),
             "MOUNT_KIND_UPLOADS" => Some(Self::Uploads),
             "MOUNT_KIND_GITHUB" => Some(Self::Github),
+            "MOUNT_KIND_S3" => Some(Self::S3),
+            "MOUNT_KIND_GCS" => Some(Self::Gcs),
+            "MOUNT_KIND_MSGRAPH" => Some(Self::Msgraph),
             _ => None,
         }
     }

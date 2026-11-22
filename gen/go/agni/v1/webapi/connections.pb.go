@@ -23,6 +23,69 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// EntraAuth says how a CONNECTION_KIND_ENTRA connection signs in.
+type EntraAuth int32
+
+const (
+	EntraAuth_ENTRA_AUTH_UNSPECIFIED EntraAuth = 0
+	// ENTRA_AUTH_SECRET sends the client secret at key_source.
+	EntraAuth_ENTRA_AUTH_SECRET EntraAuth = 1
+	// ENTRA_AUTH_CERTIFICATE signs with the private key at key_source and names the certificate at
+	// cert_source.
+	EntraAuth_ENTRA_AUTH_CERTIFICATE EntraAuth = 2
+	// ENTRA_AUTH_MANAGED_IDENTITY asks the Azure host's managed identity for a token, so the
+	// connection holds no secret.
+	EntraAuth_ENTRA_AUTH_MANAGED_IDENTITY EntraAuth = 3
+	// ENTRA_AUTH_WORKLOAD_IDENTITY sends the Kubernetes service account token in the file at
+	// key_source, as AKS workload identity does.
+	EntraAuth_ENTRA_AUTH_WORKLOAD_IDENTITY EntraAuth = 4
+)
+
+// Enum value maps for EntraAuth.
+var (
+	EntraAuth_name = map[int32]string{
+		0: "ENTRA_AUTH_UNSPECIFIED",
+		1: "ENTRA_AUTH_SECRET",
+		2: "ENTRA_AUTH_CERTIFICATE",
+		3: "ENTRA_AUTH_MANAGED_IDENTITY",
+		4: "ENTRA_AUTH_WORKLOAD_IDENTITY",
+	}
+	EntraAuth_value = map[string]int32{
+		"ENTRA_AUTH_UNSPECIFIED":       0,
+		"ENTRA_AUTH_SECRET":            1,
+		"ENTRA_AUTH_CERTIFICATE":       2,
+		"ENTRA_AUTH_MANAGED_IDENTITY":  3,
+		"ENTRA_AUTH_WORKLOAD_IDENTITY": 4,
+	}
+)
+
+func (x EntraAuth) Enum() *EntraAuth {
+	p := new(EntraAuth)
+	*p = x
+	return p
+}
+
+func (x EntraAuth) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EntraAuth) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_connections_proto_enumTypes[0].Descriptor()
+}
+
+func (EntraAuth) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_connections_proto_enumTypes[0]
+}
+
+func (x EntraAuth) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EntraAuth.Descriptor instead.
+func (EntraAuth) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{0}
+}
+
 type ConnectionScope int32
 
 const (
@@ -60,11 +123,11 @@ func (x ConnectionScope) String() string {
 }
 
 func (ConnectionScope) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_connections_proto_enumTypes[0].Descriptor()
+	return file_agni_v1_webapi_connections_proto_enumTypes[1].Descriptor()
 }
 
 func (ConnectionScope) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_connections_proto_enumTypes[0]
+	return &file_agni_v1_webapi_connections_proto_enumTypes[1]
 }
 
 func (x ConnectionScope) Number() protoreflect.EnumNumber {
@@ -73,7 +136,7 @@ func (x ConnectionScope) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConnectionScope.Descriptor instead.
 func (ConnectionScope) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{1}
 }
 
 type ConnectionKind int32
@@ -88,6 +151,16 @@ const (
 	// CONNECTION_KIND_GITHUB_USER signs in as one person with their own GitHub token. It is always
 	// CONNECTION_SCOPE_PERSON, and the server keeps the token sealed rather than naming where it is.
 	ConnectionKind_CONNECTION_KIND_GITHUB_USER ConnectionKind = 3
+	// CONNECTION_KIND_AWS signs S3 requests: with the key pair access_key_id and key_source, or with
+	// the AWS SDK's default chain, such as an instance or IRSA role. It is a server connection only
+	// (agni issue 1730).
+	ConnectionKind_CONNECTION_KIND_AWS ConnectionKind = 4
+	// CONNECTION_KIND_GCP signs Cloud Storage requests with a service account key at key_source, or
+	// with Application Default Credentials. It is a server connection only (agni issue 1730).
+	ConnectionKind_CONNECTION_KIND_GCP ConnectionKind = 5
+	// CONNECTION_KIND_ENTRA signs Microsoft Graph requests as an Entra app registration, for
+	// SharePoint and OneDrive. It is a server connection only (agni issue 1729).
+	ConnectionKind_CONNECTION_KIND_ENTRA ConnectionKind = 6
 )
 
 // Enum value maps for ConnectionKind.
@@ -97,12 +170,18 @@ var (
 		1: "CONNECTION_KIND_GITHUB_APP",
 		2: "CONNECTION_KIND_GITHUB_TOKEN",
 		3: "CONNECTION_KIND_GITHUB_USER",
+		4: "CONNECTION_KIND_AWS",
+		5: "CONNECTION_KIND_GCP",
+		6: "CONNECTION_KIND_ENTRA",
 	}
 	ConnectionKind_value = map[string]int32{
 		"CONNECTION_KIND_UNSPECIFIED":  0,
 		"CONNECTION_KIND_GITHUB_APP":   1,
 		"CONNECTION_KIND_GITHUB_TOKEN": 2,
 		"CONNECTION_KIND_GITHUB_USER":  3,
+		"CONNECTION_KIND_AWS":          4,
+		"CONNECTION_KIND_GCP":          5,
+		"CONNECTION_KIND_ENTRA":        6,
 	}
 )
 
@@ -117,11 +196,11 @@ func (x ConnectionKind) String() string {
 }
 
 func (ConnectionKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_connections_proto_enumTypes[1].Descriptor()
+	return file_agni_v1_webapi_connections_proto_enumTypes[2].Descriptor()
 }
 
 func (ConnectionKind) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_connections_proto_enumTypes[1]
+	return &file_agni_v1_webapi_connections_proto_enumTypes[2]
 }
 
 func (x ConnectionKind) Number() protoreflect.EnumNumber {
@@ -130,7 +209,7 @@ func (x ConnectionKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConnectionKind.Descriptor instead.
 func (ConnectionKind) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{2}
 }
 
 type ConnectionStatus int32
@@ -167,11 +246,11 @@ func (x ConnectionStatus) String() string {
 }
 
 func (ConnectionStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_connections_proto_enumTypes[2].Descriptor()
+	return file_agni_v1_webapi_connections_proto_enumTypes[3].Descriptor()
 }
 
 func (ConnectionStatus) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_connections_proto_enumTypes[2]
+	return &file_agni_v1_webapi_connections_proto_enumTypes[3]
 }
 
 func (x ConnectionStatus) Number() protoreflect.EnumNumber {
@@ -180,7 +259,7 @@ func (x ConnectionStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConnectionStatus.Descriptor instead.
 func (ConnectionStatus) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{3}
 }
 
 // Connection is one sign-in the server reads a source through, named "connections/{connection}".
@@ -196,8 +275,11 @@ type Connection struct {
 	// app_id and installation_id identify a GitHub App installation, for CONNECTION_KIND_GITHUB_APP.
 	AppId          string `protobuf:"bytes,5,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
 	InstallationId int64  `protobuf:"varint,6,opt,name=installation_id,json=installationId,proto3" json:"installation_id,omitempty"`
-	// key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-	// CONNECTION_KIND_GITHUB_APP.
+	// key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+	// CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+	// key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+	// certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+	// AWS, GCP and an Entra managed identity takes the host's own credentials.
 	KeySource string `protobuf:"bytes,7,opt,name=key_source,json=keySource,proto3" json:"key_source,omitempty"`
 	// token_source is where the token is, "env:NAME" or "file:/abs/path", for
 	// CONNECTION_KIND_GITHUB_TOKEN.
@@ -215,10 +297,28 @@ type Connection struct {
 	// owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
 	// who made it. It is empty for a server connection. Output only.
 	Owner string `protobuf:"bytes,14,opt,name=owner,proto3" json:"owner,omitempty"`
+	// access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+	// key_source names the secret access key. AWS doesn't treat it as a secret.
+	AccessKeyId string `protobuf:"bytes,15,opt,name=access_key_id,json=accessKeyId,proto3" json:"access_key_id,omitempty"`
+	// role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+	// "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+	RoleArn string `protobuf:"bytes,16,opt,name=role_arn,json=roleArn,proto3" json:"role_arn,omitempty"`
+	// region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+	Region string `protobuf:"bytes,17,opt,name=region,proto3" json:"region,omitempty"`
+	// tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+	// GUID or a domain, and its application id. For a managed identity, client_id picks a
+	// user-assigned identity and may be empty.
+	TenantId string `protobuf:"bytes,18,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ClientId string `protobuf:"bytes,19,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	// entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+	EntraAuth EntraAuth `protobuf:"varint,20,opt,name=entra_auth,json=entraAuth,proto3,enum=agni.v1.webapi.EntraAuth" json:"entra_auth,omitempty"`
+	// cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+	// "file:/abs/path". Its private key is at key_source.
+	CertSource string `protobuf:"bytes,21,opt,name=cert_source,json=certSource,proto3" json:"cert_source,omitempty"`
 	// sealed says a server connection keeps its secret sealed in --store under --connections-key,
 	// as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
 	// token_source or key_source is then empty. Output only.
-	Sealed        bool `protobuf:"varint,15,opt,name=sealed,proto3" json:"sealed,omitempty"`
+	Sealed        bool `protobuf:"varint,22,opt,name=sealed,proto3" json:"sealed,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -351,6 +451,55 @@ func (x *Connection) GetOwner() string {
 	return ""
 }
 
+func (x *Connection) GetAccessKeyId() string {
+	if x != nil {
+		return x.AccessKeyId
+	}
+	return ""
+}
+
+func (x *Connection) GetRoleArn() string {
+	if x != nil {
+		return x.RoleArn
+	}
+	return ""
+}
+
+func (x *Connection) GetRegion() string {
+	if x != nil {
+		return x.Region
+	}
+	return ""
+}
+
+func (x *Connection) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *Connection) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *Connection) GetEntraAuth() EntraAuth {
+	if x != nil {
+		return x.EntraAuth
+	}
+	return EntraAuth_ENTRA_AUTH_UNSPECIFIED
+}
+
+func (x *Connection) GetCertSource() string {
+	if x != nil {
+		return x.CertSource
+	}
+	return ""
+}
+
 func (x *Connection) GetSealed() bool {
 	if x != nil {
 		return x.Sealed
@@ -368,9 +517,11 @@ type CreateConnectionRequest struct {
 	// under --connections-key and never sends it back. A token kind of person connection takes no
 	// token_source, since a reference would let a caller name a secret of the server's.
 	UserToken string `protobuf:"bytes,3,opt,name=user_token,json=userToken,proto3" json:"user_token,omitempty"`
-	// server_secret is a server connection's secret itself: the token for
-	// CONNECTION_KIND_GITHUB_TOKEN, or the App's PEM private key for CONNECTION_KIND_GITHUB_APP (agni
-	// issue 1802). The server seals it under --connections-key and never sends it back, and the
+	// server_secret is a server connection's secret itself (agni issue 1802): the token for
+	// CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+	// secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+	// the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+	// holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
 	// connection's token_source or key_source stays empty. It suits a server in a container, whose
 	// environment and files the caller can't reach. A server started without --connections-key
 	// answers FAILED_PRECONDITION.
@@ -662,7 +813,7 @@ var File_agni_v1_webapi_connections_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	"\n" +
-	" agni/v1/webapi/connections.proto\x12\x0eagni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcf\x04\n" +
+	" agni/v1/webapi/connections.proto\x12\x0eagni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbb\x06\n" +
 	"\n" +
 	"Connection\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x122\n" +
@@ -682,8 +833,17 @@ const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	"createTime\x12>\n" +
 	"\rlast_use_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vlastUseTime\x125\n" +
 	"\x05scope\x18\r \x01(\x0e2\x1f.agni.v1.webapi.ConnectionScopeR\x05scope\x12\x14\n" +
-	"\x05owner\x18\x0e \x01(\tR\x05owner\x12\x16\n" +
-	"\x06sealed\x18\x0f \x01(\bR\x06sealed\"\xbe\x01\n" +
+	"\x05owner\x18\x0e \x01(\tR\x05owner\x12\"\n" +
+	"\raccess_key_id\x18\x0f \x01(\tR\vaccessKeyId\x12\x19\n" +
+	"\brole_arn\x18\x10 \x01(\tR\aroleArn\x12\x16\n" +
+	"\x06region\x18\x11 \x01(\tR\x06region\x12\x1b\n" +
+	"\ttenant_id\x18\x12 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tclient_id\x18\x13 \x01(\tR\bclientId\x128\n" +
+	"\n" +
+	"entra_auth\x18\x14 \x01(\x0e2\x19.agni.v1.webapi.EntraAuthR\tentraAuth\x12\x1f\n" +
+	"\vcert_source\x18\x15 \x01(\tR\n" +
+	"certSource\x12\x16\n" +
+	"\x06sealed\x18\x16 \x01(\bR\x06sealed\"\xbe\x01\n" +
 	"\x17CreateConnectionRequest\x12#\n" +
 	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\x12:\n" +
 	"\n" +
@@ -701,16 +861,25 @@ const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	"\x17ListConnectionsResponse\x12<\n" +
 	"\vconnections\x18\x01 \x03(\v2\x1a.agni.v1.webapi.ConnectionR\vconnections\"-\n" +
 	"\x17DeleteConnectionRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name*m\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name*\x9d\x01\n" +
+	"\tEntraAuth\x12\x1a\n" +
+	"\x16ENTRA_AUTH_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11ENTRA_AUTH_SECRET\x10\x01\x12\x1a\n" +
+	"\x16ENTRA_AUTH_CERTIFICATE\x10\x02\x12\x1f\n" +
+	"\x1bENTRA_AUTH_MANAGED_IDENTITY\x10\x03\x12 \n" +
+	"\x1cENTRA_AUTH_WORKLOAD_IDENTITY\x10\x04*m\n" +
 	"\x0fConnectionScope\x12 \n" +
 	"\x1cCONNECTION_SCOPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17CONNECTION_SCOPE_SERVER\x10\x01\x12\x1b\n" +
-	"\x17CONNECTION_SCOPE_PERSON\x10\x02*\x94\x01\n" +
+	"\x17CONNECTION_SCOPE_PERSON\x10\x02*\xe1\x01\n" +
 	"\x0eConnectionKind\x12\x1f\n" +
 	"\x1bCONNECTION_KIND_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aCONNECTION_KIND_GITHUB_APP\x10\x01\x12 \n" +
 	"\x1cCONNECTION_KIND_GITHUB_TOKEN\x10\x02\x12\x1f\n" +
-	"\x1bCONNECTION_KIND_GITHUB_USER\x10\x03*m\n" +
+	"\x1bCONNECTION_KIND_GITHUB_USER\x10\x03\x12\x17\n" +
+	"\x13CONNECTION_KIND_AWS\x10\x04\x12\x17\n" +
+	"\x13CONNECTION_KIND_GCP\x10\x05\x12\x19\n" +
+	"\x15CONNECTION_KIND_ENTRA\x10\x06*m\n" +
 	"\x10ConnectionStatus\x12!\n" +
 	"\x1dCONNECTION_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14CONNECTION_STATUS_OK\x10\x01\x12\x1c\n" +
@@ -734,45 +903,47 @@ func file_agni_v1_webapi_connections_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_connections_proto_rawDescData
 }
 
-var file_agni_v1_webapi_connections_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_agni_v1_webapi_connections_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_agni_v1_webapi_connections_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_agni_v1_webapi_connections_proto_goTypes = []any{
-	(ConnectionScope)(0),            // 0: agni.v1.webapi.ConnectionScope
-	(ConnectionKind)(0),             // 1: agni.v1.webapi.ConnectionKind
-	(ConnectionStatus)(0),           // 2: agni.v1.webapi.ConnectionStatus
-	(*Connection)(nil),              // 3: agni.v1.webapi.Connection
-	(*CreateConnectionRequest)(nil), // 4: agni.v1.webapi.CreateConnectionRequest
-	(*RotateConnectionRequest)(nil), // 5: agni.v1.webapi.RotateConnectionRequest
-	(*GetConnectionRequest)(nil),    // 6: agni.v1.webapi.GetConnectionRequest
-	(*ListConnectionsRequest)(nil),  // 7: agni.v1.webapi.ListConnectionsRequest
-	(*ListConnectionsResponse)(nil), // 8: agni.v1.webapi.ListConnectionsResponse
-	(*DeleteConnectionRequest)(nil), // 9: agni.v1.webapi.DeleteConnectionRequest
-	(*timestamppb.Timestamp)(nil),   // 10: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),           // 11: google.protobuf.Empty
+	(EntraAuth)(0),                  // 0: agni.v1.webapi.EntraAuth
+	(ConnectionScope)(0),            // 1: agni.v1.webapi.ConnectionScope
+	(ConnectionKind)(0),             // 2: agni.v1.webapi.ConnectionKind
+	(ConnectionStatus)(0),           // 3: agni.v1.webapi.ConnectionStatus
+	(*Connection)(nil),              // 4: agni.v1.webapi.Connection
+	(*CreateConnectionRequest)(nil), // 5: agni.v1.webapi.CreateConnectionRequest
+	(*RotateConnectionRequest)(nil), // 6: agni.v1.webapi.RotateConnectionRequest
+	(*GetConnectionRequest)(nil),    // 7: agni.v1.webapi.GetConnectionRequest
+	(*ListConnectionsRequest)(nil),  // 8: agni.v1.webapi.ListConnectionsRequest
+	(*ListConnectionsResponse)(nil), // 9: agni.v1.webapi.ListConnectionsResponse
+	(*DeleteConnectionRequest)(nil), // 10: agni.v1.webapi.DeleteConnectionRequest
+	(*timestamppb.Timestamp)(nil),   // 11: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),           // 12: google.protobuf.Empty
 }
 var file_agni_v1_webapi_connections_proto_depIdxs = []int32{
-	1,  // 0: agni.v1.webapi.Connection.kind:type_name -> agni.v1.webapi.ConnectionKind
-	2,  // 1: agni.v1.webapi.Connection.status:type_name -> agni.v1.webapi.ConnectionStatus
-	10, // 2: agni.v1.webapi.Connection.create_time:type_name -> google.protobuf.Timestamp
-	10, // 3: agni.v1.webapi.Connection.last_use_time:type_name -> google.protobuf.Timestamp
-	0,  // 4: agni.v1.webapi.Connection.scope:type_name -> agni.v1.webapi.ConnectionScope
-	3,  // 5: agni.v1.webapi.CreateConnectionRequest.connection:type_name -> agni.v1.webapi.Connection
-	3,  // 6: agni.v1.webapi.ListConnectionsResponse.connections:type_name -> agni.v1.webapi.Connection
-	4,  // 7: agni.v1.webapi.ConnectionService.CreateConnection:input_type -> agni.v1.webapi.CreateConnectionRequest
-	6,  // 8: agni.v1.webapi.ConnectionService.GetConnection:input_type -> agni.v1.webapi.GetConnectionRequest
-	7,  // 9: agni.v1.webapi.ConnectionService.ListConnections:input_type -> agni.v1.webapi.ListConnectionsRequest
-	9,  // 10: agni.v1.webapi.ConnectionService.DeleteConnection:input_type -> agni.v1.webapi.DeleteConnectionRequest
-	5,  // 11: agni.v1.webapi.ConnectionService.RotateConnection:input_type -> agni.v1.webapi.RotateConnectionRequest
-	3,  // 12: agni.v1.webapi.ConnectionService.CreateConnection:output_type -> agni.v1.webapi.Connection
-	3,  // 13: agni.v1.webapi.ConnectionService.GetConnection:output_type -> agni.v1.webapi.Connection
-	8,  // 14: agni.v1.webapi.ConnectionService.ListConnections:output_type -> agni.v1.webapi.ListConnectionsResponse
-	11, // 15: agni.v1.webapi.ConnectionService.DeleteConnection:output_type -> google.protobuf.Empty
-	3,  // 16: agni.v1.webapi.ConnectionService.RotateConnection:output_type -> agni.v1.webapi.Connection
-	12, // [12:17] is the sub-list for method output_type
-	7,  // [7:12] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	2,  // 0: agni.v1.webapi.Connection.kind:type_name -> agni.v1.webapi.ConnectionKind
+	3,  // 1: agni.v1.webapi.Connection.status:type_name -> agni.v1.webapi.ConnectionStatus
+	11, // 2: agni.v1.webapi.Connection.create_time:type_name -> google.protobuf.Timestamp
+	11, // 3: agni.v1.webapi.Connection.last_use_time:type_name -> google.protobuf.Timestamp
+	1,  // 4: agni.v1.webapi.Connection.scope:type_name -> agni.v1.webapi.ConnectionScope
+	0,  // 5: agni.v1.webapi.Connection.entra_auth:type_name -> agni.v1.webapi.EntraAuth
+	4,  // 6: agni.v1.webapi.CreateConnectionRequest.connection:type_name -> agni.v1.webapi.Connection
+	4,  // 7: agni.v1.webapi.ListConnectionsResponse.connections:type_name -> agni.v1.webapi.Connection
+	5,  // 8: agni.v1.webapi.ConnectionService.CreateConnection:input_type -> agni.v1.webapi.CreateConnectionRequest
+	7,  // 9: agni.v1.webapi.ConnectionService.GetConnection:input_type -> agni.v1.webapi.GetConnectionRequest
+	8,  // 10: agni.v1.webapi.ConnectionService.ListConnections:input_type -> agni.v1.webapi.ListConnectionsRequest
+	10, // 11: agni.v1.webapi.ConnectionService.DeleteConnection:input_type -> agni.v1.webapi.DeleteConnectionRequest
+	6,  // 12: agni.v1.webapi.ConnectionService.RotateConnection:input_type -> agni.v1.webapi.RotateConnectionRequest
+	4,  // 13: agni.v1.webapi.ConnectionService.CreateConnection:output_type -> agni.v1.webapi.Connection
+	4,  // 14: agni.v1.webapi.ConnectionService.GetConnection:output_type -> agni.v1.webapi.Connection
+	9,  // 15: agni.v1.webapi.ConnectionService.ListConnections:output_type -> agni.v1.webapi.ListConnectionsResponse
+	12, // 16: agni.v1.webapi.ConnectionService.DeleteConnection:output_type -> google.protobuf.Empty
+	4,  // 17: agni.v1.webapi.ConnectionService.RotateConnection:output_type -> agni.v1.webapi.Connection
+	13, // [13:18] is the sub-list for method output_type
+	8,  // [8:13] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_connections_proto_init() }
@@ -785,7 +956,7 @@ func file_agni_v1_webapi_connections_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_connections_proto_rawDesc), len(file_agni_v1_webapi_connections_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      4,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,

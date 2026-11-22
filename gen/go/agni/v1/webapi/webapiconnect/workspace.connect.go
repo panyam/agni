@@ -88,6 +88,11 @@ type WorkspaceServiceClient interface {
 	// server's secret and the push event again, so a second call changes nothing else. A server with
 	// no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
 	// that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+	//
+	// On a SharePoint or OneDrive mount it asks Microsoft Graph to send the drive's changes to url
+	// instead, with the server's --msgraph-client-state, and the server renews the subscription
+	// before Graph ends it (agni issue 1729). Graph checks url at once, so the server must already be
+	// reachable there over https. A second call for the same url renews the one subscription.
 	CreateMountWebhook(context.Context, *connect.Request[webapi.CreateMountWebhookRequest]) (*connect.Response[webapi.MountWebhook], error)
 	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
 	// file is labeled with the reader that would open it. The client addresses a location by an
@@ -270,6 +275,11 @@ type WorkspaceServiceHandler interface {
 	// server's secret and the push event again, so a second call changes nothing else. A server with
 	// no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
 	// that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+	//
+	// On a SharePoint or OneDrive mount it asks Microsoft Graph to send the drive's changes to url
+	// instead, with the server's --msgraph-client-state, and the server renews the subscription
+	// before Graph ends it (agni issue 1729). Graph checks url at once, so the server must already be
+	// reachable there over https. A second call for the same url renews the one subscription.
 	CreateMountWebhook(context.Context, *connect.Request[webapi.CreateMountWebhookRequest]) (*connect.Response[webapi.MountWebhook], error)
 	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
 	// file is labeled with the reader that would open it. The client addresses a location by an
