@@ -7,10 +7,15 @@
 # rev-c, with the schematic and board kept in Git LFS (#1809), and hw/agni-packs has the tutorial project's checks as a pack. alice is in org acme and can
 # read both. mallory is in org acme and can read neither, as a contractor might.
 #
-# agni serve starts as the bundle will start it (#1802): TLS from a throwaway CA, --auth tokens,
+# agni serve starts as the enterprise bundle starts it: TLS from a throwaway CA, --auth tokens,
 # sign-in through a GitHub App on the fake, a connections key and a webhook secret. Every request it
 # makes to a host other than the fake goes to a trap proxy, and the last step fails if the trap saw
 # one. The CLI trusts the throwaway CA through AGNI_CA_FILE.
+#
+# EXERCISE_SERVE=bundle runs the same steps against deploy/enterprise/compose.yaml over AGNI_IMAGE at
+# AGNI_VERSION, with no agni checkout behind the server (agni issue 1802). The fake and the trap then
+# listen on EXERCISE_HOST, an address of this machine that both its own CLI and the container reach:
+# the docker bridge's gateway on Linux, and this Mac's own address under Docker Desktop.
 #
 # Each step prints PASS, FAIL with its reason, or FAIL (waits on #N) when an open ticket is what's
 # missing. The script exits 1 on any FAIL. With EXERCISE_ALLOW_WAITS=1 it exits 0 when every FAIL
@@ -25,6 +30,24 @@ port=${EXERCISE_PORT:-18799}
 url=https://127.0.0.1:$port
 root=$(cd "$(dirname "$0")/.." && pwd)
 tutorial=$root/examples/tutorial-project
+mode=${EXERCISE_SERVE:-binary}
+container=${CONTAINER:-docker}
+case "$mode" in
+  binary) host=127.0.0.1 ;;
+  bundle)
+    : "${AGNI_IMAGE:?EXERCISE_SERVE=bundle needs AGNI_IMAGE, such as ghcr.io/panyam/agni}"
+    : "${AGNI_VERSION:?EXERCISE_SERVE=bundle needs AGNI_VERSION, the image tag}"
+    host=${EXERCISE_HOST:-}
+    if [ -z "$host" ]; then
+      case "$(uname -s)" in
+        Linux) host=$("$container" network inspect bridge --format '{{(index .IPAM.Config 0).Gateway}}') ;;
+        Darwin) host=$(ipconfig getifaddr en0 || ipconfig getifaddr en1) ;;
+      esac
+    fi
+    [ -n "$host" ] || { echo "EXERCISE_SERVE=bundle found no address the container reaches; set EXERCISE_HOST" >&2; exit 1; }
+    ;;
+  *) echo "EXERCISE_SERVE=$mode: want binary or bundle" >&2; exit 1 ;;
+esac
 
 rm -rf "$out"
 mkdir -p "$out"
@@ -35,9 +58,26 @@ uploads=$out/uploads
 
 pids=()
 serve_pid=
-stop_serve() { [ -n "$serve_pid" ] && kill "$serve_pid" 2>/dev/null && wait "$serve_pid" 2>/dev/null; serve_pid=; }
+project=agni-exercise-$$
+bundle() {
+  "$container" compose -f "$root/deploy/enterprise/compose.yaml" -f "$root/hack/exercise-enterprise.compose.yaml" \
+    --env-file "$out/bundle.env" -p "$project" "$@"
+}
+stop_serve() {
+  if [ "$mode" = bundle ]; then
+    [ -n "$serve_pid" ] && bundle stop agni >/dev/null 2>&1
+  else
+    [ -n "$serve_pid" ] && kill "$serve_pid" 2>/dev/null && wait "$serve_pid" 2>/dev/null
+  fi
+  serve_pid=
+}
 cleanup() {
-  stop_serve
+  if [ "$mode" = bundle ] && [ -f "$out/bundle.env" ]; then
+    bundle logs agni >"$out/serve.log" 2>&1 || true
+    bundle down -v >/dev/null 2>&1 || true
+  else
+    stop_serve
+  fi
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
 }
 trap cleanup EXIT
@@ -93,13 +133,24 @@ printf 'subjectAltName=IP:127.0.0.1,DNS:localhost\n' >"$out/san.ext"
 openssl x509 -req -in "$out/server.csr" -CA "$out/ca.pem" -CAkey "$out/ca.key" -CAcreateserial -days 1 \
   -extfile "$out/san.ext" -out "$out/server.pem" 2>/dev/null
 export AGNI_CA_FILE=$out/ca.pem
+# Off loopback the fake serves HTTPS, since oneauth refuses a plain-HTTP GitHub Enterprise host
+# there, so the bundle's run gives the fake a certificate of its own for its address.
+if [ "$mode" = bundle ]; then
+  case "$host" in *[!0-9.]*) fake_san=DNS:$host ;; *) fake_san=IP:$host ;; esac
+  openssl req -newkey rsa:2048 -nodes -subj "/CN=$host" -keyout "$out/fake.key" -out "$out/fake.csr" 2>/dev/null
+  printf 'subjectAltName=%s\n' "$fake_san" >"$out/fake-san.ext"
+  openssl x509 -req -in "$out/fake.csr" -CA "$out/ca.pem" -CAkey "$out/ca.key" -CAcreateserial -days 1 \
+    -extfile "$out/fake-san.ext" -out "$out/fake.pem" 2>/dev/null
+fi
 echo "made $out/ca.pem and a server certificate it signed"
 
 step "start the fake GitHub Enterprise Server"
 (cd "$root" && go build -o "$out/fakegithub" ./tools/fakegithub)
 ctl_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
 ctl=http://127.0.0.1:$ctl_port
-"$out/fakegithub" --seed "$out/repos/seed.json" --addr "127.0.0.1:$ctl_port" --hook-ca "$out/ca.pem" >>"$out/fakegithub.log" 2>&1 &
+fake_host=()
+[ "$mode" = bundle ] && fake_host=(--host "$host" --tls-cert "$out/fake.pem" --tls-key "$out/fake.key")
+"$out/fakegithub" --seed "$out/repos/seed.json" --addr "127.0.0.1:$ctl_port" ${fake_host[@]+"${fake_host[@]}"} --hook-ca "$out/ca.pem" >>"$out/fakegithub.log" 2>&1 &
 pids+=($!)
 wait_for "$ctl/" || { echo "the fake didn't start; see $out/fakegithub.log" >&2; exit 1; }
 answer=$(curl -s "$ctl/")
@@ -109,7 +160,7 @@ revc=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["commits"]["hw
 echo "the fake is at $ghes; rev-b is $revb and rev-c is $revc"
 # The repo itself holds LFS pointers, so a check that matches the files' findings later shows that
 # agni read the objects.
-if curl -s -H "Authorization: Bearer $server_token" "$ghes/raw/hw/baseboard/$revb/gateway.kicad_sch" | grep -q '^version https://git-lfs.github.com/spec/v1'; then
+if curl -s --cacert "$out/ca.pem" -H "Authorization: Bearer $server_token" "$ghes/raw/hw/baseboard/$revb/gateway.kicad_sch" | grep -q '^version https://git-lfs.github.com/spec/v1'; then
   pass "hw/baseboard keeps gateway.kicad_sch at rev-b as a Git LFS pointer"
 else
   no "hw/baseboard's gateway.kicad_sch at rev-b isn't an LFS pointer, so the exercise checks no LFS read"
@@ -118,10 +169,10 @@ fi
 step "a trap for any request to another host"
 # agni serve sends every outbound request through this proxy, except those to 127.0.0.1, which
 # NO_PROXY lets through to the fake. The trap logs whatever reaches it and answers 502.
-trap_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
-python3 - "$trap_port" "$out/trap.log" <<'PY' >>"$out/trap.out" 2>&1 &
+trap_port=$(python3 -c 'import socket,sys; s=socket.socket(); s.bind((sys.argv[1],0)); print(s.getsockname()[1])' "$host")
+python3 - "$host" "$trap_port" "$out/trap.log" <<'PY' >>"$out/trap.out" 2>&1 &
 import http.server, sys
-log = open(sys.argv[2], "a", buffering=1)
+log = open(sys.argv[3], "a", buffering=1)
 class Trap(http.server.BaseHTTPRequestHandler):
     def handle_one_request(self):
         line = self.rfile.readline(65537).decode("latin-1").strip()
@@ -129,11 +180,11 @@ class Trap(http.server.BaseHTTPRequestHandler):
             log.write(line + "\n")
             self.wfile.write(b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n")
         self.close_connection = True
-http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), Trap).serve_forever()
+http.server.ThreadingHTTPServer((sys.argv[1], int(sys.argv[2])), Trap).serve_forever()
 PY
 pids+=($!)
 touch "$out/trap.log"
-echo "the trap listens on 127.0.0.1:$trap_port"
+echo "the trap listens on $host:$trap_port"
 
 AGNI_CONNECTIONS_KEY=$(openssl rand -hex 32)
 AGNI_GITHUB_CLIENT_SECRET=$client_secret
@@ -141,7 +192,50 @@ AGNI_WEBHOOK_SECRET=$(openssl rand -hex 32)
 HW_TOKEN=$server_token
 export AGNI_CONNECTIONS_KEY AGNI_GITHUB_CLIENT_SECRET AGNI_WEBHOOK_SECRET HW_TOKEN
 
+# The bundle reads each secret from a file. They sit in this run's own folder, readable by the
+# image's uid, as the bundle's env.example asks.
+if [ "$mode" = bundle ]; then
+  mkdir -p "$out/secrets"
+  cp "$out/server.pem" "$out/secrets/tls.crt"
+  cp "$out/server.key" "$out/secrets/tls.key"
+  printf '%s' "$AGNI_CONNECTIONS_KEY" >"$out/secrets/connections.key"
+  printf '%s' "$AGNI_GITHUB_CLIENT_SECRET" >"$out/secrets/github-client-secret"
+  printf '%s' "$AGNI_WEBHOOK_SECRET" >"$out/secrets/github-webhook-secret"
+  # The fake's certificate comes from the exercise's CA, which the bundle trusts through its own
+  # folder of CA certificates, as a GitHub Enterprise Server behind a team's CA would be.
+  mkdir -p "$out/ca-dir"
+  cp "$out/ca.pem" "$out/ca-dir/exercise-ca.pem"
+  chmod 0644 "$out/ca-dir/exercise-ca.pem"
+  mkdir -p "$out/connection-secrets"
+  printf '%s' "$HW_TOKEN" >"$out/connection-secrets/hw"
+  chmod 0644 "$out/secrets/"* "$out/connection-secrets/hw"
+  cat >"$out/bundle.env" <<ENV
+AGNI_IMAGE=$AGNI_IMAGE
+AGNI_VERSION=$AGNI_VERSION
+AGNI_PUBLIC_URL=$url
+AGNI_PORT=$port
+AGNI_TLS_CERT=$out/secrets/tls.crt
+AGNI_TLS_KEY=$out/secrets/tls.key
+AGNI_CONNECTIONS_KEY_FILE=$out/secrets/connections.key
+AGNI_GITHUB_API=$ghes/api/v3
+AGNI_GITHUB_CLIENT_ID=Iv1.exercise
+AGNI_GITHUB_CLIENT_SECRET_FILE=$out/secrets/github-client-secret
+AGNI_GITHUB_ALLOW=org:acme
+AGNI_GITHUB_WEBHOOK_SECRET_FILE=$out/secrets/github-webhook-secret
+EXERCISE_PROXY=http://$host:$trap_port
+EXERCISE_NO_PROXY=$host
+AGNI_CONNECTION_SECRETS=$out/connection-secrets
+AGNI_CA_DIR=$out/ca-dir
+ENV
+fi
+
 serve() {
+  if [ "$mode" = bundle ]; then
+    bundle up -d agni >>"$out/bundle.log" 2>&1 || { echo "the bundle didn't start; see $out/bundle.log" >&2; exit 1; }
+    serve_pid=bundle
+    wait_for --cacert "$out/ca.pem" "$url/healthz" || { bundle logs agni >"$out/serve.log" 2>&1; echo "the bundle's agni serve didn't answer; see $out/serve.log" >&2; exit 1; }
+    return
+  fi
   (cd "$out" && HTTPS_PROXY="http://127.0.0.1:$trap_port" HTTP_PROXY="http://127.0.0.1:$trap_port" NO_PROXY=127.0.0.1,localhost \
     exec "$agni" serve --addr "127.0.0.1:$port" --store "file://$store" --uploads "file://$uploads" \
     --auth tokens --tls-cert "$out/server.pem" --tls-key "$out/server.key" \
@@ -154,7 +248,11 @@ serve() {
 }
 
 step "start agni serve with TLS, tokens, sign-in through the App, a connections key and webhooks"
-"$agni" token create admin --store "file://$store" >"$out/admin.token" 2>/dev/null
+if [ "$mode" = bundle ]; then
+  bundle run --rm --no-deps -T agni token create admin --store file:///var/lib/agni/meta >"$out/admin.token" 2>>"$out/bundle.log"
+else
+  "$agni" token create admin --store "file://$store" >"$out/admin.token" 2>/dev/null
+fi
 serve
 if curl -s -o /dev/null --cacert "$out/ca.pem" "$url/healthz" && ! curl -s -o /dev/null "$url/healthz" 2>/dev/null; then
   pass "agni serve answers over TLS with the throwaway CA, and a client without it is refused"
@@ -202,11 +300,19 @@ for who in alice mallory; do
 done
 
 step "the admin adds a server connection and mounts hw/baseboard through it"
-admin connections add hw --github-token env:HW_TOKEN >/dev/null
+# The server reads a server connection's token itself: from its own environment here, and from the
+# bundle's mounted folder of connection secrets there.
+hw_ref=env:HW_TOKEN
+[ "$mode" = bundle ] && hw_ref=file:/run/agni/connections/hw
+admin connections add hw --github-token "$hw_ref" >/dev/null
 if admin mounts add board github://hw/baseboard --ref rev-b --connection hw | tee "$out/mount.txt" | grep -q "via hw"; then
   pass "hw/baseboard mounted at rev-b through the server connection"
 else
   no "mounting hw/baseboard; see $out/mount.txt and $out/serve.log"
+fi
+if [ "$mode" = bundle ]; then
+  store=$out/store-copy
+  rm -rf "$store" && bundle cp agni:/var/lib/agni/meta "$store" >/dev/null
 fi
 if grep -rqF "$HW_TOKEN" "$store"; then
   no "the store holds the server connection's token in the clear"
@@ -325,9 +431,6 @@ else
 fi
 as mallory designs get bb >"$out/mallory-get-2.txt" 2>&1 || true
 refused "designs/bb after the restart" "$out/mallory-get-2.txt"
-
-step "the deployment bundle"
-waits 1802 "the same run from the release's deployment bundle, with no agni checkout"
 
 step "nothing reached a host other than the fake"
 if [ -s "$out/trap.log" ]; then

@@ -1,0 +1,9 @@
+# The enterprise exercise's additions to deploy/enterprise/compose.yaml (agni issue 1802). agni serve
+# sends every outbound request through the exercise's trap proxy, apart from those to the fake GitHub
+# Enterprise Server, so the run fails if the bundle reaches any other host. Nothing here ships.
+services:
+  agni:
+    environment:
+      HTTPS_PROXY: ${EXERCISE_PROXY:?the exercise sets EXERCISE_PROXY}
+      HTTP_PROXY: ${EXERCISE_PROXY:?the exercise sets EXERCISE_PROXY}
+      NO_PROXY: ${EXERCISE_NO_PROXY:?the exercise sets EXERCISE_NO_PROXY}

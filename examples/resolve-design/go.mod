@@ -6,7 +6,7 @@ require (
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/agni/examples/common v0.0.0
 	github.com/panyam/demokit v0.0.33
-	github.com/panyam/goapplib/storage v0.7.27
+	github.com/panyam/goapplib/storage v0.7.28
 )
 
 require (
@@ -47,7 +47,7 @@ require (
 	github.com/panyam/gocurrent v0.1.3 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
-	github.com/panyam/oneauth v0.3.16 // indirect
+	github.com/panyam/oneauth v0.3.17 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/afero v1.15.0 // indirect

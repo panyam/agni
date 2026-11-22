@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -15,18 +16,27 @@ import (
 
 type composeFile struct {
 	Services map[string]struct {
-		Command []string `yaml:"command"`
-		Volumes []string `yaml:"volumes"`
+		Command     []string          `yaml:"command"`
+		Volumes     []string          `yaml:"volumes"`
+		Secrets     []string          `yaml:"secrets"`
+		Environment map[string]string `yaml:"environment"`
 	} `yaml:"services"`
 	Volumes map[string]any `yaml:"volumes"`
+	Secrets map[string]struct {
+		File string `yaml:"file"`
+	} `yaml:"secrets"`
 }
+
+// bundles are the compose files a release attaches: the trial bundle, and the enterprise bundle
+// with TLS, tokens and GitHub sign-in (agni issue 1802).
+var bundles = []string{"compose.yaml", "enterprise/compose.yaml"}
 
 // writableFlags are the serve flags that name a folder the server writes into, as a file:// URL.
 var writableFlags = []string{"--store", "--uploads"}
 
-func readCompose(t *testing.T) composeFile {
+func readComposeAt(t *testing.T, file string) composeFile {
 	t.Helper()
-	b, err := os.ReadFile("compose.yaml")
+	b, err := os.ReadFile(file) // #nosec G304 -- one of bundles
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,35 +70,49 @@ func under(p, dir string) bool {
 // A design a customer uploads, a review run and a snapshot's definition each live in a folder a
 // serve flag names. Each folder must sit on a named volume, or recreating the container loses it.
 func TestServeKeepsItsWritesOnANamedVolume(t *testing.T) {
-	c := readCompose(t)
-	targets := namedTargets(t, c, "agni")
-	cmd := c.Services["agni"].Command
-	for _, flag := range writableFlags {
-		i := indexOf(cmd, flag)
-		if i < 0 || i+1 >= len(cmd) {
-			t.Errorf("the agni service's command has no %s, so the server keeps that state in memory or not at all", flag)
-			continue
-		}
-		dir, isFile := strings.CutPrefix(cmd[i+1], "file://")
-		if !isFile {
-			t.Errorf("%s %s is no file:// URL", flag, cmd[i+1])
-			continue
-		}
-		onVolume := false
-		for _, target := range targets {
-			onVolume = onVolume || under(dir, target)
-		}
-		if !onVolume {
-			t.Errorf("%s %s is on no named volume (the volumes are at %v), so recreating the container loses it", flag, dir, targets)
+	for _, file := range bundles {
+		c := readComposeAt(t, file)
+		targets := namedTargets(t, c, "agni")
+		cmd := c.Services["agni"].Command
+		for _, flag := range writableFlags {
+			v, ok := flagValue(cmd, flag)
+			if !ok {
+				t.Errorf("%s: the agni service's command has no %s, so the server keeps that state in memory or not at all", file, flag)
+				continue
+			}
+			dir, isFile := strings.CutPrefix(v, "file://")
+			if !isFile {
+				t.Errorf("%s: %s %s is no file:// URL", file, flag, v)
+				continue
+			}
+			onVolume := false
+			for _, target := range targets {
+				onVolume = onVolume || under(dir, target)
+			}
+			if !onVolume {
+				t.Errorf("%s: %s %s is on no named volume (the volumes are at %v), so recreating the container loses it", file, flag, dir, targets)
+			}
 		}
 	}
+}
+
+// flagValue is the value cmd gives flag, written as "--flag value" or "--flag=value".
+func flagValue(cmd []string, flag string) (string, bool) {
+	for i, a := range cmd {
+		if v, ok := strings.CutPrefix(a, flag+"="); ok {
+			return v, true
+		}
+		if a == flag && i+1 < len(cmd) {
+			return cmd[i+1], true
+		}
+	}
+	return "", false
 }
 
 // A named volume copies the ownership of the folder it is mounted over, and a folder the image lacks
 // comes up owned by root. The server runs as the user agni, so every named volume's target must be a
 // folder the Dockerfile makes, or the server cannot write to it.
 func TestTheImageMakesEveryNamedVolumesFolder(t *testing.T) {
-	c := readCompose(t)
 	b, err := os.ReadFile("../Dockerfile")
 	if err != nil {
 		t.Fatal(err)
@@ -100,35 +124,35 @@ func TestTheImageMakesEveryNamedVolumesFolder(t *testing.T) {
 	if len(made) == 0 {
 		t.Fatal("the Dockerfile has no mkdir -p")
 	}
-	targets := namedTargets(t, c, "agni")
-	if len(targets) == 0 {
-		t.Fatal("the agni service mounts no named volume")
-	}
-	for _, target := range targets {
-		ok := false
-		for _, dir := range made {
-			ok = ok || under(path.Clean(dir), path.Clean(target))
+	for _, file := range bundles {
+		c := readComposeAt(t, file)
+		targets := namedTargets(t, c, "agni")
+		if len(targets) == 0 {
+			t.Fatalf("%s: the agni service mounts no named volume", file)
 		}
-		if !ok {
-			t.Errorf("the Dockerfile makes none of %s, so a named volume there is owned by root (it makes %v)", target, made)
-		}
-	}
-}
-
-func indexOf(xs []string, x string) int {
-	for i, s := range xs {
-		if s == x {
-			return i
+		for _, target := range targets {
+			ok := false
+			for _, dir := range made {
+				ok = ok || under(path.Clean(dir), path.Clean(target))
+			}
+			if !ok {
+				t.Errorf("%s: the Dockerfile makes none of %s, so a named volume there is owned by root (it makes %v)", file, target, made)
+			}
 		}
 	}
-	return -1
 }
 
 // The workbench serves the mounts the agni service made at runtime by reading agni's records and
 // files (agni issue 1735). The agnids image's command names agni's --store and --uploads, so the
 // datasheets service must mount agni's named volume there, read-only, since agnids only reads them.
 func TestTheWorkbenchReadsTheAgniServicesMounts(t *testing.T) {
-	c := readCompose(t)
+	for _, file := range bundles {
+		workbenchReadsAgni(t, file, readComposeAt(t, file))
+	}
+}
+
+func workbenchReadsAgni(t *testing.T, file string, c composeFile) {
+	t.Helper()
 	b, err := os.ReadFile("../Dockerfile.agnids")
 	if err != nil {
 		t.Fatal(err)
@@ -154,7 +178,7 @@ func TestTheWorkbenchReadsTheAgniServicesMounts(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("the datasheets service mounts no read-only copy of the agni service's volume at %s", dir)
+			t.Errorf("%s: the datasheets service mounts no read-only copy of the agni service's volume at %s", file, dir)
 		}
 	}
 }
@@ -168,4 +192,95 @@ func namedVolumeAt(c composeFile, service, target string) string {
 		}
 	}
 	return ""
+}
+
+// The enterprise bundle takes every secret from a file the operator's .env names, mounted under
+// /run/secrets, and never as a value in compose.yaml or the environment (agni issue 1802). Each flag
+// that reads a secret names its file there, and the service mounts that secret.
+func TestTheEnterpriseBundleReadsEverySecretFromAFile(t *testing.T) {
+	c := readComposeAt(t, "enterprise/compose.yaml")
+	secretFlags := map[string][]string{
+		"agni":       {"--tls-cert", "--tls-key", "--connections-key", "--github-client-secret", "--github-webhook-secret"},
+		"datasheets": {"--tls-cert", "--tls-key", "--connections-key"},
+	}
+	for service, flags := range secretFlags {
+		cmd := c.Services[service].Command
+		for _, flag := range flags {
+			v, ok := flagValue(cmd, flag)
+			if !ok {
+				t.Errorf("the %s service's command has no %s", service, flag)
+				continue
+			}
+			name, ok := strings.CutPrefix(strings.TrimPrefix(v, "file:"), "/run/secrets/")
+			if !ok {
+				t.Errorf("%s %s %s reads no file under /run/secrets", service, flag, v)
+				continue
+			}
+			if !slices.Contains(c.Services[service].Secrets, name) {
+				t.Errorf("%s %s reads secret %s, which the service doesn't mount (it mounts %v)", service, flag, name, c.Services[service].Secrets)
+			}
+			src := c.Secrets[name].File
+			if !regexp.MustCompile(`^\$\{AGNI_[A-Z_]+:\?[^}]+\}$`).MatchString(src) {
+				t.Errorf("secret %s comes from %q; want a file path the operator's .env must name, as ${AGNI_...:?why}", name, src)
+			}
+		}
+		for _, a := range cmd {
+			if strings.Contains(a, "env:") {
+				t.Errorf("%s passes %q, a secret from the environment, where compose would hold its value", service, a)
+			}
+		}
+	}
+}
+
+// A server connection's token is a file the server reads, so the enterprise bundle mounts a folder of
+// them read-only, named by the operator's .env (agni issue 1802).
+func TestTheEnterpriseBundleMountsTheServersConnectionSecrets(t *testing.T) {
+	c := readComposeAt(t, "enterprise/compose.yaml")
+	for _, v := range c.Services["agni"].Volumes {
+		// The source can hold a colon of its own, as ${VAR:-default} does, so split from the right.
+		rest, mode, _ := cutLast(v, ":")
+		src, target, _ := cutLast(rest, ":")
+		if target == "/run/agni/connections" {
+			if mode != "ro" || !strings.HasPrefix(src, "${AGNI_CONNECTION_SECRETS") {
+				t.Errorf("the connection secrets mount is %q; want a read-only folder that AGNI_CONNECTION_SECRETS names", v)
+			}
+			return
+		}
+	}
+	t.Errorf("the agni service mounts no folder at /run/agni/connections, so a server connection's token has nowhere to live (volumes %v)", c.Services["agni"].Volumes)
+}
+
+// cutLast is strings.Cut at the last sep.
+func cutLast(s, sep string) (before, after string, found bool) {
+	i := strings.LastIndex(s, sep)
+	if i < 0 {
+		return s, "", false
+	}
+	return s[:i], s[i+len(sep):], true
+}
+
+// A GitHub Enterprise Server behind the team's own CA needs both servers to trust that CA. The bundle
+// mounts a folder of CA certificates and adds it to SSL_CERT_DIR, keeping the system's roots, since
+// SSL_CERT_FILE would replace them (agni issue 1802).
+func TestTheEnterpriseBundleTrustsATeamsOwnCA(t *testing.T) {
+	c := readComposeAt(t, "enterprise/compose.yaml")
+	for _, service := range []string{"agni", "datasheets"} {
+		svc := c.Services[service]
+		dirs := strings.Split(svc.Environment["SSL_CERT_DIR"], ":")
+		if !slices.Contains(dirs, "/etc/ssl/certs") || !slices.Contains(dirs, "/etc/agni/ca") {
+			t.Errorf("%s's SSL_CERT_DIR = %q; want the system's /etc/ssl/certs and the mounted /etc/agni/ca", service, svc.Environment["SSL_CERT_DIR"])
+		}
+		if _, ok := svc.Environment["SSL_CERT_FILE"]; ok {
+			t.Errorf("%s sets SSL_CERT_FILE, which replaces the system's roots", service)
+		}
+		mounted := false
+		for _, v := range svc.Volumes {
+			rest, mode, _ := cutLast(v, ":")
+			src, target, _ := cutLast(rest, ":")
+			mounted = mounted || target == "/etc/agni/ca" && mode == "ro" && strings.HasPrefix(src, "${AGNI_CA_DIR")
+		}
+		if !mounted {
+			t.Errorf("%s mounts no read-only folder that AGNI_CA_DIR names at /etc/agni/ca (volumes %v)", service, svc.Volumes)
+		}
+	}
 }

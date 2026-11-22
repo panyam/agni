@@ -764,6 +764,41 @@ export AGNI_CA_FILE=/etc/agni/team-ca.pem
 agni login --remote https://agni.example.com
 ```
 
+### The enterprise bundle
+
+Say a team wants that shared server on one machine, against its own GitHub Enterprise Server. Each
+release attaches `agni-enterprise-<version>.tar.gz`, which unpacks into a folder holding a
+`compose.yaml` and an `env.example` (agni issue 1802). The bundle runs `agni serve` with every flag
+this page covers: TLS from your certificate, `--auth tokens`, sign-in through a GitHub App, a
+connections key and a webhook secret.
+
+```bash
+tar -xzf agni-enterprise-v0.11.0.tar.gz && cd agni-enterprise
+cp env.example .env              # fill it in, and make the secret files it names
+docker compose up -d             # then open AGNI_PUBLIC_URL and sign in with GitHub
+```
+
+- Each secret is a file on the machine that `.env` names. Compose mounts it read-only under
+  `/run/secrets`, and no secret value sits in `compose.yaml` or `.env`. The server runs as uid
+  10001, so each file must be readable by it, for example with `chown 10001` and `chmod 0400`.
+- A connection the server reads repos through names its token as a file the server reads.
+  `AGNI_CONNECTION_SECRETS` is a folder on the machine, mounted read-only at
+  `/run/agni/connections`, so `agni connections add hw --github-token file:/run/agni/connections/hw`
+  reads the file `hw` there. A token sealed in the store, as a person's own connection is kept, waits
+  on panyam/goapplib#231.
+- `AGNI_GITHUB_API` is your server's REST API, `https://<host>/api/v3` on GitHub Enterprise Server.
+  `agni serve` reads mounts, signs people in and checks access through it, as its `--github-api` flag.
+- `AGNI_CA_DIR` is a folder of CA certificates both servers trust beside the system's, such as the
+  CA that signed your GitHub Enterprise Server's certificate. Leave it empty when a public CA signed
+  it.
+- The `data` volume holds the store and the uploads. Back it up with the connections key file, since
+  the people's tokens in it are sealed with that key.
+- An upgrade changes `AGNI_VERSION` in `.env` and runs `docker compose up -d` again.
+- `docker compose --profile datasheets up -d` adds the datasheet workbench with the same certificate
+  and tokens.
+- `make exercise-enterprise-bundle` runs the enterprise exercise against the bundle over an image,
+  and each release runs it over the published one.
+
 ### Behind a proxy that ends TLS
 
 Say the team runs agni on Kubernetes. The ingress holds the certificate, takes each browser's HTTPS,

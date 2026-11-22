@@ -82,8 +82,11 @@ type enterprise struct {
 	hooks   *http.Client
 }
 
-// seedEnterprise reads the seed file at path and builds the fake it describes.
-func seedEnterprise(path string) (*enterprise, error) {
+// seedEnterprise reads the seed file at path and builds the fake it describes. host, when set, is
+// an address of this machine the fake listens on, and the host in every URL it hands out, so an app
+// in a container can reach it (agni issue 1802). Empty listens on a fresh 127.0.0.1 port. cert, when
+// set, serves the fake over HTTPS, which oneauth requires of a GitHub Enterprise host off loopback.
+func seedEnterprise(path, host string, cert *tls.Certificate) (*enterprise, error) {
 	b, err := os.ReadFile(path) // #nosec G304 -- a test tool reads the seed file its caller names
 	if err != nil {
 		return nil, err
@@ -92,7 +95,23 @@ func seedEnterprise(path string) (*enterprise, error) {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	e := &enterprise{gh: githubtest.New(process{}), repos: map[string]*githubtest.Repo{},
+	var opts []githubtest.Option
+	if host != "" {
+		l, err := net.Listen("tcp", net.JoinHostPort(host, "0"))
+		if err != nil {
+			return nil, fmt.Errorf("--host %s: %w", host, err)
+		}
+		_, port, _ := net.SplitHostPort(l.Addr().String())
+		scheme := "http://"
+		if cert != nil {
+			l = tls.NewListener(l, &tls.Config{Certificates: []tls.Certificate{*cert}, MinVersion: tls.VersionTLS12})
+			scheme = "https://"
+		}
+		opts = append(opts, githubtest.WithListener(l), githubtest.WithBaseURL(scheme+net.JoinHostPort(host, port)))
+	} else if cert != nil {
+		return nil, fmt.Errorf("--tls-cert serves the fake on --host; name the address too")
+	}
+	e := &enterprise{gh: githubtest.New(process{}, opts...), repos: map[string]*githubtest.Repo{},
 		files: map[string]map[string]string{}, commits: map[string]map[string]string{}, users: map[string]*githubtest.User{}, hooks: http.DefaultClient}
 	if s.App.ClientID != "" {
 		e.gh.AddApp(s.App.ClientID, s.App.ClientSecret)
@@ -226,8 +245,16 @@ func writeJSON(w http.ResponseWriter, v any) {
 // serveEnterprise seeds the fake from seed, serves the control requests on addr, and returns only
 // when serving fails. The fake itself listens where goapplib's githubtest puts it, and GET / on the
 // control address names it.
-func serveEnterprise(seed, addr, hookCA string) error {
-	e, err := seedEnterprise(seed)
+func serveEnterprise(seed, addr, hookCA, host, certFile, keyFile string) error {
+	var cert *tls.Certificate
+	if certFile != "" || keyFile != "" {
+		c, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return fmt.Errorf("--tls-cert and --tls-key: %w", err)
+		}
+		cert = &c
+	}
+	e, err := seedEnterprise(seed, host, cert)
 	if err != nil {
 		return err
 	}
