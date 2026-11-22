@@ -29,8 +29,6 @@ makes the target build it. The Helm chart (#1803) comes next and puts agni behin
   and two servers can share one store. `--uploads` takes `s3://` and `gs://` with a local
   `--uploads-cache` (PR 1834). #1803 can offer postgres and a bucket in place of volumes.
   `internal/authgate/keys.go` reads API keys through oneauth's `APIKeyAdmin`.
-- **#1722** (linked sources) has all 24 tickets closed. Its exercise passes all 13 checks at
-  `dd30166a`. It closes once its 3 Later lines move.
 - **Parked work lives in each mission's `## Later` list.** The 62 `waiting` issues were closed into
   those lists on 2026-11-21. Anything that fits no mission is on #1806, and
   `is:closed label:waiting reason:"not planned"` finds them all. A mission moves its Later lines
