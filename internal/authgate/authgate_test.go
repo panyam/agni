@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -107,5 +109,28 @@ func TestPruneDeletesOnlyExpiredTokens(t *testing.T) {
 	}
 	if n, err := Prune(ctx, store, now); err != nil || n != 0 {
 		t.Errorf("a second Prune = %d, %v; want nothing left to delete", n, err)
+	}
+}
+
+// A key deleted between List reading the folder and reading the key is left out, rather than failing
+// the listing. Expired tokens are deleted while the server runs, so `agni token list` can race that
+// sweep (agni issue 1796). A dangling link stands in for the deleted key, since the folder lists it
+// and reading it finds nothing.
+func TestListSkipsAKeyDeletedWhileListing(t *testing.T) {
+	dir := t.TempDir()
+	keys := Store(dir)
+	if _, err := keys.CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "ops", Name: "ops"}); err != nil {
+		t.Fatal(err)
+	}
+	gone := filepath.Join(keys.StoragePath, "api_keys", "gone.json")
+	if err := os.Symlink(filepath.Join(dir, "nowhere.json"), gone); err != nil {
+		t.Fatal(err)
+	}
+	left, err := List(context.Background(), keys)
+	if err != nil {
+		t.Fatalf("List failed on a key deleted while listing: %v", err)
+	}
+	if len(left) != 1 || left[0].Subject != "ops" {
+		t.Fatalf("List = %v, want only ops", left)
 	}
 }

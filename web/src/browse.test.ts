@@ -101,16 +101,29 @@ describe("the browse page boots", () => {
   });
 });
 
+// The tests share one booted page, and vitest may run them in any order (agni issue 1796). Each one
+// chooses what it needs, rather than counting on an earlier test to have chosen it.
+async function chooseBoard(): Promise<void> {
+  await vi.waitFor(() => expect(buttonFor("m")).toBeTruthy());
+  if (!buttonFor("board.edn")) buttonFor("m")!.click(); // expand the mount
+  await vi.waitFor(() => expect(buttonFor("board.edn")).toBeTruthy());
+  buttonFor("board.edn")!.click();
+  // Open enables as soon as the file is chosen, and an earlier test may already have fetched the
+  // sheet, so wait for the drawing itself.
+  await vi.waitFor(() => {
+    expect(el("browse-preview").style.display).not.toBe("none");
+    expect(el("browse-preview").querySelector("rect")).toBeTruthy();
+    expect((el("browse-open") as HTMLButtonElement).disabled).toBe(false);
+  }, 5000);
+}
+
 describe("choose a design, see it, open it", () => {
   it("previews the chosen design and enables Open", async () => {
-    await vi.waitFor(() => expect(buttonFor("m")).toBeTruthy());
-    buttonFor("m")!.click(); // expand the mount
-    await vi.waitFor(() => expect(buttonFor("board.edn")).toBeTruthy());
+    await chooseBoard();
 
     // A file with no reader never reaches the tree, so the browse page cannot preview one.
     expect(buttonFor("notes.txt")).toBeUndefined();
 
-    buttonFor("board.edn")!.click();
     await vi.waitFor(() => expect(called).toContain("GetSheet"), 5000);
 
     // The page exists to show the design's own drawing and a caption naming it.
@@ -121,6 +134,8 @@ describe("choose a design, see it, open it", () => {
   });
 
   it("hands the design's work-page URL to a real navigation", async () => {
+    await chooseBoard();
+    navigated.length = 0;
     (el("browse-open") as HTMLButtonElement).click();
     await vi.waitFor(() => expect(navigated).toHaveLength(1));
     expect(navigated[0]).toBe("/mounts/m/board.edn/view");
@@ -129,6 +144,9 @@ describe("choose a design, see it, open it", () => {
   // A folder is a place to look rather than a thing to open, so choosing one re-addresses the URL
   // and empties the stage instead of leaving the previous design on screen under a new location.
   it("clears the stage when a folder is chosen", async () => {
+    // Choose the board first, so the stage has a design on it to clear.
+    await chooseBoard();
+    expect(el("browse-preview").style.display).not.toBe("none");
     buttonFor("m")!.click();
     await vi.waitFor(() => expect(el("browse-preview").style.display).toBe("none"));
     expect((el("browse-open") as HTMLButtonElement).disabled).toBe(true);

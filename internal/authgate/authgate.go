@@ -244,7 +244,9 @@ func Prune(ctx context.Context, store *oafs.FSAPIKeyStore, now time.Time) (int, 
 	return n, nil
 }
 
-// List returns every token in the store, newest first, without their hashes.
+// List returns every token in the store, newest first, without their hashes. A token deleted after
+// List reads the folder, as the expiry sweep does while the server runs, is left out rather than
+// failing the listing (agni issue 1796).
 func List(ctx context.Context, store *oafs.FSAPIKeyStore) ([]*core.APIKey, error) {
 	entries, err := os.ReadDir(filepath.Join(store.StoragePath, "api_keys"))
 	if errors.Is(err, os.ErrNotExist) {
@@ -260,6 +262,9 @@ func List(ctx context.Context, store *oafs.FSAPIKeyStore) ([]*core.APIKey, error
 			continue
 		}
 		resp, err := store.GetAPIKeyByID(ctx, &core.GetAPIKeyByIDRequest{KeyID: id})
+		if errors.Is(err, core.ErrAPIKeyNotFound) {
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
