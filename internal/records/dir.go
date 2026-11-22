@@ -98,7 +98,10 @@ func (d *Dir) lock(ctx context.Context, key string) (func(), error) {
 			f.Close()
 			return func() { os.Remove(lk) }, nil
 		}
-		if !errors.Is(err, fs.ErrExist) {
+		// On windows a lock file another writer just removed can't be created again until its last
+		// handle closes (openElsewhere). It's the same wait as a held lock.
+		busy := errors.Is(err, fs.ErrExist) || openElsewhere(err)
+		if !busy {
 			return nil, err
 		}
 		if info, err := os.Stat(lk); err == nil && time.Since(info.ModTime()) > lockStale {
@@ -116,6 +119,22 @@ func (d *Dir) lock(ctx context.Context, key string) (func(), error) {
 	}
 }
 
+// sharedWait is how long a rename or remove keeps trying while a reader has the file open.
+const sharedWait = 2 * time.Second
+
+// retryShared runs op again while windows refuses it because another handle has the file open
+// (openElsewhere). Reads take no lock, and windows refuses to rename over or remove an open file,
+// with "Access is denied" or a sharing violation. The reader closes the file within milliseconds,
+// so a short retry gets through. Elsewhere openElsewhere is false and op runs once.
+func retryShared(op func() error) error {
+	err := op()
+	for deadline := time.Now().Add(sharedWait); err != nil && openElsewhere(err) && time.Now().Before(deadline); {
+		time.Sleep(5 * time.Millisecond)
+		err = op()
+	}
+	return err
+}
+
 // write puts body at dst through a temp file and a rename, so a reader sees the old file or the new
 // one.
 func write(dst string, body []byte) error {
@@ -123,7 +142,7 @@ func write(dst string, body []byte) error {
 	if err != nil {
 		return err
 	}
-	if err := os.Rename(tmp, dst); err != nil {
+	if err := retryShared(func() error { return os.Rename(tmp, dst) }); err != nil {
 		os.Remove(tmp)
 		return err
 	}
@@ -170,7 +189,7 @@ func (d *Dir) Delete(ctx context.Context, key string) error {
 		return err
 	}
 	defer unlock()
-	return os.Remove(d.path(key))
+	return retryShared(func() error { return os.Remove(d.path(key)) })
 }
 
 // version is a record's contents' hash. Two writes of the same bytes share one, which Replace may
