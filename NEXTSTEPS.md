@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-21, at `42f7ea70`.
+Last pruned 2026-11-21, at `e70e4f1f`.
 
 ## At a glance
 
@@ -19,9 +19,10 @@ a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job with
 `EXERCISE_ALLOW_WAITS=1`. At `42f7ea70` 14 steps pass, and 4 wait: three on #1801 and one on #1802.
 A compose bundle (#1802) and a Helm chart (#1803) both deploy it.
 
-- **Five tickets wait on library releases.** #1809 (Git LFS) on goapplib#203, #1810 (TLS ended at
-  a proxy) on oneauth#541, #1811 (OIDC sign-in) on oneauth#542, #1730 (S3 and GCS) on goapplib#204
-  and #205, and #1729 (SharePoint) on goapplib#206. agni moves to each release once it ships.
+- **The library pushdowns have shipped.** agni moved to goapplib v0.7.26 and oneauth v0.3.16 in
+  PR 1817. #1809 (LFS) needs only an agni test and exercise step, since goapplib's GitHub driver
+  resolves pointers. #1810 (proxy TLS), #1811 (OIDC), #1730 (S3 and GCS) and #1729 (SharePoint)
+  each need agni wiring.
 - **#1722** (linked sources) is no longer active, at 21 of 23. Its exercise passes at `0c1990ed`.
   #1729 (SharePoint) and #1730 (S3 and GCS) stay open there at P3.
 - **Parked work lives in each mission's `## Later` list.** The 62 `waiting` issues were closed into
