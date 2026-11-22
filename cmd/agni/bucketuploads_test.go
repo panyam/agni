@@ -28,10 +28,20 @@ func TestUploadsInAnS3BucketOutliveTheLocalCopy(t *testing.T) {
 	if err := os.MkdirAll(folder, 0o750); err != nil {
 		t.Fatal(err)
 	}
+	// The corpus also carries sheets the root never references, and a put of those reads as more
+	// designs. Copy the root and the sheets it names.
+	const root = "jetson-agx-thor-baseboard.kicad_sch"
 	for name, b := range sheets {
+		if name != root && !strings.Contains(string(sheets[root]), `"Sheetfile" "`+name+`"`) {
+			delete(sheets, name)
+			continue
+		}
 		if err := os.WriteFile(filepath.Join(folder, name), b, 0o600); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if len(sheets) < 10 {
+		t.Fatalf("the root references %d sheets; want the baseboard's 14 and the root", len(sheets)-1)
 	}
 	dir := t.TempDir()
 	serve := func(cache string) string {
