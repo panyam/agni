@@ -148,6 +148,44 @@ beforeAll(async () => {
   }, 5000);
 });
 
+// Every describe in this file shares ONE booted page, and vitest may run them in any order
+// (agni issue 1796). A test that needs a finding row or a query row makes it itself when it is
+// missing, rather than counting on an earlier test to have left one.
+
+// ensureChecked runs the checks when no finding row is on the page yet, and returns the first
+// row's locate button.
+async function ensureChecked(): Promise<HTMLButtonElement> {
+  const locate = () => document.querySelector(".check-locate") as HTMLButtonElement | null;
+  if (!locate()) {
+    const run = document.querySelector(".checks-run") as HTMLButtonElement | null;
+    expect(run, "the checks panel rendered no Run button").not.toBeNull();
+    run!.click();
+  }
+  return vi.waitFor(() => {
+    const b = locate();
+    expect(b, "no finding row rendered to click").not.toBeNull();
+    return b!;
+  }, 5000);
+}
+
+// ensureQueryRow runs a query in the front tab when the query panel shows no row yet, and returns
+// the first row's toggle. The fake RunQuery answers any question with one row.
+async function ensureQueryRow(): Promise<HTMLButtonElement> {
+  const toggle = () => document.querySelector<HTMLButtonElement>('[data-component="query"] .query-cite-toggle');
+  if (!toggle()) {
+    const box = document.querySelector<HTMLTextAreaElement>('[data-component="query"] textarea');
+    expect(box, "the query panel has no query box").not.toBeNull();
+    box!.value = "component(?r) => ?r";
+    box!.dispatchEvent(new Event("input", { bubbles: true }));
+    box!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
+  }
+  return vi.waitFor(() => {
+    const b = toggle();
+    expect(b, "the query panel shows no row to open").not.toBeNull();
+    return b!;
+  }, 5000);
+}
+
 describe("the composition root boots", () => {
   it("raises nothing on the way up", () => {
     expect(bootErrors).toEqual([]);
@@ -286,12 +324,13 @@ describe("run checks, then locate a finding", () => {
   });
 
   it("highlights the subject when its finding is clicked", async () => {
-    const locate = await vi.waitFor(() => {
-      const b = document.querySelector(".check-locate") as HTMLButtonElement | null;
-      expect(b, "no finding row rendered to click").not.toBeNull();
-      return b!;
-    }, 5000);
+    const locate = await ensureChecked();
     expect(locate.textContent).toContain("R1");
+    // A click on a selected row toggles it off, so start from a row that is not selected.
+    if (document.querySelector(".check-row.selected")) {
+      locate.click();
+      await vi.waitFor(() => expect(document.querySelector(".check-row.selected")).toBeNull(), 5000);
+    }
 
     // Counted rather than tested for membership, because the deep-link restore already highlights, so
     // "HighlightSheet appears in called" is true before the click and the assertion would pass with
@@ -366,11 +405,7 @@ describe("clicking the drawing selects what was clicked, and Ask asks about it",
 // every unit test green.
 describe("opening a query row asks how it holds", () => {
   it("runs the tab's question again when a row is opened", async () => {
-    const toggle = await vi.waitFor(() => {
-      const b = document.querySelector<HTMLButtonElement>('[data-component="query"] .query-cite-toggle');
-      expect(b, "the query panel shows no row to open").not.toBeNull();
-      return b!;
-    }, 5000);
+    const toggle = await ensureQueryRow();
     const before = called.filter((m) => m === "RunQuery").length;
     toggle.click();
     await vi.waitFor(() => expect(called.filter((m) => m === "RunQuery").length).toBeGreaterThan(before), 5000);
@@ -386,15 +421,10 @@ describe("opening a query row asks how it holds", () => {
 // The observable is the findings panel's selected row rather than an rpc, because clearing does NOT
 // make one. setHighlights([]) short-circuits the overlay fetch instead of requesting an empty one.
 describe("Escape clears the highlight (agni issue 348)", () => {
-  // Every describe in this file shares ONE booted page, so a finding may already be focused from the
-  // locate test above and a blind click would TOGGLE IT OFF. This asserts the state we need rather
-  // than assuming it, so it does not depend on what ran before.
+  // A finding may already be focused from the locate test, and a blind click would TOGGLE IT OFF.
+  // This asserts the state we need rather than assuming it, so it does not depend on what ran before.
   async function ensureSelected(): Promise<void> {
-    const locate = await vi.waitFor(() => {
-      const b = document.querySelector(".check-locate") as HTMLButtonElement | null;
-      expect(b, "no finding row rendered to click").not.toBeNull();
-      return b!;
-    }, 2000);
+    const locate = await ensureChecked();
     if (!document.querySelector(".check-row.selected")) locate.click();
     await vi.waitFor(() => expect(document.querySelector(".check-row.selected"), "no row ended up selected").not.toBeNull(), 2000);
   }

@@ -94,6 +94,7 @@ func assertWithheld(t *testing.T, page, banner, reason string) {
 
 func TestCheckHTMLCarriesTheWithheldLinkReason(t *testing.T) {
 	t.Run("minted mount", func(t *testing.T) {
+		freshWorkspace(t)
 		page := runCheck(t, "--format", "html", "--server", "http://127.0.0.1:1",
 			"testdata/conformance/showcase.fires.kicad_sch")
 		assertWithheld(t, page, checkWithheldBanner, mintedReason)
@@ -113,6 +114,7 @@ func TestCheckHTMLCarriesTheWithheldLinkReason(t *testing.T) {
 
 func TestReviewHTMLCarriesTheWithheldLinkReason(t *testing.T) {
 	t.Run("minted mount", func(t *testing.T) {
+		freshWorkspace(t)
 		page := runReview(t, "--checklist", "testdata/review/mini.yaml", "--format", "html",
 			"--server", "http://127.0.0.1:1", "testdata/review/can-broken.edn")
 		assertWithheld(t, page, reviewWithheldBanner, mintedReason)
