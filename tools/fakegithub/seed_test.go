@@ -13,11 +13,19 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
 )
 
 // writeSeed writes a seed for one private repo with two tagged commits, granted to alice and to a
 // server token, and returns its path.
 func writeSeed(t *testing.T) string {
+	t.Helper()
+	return writeSeedWith(t, `{"tag": "rev-c", "dir": "rev-c"}`)
+}
+
+// writeSeedWith writes writeSeed's seed with revC as the second commit.
+func writeSeedWith(t *testing.T, revC string) string {
 	t.Helper()
 	dir := t.TempDir()
 	for rev, body := range map[string]string{"rev-b": "b", "rev-c": "c"} {
@@ -32,7 +40,7 @@ func writeSeed(t *testing.T) string {
 	  "users": [{"login": "alice", "orgs": ["acme"]}, {"login": "mallory", "orgs": ["acme"]}],
 	  "tokens": ["server-token"],
 	  "repos": [{"repo": "hw/baseboard", "private": true, "readers": ["alice"], "tokens": ["server-token"],
-	             "commits": [{"tag": "rev-b", "dir": "rev-b"}, {"tag": "rev-c", "dir": "rev-c"}]}]}`
+	             "commits": [{"tag": "rev-b", "dir": "rev-b"}, ` + revC + `]}]}`
 	p := filepath.Join(dir, "seed.json")
 	if err := os.WriteFile(p, []byte(seed), 0o600); err != nil {
 		t.Fatal(err)
@@ -120,5 +128,38 @@ func TestTheControlAddressPushesAndApproves(t *testing.T) {
 	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("approving a code no device flow issued = %d, want 404", resp.StatusCode)
+	}
+}
+
+func body(t *testing.T, u, token string) string {
+	t.Helper()
+	req, _ := http.NewRequest(http.MethodGet, u, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	b, _ := io.ReadAll(resp.Body)
+	return string(b)
+}
+
+func TestASeedCommitKeepsItsLFSPathsAsPointers(t *testing.T) {
+	e, err := seedEnterprise(writeSeedWith(t, `{"tag": "rev-c", "dir": "rev-c", "lfs": ["board.txt"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := func(tag string) string {
+		return body(t, e.gh.RawURL()+"/hw/baseboard/"+e.commits["hw/baseboard"][tag]+"/board.txt", "server-token")
+	}
+	pointer, _ := githubtest.LFSPointer("c")
+	if got := raw("rev-c"); got != pointer {
+		t.Errorf("board.txt at rev-c = %q; want the LFS pointer to its contents, %q", got, pointer)
+	}
+	if got := raw("rev-b"); got != "b" {
+		t.Errorf("board.txt at rev-b = %q; want the plain file", got)
+	}
+	if _, err := seedEnterprise(writeSeedWith(t, `{"tag": "rev-c", "dir": "rev-c", "lfs": ["nope.txt"]}`)); err == nil || !strings.Contains(err.Error(), "nope.txt") {
+		t.Errorf("a seed listing a missing file under lfs = %v; want an error naming it", err)
 	}
 }

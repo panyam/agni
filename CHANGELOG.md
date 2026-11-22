@@ -28,10 +28,17 @@ GitHub Release body carries.
 
 - agni builds on goapplib v0.7.26 and oneauth v0.3.16 in every module. goapplib's mount drivers now
   take a typed credential instead of a token source, and agni passes the connection service's
-  `Credentials`. A `github://` mount now swaps a Git LFS pointer for its object, and a snapshot fails
-  with the path named when it can't. A folder mount refuses a pointer the same way. agni's own test
-  and exercise step for that come in issue 1809. S3, GCS and SharePoint mounts, and oneauth's OIDC
-  sign-in and trusted proxies, need agni wiring in issues 1729, 1730, 1810 and 1811.
+  `Credentials`. A `github://` mount now swaps a Git LFS pointer for its object, and a folder mount
+  refuses a pointer. S3, GCS and SharePoint mounts, and oneauth's OIDC sign-in and trusted proxies,
+  need agni wiring in issues 1729, 1730, 1810 and 1811.
+
+### Fixed
+
+- A mount, a link or a folder read that meets a Git LFS pointer it can't resolve now fails with
+  FAILED_PRECONDITION naming the file (issue 1809). Before, a missing LFS object answered NOT_FOUND,
+  as if the mount were gone, and a folder's refusal reached the caller as an internal error. The
+  enterprise exercise now keeps hw/baseboard's schematic and board in Git LFS, and
+  `tools/fakegithub --seed` takes an `lfs` list per commit.
 
 ## [0.10.0] - 2026-11-21
 

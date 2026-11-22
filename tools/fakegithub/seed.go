@@ -15,7 +15,9 @@ package main
 //	}
 //
 // Each commit replaces the files on main with dir's, and tags the commit when tag is set. A
-// relative dir is read beside the seed file. readers are the logins a repo is granted to, and
+// relative dir is read beside the seed file. A commit's "lfs" lists paths in dir that go in as Git
+// LFS pointers, with their contents kept as LFS objects and a .gitattributes line each, as
+// {"dir": "rev-b", "lfs": ["board.kicad_pcb"]}. readers are the logins a repo is granted to, and
 // tokens are fixed tokens it is granted to, such as a server connection's.
 //
 // The control address answers three requests, so a script can play GitHub's other side:
@@ -62,8 +64,9 @@ type seedRepo struct {
 	Readers []string `json:"readers"`
 	Tokens  []string `json:"tokens"`
 	Commits []struct {
-		Tag string `json:"tag"`
-		Dir string `json:"dir"`
+		Tag string   `json:"tag"`
+		Dir string   `json:"dir"`
+		LFS []string `json:"lfs"`
 	} `json:"commits"`
 }
 
@@ -118,7 +121,17 @@ func seedEnterprise(path string) (*enterprise, error) {
 			if err != nil {
 				return nil, err
 			}
-			sha := e.commit(sr, owner, name, files)
+			for _, p := range c.LFS {
+				if _, ok := files[p]; !ok {
+					return nil, fmt.Errorf("%s: repo %q lists %q under lfs, and %s has no such file", path, sr.Repo, p, dir)
+				}
+			}
+			// git lfs track writes a .gitattributes line per path, and a driver reads it to know
+			// the repo uses LFS.
+			for _, p := range c.LFS {
+				files[".gitattributes"] += p + " filter=lfs diff=lfs merge=lfs -text\n"
+			}
+			sha := e.commit(sr, owner, name, files, c.LFS...)
 			if c.Tag != "" {
 				e.repos[sr.Repo].Tag(c.Tag, sha, false)
 				e.commits[sr.Repo][c.Tag] = sha
@@ -129,8 +142,9 @@ func seedEnterprise(path string) (*enterprise, error) {
 }
 
 // commit replaces main's files in repo with files, making the repo on its first commit, and
-// returns the new commit.
-func (e *enterprise) commit(sr seedRepo, owner, name string, files map[string]string) string {
+// returns the new commit. Each path in lfs is then committed again as a Git LFS pointer to its
+// contents, so the returned commit holds pointers there.
+func (e *enterprise) commit(sr seedRepo, owner, name string, files map[string]string, lfs ...string) string {
 	r := e.repos[sr.Repo]
 	if r == nil {
 		r = e.gh.AddRepo(owner, name, sr.Private, files)
@@ -145,6 +159,9 @@ func (e *enterprise) commit(sr seedRepo, owner, name string, files map[string]st
 			}
 		}
 		r.Commit("main", files, gone)
+	}
+	for _, p := range lfs {
+		r.CommitLFS("main", p, files[p])
 	}
 	e.files[sr.Repo] = files
 	return r.Head("main")

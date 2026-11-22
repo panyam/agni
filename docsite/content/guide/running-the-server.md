@@ -350,6 +350,16 @@ files go to the uploads once each, by hash, beside the designs' files. Its view 
 every file's path and hash. A restart reads the records back, and rebuilds a view the uploads lost
 from its files. A snapshot over 256 MB is refused.
 
+A repo that keeps its schematics or board files in Git LFS reads as the files themselves (agni issue
+1809). Git stores a short pointer in place of each LFS file. The server swaps each pointer for its
+object through the repo's LFS batch API, with the mount's connection, and checks the object's size
+and SHA-256. That happens for a mount, a linked artifact and a read at another commit alike. On
+GitHub Enterprise Server the LFS host is the `--github-api` URL without `/api/v3`. A pointer whose
+object can't be read fails the mount or the link with FAILED_PRECONDITION, naming the file, so a
+design never reads short with no error. Typical causes are no LFS permission, a used-up quota or a
+missing object. A `--mount` folder refuses a pointer the same way, so a checkout made without
+`git lfs pull` fails loudly too.
+
 `DeleteMount` forgets a mount `CreateMount` made. A mount from `--mount` or `--mount-root` comes from
 the server's flags, and deleting one is refused. So is deleting a mount that an artifact is linked
 to, as the next section describes. A runtime mount can only come from GitHub, since a

@@ -190,6 +190,7 @@ func TestErrMapsTheLibrarysErrorsOntoServiceErrors(t *testing.T) {
 		mounts.ErrFixed:       service.ErrFailedPrecondition,
 		mounts.ErrTooLarge:    service.ErrResourceExhausted,
 		mounts.ErrUnavailable: service.ErrUnavailable,
+		mounts.ErrLFS:         service.ErrFailedPrecondition,
 	} {
 		got := mountset.Err(fmt.Errorf("%w: detail", lib))
 		if !errors.Is(got, svc) || !errors.Is(got, lib) || !strings.Contains(got.Error(), "detail") {
