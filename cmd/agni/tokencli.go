@@ -33,7 +33,9 @@ create prints the token once. The store keeps only its hash. A revoked token sto
 a minute, since the server trusts a token it checked for that long.`,
 	}
 	cmd.PersistentFlags().StringVar(&storeURL, "store", "", "the --store of the agni serve these tokens are for, such as file:///srv/agni/meta, sqlite:///srv/agni.db, postgres://agni@db/agni or datastore://project?namespace=agni (required)")
-	store := func() (authgate.Keys, error) {
+	// store opens --store's tokens, and closes the store when cmd ends, so a database connection or a
+	// Datastore client isn't left open.
+	store := func(cmd *cobra.Command) (authgate.Keys, error) {
 		if storeURL == "" {
 			return nil, fmt.Errorf("agni token needs --store, the same one the server was started with")
 		}
@@ -41,6 +43,7 @@ a minute, since the server trusts a token it checked for that long.`,
 		if err != nil {
 			return nil, err
 		}
+		cmd.PostRunE = func(*cobra.Command, []string) error { return st.Close() }
 		return st.Tokens()
 	}
 
@@ -49,7 +52,7 @@ a minute, since the server trusts a token it checked for that long.`,
 		Short: "Make a token for a person or a tool, and print it once",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s, err := store()
+			s, err := store(cmd)
 			if err != nil {
 				return err
 			}
@@ -68,7 +71,7 @@ a minute, since the server trusts a token it checked for that long.`,
 		Short: "List the tokens, newest first, each with its id, who it is for, and when it was made",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			s, err := store()
+			s, err := store(cmd)
 			if err != nil {
 				return err
 			}
@@ -92,7 +95,7 @@ a minute, since the server trusts a token it checked for that long.`,
 		Short: "Revoke a token by the id agni token ls shows",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s, err := store()
+			s, err := store(cmd)
 			if err != nil {
 				return err
 			}

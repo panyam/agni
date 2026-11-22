@@ -43,6 +43,12 @@ func TestOpenSQLitePragmas(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Closed before t.TempDir's cleanup, since Windows can't delete an open file.
+	t.Cleanup(func() {
+		if sqlDB, err := db.DB(); err == nil {
+			sqlDB.Close()
+		}
+	})
 	var mode string
 	var busy int
 	db.Raw("PRAGMA journal_mode").Scan(&mode)
