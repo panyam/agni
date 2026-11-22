@@ -12,6 +12,12 @@ GitHub Release body carries.
 
 ### Added
 
+- `agni serve` and `agnids` run `--auth tokens` behind a proxy that ends TLS, such as a Kubernetes
+  ingress or a cloud load balancer (issue 1810). `--trusted-proxy 10.0.0.0/8` names the proxy. The
+  server then serves plain HTTP on any address, and a request the proxy took over HTTPS gets Secure
+  cookies. X-Forwarded-Proto from any other peer is ignored. Signing in with GitHub behind a proxy
+  needs `--public-url`.
+
 - A pack reads from a project folder in a repo and follows its branch (issue 1801). `agni packs link
   house rules@main` links one, and a push webhook, `--poll` or `agni packs sync` moves it to the
   branch's new commit, so the next check runs the new rules. A tag or commit pins it. Each report
@@ -29,8 +35,8 @@ GitHub Release body carries.
 - agni builds on goapplib v0.7.26 and oneauth v0.3.16 in every module. goapplib's mount drivers now
   take a typed credential instead of a token source, and agni passes the connection service's
   `Credentials`. A `github://` mount now swaps a Git LFS pointer for its object, and a folder mount
-  refuses a pointer. S3, GCS and SharePoint mounts, and oneauth's OIDC sign-in and trusted proxies,
-  need agni wiring in issues 1729, 1730, 1810 and 1811.
+  refuses a pointer. S3, GCS and SharePoint mounts, and oneauth's OIDC sign-in, need agni wiring in
+  issues 1729, 1730 and 1811.
 
 ### Fixed
 
