@@ -426,6 +426,10 @@ public final class WorkspaceServiceGrpc {
      * server's secret and the push event again, so a second call changes nothing else. A server with
      * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
      * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * On a SharePoint or OneDrive mount it asks Microsoft Graph to send the drive's changes to url
+     * instead, with the server's --msgraph-client-state, and the server renews the subscription
+     * before Graph ends it (agni issue 1729). Graph checks url at once, so the server must already be
+     * reachable there over https. A second call for the same url renews the one subscription.
      * </pre>
      */
     default void createMountWebhook(io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest request,
@@ -596,6 +600,10 @@ public final class WorkspaceServiceGrpc {
      * server's secret and the push event again, so a second call changes nothing else. A server with
      * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
      * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * On a SharePoint or OneDrive mount it asks Microsoft Graph to send the drive's changes to url
+     * instead, with the server's --msgraph-client-state, and the server renews the subscription
+     * before Graph ends it (agni issue 1729). Graph checks url at once, so the server must already be
+     * reachable there over https. A second call for the same url renews the one subscription.
      * </pre>
      */
     public void createMountWebhook(io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest request,
@@ -749,6 +757,10 @@ public final class WorkspaceServiceGrpc {
      * server's secret and the push event again, so a second call changes nothing else. A server with
      * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
      * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * On a SharePoint or OneDrive mount it asks Microsoft Graph to send the drive's changes to url
+     * instead, with the server's --msgraph-client-state, and the server renews the subscription
+     * before Graph ends it (agni issue 1729). Graph checks url at once, so the server must already be
+     * reachable there over https. A second call for the same url renews the one subscription.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.MountWebhook createMountWebhook(io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest request) throws io.grpc.StatusException {
@@ -897,6 +909,10 @@ public final class WorkspaceServiceGrpc {
      * server's secret and the push event again, so a second call changes nothing else. A server with
      * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
      * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * On a SharePoint or OneDrive mount it asks Microsoft Graph to send the drive's changes to url
+     * instead, with the server's --msgraph-client-state, and the server renews the subscription
+     * before Graph ends it (agni issue 1729). Graph checks url at once, so the server must already be
+     * reachable there over https. A second call for the same url renews the one subscription.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.MountWebhook createMountWebhook(io.github.panyam.agni.v1.webapi.CreateMountWebhookRequest request) {
@@ -1049,6 +1065,10 @@ public final class WorkspaceServiceGrpc {
      * server's secret and the push event again, so a second call changes nothing else. A server with
      * no --github-webhook-secret is FAILED_PRECONDITION, and so is a mount with no connection or one
      * that isn't a GitHub repo. A token GitHub won't let manage the hooks is PERMISSION_DENIED.
+     * On a SharePoint or OneDrive mount it asks Microsoft Graph to send the drive's changes to url
+     * instead, with the server's --msgraph-client-state, and the server renews the subscription
+     * before Graph ends it (agni issue 1729). Graph checks url at once, so the server must already be
+     * reachable there over https. A second call for the same url renews the one subscription.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.MountWebhook> createMountWebhook(

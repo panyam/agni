@@ -52,7 +52,7 @@ public interface MountWebhookOrBuilder extends
 
   /**
    * <pre>
-   * id is GitHub's id for the hook.
+   * id is GitHub's id for the hook, and 0 for a Graph subscription.
    * </pre>
    *
    * <code>int64 id = 3 [json_name = "id"];</code>
@@ -131,4 +131,43 @@ public interface MountWebhookOrBuilder extends
    * @return The created.
    */
   boolean getCreated();
+
+  /**
+   * <pre>
+   * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+   * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+   * it does on its own.
+   * </pre>
+   *
+   * <code>string subscription_id = 7 [json_name = "subscriptionId"];</code>
+   * @return The subscriptionId.
+   */
+  java.lang.String getSubscriptionId();
+  /**
+   * <pre>
+   * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+   * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+   * it does on its own.
+   * </pre>
+   *
+   * <code>string subscription_id = 7 [json_name = "subscriptionId"];</code>
+   * @return The bytes for subscriptionId.
+   */
+  com.google.protobuf.ByteString
+      getSubscriptionIdBytes();
+
+  /**
+   * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+   * @return Whether the expireTime field is set.
+   */
+  boolean hasExpireTime();
+  /**
+   * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+   * @return The expireTime.
+   */
+  com.google.protobuf.Timestamp getExpireTime();
+  /**
+   * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getExpireTimeOrBuilder();
 }

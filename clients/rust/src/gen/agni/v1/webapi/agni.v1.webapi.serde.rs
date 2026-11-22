@@ -19924,6 +19924,12 @@ impl serde::Serialize for MountWebhook {
         if self.created {
             len += 1;
         }
+        if !self.subscription_id.is_empty() {
+            len += 1;
+        }
+        if self.expire_time.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.MountWebhook", len)?;
         if !self.mount.is_empty() {
             struct_ser.serialize_field("mount", &self.mount)?;
@@ -19945,6 +19951,12 @@ impl serde::Serialize for MountWebhook {
         if self.created {
             struct_ser.serialize_field("created", &self.created)?;
         }
+        if !self.subscription_id.is_empty() {
+            struct_ser.serialize_field("subscriptionId", &self.subscription_id)?;
+        }
+        if let Some(v) = self.expire_time.as_ref() {
+            struct_ser.serialize_field("expireTime", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -19961,6 +19973,10 @@ impl<'de> serde::Deserialize<'de> for MountWebhook {
             "url",
             "events",
             "created",
+            "subscription_id",
+            "subscriptionId",
+            "expire_time",
+            "expireTime",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -19971,6 +19987,8 @@ impl<'de> serde::Deserialize<'de> for MountWebhook {
             Url,
             Events,
             Created,
+            SubscriptionId,
+            ExpireTime,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -19998,6 +20016,8 @@ impl<'de> serde::Deserialize<'de> for MountWebhook {
                             "url" => Ok(GeneratedField::Url),
                             "events" => Ok(GeneratedField::Events),
                             "created" => Ok(GeneratedField::Created),
+                            "subscriptionId" | "subscription_id" => Ok(GeneratedField::SubscriptionId),
+                            "expireTime" | "expire_time" => Ok(GeneratedField::ExpireTime),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -20023,6 +20043,8 @@ impl<'de> serde::Deserialize<'de> for MountWebhook {
                 let mut url__ = None;
                 let mut events__ = None;
                 let mut created__ = None;
+                let mut subscription_id__ = None;
+                let mut expire_time__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Mount => {
@@ -20063,6 +20085,18 @@ impl<'de> serde::Deserialize<'de> for MountWebhook {
                             }
                             created__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::SubscriptionId => {
+                            if subscription_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("subscriptionId"));
+                            }
+                            subscription_id__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ExpireTime => {
+                            if expire_time__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("expireTime"));
+                            }
+                            expire_time__ = map_.next_value()?;
+                        }
                     }
                 }
                 Ok(MountWebhook {
@@ -20072,6 +20106,8 @@ impl<'de> serde::Deserialize<'de> for MountWebhook {
                     url: url__.unwrap_or_default(),
                     events: events__.unwrap_or_default(),
                     created: created__.unwrap_or_default(),
+                    subscription_id: subscription_id__.unwrap_or_default(),
+                    expire_time: expire_time__,
                 })
             }
         }
