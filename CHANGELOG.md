@@ -32,6 +32,11 @@ GitHub Release body carries.
 
 ### Changed
 
+- agni builds on goapplib v0.7.27 in every module (issue 1820). A GitHub mount now reads a Git LFS
+  file whose object is smaller than its pointer, or whose repo has no `.gitattributes`, as the
+  object, where before its size didn't match its hash. The release's folder views for S3, GCS and
+  SharePoint snapshots, `blobs.Cached` and Entra workload identity wait for issues 1729 and 1730.
+
 - agni builds on goapplib v0.7.26 and oneauth v0.3.16 in every module. goapplib's mount drivers now
   take a typed credential instead of a token source, and agni passes the connection service's
   `Credentials`. A `github://` mount now swaps a Git LFS pointer for its object, and a folder mount
