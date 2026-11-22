@@ -28,7 +28,7 @@ func Transport() (http.RoundTripper, error) {
 	if path == "" {
 		return http.DefaultTransport, nil
 	}
-	pem, err := os.ReadFile(path) // #nosec G304 -- the person names their own CA file
+	pem, err := os.ReadFile(path) // #nosec G304 G703 -- the person names their own CA file
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", Env, err)
 	}

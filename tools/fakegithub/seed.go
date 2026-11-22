@@ -188,7 +188,7 @@ func (e *enterprise) control() http.Handler {
 		status := 0
 		if hook != "" {
 			req := gr.PushRequest(hook, []byte(r.FormValue("secret")), branch)
-			resp, err := e.hooks.Do(req)
+			resp, err := e.hooks.Do(req) // #nosec G704 -- a test tool delivers to the hook its caller names
 			if err != nil {
 				http.Error(w, "delivering the push: "+err.Error(), http.StatusBadGateway)
 				return
