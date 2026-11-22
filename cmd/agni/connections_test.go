@@ -152,3 +152,78 @@ func runCobra(t *testing.T, cmd *cobra.Command, args ...string) (string, error) 
 	err := cmd.ExecuteContext(context.Background())
 	return out.String(), err
 }
+
+// A server connection added with --seal sends its token once. The server seals it under its
+// connections key and reads the private repo with it, with no reference into its own environment.
+// Rotating it moves the reads to the new token while the mount stays, and no token reaches the store
+// in the clear (agni issue 1802).
+func TestASealedServerConnectionReadsAPrivateRepoAndRotates(t *testing.T) {
+	gh, head := privateRepo(t)
+	gh.AddToken("ghp_next_not_in_any_record")
+	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("5e", 32))
+	t.Setenv("AGNI_TEST_GITHUB_TOKEN", secretToken)
+	dir := t.TempDir()
+	url := serveViewer(t, viewerOpts{store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"),
+		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	must := func(out string, err error) string {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("%v\n%s", err, out)
+		}
+		return out
+	}
+	conns := func(args ...string) (string, error) {
+		return runCobra(t, connectionsCmd(), append(args, "--remote", url)...)
+	}
+
+	if out := must(conns("add", "hw", "--seal", "--github-token", "env:AGNI_TEST_GITHUB_TOKEN")); out != "hw\tgithub-token\tsealed\tok\n" {
+		t.Errorf("connections add --seal = %q; want hw sealed", out)
+	}
+	// The server shares this process's environment here, so emptying the variable shows it reads the
+	// sealed token rather than the reference the CLI read.
+	t.Setenv("AGNI_TEST_GITHUB_TOKEN", "")
+	if out := must(runMounts(t, "add", "board", "github://acme/board", "--connection", "hw", "--remote", url)); out != "board\tgithub\tgithub://acme/board@"+head+"\truntime\tvia hw\n" {
+		t.Errorf("mounts add through the sealed connection = %q", out)
+	}
+
+	t.Setenv("AGNI_TEST_NEXT_TOKEN", "ghp_next_not_in_any_record")
+	if out := must(conns("rotate", "hw", "--github-token", "env:AGNI_TEST_NEXT_TOKEN")); out != "hw\tgithub-token\tsealed\tok\n" {
+		t.Errorf("connections rotate = %q", out)
+	}
+	before := len(gh.Requests())
+	must(runDesigns(t, url, "create", "bb"))
+	must(runDesigns(t, url, "link", "bb", "schematic", "board/hw/bb.kicad_sch@main"))
+	read := 0
+	for _, r := range gh.Requests()[before:] {
+		if strings.Contains(r.Path, "acme/board") && r.Token != "" {
+			read++
+			if r.Token != "ghp_next_not_in_any_record" {
+				t.Errorf("after the rotation, %s %s carried %q; want the new token", r.Method, r.Path, r.Token)
+			}
+		}
+	}
+	if read == 0 {
+		t.Fatalf("linking read nothing from acme/board after the rotation")
+	}
+	if out, err := conns("rotate", "hw"); err == nil || !strings.Contains(err.Error(), "name the new secret") {
+		t.Errorf("connections rotate with no secret = %q, %v; want a refusal", out, err)
+	}
+
+	if err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(p)
+		if err == nil && (strings.Contains(string(b), secretToken) || strings.Contains(string(b), "ghp_next_not_in_any_record")) {
+			t.Errorf("%s holds a token in the clear", p)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	must(runDesigns(t, url, "unlink", "bb", "schematic"))
+	must(runMounts(t, "rm", "board", "--remote", url))
+	if out := must(conns("rm", "hw")); out != "removed hw\n" {
+		t.Errorf("connections rm of the sealed connection = %q", out)
+	}
+}

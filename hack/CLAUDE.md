@@ -49,4 +49,5 @@ This file covers the release bundle, the images, the native tools, the fetched s
 ## The enterprise exercise
 
 - **`make exercise-enterprise` needs no network** (agni 1800). `tools/fakegithub --seed` plays a GitHub Enterprise Server, and its control address approves device codes and pushes commits with a signed webhook. A trap proxy fails the run if agni serve reaches any other host.
+- **`make exercise-enterprise-bundle` runs the same steps against `deploy/enterprise/compose.yaml`** over an image (agni 1802). The fake and the trap listen on an address the container and this machine both reach: the docker bridge gateway on Linux, this Mac's own address under Docker Desktop, or `EXERCISE_HOST`. Off loopback the fake serves HTTPS with a certificate from the exercise's CA, since oneauth refuses a plain-HTTP GitHub Enterprise host there, and the bundle trusts that CA through its own `AGNI_CA_DIR`.
 - A step whose missing piece is an open ticket prints `FAIL (waits on #N)`. CI sets `EXERCISE_ALLOW_WAITS=1`, which passes the job on those alone. When a ticket lands, change its step to pass or fail, and drop the wait.

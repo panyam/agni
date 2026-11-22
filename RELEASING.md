@@ -62,7 +62,8 @@ From a green `main`:
 
    ```
    make compose-release V=vX.Y.Z
-   GH_TOKEN="$GH_PERSONAL_TOKEN" hack/release_attach.sh vX.Y.Z dist/compose.yaml dist/env.example
+   GH_TOKEN="$GH_PERSONAL_TOKEN" hack/release_attach.sh vX.Y.Z dist/compose.yaml dist/env.example \
+     dist/agni-enterprise-vX.Y.Z.tar.gz
    GH_TOKEN="$GH_PERSONAL_TOKEN" gh release edit vX.Y.Z \
      --title vX.Y.Z --notes-file RELEASES/vX.Y.Z.md --draft=false
    ```
@@ -75,6 +76,11 @@ From a green `main`:
    release on their own boards.  It is `deploy/compose.yaml` with the release's version as its
    default.  The release workflow has already brought it up over the published image
    (`hack/compose_smoke.sh`).
+
+   The tarball is the enterprise bundle (agni issue 1802), `deploy/enterprise/` pinned the same way.
+   A team runs it against their own GitHub or GitHub Enterprise Server. The release workflow has
+   already run the enterprise exercise against it over the published images
+   (`make exercise-enterprise-bundle`).
 
    The workflow's `binaries` job attaches the CLI's archives, the viewer bundle and `checksums.txt`
    (`make dist`, WS16-003) through the same script.  macOS and Linux get tarballs, and Windows gets

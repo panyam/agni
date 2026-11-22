@@ -48,8 +48,12 @@ type UserTokenKeeper interface {
 	SaveUserToken(ctx context.Context, owner, id, token string) error
 	// Disconnect removes owner's connection id and its sealed token. A token the person pasted is
 	// deleted, and one the server got by signing the person in is revoked at GitHub first. A
-	// connection that isn't there is not an error.
+	// connection that isn't there is not an error. With owner "" it removes a sealed server
+	// connection, its secret first.
 	Disconnect(ctx context.Context, owner, id string) error
+	// SaveServerSecret seals secret as server connection id's token or App key, replacing any before
+	// (agni issue 1802). The connection's record must already say it is sealed.
+	SaveServerSecret(ctx context.Context, id, secret string) error
 }
 
 // WithUserTokens lets people keep their own connections, sealing each token through k, and returns
@@ -131,7 +135,7 @@ func (s *ConnectionService) CreateConnection(ctx context.Context, req *webapi.Cr
 		}
 		c.Kind, c.Scope = connections.KindGitHubUser, connections.ScopePerson
 	case req.GetUserToken() != "":
-		return nil, fmt.Errorf("%w: user_token is for a person's connection; a server connection names where its secret is", ErrInvalidArgument)
+		return nil, fmt.Errorf("%w: user_token is for a person's connection; a server connection names where its secret is, or sends it in server_secret", ErrInvalidArgument)
 	case in.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP:
 		c.Kind = connections.KindGitHubApp
 	case in.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN:
@@ -149,6 +153,20 @@ func (s *ConnectionService) CreateConnection(ctx context.Context, req *webapi.Cr
 		c.EntraAuth = auth
 	default:
 		return nil, fmt.Errorf("%w: a connection's kind is CONNECTION_KIND_GITHUB_APP, CONNECTION_KIND_GITHUB_TOKEN, CONNECTION_KIND_GITHUB_USER, CONNECTION_KIND_AWS, CONNECTION_KIND_GCP or CONNECTION_KIND_ENTRA", ErrInvalidArgument)
+	}
+	sealed := req.GetServerSecret() != ""
+	if sealed {
+		// A sealed secret replaces the reference, so naming both says two things about one secret.
+		if person {
+			return nil, fmt.Errorf("%w: server_secret is for a server connection; a person's connection sends user_token", ErrInvalidArgument)
+		}
+		if c.TokenRef != "" || c.KeyRef != "" {
+			return nil, fmt.Errorf("%w: a connection with server_secret keeps it sealed, so it names no token_source or key_source", ErrInvalidArgument)
+		}
+		if s.users == nil {
+			return nil, fmt.Errorf("%w: this server seals no secret; start it with --connections-key env:NAME", ErrFailedPrecondition)
+		}
+		c.Sealed = true
 	}
 	if err := c.Validate(); err != nil {
 		return nil, ConnectionErr(err)
@@ -171,6 +189,43 @@ func (s *ConnectionService) CreateConnection(ctx context.Context, req *webapi.Cr
 			_ = s.store.DeleteConnection(ctx, c.Owner, c.ID)
 			return nil, err
 		}
+	}
+	if sealed {
+		if err := s.users.SaveServerSecret(ctx, c.ID, req.GetServerSecret()); err != nil {
+			_ = s.store.DeleteConnection(ctx, "", c.ID)
+			return nil, ConnectionErr(err)
+		}
+	}
+	return connectionProto(c), nil
+}
+
+// RotateConnection replaces a sealed server connection's secret.
+func (s *ConnectionService) RotateConnection(ctx context.Context, req *webapi.RotateConnectionRequest) (*webapi.Connection, error) {
+	if s.store == nil {
+		return nil, fmt.Errorf("%w: %s", ErrFailedPrecondition, noConnections)
+	}
+	if req.GetServerSecret() == "" {
+		return nil, fmt.Errorf("%w: server_secret is empty", ErrInvalidArgument)
+	}
+	id := ConnectionID(req.GetName())
+	c, err := s.visible(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case c.Owner != "":
+		return nil, fmt.Errorf("%w: %s is your own connection; add it again to change its token", ErrInvalidArgument, ConnectionName(id))
+	case !c.Sealed:
+		return nil, fmt.Errorf("%w: %s names where its secret is; change the file or variable it names", ErrFailedPrecondition, ConnectionName(id))
+	case s.users == nil:
+		return nil, fmt.Errorf("%w: this server seals no secret; start it with --connections-key env:NAME", ErrFailedPrecondition)
+	}
+	if err := s.users.SaveServerSecret(ctx, id, req.GetServerSecret()); err != nil {
+		return nil, ConnectionErr(err)
+	}
+	c, err = s.store.GetConnection(ctx, "", id)
+	if err != nil {
+		return nil, ConnectionErr(err)
 	}
 	return connectionProto(c), nil
 }
@@ -272,7 +327,8 @@ func (s *ConnectionService) DeleteConnection(ctx context.Context, req *webapi.De
 			return fmt.Errorf("%w: the mount%s %s read%s through %s; delete %s first", ErrFailedPrecondition, plural(len(mounts), "", "s"), listSome(mounts, 3), plural(len(mounts), "s", ""), ConnectionName(id), plural(len(mounts), "it", "them"))
 		}
 	}
-	if c.Kind == connections.KindGitHubUser && s.users != nil {
+	// A sealed secret lives beside the record, so Disconnect deletes it before the record.
+	if (c.Kind == connections.KindGitHubUser || c.Sealed) && s.users != nil {
 		return ConnectionErr(s.users.Disconnect(ctx, c.Owner, id))
 	}
 	return ConnectionErr(s.store.DeleteConnection(ctx, c.Owner, id))
@@ -288,7 +344,8 @@ func ConnectionErr(err error) error {
 		return fmt.Errorf("%w: %w", ErrNotFound, err)
 	case errors.Is(err, connections.ErrInvalid):
 		return fmt.Errorf("%w: %w", ErrInvalidArgument, err)
-	case errors.Is(err, connections.ErrNotConfigured), errors.Is(err, connections.ErrReconnect), errors.Is(err, connections.ErrNotOwner):
+	case errors.Is(err, connections.ErrNotConfigured), errors.Is(err, connections.ErrReconnect), errors.Is(err, connections.ErrNotOwner),
+		errors.Is(err, connections.ErrNoSecret):
 		return fmt.Errorf("%w: %w", ErrFailedPrecondition, err)
 	}
 	return err
@@ -301,7 +358,7 @@ func connectionProto(c connections.Connection) *webapi.Connection {
 		Name: ConnectionName(c.ID), DisplayName: c.Name, BaseUrl: c.BaseURL, AppId: c.AppID, InstallationId: c.InstallationID,
 		KeySource: c.KeyRef, TokenSource: c.TokenRef, LastError: c.LastError, Status: webapi.ConnectionStatus_CONNECTION_STATUS_OK,
 		AccessKeyId: c.AccessKeyID, RoleArn: c.RoleARN, Region: c.Region, TenantId: c.TenantID, ClientId: c.ClientID, CertSource: c.CertRef,
-		Kind: connectionKinds[c.Kind],
+		Kind: connectionKinds[c.Kind], Sealed: c.Sealed,
 	}
 	for wire, auth := range entraAuths {
 		if c.EntraAuth == auth {

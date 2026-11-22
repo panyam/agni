@@ -9,18 +9,19 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-22, at `e23a6171`.
+Last pruned 2026-11-22, at `b99c4a81`.
 
 ## At a glance
 
 **#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 5 of 12. Its exercise is `make exercise-enterprise`, against
-a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job with
-`EXERCISE_ALLOW_WAITS=1`. At `2c561cb1` 20 steps pass, and 1 waits on #1802. A compose bundle
-(#1802) and a Helm chart (#1803) both deploy it, and `--trusted-proxy` (PR 1821) lets either put
-agni behind an ingress that ends TLS.
+Server) is active from 2026-11-21, at 6 of 12. Its exercise is `make exercise-enterprise`, against
+a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job. At `b99c4a81` all 20 steps
+pass with no waits, and `make exercise-enterprise-bundle` passes the same 20 against
+`deploy/enterprise/compose.yaml` (PR 1832). Run `make image` before the bundle run until #1803
+makes the target build it. The Helm chart (#1803) comes next and puts agni behind an ingress with
+`--trusted-proxy`.
 
-- **agni is on goapplib v0.7.27, oneauth v0.3.16, servicekit v0.2.5 and ci-actions v0.1.4.**
+- **agni is on goapplib v0.7.29, oneauth v0.3.18, servicekit v0.2.5 and ci-actions v0.1.4.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). #1811 (OIDC) needs only agni wiring. #1730
   (S3 and GCS) and #1729 (SharePoint) have comments naming v0.7.27's folder views, `blobs.Cached`
   and Entra workload identity. The plan is two PRs: mount kinds for both, then `--uploads s3://`
@@ -41,9 +42,9 @@ agni behind an ingress that ends TLS.
 
 ## Open, ranked
 
-1. **#1802**, the production deployment bundle. The exercise's last waiting step names it, and it
-   can offer `--trusted-proxy` beside TLS. #1803 (Helm), #1804 (the guide) and #1805 (a demo repo)
-   read best after it.
+1. **#1803**, the Helm chart, reusing the compose bundle's flags behind an ingress. It wants
+   panyam/ci-actions#14 (kind-ingress) and #15 (helm-oci-publish). #1804 (the guide) walks an
+   admin through the bundle after it. PR 1834 moves to goapplib v0.7.30.
 2. **#1808**, bootstrap. Linked packs (PR 1819) give it `LinkPack` to call. Its scope is still
    open: the leaning is a file beside `agni.yaml`, not inside it, that also declares runtime
    mounts, plus what happens to a design the file drops and whether reports are made at start.

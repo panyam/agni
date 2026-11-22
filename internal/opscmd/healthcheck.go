@@ -1,6 +1,7 @@
 package opscmd
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,9 +14,14 @@ import (
 // installing one would add a package to every deployment for a single request. It reads only the
 // status code and checks no other route. defaultAddr is the loopback form of the server's own
 // default --addr, since ":8080" listens on every interface and is not a dialable host.
+//
+// --tls probes a server that ends TLS itself, as the enterprise compose bundle runs agni (agni issue
+// 1802). It doesn't verify the certificate. The probe dials the server's own container over loopback
+// and sends no credential, and the certificate names the public host rather than localhost.
 func Healthcheck(server, defaultAddr string) *cobra.Command {
 	var addr string
 	var timeout time.Duration
+	var useTLS bool
 	c := &cobra.Command{
 		Use:   "healthcheck",
 		Short: "Probe a running server's /healthz and exit non-zero if it is unhealthy",
@@ -27,6 +33,10 @@ func Healthcheck(server, defaultAddr string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := &http.Client{Timeout: timeout}
 			url := "http://" + addr + "/healthz"
+			if useTLS {
+				url = "https://" + addr + "/healthz"
+				client.Transport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}} // #nosec G402 -- a loopback probe of the server's own container that sends no credential, as the doc comment says
+			}
 			resp, err := client.Get(url)
 			if err != nil {
 				return fmt.Errorf("%s: %w", url, err)
@@ -41,5 +51,6 @@ func Healthcheck(server, defaultAddr string) *cobra.Command {
 	}
 	c.Flags().StringVar(&addr, "addr", defaultAddr, "address of the server to probe")
 	c.Flags().DurationVar(&timeout, "timeout", 3*time.Second, "how long to wait for a response")
+	c.Flags().BoolVar(&useTLS, "tls", false, "probe over HTTPS, for a server started with --tls-cert; the certificate isn't checked, since the probe only reads /healthz on the server's own container")
 	return c
 }

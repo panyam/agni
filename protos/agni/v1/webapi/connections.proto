@@ -40,6 +40,13 @@ service ConnectionService {
   // naming the mounts, until they are deleted. Deleting a person's connection deletes their sealed
   // token too. Another person's connection is NOT_FOUND.
   rpc DeleteConnection(DeleteConnectionRequest) returns (google.protobuf.Empty);
+
+  // RotateConnection replaces the sealed secret of a server connection created with
+  // server_secret, so a token is rotated while mounts read through the connection (agni issue
+  // 1802). Each server process sharing the store uses the new secret on its next read. A
+  // connection that names its secret by reference is FAILED_PRECONDITION, since its secret is the
+  // file or variable it names. A person's connection, or an empty secret, is INVALID_ARGUMENT.
+  rpc RotateConnection(RotateConnectionRequest) returns (Connection);
 }
 
 // Connection is one sign-in the server reads a source through, named "connections/{connection}".
@@ -94,6 +101,10 @@ message Connection {
   // cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
   // "file:/abs/path". Its private key is at key_source.
   string cert_source = 21;
+  // sealed says a server connection keeps its secret sealed in --store under --connections-key,
+  // as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
+  // token_source or key_source is then empty. Output only.
+  bool sealed = 22;
 }
 
 // EntraAuth says how a CONNECTION_KIND_ENTRA connection signs in.
@@ -160,6 +171,21 @@ message CreateConnectionRequest {
   // under --connections-key and never sends it back. A token kind of person connection takes no
   // token_source, since a reference would let a caller name a secret of the server's.
   string user_token = 3;
+  // server_secret is a server connection's secret itself (agni issue 1802): the token for
+  // CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+  // secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+  // the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+  // holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
+  // connection's token_source or key_source stays empty. It suits a server in a container, whose
+  // environment and files the caller can't reach. A server started without --connections-key
+  // answers FAILED_PRECONDITION.
+  string server_secret = 4;
+}
+
+message RotateConnectionRequest {
+  string name = 1; // "connections/{connection}"
+  // server_secret is the new secret, as CreateConnectionRequest.server_secret takes it.
+  string server_secret = 2;
 }
 
 message GetConnectionRequest {

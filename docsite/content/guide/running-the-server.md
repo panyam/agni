@@ -670,6 +670,19 @@ Credentials, such as GKE workload identity. An Entra connection signs in as an a
 token file. The app registration needs Graph's `Sites.Read.All` or `Files.Read.All` application
 permission.
 
+A server in a container, or on a machine the operator can't log in to, has no environment or files
+the CLI can name. `--seal` sends the secret instead (agni issue 1802). The CLI reads the token, or
+the secret `--key` names, from the reference on its own machine and sends it once. That covers an
+App's key, an AWS secret key, a GCP service account key and an Entra secret or certificate key. The server seals it in
+the store under `--connections-key`, as it does a person's own token, and never sends it back.
+`agni connections ls` shows the connection as `sealed`. `agni connections rotate` replaces the
+secret while mounts keep reading through the connection:
+
+```bash
+agni connections add acme --seal --github-token env:GITHUB_TOKEN --remote https://agni.example.com
+agni connections rotate acme --github-token env:GITHUB_TOKEN_NEXT --remote https://agni.example.com
+```
+
 Several mounts can read through one connection. `agni mounts ls` names a mount's connection after
 its source, and `agni connections ls` lists each connection with where its secret is and whether its
 last token request worked. A connection a mount reads through can't be removed until the mount is.
@@ -831,6 +844,42 @@ for every `--remote` call and for `agni login`, and trusts the system's roots be
 export AGNI_CA_FILE=/etc/agni/team-ca.pem
 agni login --remote https://agni.example.com
 ```
+
+### The enterprise bundle
+
+Say a team wants that shared server on one machine, against its own GitHub Enterprise Server. Each
+release attaches `agni-enterprise-<version>.tar.gz`, which unpacks into a folder holding a
+`compose.yaml` and an `env.example` (agni issue 1802). The bundle runs `agni serve` with every flag
+this page covers: TLS from your certificate, `--auth tokens`, sign-in through a GitHub App, a
+connections key and a webhook secret.
+
+```bash
+tar -xzf agni-enterprise-v0.11.0.tar.gz && cd agni-enterprise
+cp env.example .env              # fill it in, and make the secret files it names
+docker compose up -d             # then open AGNI_PUBLIC_URL and sign in with GitHub
+```
+
+- Each secret is a file on the machine that `.env` names. Compose mounts it read-only under
+  `/run/secrets`, and no secret value sits in `compose.yaml` or `.env`. The server runs as uid
+  10001, so each file must be readable by it, for example with `chown 10001` and `chmod 0400`.
+- A connection the server reads repos through can't name a variable or file on your own machine,
+  since the server runs in a container. `agni connections add hw --seal --github-token env:HW_TOKEN`
+  reads the token where the CLI runs, and the server seals it in the store under the connections key.
+  `agni connections rotate hw --github-token env:HW_TOKEN_NEXT` replaces it while mounts read through
+  the connection. A token the server should read itself goes in `AGNI_CONNECTION_SECRETS`, a folder
+  mounted read-only at `/run/agni/connections`, named as `--github-token file:/run/agni/connections/hw`.
+- `AGNI_GITHUB_API` is your server's REST API, `https://<host>/api/v3` on GitHub Enterprise Server.
+  `agni serve` reads mounts, signs people in and checks access through it, as its `--github-api` flag.
+- `AGNI_CA_DIR` is a folder of CA certificates both servers trust beside the system's, such as the
+  CA that signed your GitHub Enterprise Server's certificate. Leave it empty when a public CA signed
+  it.
+- The `data` volume holds the store and the uploads. Back it up with the connections key file, since
+  the people's tokens in it are sealed with that key.
+- An upgrade changes `AGNI_VERSION` in `.env` and runs `docker compose up -d` again.
+- `docker compose --profile datasheets up -d` adds the datasheet workbench with the same certificate
+  and tokens.
+- `make exercise-enterprise-bundle` runs the enterprise exercise against the bundle over an image,
+  and each release runs it over the published one.
 
 ### Behind a proxy that ends TLS
 

@@ -1,11 +1,18 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
 )
@@ -64,7 +72,7 @@ func get(t *testing.T, u, token string) int {
 
 // The seed's private repo answers, under /api/v3 as on a GHES host, only a token it granted.
 func TestTheSeedGrantsAPrivateRepoToItsTokensAlone(t *testing.T) {
-	e, err := seedEnterprise(writeSeed(t))
+	e, err := seedEnterprise(writeSeed(t), "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +91,7 @@ func TestTheSeedGrantsAPrivateRepoToItsTokensAlone(t *testing.T) {
 // /push commits to main and delivers a push event signed with the secret it was given, and
 // /approve refuses a code no device flow issued.
 func TestTheControlAddressPushesAndApproves(t *testing.T) {
-	e, err := seedEnterprise(writeSeed(t))
+	e, err := seedEnterprise(writeSeed(t), "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +153,7 @@ func body(t *testing.T, u, token string) string {
 }
 
 func TestASeedCommitKeepsItsLFSPathsAsPointers(t *testing.T) {
-	e, err := seedEnterprise(writeSeedWith(t, `{"tag": "rev-c", "dir": "rev-c", "lfs": ["board.txt"]}`))
+	e, err := seedEnterprise(writeSeedWith(t, `{"tag": "rev-c", "dir": "rev-c", "lfs": ["board.txt"]}`), "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +167,77 @@ func TestASeedCommitKeepsItsLFSPathsAsPointers(t *testing.T) {
 	if got := raw("rev-b"); got != "b" {
 		t.Errorf("board.txt at rev-b = %q; want the plain file", got)
 	}
-	if _, err := seedEnterprise(writeSeedWith(t, `{"tag": "rev-c", "dir": "rev-c", "lfs": ["nope.txt"]}`)); err == nil || !strings.Contains(err.Error(), "nope.txt") {
+	if _, err := seedEnterprise(writeSeedWith(t, `{"tag": "rev-c", "dir": "rev-c", "lfs": ["nope.txt"]}`), "", nil); err == nil || !strings.Contains(err.Error(), "nope.txt") {
 		t.Errorf("a seed listing a missing file under lfs = %v; want an error naming it", err)
+	}
+}
+
+// With a host, the fake listens there and names it in every URL it hands out, so an app in a
+// container follows an LFS download link to the address it reaches (agni issue 1802). "localhost"
+// stands in for the docker bridge's gateway, since it differs from the default 127.0.0.1 in each URL.
+func TestASeededFakeOnAHostNamesItInTheURLsItHandsOut(t *testing.T) {
+	e, err := seedEnterprise(writeSeedWith(t, `{"tag": "rev-c", "dir": "rev-c", "lfs": ["board.txt"]}`), "localhost", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(e.gh.URL, "http://localhost:") {
+		t.Fatalf("the fake's URL = %s; want it on localhost", e.gh.URL)
+	}
+	pointer, oid := githubtest.LFSPointer("c")
+	if got := body(t, e.gh.RawURL()+"/hw/baseboard/"+e.commits["hw/baseboard"]["rev-c"]+"/board.txt", "server-token"); got != pointer {
+		t.Errorf("board.txt at rev-c through localhost = %q; want its LFS pointer", got)
+	}
+	req, _ := http.NewRequest(http.MethodPost, e.gh.LFSURL()+"/hw/baseboard.git/info/lfs/objects/batch",
+		strings.NewReader(`{"operation": "download", "objects": [{"oid": "`+oid+`", "size": 1}]}`))
+	req.Header.Set("Authorization", "Bearer server-token")
+	req.Header.Set("Accept", "application/vnd.git-lfs+json")
+	req.Header.Set("Content-Type", "application/vnd.git-lfs+json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	b, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(b), `"href":"http://localhost:`) && !strings.Contains(string(b), `"href": "http://localhost:`) {
+		t.Errorf("the LFS batch answer = %s; want a download href on localhost", b)
+	}
+}
+
+// With a certificate, the fake on a host serves HTTPS and names https URLs, since oneauth refuses a
+// plain-HTTP GitHub Enterprise host off loopback (agni issue 1802).
+func TestASeededFakeWithACertificateServesHTTPS(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpl := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "localhost"}, DNSNames: []string{"localhost"},
+		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour), KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf, _ := x509.ParseCertificate(der)
+	e, err := seedEnterprise(writeSeed(t), "localhost", &tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key, Leaf: leaf})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(e.gh.URL, "https://localhost:") {
+		t.Fatalf("the fake's URL = %s; want https on localhost", e.gh.URL)
+	}
+	pool := x509.NewCertPool()
+	pool.AddCert(leaf)
+	client := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}}}
+	req, _ := http.NewRequest(http.MethodGet, e.gh.RawURL()+"/hw/baseboard/"+e.commits["hw/baseboard"]["rev-b"]+"/board.txt", nil)
+	req.Header.Set("Authorization", "Bearer server-token")
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("a read from the fake over HTTPS: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if b, _ := io.ReadAll(resp.Body); string(b) != "b" {
+		t.Errorf("board.txt at rev-b over HTTPS = %q; want b", b)
+	}
+	if _, err := seedEnterprise(writeSeed(t), "", &tls.Certificate{}); err == nil || !strings.Contains(err.Error(), "--host") {
+		t.Errorf("a certificate with no host = %v; want an error asking for --host", err)
 	}
 }

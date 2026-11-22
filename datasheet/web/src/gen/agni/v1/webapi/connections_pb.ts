@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/connections.proto.
  */
 export const file_agni_v1_webapi_connections: GenFile = /*@__PURE__*/
-  fileDesc("CiBhZ25pL3YxL3dlYmFwaS9jb25uZWN0aW9ucy5wcm90bxIOYWduaS52MS53ZWJhcGkizwQKCkNvbm5lY3Rpb24SDAoEbmFtZRgBIAEoCRIsCgRraW5kGAIgASgOMh4uYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbktpbmQSFAoMZGlzcGxheV9uYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEg4KBmFwcF9pZBgFIAEoCRIXCg9pbnN0YWxsYXRpb25faWQYBiABKAMSEgoKa2V5X3NvdXJjZRgHIAEoCRIUCgx0b2tlbl9zb3VyY2UYCCABKAkSMAoGc3RhdHVzGAkgASgOMiAuYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvblN0YXR1cxISCgpsYXN0X2Vycm9yGAogASgJEi8KC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCg1sYXN0X3VzZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgVzY29wZRgNIAEoDjIfLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb25TY29wZRINCgVvd25lchgOIAEoCRIVCg1hY2Nlc3Nfa2V5X2lkGA8gASgJEhAKCHJvbGVfYXJuGBAgASgJEg4KBnJlZ2lvbhgRIAEoCRIRCgl0ZW5hbnRfaWQYEiABKAkSEQoJY2xpZW50X2lkGBMgASgJEi0KCmVudHJhX2F1dGgYFCABKA4yGS5hZ25pLnYxLndlYmFwaS5FbnRyYUF1dGgSEwoLY2VydF9zb3VyY2UYFSABKAkidAoXQ3JlYXRlQ29ubmVjdGlvblJlcXVlc3QSFQoNY29ubmVjdGlvbl9pZBgBIAEoCRIuCgpjb25uZWN0aW9uGAIgASgLMhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbhISCgp1c2VyX3Rva2VuGAMgASgJIiQKFEdldENvbm5lY3Rpb25SZXF1ZXN0EgwKBG5hbWUYASABKAkiGAoWTGlzdENvbm5lY3Rpb25zUmVxdWVzdCJKChdMaXN0Q29ubmVjdGlvbnNSZXNwb25zZRIvCgtjb25uZWN0aW9ucxgBIAMoCzIaLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb24iJwoXRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QSDAoEbmFtZRgBIAEoCSqdAQoJRW50cmFBdXRoEhoKFkVOVFJBX0FVVEhfVU5TUEVDSUZJRUQQABIVChFFTlRSQV9BVVRIX1NFQ1JFVBABEhoKFkVOVFJBX0FVVEhfQ0VSVElGSUNBVEUQAhIfChtFTlRSQV9BVVRIX01BTkFHRURfSURFTlRJVFkQAxIgChxFTlRSQV9BVVRIX1dPUktMT0FEX0lERU5USVRZEAQqbQoPQ29ubmVjdGlvblNjb3BlEiAKHENPTk5FQ1RJT05fU0NPUEVfVU5TUEVDSUZJRUQQABIbChdDT05ORUNUSU9OX1NDT1BFX1NFUlZFUhABEhsKF0NPTk5FQ1RJT05fU0NPUEVfUEVSU09OEAIq4QEKDkNvbm5lY3Rpb25LaW5kEh8KG0NPTk5FQ1RJT05fS0lORF9VTlNQRUNJRklFRBAAEh4KGkNPTk5FQ1RJT05fS0lORF9HSVRIVUJfQVBQEAESIAocQ09OTkVDVElPTl9LSU5EX0dJVEhVQl9UT0tFThACEh8KG0NPTk5FQ1RJT05fS0lORF9HSVRIVUJfVVNFUhADEhcKE0NPTk5FQ1RJT05fS0lORF9BV1MQBBIXChNDT05ORUNUSU9OX0tJTkRfR0NQEAUSGQoVQ09OTkVDVElPTl9LSU5EX0VOVFJBEAYqbQoQQ29ubmVjdGlvblN0YXR1cxIhCh1DT05ORUNUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEhgKFENPTk5FQ1RJT05fU1RBVFVTX09LEAESHAoYQ09OTkVDVElPTl9TVEFUVVNfRkFJTEVEEAIy+AIKEUNvbm5lY3Rpb25TZXJ2aWNlElcKEENyZWF0ZUNvbm5lY3Rpb24SJy5hZ25pLnYxLndlYmFwaS5DcmVhdGVDb25uZWN0aW9uUmVxdWVzdBoaLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb24SUQoNR2V0Q29ubmVjdGlvbhIkLmFnbmkudjEud2ViYXBpLkdldENvbm5lY3Rpb25SZXF1ZXN0GhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbhJiCg9MaXN0Q29ubmVjdGlvbnMSJi5hZ25pLnYxLndlYmFwaS5MaXN0Q29ubmVjdGlvbnNSZXF1ZXN0GicuYWduaS52MS53ZWJhcGkuTGlzdENvbm5lY3Rpb25zUmVzcG9uc2USUwoQRGVsZXRlQ29ubmVjdGlvbhInLmFnbmkudjEud2ViYXBpLkRlbGV0ZUNvbm5lY3Rpb25SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Qi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_google_protobuf_empty, file_google_protobuf_timestamp]);
+  fileDesc("CiBhZ25pL3YxL3dlYmFwaS9jb25uZWN0aW9ucy5wcm90bxIOYWduaS52MS53ZWJhcGki3wQKCkNvbm5lY3Rpb24SDAoEbmFtZRgBIAEoCRIsCgRraW5kGAIgASgOMh4uYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbktpbmQSFAoMZGlzcGxheV9uYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEg4KBmFwcF9pZBgFIAEoCRIXCg9pbnN0YWxsYXRpb25faWQYBiABKAMSEgoKa2V5X3NvdXJjZRgHIAEoCRIUCgx0b2tlbl9zb3VyY2UYCCABKAkSMAoGc3RhdHVzGAkgASgOMiAuYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvblN0YXR1cxISCgpsYXN0X2Vycm9yGAogASgJEi8KC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCg1sYXN0X3VzZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgVzY29wZRgNIAEoDjIfLmFnbmkudjEud2ViYXBpLkNvbm5lY3Rpb25TY29wZRINCgVvd25lchgOIAEoCRIVCg1hY2Nlc3Nfa2V5X2lkGA8gASgJEhAKCHJvbGVfYXJuGBAgASgJEg4KBnJlZ2lvbhgRIAEoCRIRCgl0ZW5hbnRfaWQYEiABKAkSEQoJY2xpZW50X2lkGBMgASgJEi0KCmVudHJhX2F1dGgYFCABKA4yGS5hZ25pLnYxLndlYmFwaS5FbnRyYUF1dGgSEwoLY2VydF9zb3VyY2UYFSABKAkSDgoGc2VhbGVkGBYgASgIIosBChdDcmVhdGVDb25uZWN0aW9uUmVxdWVzdBIVCg1jb25uZWN0aW9uX2lkGAEgASgJEi4KCmNvbm5lY3Rpb24YAiABKAsyGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uEhIKCnVzZXJfdG9rZW4YAyABKAkSFQoNc2VydmVyX3NlY3JldBgEIAEoCSI+ChdSb3RhdGVDb25uZWN0aW9uUmVxdWVzdBIMCgRuYW1lGAEgASgJEhUKDXNlcnZlcl9zZWNyZXQYAiABKAkiJAoUR2V0Q29ubmVjdGlvblJlcXVlc3QSDAoEbmFtZRgBIAEoCSIYChZMaXN0Q29ubmVjdGlvbnNSZXF1ZXN0IkoKF0xpc3RDb25uZWN0aW9uc1Jlc3BvbnNlEi8KC2Nvbm5lY3Rpb25zGAEgAygLMhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbiInChdEZWxldGVDb25uZWN0aW9uUmVxdWVzdBIMCgRuYW1lGAEgASgJKp0BCglFbnRyYUF1dGgSGgoWRU5UUkFfQVVUSF9VTlNQRUNJRklFRBAAEhUKEUVOVFJBX0FVVEhfU0VDUkVUEAESGgoWRU5UUkFfQVVUSF9DRVJUSUZJQ0FURRACEh8KG0VOVFJBX0FVVEhfTUFOQUdFRF9JREVOVElUWRADEiAKHEVOVFJBX0FVVEhfV09SS0xPQURfSURFTlRJVFkQBCptCg9Db25uZWN0aW9uU2NvcGUSIAocQ09OTkVDVElPTl9TQ09QRV9VTlNQRUNJRklFRBAAEhsKF0NPTk5FQ1RJT05fU0NPUEVfU0VSVkVSEAESGwoXQ09OTkVDVElPTl9TQ09QRV9QRVJTT04QAirhAQoOQ29ubmVjdGlvbktpbmQSHwobQ09OTkVDVElPTl9LSU5EX1VOU1BFQ0lGSUVEEAASHgoaQ09OTkVDVElPTl9LSU5EX0dJVEhVQl9BUFAQARIgChxDT05ORUNUSU9OX0tJTkRfR0lUSFVCX1RPS0VOEAISHwobQ09OTkVDVElPTl9LSU5EX0dJVEhVQl9VU0VSEAMSFwoTQ09OTkVDVElPTl9LSU5EX0FXUxAEEhcKE0NPTk5FQ1RJT05fS0lORF9HQ1AQBRIZChVDT05ORUNUSU9OX0tJTkRfRU5UUkEQBiptChBDb25uZWN0aW9uU3RhdHVzEiEKHUNPTk5FQ1RJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASGAoUQ09OTkVDVElPTl9TVEFUVVNfT0sQARIcChhDT05ORUNUSU9OX1NUQVRVU19GQUlMRUQQAjLRAwoRQ29ubmVjdGlvblNlcnZpY2USVwoQQ3JlYXRlQ29ubmVjdGlvbhInLmFnbmkudjEud2ViYXBpLkNyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0GhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbhJRCg1HZXRDb25uZWN0aW9uEiQuYWduaS52MS53ZWJhcGkuR2V0Q29ubmVjdGlvblJlcXVlc3QaGi5hZ25pLnYxLndlYmFwaS5Db25uZWN0aW9uEmIKD0xpc3RDb25uZWN0aW9ucxImLmFnbmkudjEud2ViYXBpLkxpc3RDb25uZWN0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0Q29ubmVjdGlvbnNSZXNwb25zZRJTChBEZWxldGVDb25uZWN0aW9uEicuYWduaS52MS53ZWJhcGkuRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSVwoQUm90YXRlQ29ubmVjdGlvbhInLmFnbmkudjEud2ViYXBpLlJvdGF0ZUNvbm5lY3Rpb25SZXF1ZXN0GhouYWduaS52MS53ZWJhcGkuQ29ubmVjdGlvbkIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_google_protobuf_empty, file_google_protobuf_timestamp]);
 
 /**
  * Connection is one sign-in the server reads a source through, named "connections/{connection}".
@@ -170,6 +170,15 @@ export type Connection = Message<"agni.v1.webapi.Connection"> & {
    * @generated from field: string cert_source = 21;
    */
   certSource: string;
+
+  /**
+   * sealed says a server connection keeps its secret sealed in --store under --connections-key,
+   * as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
+   * token_source or key_source is then empty. Output only.
+   *
+   * @generated from field: bool sealed = 22;
+   */
+  sealed: boolean;
 };
 
 /**
@@ -205,6 +214,20 @@ export type CreateConnectionRequest = Message<"agni.v1.webapi.CreateConnectionRe
    * @generated from field: string user_token = 3;
    */
   userToken: string;
+
+  /**
+   * server_secret is a server connection's secret itself (agni issue 1802): the token for
+   * CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+   * secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+   * the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+   * holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
+   * connection's token_source or key_source stays empty. It suits a server in a container, whose
+   * environment and files the caller can't reach. A server started without --connections-key
+   * answers FAILED_PRECONDITION.
+   *
+   * @generated from field: string server_secret = 4;
+   */
+  serverSecret: string;
 };
 
 /**
@@ -213,6 +236,32 @@ export type CreateConnectionRequest = Message<"agni.v1.webapi.CreateConnectionRe
  */
 export const CreateConnectionRequestSchema: GenMessage<CreateConnectionRequest> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_connections, 1);
+
+/**
+ * @generated from message agni.v1.webapi.RotateConnectionRequest
+ */
+export type RotateConnectionRequest = Message<"agni.v1.webapi.RotateConnectionRequest"> & {
+  /**
+   * "connections/{connection}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * server_secret is the new secret, as CreateConnectionRequest.server_secret takes it.
+   *
+   * @generated from field: string server_secret = 2;
+   */
+  serverSecret: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.RotateConnectionRequest.
+ * Use `create(RotateConnectionRequestSchema)` to create a new message.
+ */
+export const RotateConnectionRequestSchema: GenMessage<RotateConnectionRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_connections, 2);
 
 /**
  * @generated from message agni.v1.webapi.GetConnectionRequest
@@ -231,7 +280,7 @@ export type GetConnectionRequest = Message<"agni.v1.webapi.GetConnectionRequest"
  * Use `create(GetConnectionRequestSchema)` to create a new message.
  */
 export const GetConnectionRequestSchema: GenMessage<GetConnectionRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_connections, 2);
+  messageDesc(file_agni_v1_webapi_connections, 3);
 
 /**
  * @generated from message agni.v1.webapi.ListConnectionsRequest
@@ -244,7 +293,7 @@ export type ListConnectionsRequest = Message<"agni.v1.webapi.ListConnectionsRequ
  * Use `create(ListConnectionsRequestSchema)` to create a new message.
  */
 export const ListConnectionsRequestSchema: GenMessage<ListConnectionsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_connections, 3);
+  messageDesc(file_agni_v1_webapi_connections, 4);
 
 /**
  * @generated from message agni.v1.webapi.ListConnectionsResponse
@@ -261,7 +310,7 @@ export type ListConnectionsResponse = Message<"agni.v1.webapi.ListConnectionsRes
  * Use `create(ListConnectionsResponseSchema)` to create a new message.
  */
 export const ListConnectionsResponseSchema: GenMessage<ListConnectionsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_connections, 4);
+  messageDesc(file_agni_v1_webapi_connections, 5);
 
 /**
  * @generated from message agni.v1.webapi.DeleteConnectionRequest
@@ -280,7 +329,7 @@ export type DeleteConnectionRequest = Message<"agni.v1.webapi.DeleteConnectionRe
  * Use `create(DeleteConnectionRequestSchema)` to create a new message.
  */
 export const DeleteConnectionRequestSchema: GenMessage<DeleteConnectionRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_connections, 5);
+  messageDesc(file_agni_v1_webapi_connections, 6);
 
 /**
  * EntraAuth says how a CONNECTION_KIND_ENTRA connection signs in.
@@ -520,6 +569,20 @@ export const ConnectionService: GenService<{
     methodKind: "unary";
     input: typeof DeleteConnectionRequestSchema;
     output: typeof EmptySchema;
+  },
+  /**
+   * RotateConnection replaces the sealed secret of a server connection created with
+   * server_secret, so a token is rotated while mounts read through the connection (agni issue
+   * 1802). Each server process sharing the store uses the new secret on its next read. A
+   * connection that names its secret by reference is FAILED_PRECONDITION, since its secret is the
+   * file or variable it names. A person's connection, or an empty secret, is INVALID_ARGUMENT.
+   *
+   * @generated from rpc agni.v1.webapi.ConnectionService.RotateConnection
+   */
+  rotateConnection: {
+    methodKind: "unary";
+    input: typeof RotateConnectionRequestSchema;
+    output: typeof ConnectionSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_connections, 0);
