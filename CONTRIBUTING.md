@@ -137,6 +137,11 @@ failure. An untidy module keeps building until a later change needs a requiremen
 updates (PR 782). A bump that touches the root alone leaves every nested module stale and fails
 `tidyall-check`. A new module outside `examples/` needs a line there.
 
+A goapplib release tags each module (`v0.7.27`, `storage/v0.7.27`), and agni bumps every one it
+imports, in the root and in `datasheet`, in one PR. Right after a tag, proxy.golang.org and
+sum.golang.org can answer 404 for a module for some minutes. Wait for them, and never set
+`GONOSUMDB` or `GOPROXY=direct` to get past it, since CI fetches through both (agni issue 1820).
+
 ## Wiring, per subsystem
 
 Each kind of addition below has a fixed edit list, and a missed edit fails silently. Most rows name a
