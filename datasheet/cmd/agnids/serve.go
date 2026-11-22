@@ -37,7 +37,7 @@ import (
 // DatasheetService holds the workbench's whole API, including its folder tree, so agnids can be
 // hosted apart from the engine's `agni serve` (agni issue 744).
 func serveCmd() *cobra.Command {
-	var addr, webDir, pdf2doc, viewerURL, mountRoot, corpusDir, storeURL, uploadsURL string
+	var addr, webDir, pdf2doc, viewerURL, mountRoot, corpusDir, storeURL, uploadsURL, uploadsCache string
 	var auth, tlsCert, tlsKey string
 	var trustedProxy []string
 	var access tableAccess
@@ -54,7 +54,7 @@ func serveCmd() *cobra.Command {
 			if access.connectionsKey != "" && (!access.auth || storeURL == "" || uploadsURL == "") {
 				return fmt.Errorf("--connections-key checks each caller's own connections, so it needs --auth %s, --store and --uploads", authgate.Tokens)
 			}
-			st, uploadsDir, err := storeurl.Open(storeURL, uploadsURL)
+			st, uploadsDir, err := storeurl.Open(storeURL, uploadsURL, storeurl.WithUploadsCache(uploadsCache))
 			if err != nil {
 				return err
 			}
@@ -123,6 +123,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&viewerURL, "viewer-url", "", "where the viewer (`agni serve`) is served, e.g. http://host:8080; the workbench's heading links home there, and is plain text when this is empty")
 	c.Flags().StringVar(&corpusDir, "corpus", "", "the corpus store: published PartSpecs with their corpus.index.json, served over PartSpecService for `agni serve --params-url`, and the workbench's drafts under drafts/. It is indexed at start when the index is missing or stale. Empty serves neither, and the workbench cannot save")
 	c.Flags().StringVar(&storeURL, "store", "", "agni serve's --store, as a URL such as file:///srv/agni/meta, sqlite:///srv/agni.db, postgres://agni@db/agni or datastore://project?namespace=agni; with --uploads, the workbench also serves the mounts agni serve made at runtime, such as a GitHub snapshot, and sees a new one within a second. It only reads them")
+	c.Flags().StringVar(&uploadsCache, "uploads-cache", "", "agni serve's --uploads-cache, the local folder in front of an s3:// or gs:// --uploads, where the views are. It only reads them (agni issue 1730)")
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "agni serve's --uploads, as a URL such as file:///srv/agni/files, where the runtime mounts' files are. Needs --store")
 	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` keeps in --store, the same ones agni serve accepts, and refuses a call without one (agni issue 1765). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost or --trusted-proxy names the proxy that ends TLS")
 	c.Flags().StringVar(&access.connectionsKey, "connections-key", "", "agni serve's --connections-key, as env:NAME or file:/abs/path (agni issue 1778). With --auth, a caller sees a private mount when their own connection in --store reads its repo. agnids reads people's tokens and never refreshes or writes one, so a signed-in token that has expired reads as no until agni serve refreshes it. Without it, --auth hides every private mount. Needs --auth, --store and --uploads")

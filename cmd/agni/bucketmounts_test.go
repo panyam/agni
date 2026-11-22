@@ -102,11 +102,9 @@ func TestADesignLinkedFromAnS3BucketChecksAsItsFolder(t *testing.T) {
 	}
 
 	putS3(t, s3c, "jetson/power.kicad_sch", append(sheets["power.kicad_sch"], '\n'))
-	// goapplib's bucket driver downloads every file again on a sync (panyam/goapplib#234), so the
-	// count of files fetched isn't checked here.
 	out = must(runDesigns(t, url, "sync", "bb"))
-	if !strings.Contains(out, "designs/bb/artifacts/schematic\tchanged\t") {
-		t.Errorf("designs sync after one object changed = %q; want the schematic changed", out)
+	if !strings.Contains(out, "designs/bb/artifacts/schematic\tchanged\t") || !strings.Contains(out, "fetched 1 files") {
+		t.Errorf("designs sync after one object changed = %q; want the schematic changed with one file fetched", out)
 	}
 	if again := findingKeys(t, "check", "designs/bb", "--remote", url); !slices.Equal(again, local) {
 		t.Errorf("after a newline was added to one sheet, the check gives %d findings; want the folder's %d", len(again), len(local))

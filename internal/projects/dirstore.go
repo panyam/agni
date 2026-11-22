@@ -89,6 +89,12 @@ func NewDirStore(recordsDir, uploads, mount string) (*DirStore, error) {
 // FAILED_PRECONDITION. The views are folders on this server's disk whatever recs is, since the
 // engine reads a design through a folder.
 func NewStore(recs records.Store, uploads, mount string) (*DirStore, error) {
+	return NewStoreOver(recs, uploads, mount, nil)
+}
+
+// NewStoreOver is NewStore with the uploads' blob store b, such as a bucket behind the local folder
+// (agni issue 1730). A nil b opens the folder's own blobs.
+func NewStoreOver(recs records.Store, uploads, mount string, b *BlobDir) (*DirStore, error) {
 	s := &DirStore{recs: recs, mount: mount}
 	if uploads == "" {
 		return s, nil
@@ -97,8 +103,10 @@ func NewStore(recs records.Store, uploads, mount string) (*DirStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	if s.blobs, err = NewBlobDir(up); err != nil {
-		return nil, err
+	if s.blobs = b; s.blobs == nil {
+		if s.blobs, err = NewBlobDir(up); err != nil {
+			return nil, err
+		}
 	}
 	s.views = filepath.Join(up, viewsDir)
 	if err := os.MkdirAll(s.views, 0o750); err != nil {
@@ -744,7 +752,7 @@ func (s *DirStore) Sweep(keep map[string]bool, grace time.Duration, more ...blob
 			_ = os.Remove(dir)
 		}
 	}
-	removed, err = s.blobs.Dir().Sweep(context.Background(), grace, append([]blobs.Referrer{keeping(refs)}, more...)...)
+	removed, err = s.blobs.Store().Sweep(context.Background(), grace, append([]blobs.Referrer{keeping(refs)}, more...)...)
 	return views, removed, err
 }
 
@@ -871,4 +879,55 @@ func symbolDirs(rec recordYAML) []string {
 		}
 	}
 	return out
+}
+
+// RebuildViews builds every view a record names that the uploads folder lacks: each design's
+// current one and each kept revision's (agni issue 1730). Views are hard links to blobs, so a server
+// whose local folder was lost, as an s3:// or gs:// --uploads allows, rebuilds them from the blobs,
+// which the bucket refills on demand. It returns how many it built. A store with no uploads builds
+// none.
+func (s *DirStore) RebuildViews(ctx context.Context) (int, error) {
+	if s.blobs == nil {
+		return 0, nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ids, err := s.ids()
+	if err != nil {
+		return 0, err
+	}
+	built := 0
+	rebuild := func(id string, rec recordYAML) error {
+		_, _, raw, err := describe(id, rec)
+		if err != nil || raw == nil {
+			return err
+		}
+		if _, err := os.Stat(filepath.Join(s.views, id, revOf(rec, raw))); err == nil {
+			return nil
+		}
+		if _, err := s.buildView(id, rec, raw); err != nil {
+			return fmt.Errorf("rebuilding the view of %s: %w", service.StandaloneDesignName(id), err)
+		}
+		built++
+		return nil
+	}
+	for _, id := range ids {
+		rec, err := s.load(id)
+		if err != nil {
+			return built, err
+		}
+		if err := rebuild(id, rec); err != nil {
+			return built, err
+		}
+		revs, err := s.loadRevisions(id)
+		if err != nil {
+			return built, err
+		}
+		for _, r := range revs {
+			if err := rebuild(id, r.Record); err != nil {
+				return built, err
+			}
+		}
+	}
+	return built, nil
 }

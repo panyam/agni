@@ -37,7 +37,7 @@ func storeServer(t *testing.T, dir string) *httptest.Server {
 	}
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
 	resolver := &service.ProjectResolver{Store: projectStore, Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
-	projectSvc, designSvc, _, err := storeServices(t.Context(), tableOf(ms), testStore(t, filepath.Join(dir, "store")), filepath.Join(dir, "uploads"), projectStore, resolver, nil, nil, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(t.Context(), tableOf(ms), testStore(t, filepath.Join(dir, "store")), filepath.Join(dir, "uploads"), nil, projectStore, resolver, nil, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func TestARunningServerSweepsAReplacedArtifactsFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	resolver := &service.ProjectResolver{Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
-	_, designSvc, _, err := storeServices(t.Context(), tableOf(ms), testStore(t, store), uploads, nil, resolver, nil, nil, io.Discard)
+	_, designSvc, _, err := storeServices(t.Context(), tableOf(ms), testStore(t, store), uploads, nil, nil, resolver, nil, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

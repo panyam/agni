@@ -547,3 +547,27 @@ func TestTwoServersWritingOneDesignLoseNeitherArtifact(t *testing.T) {
 		t.Fatalf("after %d rounds of two racing writes, mul holds %d artifacts, %v; want %d", rounds, len(all), err, 2*rounds)
 	}
 }
+
+// A store whose views were lost builds them again from its blobs, and a second pass builds nothing
+// (agni issue 1730).
+func TestRebuildViewsRestoresLostViews(t *testing.T) {
+	ctx := context.Background()
+	ds, l := dirStore(t)
+	mustDesign(t, ds, "mul", arts{"netlist": {"a.edn": "(edif a)"}})
+	d, err := ds.Design(ctx, "mul")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(l.views()); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := ds.RebuildViews(ctx); err != nil || n != 1 {
+		t.Fatalf("RebuildViews after the views were lost = %d, %v; want 1", n, err)
+	}
+	if b, err := os.ReadFile(filepath.Join(viewDir(l, d), "netlist", "a.edn")); err != nil || string(b) != "(edif a)" {
+		t.Errorf("the rebuilt view holds %q, %v; want the netlist", b, err)
+	}
+	if n, err := ds.RebuildViews(ctx); err != nil || n != 0 {
+		t.Errorf("a second RebuildViews = %d, %v; want nothing left to build", n, err)
+	}
+}

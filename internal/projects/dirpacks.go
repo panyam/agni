@@ -384,3 +384,33 @@ func (r *DirPacks) Sweep(ctx context.Context, grace time.Duration) (int, error) 
 	}
 	return removed, nil
 }
+
+// RebuildViews builds the view of each pack's files that the uploads folder lacks, from the blobs,
+// as DirStore.RebuildViews does for designs (agni issue 1730). It returns how many it built.
+func (r *DirPacks) RebuildViews(ctx context.Context) (int, error) {
+	if r.blobs == nil || r.views == "" {
+		return 0, nil
+	}
+	all, err := r.Packs(ctx)
+	if err != nil {
+		return 0, err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	built := 0
+	for _, p := range all {
+		if len(p.GetFiles()) == 0 {
+			continue
+		}
+		id := strings.TrimPrefix(p.GetName(), "packs/")
+		rev := strings.TrimPrefix(p.GetHash(), "sha256:")[:12]
+		if _, err := os.Stat(filepath.Join(r.views, packViewsDir, id, rev)); err == nil {
+			continue
+		}
+		if err := r.buildView(id, rev, p.GetFiles()); err != nil {
+			return built, fmt.Errorf("rebuilding the view of %s: %w", p.GetName(), err)
+		}
+		built++
+	}
+	return built, nil
+}

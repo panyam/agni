@@ -199,7 +199,14 @@ project. See [interface profiles](../interface-profiles/) and
 
 `serve --store <url>` names where the server keeps its records, and `serve --uploads <url>` names
 where it keeps the files of designs its users upload (agni issues 1732, 1739). `--uploads` takes a
-`file://` URL naming a folder, created if absent, such as `--uploads file:///srv/agni/files`.
+`file://` URL naming a folder, created if absent, such as `--uploads file:///srv/agni/files`, or a
+bucket, `s3://<bucket>/<prefix>` or `gs://<bucket>/<prefix>` (agni issue 1730). A bucket holds every
+file, and `--uploads-cache` names a local folder in front of it. The folder keeps a copy of each
+file the server reads and every view the engine reads, since the engine reads a design through a
+folder. A server that loses the folder, as a pod on a fresh node does, fetches each file from the
+bucket when it needs it and rebuilds the views at start. The bucket signs in with the server's own
+credentials, the AWS default chain or Application Default Credentials, and `--s3-endpoint` or
+`--gcs-endpoint` points it at another host, such as MinIO.
 `--store` takes one of four kinds of URL (agni issue 1733). A bare path is refused with the `file://`
 form it meant.
 

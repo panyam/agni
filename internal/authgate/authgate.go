@@ -43,7 +43,7 @@ var CacheTTL = time.Minute
 
 // Store is the store of the server's tokens, inside the --store folder.
 func Store(storeDir string) Keys {
-	return fsKeys{oafs.NewFSAPIKeyStore(filepath.Join(storeDir, StoreDir))}
+	return oafs.NewFSAPIKeyStore(filepath.Join(storeDir, StoreDir))
 }
 
 // Gate refuses every request without a valid token, apart from the health check, the viewer's
@@ -241,20 +241,20 @@ func CheckFlags(auth, store, tlsCert, tlsKey, addr string, proxies skmw.TrustedP
 // record per sign-in for good. A token with no expiry, as `agni token create` makes, stays, and so
 // does a revoked one, which `agni token ls` still lists.
 func Prune(ctx context.Context, store Keys, now time.Time) (int, error) {
-	return store.deleteExpired(ctx, now)
+	resp, err := store.CleanupExpiredAPIKeys(ctx, &core.CleanupExpiredAPIKeysRequest{Now: now})
+	if err != nil {
+		return 0, err
+	}
+	return resp.Removed, nil
 }
 
 // List returns every token in the store, newest first, without their hashes.
 func List(ctx context.Context, store Keys) ([]*core.APIKey, error) {
-	out, err := store.all(ctx)
+	resp, err := store.ListAPIKeys(ctx, &core.ListAPIKeysRequest{})
 	if err != nil {
 		return nil, err
 	}
-	for i, k := range out {
-		c := *k
-		c.KeyHash = ""
-		out[i] = &c
-	}
+	out := resp.APIKeys
 	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
 	return out, nil
 }

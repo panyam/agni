@@ -16,10 +16,11 @@ import (
 // blobsDir is the folder under the uploads folder that holds the blobs.
 const blobsDir = "blobs"
 
-// BlobDir is the uploads' blob folder, goapplib's blobs.Dir at <uploads>/blobs, with the byte-slice
-// calls agni's stores and service.UploadStore use (agni issues 1739, 1759). A server reads and
-// writes uploaded contents through it, so an upload outlives a restart.
-type BlobDir struct{ d *blobs.Dir }
+// BlobDir is the uploads' blob store with the byte-slice calls agni's stores and service.UploadStore
+// use (agni issues 1739, 1759). It is goapplib's blobs.Dir at <uploads>/blobs, or a bucket behind
+// that folder for an s3:// or gs:// --uploads (agni issue 1730). A server reads and writes uploaded
+// contents through it, so an upload outlives a restart.
+type BlobDir struct{ d blobs.Linker }
 
 // NewBlobDir opens the blob folder under uploads, creating it if absent. Its layout is
 // sha256/ab/cdef..., which agni has always used, so blobs from an older agni stay where they are.
@@ -31,8 +32,11 @@ func NewBlobDir(uploads string) (*BlobDir, error) {
 	return &BlobDir{d: d}, nil
 }
 
-// Dir is the library's store, for a sweep and for the mounts registry.
-func (b *BlobDir) Dir() *blobs.Dir { return b.d }
+// NewBlobDirOver wraps a blob store the server opened, such as a bucket behind a local folder.
+func NewBlobDirOver(l blobs.Linker) *BlobDir { return &BlobDir{d: l} }
+
+// Store is the library's store, for a sweep and for the mounts registry.
+func (b *BlobDir) Store() blobs.Linker { return b.d }
 
 // Put stores p and returns its hash, "sha256:<hex>". Storing contents already held writes nothing.
 func (b *BlobDir) Put(p []byte) (string, error) {
