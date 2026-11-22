@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +24,8 @@ type row struct {
 	Key     string    `gorm:"column:record_key;primaryKey;size:512"`
 	Body    []byte    `gorm:"column:body"`
 	Updated time.Time `gorm:"column:updated"`
+	// Rev counts the row's writes. Replace writes only when it still holds the count Read saw.
+	Rev int64 `gorm:"column:rev;not null;default:0"`
 }
 
 func (row) TableName() string { return "agni_records" }
@@ -30,7 +33,8 @@ func (row) TableName() string { return "agni_records" }
 // SQL is a Store over one table of a GORM database, `agni_records`, with a row per record keyed by
 // its full key. A folder is the key prefix up to a slash, so it exists while a row sits under it.
 // Each call is one statement, so several servers can share the database. Create inserts and lets
-// the primary key refuse a taken key.
+// the primary key refuse a taken key. Each write bumps the row's rev, and Replace updates only the
+// row whose rev is still the one Read returned.
 type SQL struct {
 	db  *gorm.DB
 	now func() time.Time
@@ -67,8 +71,13 @@ func (s *SQL) Put(ctx context.Context, key string, body []byte) error {
 	if err := records.CheckKey(key); err != nil {
 		return err
 	}
-	r := row{Key: key, Body: body, Updated: s.now().UTC()}
-	return s.db.WithContext(ctx).Clauses(clause.OnConflict{UpdateAll: true}).Create(&r).Error
+	r := row{Key: key, Body: body, Updated: s.now().UTC(), Rev: 1}
+	return s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "record_key"}},
+		DoUpdates: clause.Assignments(map[string]any{
+			"body": body, "updated": r.Updated, "rev": gorm.Expr("agni_records.rev + 1"),
+		}),
+	}).Create(&r).Error
 }
 
 // Create inserts the row at key, doing nothing when key is taken.
@@ -76,7 +85,7 @@ func (s *SQL) Create(ctx context.Context, key string, body []byte) error {
 	if err := records.CheckKey(key); err != nil {
 		return err
 	}
-	r := row{Key: key, Body: body, Updated: s.now().UTC()}
+	r := row{Key: key, Body: body, Updated: s.now().UTC(), Rev: 1}
 	res := s.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&r)
 	if res.Error != nil {
 		return res.Error
@@ -85,6 +94,46 @@ func (s *SQL) Create(ctx context.Context, key string, body []byte) error {
 		return fmt.Errorf("record %s: %w", key, fs.ErrExist)
 	}
 	return nil
+}
+
+// Read reads the row at key with its rev.
+func (s *SQL) Read(ctx context.Context, key string) ([]byte, records.Version, error) {
+	if err := records.CheckKey(key); err != nil {
+		return nil, "", err
+	}
+	var r row
+	err := s.db.WithContext(ctx).Where("record_key = ?", key).Take(&r).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, "", fmt.Errorf("record %s: %w", key, fs.ErrNotExist)
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	return r.Body, records.Version(strconv.FormatInt(r.Rev, 10)), nil
+}
+
+// Replace updates the row whose key is key and whose rev is still ver, in one statement. No row
+// updated means the row moved on or went away, and a second read says which.
+func (s *SQL) Replace(ctx context.Context, key string, body []byte, ver records.Version) error {
+	if err := records.CheckKey(key); err != nil {
+		return err
+	}
+	rev, err := strconv.ParseInt(string(ver), 10, 64)
+	if err != nil {
+		return fmt.Errorf("record %s: version %q is not one Read returned: %w", key, ver, records.ErrConflict)
+	}
+	res := s.db.WithContext(ctx).Model(&row{}).Where("record_key = ? AND rev = ?", key, rev).
+		Updates(map[string]any{"body": body, "updated": s.now().UTC(), "rev": rev + 1})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 1 {
+		return nil
+	}
+	if _, err := s.Get(ctx, key); err != nil {
+		return err
+	}
+	return fmt.Errorf("record %s: %w", key, records.ErrConflict)
 }
 
 // Delete removes the row at key.

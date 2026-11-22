@@ -144,7 +144,9 @@ put it back.
 ## Generated captures are checked by REGENERATING them
 
 `tutorial-runs-check` deletes every `docsite/content/**/runs/*.output`, rebuilds them, and fails on
-any difference. It costs about 15 seconds.
+any difference. It costs about 15 seconds. A gate stopped during this step leaves the captures
+deleted, so `git status` shows dozens of ` D` lines in `docsite/content/`. Restore each with `git
+show HEAD:<path> > <path>` before committing anything from that tree.
 
 Regenerating is the only thing that works, because a capture's freshness stamp hashes its SPEC and
 its FIXTURE and never the engine. An engine change that alters output leaves every stamp valid, so

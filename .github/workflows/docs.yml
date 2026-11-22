@@ -68,7 +68,7 @@ jobs:
         working-directory: .
 
       # A browser for the demo's spec, as ci.yml sets one up for the gate's.
-      - uses: panyam/ci-actions/setup-browser@a141bcd8a0a2018743f6e4cfde60bd734237b5cc # v0.1.2
+      - uses: panyam/ci-actions/setup-browser@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
         with:
           working-directory: web
 

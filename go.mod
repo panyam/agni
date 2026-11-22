@@ -29,7 +29,7 @@ require (
 	github.com/panyam/oneauth/oauth2 v0.3.18
 	github.com/panyam/oneauth/stores/gae v0.3.18
 	github.com/panyam/oneauth/stores/gorm v0.3.18
-	github.com/panyam/servicekit v0.2.4
+	github.com/panyam/servicekit v0.2.5
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/ulikunitz/xz v0.5.15

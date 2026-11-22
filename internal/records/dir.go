@@ -2,17 +2,21 @@ package records
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Dir is a Store that keeps each record as a file under a folder, at its key's path. A write goes
-// to a temp file beside the record and is renamed into place. Create hard-links the temp file to
-// the key, which fails when the key exists, and falls back to an exclusive create on a filesystem
-// without hard links.
+// to a temp file beside the record and is renamed into place. Every write takes the record's lock
+// file first, so Create's check for a taken key and Replace's check of the version hold across
+// processes sharing the folder. A version is the hash of the record's contents.
 type Dir struct {
 	root string
 }
@@ -71,57 +75,157 @@ func temp(dst string, body []byte) (string, error) {
 	return tmp.Name(), nil
 }
 
-// Put writes key through a temp file and a rename.
-func (d *Dir) Put(_ context.Context, key string, body []byte) error {
-	if err := CheckKey(key); err != nil {
-		return err
-	}
+// lockWait is how long a write waits for another writer's lock on the same record, and lockStale is
+// how old a lock must be before it counts as left by a writer that died holding it.
+const (
+	lockWait  = 30 * time.Second
+	lockStale = time.Minute
+)
+
+// lock takes key's lock, a file beside the record that only one writer can create, and returns its
+// release. It serializes writes to one record across processes sharing the folder, so Replace's check
+// and write happen as one step. A lock older than lockStale is taken over.
+func (d *Dir) lock(ctx context.Context, key string) (func(), error) {
 	dst := d.path(key)
+	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
+		return nil, err
+	}
+	lk := filepath.Join(filepath.Dir(dst), ".lock-"+filepath.Base(dst))
+	deadline := time.Now().Add(lockWait)
+	for {
+		f, err := os.OpenFile(lk, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) // #nosec G304 -- beside a checked key under the store's own folder
+		if err == nil {
+			f.Close()
+			return func() { os.Remove(lk) }, nil
+		}
+		// On windows a lock file another writer just removed can't be created again until its last
+		// handle closes (openElsewhere). It's the same wait as a held lock.
+		busy := errors.Is(err, fs.ErrExist) || openElsewhere(err)
+		if !busy {
+			return nil, err
+		}
+		if info, err := os.Stat(lk); err == nil && time.Since(info.ModTime()) > lockStale {
+			os.Remove(lk)
+			continue
+		}
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("record %s: another writer has held its lock for %s", key, lockWait)
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(5 * time.Millisecond):
+		}
+	}
+}
+
+// sharedWait is how long a rename or remove keeps trying while a reader has the file open.
+const sharedWait = 2 * time.Second
+
+// retryShared runs op again while windows refuses it because another handle has the file open
+// (openElsewhere). Reads take no lock, and windows refuses to rename over or remove an open file,
+// with "Access is denied" or a sharing violation. The reader closes the file within milliseconds,
+// so a short retry gets through. Elsewhere openElsewhere is false and op runs once.
+func retryShared(op func() error) error {
+	err := op()
+	for deadline := time.Now().Add(sharedWait); err != nil && openElsewhere(err) && time.Now().Before(deadline); {
+		time.Sleep(5 * time.Millisecond)
+		err = op()
+	}
+	return err
+}
+
+// write puts body at dst through a temp file and a rename, so a reader sees the old file or the new
+// one.
+func write(dst string, body []byte) error {
 	tmp, err := temp(dst, body)
 	if err != nil {
 		return err
 	}
-	if err := os.Rename(tmp, dst); err != nil {
+	if err := retryShared(func() error { return os.Rename(tmp, dst) }); err != nil {
 		os.Remove(tmp)
 		return err
 	}
 	return nil
 }
 
-// Create writes key unless it exists.
-func (d *Dir) Create(_ context.Context, key string, body []byte) error {
+// Put writes key under its lock.
+func (d *Dir) Put(ctx context.Context, key string, body []byte) error {
 	if err := CheckKey(key); err != nil {
 		return err
 	}
-	dst := d.path(key)
-	tmp, err := temp(dst, body)
+	unlock, err := d.lock(ctx, key)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmp)
-	err = os.Link(tmp, dst)
-	if err == nil || errors.Is(err, fs.ErrExist) {
-		return err
-	}
-	// No hard links here. An exclusive create still refuses a taken key, though a reader may see the
-	// record while it is written.
-	f, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) // #nosec G304 -- a checked key under the store's own folder
-	if err != nil {
-		return err
-	}
-	if _, err := f.Write(body); err != nil {
-		f.Close()
-		return err
-	}
-	return f.Close()
+	defer unlock()
+	return write(d.path(key), body)
 }
 
-// Delete removes the file at key. Its folder stays, and List treats an empty folder as no folder.
-func (d *Dir) Delete(_ context.Context, key string) error {
+// Create writes key under its lock, unless the file exists.
+func (d *Dir) Create(ctx context.Context, key string, body []byte) error {
 	if err := CheckKey(key); err != nil {
 		return err
 	}
-	return os.Remove(d.path(key))
+	unlock, err := d.lock(ctx, key)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if _, err := os.Lstat(d.path(key)); err == nil {
+		return fmt.Errorf("record %s: %w", key, fs.ErrExist)
+	}
+	return write(d.path(key), body)
+}
+
+// Delete removes the file at key under its lock. Its folder stays, and List treats an empty folder
+// as no folder.
+func (d *Dir) Delete(ctx context.Context, key string) error {
+	if err := CheckKey(key); err != nil {
+		return err
+	}
+	unlock, err := d.lock(ctx, key)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	return retryShared(func() error { return os.Remove(d.path(key)) })
+}
+
+// version is a record's contents' hash. Two writes of the same bytes share one, which Replace may
+// treat as no change, since nothing about the record differs.
+func version(body []byte) Version {
+	h := sha256.Sum256(body)
+	return Version(hex.EncodeToString(h[:16]))
+}
+
+// Read reads the file at key and hashes it for its version.
+func (d *Dir) Read(ctx context.Context, key string) ([]byte, Version, error) {
+	b, err := d.Get(ctx, key)
+	if err != nil {
+		return nil, "", err
+	}
+	return b, version(b), nil
+}
+
+// Replace checks the file's hash and writes it, both under the record's lock.
+func (d *Dir) Replace(ctx context.Context, key string, body []byte, ver Version) error {
+	if err := CheckKey(key); err != nil {
+		return err
+	}
+	unlock, err := d.lock(ctx, key)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	cur, err := d.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	if version(cur) != ver {
+		return fmt.Errorf("record %s: %w", key, ErrConflict)
+	}
+	return write(d.path(key), body)
 }
 
 // List reads dir's folder. It leaves out dot files, which are temp files or an operator's notes, and

@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	skmw "github.com/panyam/servicekit/middleware"
+
 	"github.com/spf13/cobra"
 
 	"github.com/panyam/agni/core/param"
@@ -28,7 +30,6 @@ import (
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
 	"github.com/panyam/goapplib/storage/mounts"
-	"github.com/panyam/oneauth/core"
 	skhttp "github.com/panyam/servicekit/http"
 )
 
@@ -367,7 +368,7 @@ func (p *DatasheetsPage) Load(r *http.Request, w http.ResponseWriter, app *goal.
 // guard puts the token check in front of h, checking tokens against tokens (agni issue 1765). Nil
 // tokens, for a server without --auth, checks nothing. proxies are the proxies that end TLS in front
 // of agnids (agni issue 1810).
-func guard(h http.Handler, tokens authgate.Keys, proxies core.TrustedProxies) http.Handler {
+func guard(h http.Handler, tokens authgate.Keys, proxies skmw.TrustedProxies) http.Handler {
 	if tokens == nil {
 		return h
 	}

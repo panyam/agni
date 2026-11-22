@@ -17,11 +17,12 @@ import (
 	"sync"
 	"time"
 
+	skmw "github.com/panyam/servicekit/middleware"
+
 	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/wasmengine"
 	"github.com/panyam/goapplib/storage/mounts"
-	"github.com/panyam/oneauth/core"
 	"golang.org/x/oauth2"
 
 	"connectrpc.com/connect"
@@ -314,7 +315,7 @@ type viewerOpts struct {
 	tlsCert, tlsKey string
 	// trustedProxies are --trusted-proxy, the proxies that end TLS in front of the server (agni issue
 	// 1810).
-	trustedProxies core.TrustedProxies
+	trustedProxies skmw.TrustedProxies
 	// connectionsKey is --connections-key, where the key sealing people's own tokens is.
 	connectionsKey string
 	// githubSignIn is the GitHub App people sign in through, nil for none (agni issue 1772).
@@ -331,7 +332,7 @@ type viewerOpts struct {
 }
 
 // proxyList names the trusted proxies for the startup note.
-func proxyList(p core.TrustedProxies) string {
+func proxyList(p skmw.TrustedProxies) string {
 	out := make([]string, len(p))
 	for i, x := range p {
 		out[i] = x.String()

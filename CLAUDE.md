@@ -83,7 +83,8 @@ or a connection. Never add a free-text field to it.
   served answer, and never `pkill` from the shell that runs the gate.
 - `go test` prints FAIL for a build failure too. A red-check names the assertion it failed on.
 - Restore a red-checked file from a copy, never `git checkout <file>`, in a command of its own.
-- Never `git add -A`, and never `gofmt -w` a directory. Use `git -C <abs-path>` across checkouts.
+- Never `git add -A`, and never `gofmt -w` or `goimports -w` a directory or a glob. Use
+  `git -C <abs-path>` across checkouts.
 - Before believing a measurement or a green test, read `build/evidence.md`. A negative result needs
   a positive control, and a test that loops over rows needs a count guard.
 - When you build a feature, ship an example (C10, `examples/CONVENTIONS.md`).

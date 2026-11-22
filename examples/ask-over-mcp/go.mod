@@ -55,7 +55,7 @@ require (
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
 	github.com/panyam/oneauth v0.3.18 // indirect
-	github.com/panyam/servicekit v0.2.4 // indirect
+	github.com/panyam/servicekit v0.2.5 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
