@@ -74,6 +74,11 @@ func TestOSReviewStoreRoundTrip(t *testing.T) {
 	if _, err := results.Parse(b); err != nil {
 		t.Errorf("the file on the volume is not a readable results document: %v", err)
 	}
+	// A run holds every verdict, megabytes on a real board, so it is stored without indentation
+	// (agni issue 1823). It is still a results document results.Parse reads.
+	if strings.Contains(strings.TrimSpace(string(b)), "\n") {
+		t.Errorf("the stored run is indented")
+	}
 }
 
 // TestOSReviewStoreListsNewestFirst pins a property of the id scheme. Ids lead with a UTC

@@ -86,7 +86,7 @@ func TestASharedServerBehindAProxyThatEndsTLS(t *testing.T) {
 	t.Setenv(envToken, "")
 	dir := t.TempDir()
 	store := filepath.Join(dir, "store")
-	out, err := runCobra(t, tokenCmd(), "create", "ops", "--store", "file:///"+strings.TrimPrefix(filepath.ToSlash(store), "/"))
+	out, err := runCobra(t, tokenCmd(), "create", "ops", "--store", testStoreURL(t, store))
 	if err != nil {
 		t.Fatalf("agni token create ops: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestASharedServerBehindAProxyThatEndsTLS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := serveViewer(t, viewerOpts{storeDir: store, uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens,
+	server := serveViewer(t, viewerOpts{store: testStore(t, store), uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens,
 		trustedProxies: proxies, publicURL: proxy.URL,
 		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL(),
 		githubSignIn: &githubSignIn{clientID: appClientID, clientSecret: appSecret, allow: []string{"org:acme"}}})

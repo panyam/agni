@@ -14,9 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records"
+	"github.com/panyam/agni/internal/records/recordstest"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // upload is a file set as a client sends it: a manifest, and the contents it names.
@@ -47,8 +49,12 @@ func (u upload) source(_ context.Context, h string) ([]byte, bool) {
 	return b, ok
 }
 
-// layout is where a test store keeps its records and its uploads.
-type layout struct{ records, uploads string }
+// layout is where a test store keeps its records and its uploads. recs is the records store over
+// records, a folder or sqlite as recordstest.BackendEnv picks.
+type layout struct {
+	records, uploads string
+	recs             records.Store
+}
 
 // views is the folder the uploads mount serves.
 func (l layout) views() string { return filepath.Join(l.uploads, "designs") }
@@ -57,7 +63,8 @@ func (l layout) views() string { return filepath.Join(l.uploads, "designs") }
 func dirStore(t *testing.T) (*DirStore, layout) {
 	t.Helper()
 	l := layout{records: t.TempDir(), uploads: t.TempDir()}
-	ds, err := NewDirStore(l.records, l.uploads, "uploads")
+	l.recs = recordstest.At(t, l.records)
+	ds, err := NewStore(l.recs, l.uploads, "uploads")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,10 +167,10 @@ func TestTheStoreHoldsRecordsAndTheUploadsHoldFiles(t *testing.T) {
 	ds, l := dirStore(t)
 	const board = "(kicad_pcb board-bytes)"
 	mustDesign(t, ds, "mul", arts{"netlist": {"a.edn": "(edif a)"}, "board": {"a.kicad_pcb": board}})
-	if names := dirNames(t, l.records); !slices.Equal(names, []string{"mul.yaml"}) {
-		t.Errorf("records folder holds %v, want only mul.yaml", names)
+	if names := recordNames(t, l); !slices.Equal(names, []string{"mul.yaml"}) {
+		t.Errorf("records hold %v, want only mul.yaml", names)
 	}
-	rec, err := os.ReadFile(filepath.Join(l.records, "mul.yaml"))
+	rec, err := l.recs.Get(context.Background(), "mul.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +185,7 @@ func TestTheStoreHoldsRecordsAndTheUploadsHoldFiles(t *testing.T) {
 
 func TestAStoreWithoutUploadsKeepsRecordsOnly(t *testing.T) {
 	ctx := context.Background()
-	ds, err := NewDirStore(t.TempDir(), "", "uploads")
+	ds, err := NewStore(recordstest.New(t), "", "uploads")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +248,7 @@ func TestAStoreRefusesADesignItCouldReadTwoWays(t *testing.T) {
 	ctx := context.Background()
 	ds, l := dirStore(t)
 	mustDesign(t, ds, "mul", arts{"netlist": {"mul.edn": "(edif mul)"}})
-	before, _ := os.ReadFile(filepath.Join(l.records, "mul.yaml"))
+	before, _ := l.recs.Get(ctx, "mul.yaml")
 	for _, tc := range []struct {
 		name string
 		as   arts
@@ -255,7 +262,7 @@ func TestAStoreRefusesADesignItCouldReadTwoWays(t *testing.T) {
 			t.Errorf("%s = %v, want %v", tc.name, err, tc.want)
 		}
 	}
-	after, _ := os.ReadFile(filepath.Join(l.records, "mul.yaml"))
+	after, _ := l.recs.Get(ctx, "mul.yaml")
 	if len(before) == 0 || string(before) != string(after) {
 		t.Errorf("a refused write changed the record:\n%s\nto\n%s", before, after)
 	}
@@ -397,8 +404,8 @@ func TestDeletingADesignRemovesItsRecordAndTheSweepItsFiles(t *testing.T) {
 	if err := ds.DeleteDesign(ctx, "mul"); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("second DeleteDesign = %v, want ErrNotFound", err)
 	}
-	if top := dirNames(t, l.records); len(top) != 0 {
-		t.Errorf("records folder holds %v after the delete, want nothing", top)
+	if top := recordNames(t, l); len(top) != 0 {
+		t.Errorf("records hold %v after the delete, want nothing", top)
 	}
 	if all, err := ds.Designs(ctx); err != nil || len(all) != 0 {
 		t.Errorf("designs after the delete = %v, %v; want none", all, err)
@@ -451,6 +458,24 @@ func TestTheSweepKeepsWhatIsNamedAndWhatIsNew(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(viewDir(l, d), "netlist", "b.edn")); err != nil {
 		t.Errorf("the current view lost its netlist in the sweep: %v", err)
 	}
+}
+
+// recordNames lists what sits at the top of l's records. A folder lists every entry, dot files
+// included, so a temp file left behind shows. sqlite lists its keys.
+func recordNames(t *testing.T, l layout) []string {
+	t.Helper()
+	if recordstest.Folder() {
+		return dirNames(t, l.records)
+	}
+	ents, err := l.recs.List(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, e := range ents {
+		out = append(out, e.Name)
+	}
+	return out
 }
 
 func dirNames(t *testing.T, dir string) []string {

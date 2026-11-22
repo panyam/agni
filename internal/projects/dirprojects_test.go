@@ -6,24 +6,19 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records/recordstest"
 	"github.com/panyam/agni/service"
 )
 
 func TestDirProjectsKeepARecordAcrossAReopen(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
-	r, err := NewDirProjects(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r := NewProjects(recordstest.At(t, dir))
 	p := &webapi.Project{Name: "projects/b200", Title: "B200", Designs: []string{"designs/mem", "designs/mul"}}
 	if err := r.Put(ctx, "b200", p); err != nil {
 		t.Fatal(err)
 	}
-	again, err := NewDirProjects(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	again := NewProjects(recordstest.At(t, dir))
 	got, err := again.Get(ctx, "b200")
 	if err != nil || got.GetTitle() != "B200" || len(got.GetDesigns()) != 2 {
 		t.Errorf("Get after reopening = %+v, %v; want B200 with two designs", got, err)

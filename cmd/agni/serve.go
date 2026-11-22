@@ -112,21 +112,22 @@ func serveCmd() *cobra.Command {
 			if viewerRooms && !mcp {
 				return fmt.Errorf("--viewer-rooms needs --mcp, since agents reach the viewer's tabs through /mcp")
 			}
-			storeDir, uploadsDir, err := storeurl.Folders(storeURL, uploadsURL)
+			store, uploadsDir, err := storeurl.Open(storeURL, uploadsURL)
 			if err != nil {
 				return err
 			}
+			defer store.Close()
 			proxies, err := authgate.ParseProxies(trustedProxy)
 			if err != nil {
 				return err
 			}
-			if err := authgate.CheckFlags(auth, storeDir, tlsCert, tlsKey, addr, proxies); err != nil {
+			if err := authgate.CheckFlags(auth, storeURL, tlsCert, tlsKey, addr, proxies); err != nil {
 				return err
 			}
-			if connectionsKey != "" && (storeDir == "" || uploadsDir == "") {
+			if connectionsKey != "" && (store == nil || uploadsDir == "") {
 				return fmt.Errorf("--connections-key seals people's tokens in --store, so it needs --store and --uploads")
 			}
-			if (webhookSecretRef != "" || pollEvery != 0) && (storeDir == "" || uploadsDir == "") {
+			if (webhookSecretRef != "" || pollEvery != 0) && (store == nil || uploadsDir == "") {
 				return fmt.Errorf("--github-webhook-secret and --poll move linked designs, so they need --store and --uploads")
 			}
 			if pollEvery < 0 {
@@ -164,7 +165,7 @@ func serveCmd() *cobra.Command {
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
-				storeDir:       storeDir,
+				store:          store,
 				uploadsDir:     uploadsDir,
 				githubAPI:      githubAPI,
 				githubRaw:      githubRaw,
@@ -205,7 +206,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&paramsURL, "params-url", "", "a PartSpecService to read published PartSpecs from instead of a directory, e.g. http://host:8090 for an `agnids serve --corpus`; each request fetches its design's parts in one batch, and a spec published there reaches the next request. Not with --params. A project's own params/ still wins over it")
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
-	c.Flags().StringVar(&storeURL, "store", "", "where this server keeps its records, as a URL: file:///srv/agni/meta keeps them as files in that folder, created if absent (agni issue 1732). The records are designs, each artifact's manifest of paths and hashes, projects, packs, each design's reports, snapshot definitions and review runs; they hold no file bytes. Without it, snapshots live in memory, review runs are not kept, and no design can be created. In a container, mount a volume here")
+	c.Flags().StringVar(&storeURL, "store", "", "where this server keeps its records, as a URL: file:///srv/agni/meta keeps them as files in that folder, created if absent (agni issue 1732); sqlite:///srv/agni/agni.db in one sqlite file; postgres://agni@db/agni in postgres, with the password in PGPASSWORD; datastore://project?namespace=agni in Cloud Datastore (agni issue 1733). The records are designs, each artifact's manifest of paths and hashes, projects, packs, each design's reports, snapshot definitions and review runs; they hold no file bytes. Without it, snapshots live in memory, review runs are not kept, and no design can be created. In a container, mount a volume here")
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "where this server keeps the files of designs its users upload, as a URL: file:///srv/agni/files, created if absent (agni issue 1739). It keeps each file once, by hash, and never changes one, and serves each design's files as the mount \""+uploadsMount+"\". Needs --store. Without it, a design's files cannot be written")
 	c.Flags().StringVar(&githubAPI, "github-api", "", "the GitHub REST API a github:// mount is read through; a test or a GitHub Enterprise server names its own")
 	_ = c.Flags().MarkHidden("github-api")
@@ -247,9 +248,9 @@ type viewerOpts struct {
 	profilePath string
 	conventions string
 
-	// storeDir is --store's folder, where the server keeps its records: designs, projects, snapshot
-	// definitions and review runs.
-	storeDir string
+	// store is the opened --store, where the server keeps its records: designs, projects, snapshot
+	// definitions, review runs, runtime mounts, connections and tokens. Nil without --store.
+	store *storeurl.Store
 	// uploadsDir is --uploads' folder, where the server keeps uploaded files by hash.
 	uploadsDir string
 	// githubAPI is the GitHub REST API's base URL, which a github:// mount reads through.
@@ -428,11 +429,17 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// The table serves the fixed mounts and, with --store and --uploads, the GitHub mounts
 	// CreateMount made, read back from --store so they outlive a restart (agni issues 1735, 1759).
 	cfg := mountset.Config{Fixed: fixed, UploadsMount: uploadsMount, GitHubAPI: o.githubAPI, GitHubRaw: o.githubRaw, Log: cmd.ErrOrStderr()}
-	runtime := o.storeDir != "" && o.uploadsDir != ""
+	runtime := o.store != nil && o.uploadsDir != ""
 	if runtime {
-		cfg.Uploads, cfg.Records = o.uploadsDir, filepath.Join(o.storeDir, storeMountsDir)
-		cfg.Connections = filepath.Join(o.storeDir, mountset.ConnectionsDir)
-		cfg.UserTokens, cfg.ConnectionsKey = filepath.Join(o.storeDir, mountset.UserTokensDir), o.connectionsKey
+		cfg.Uploads, cfg.ConnectionsKey = o.uploadsDir, o.connectionsKey
+		if cfg.Stores, err = o.store.TableStores(); err != nil {
+			return err
+		}
+		if dir := o.store.Dir; dir != "" {
+			cfg.Records = filepath.Join(dir, storeMountsDir)
+			cfg.Connections = filepath.Join(dir, mountset.ConnectionsDir)
+			cfg.UserTokens = filepath.Join(dir, mountset.UserTokensDir)
+		}
 		if o.githubSignIn != nil {
 			cfg.GitHubApp = &oauth2.Config{ClientID: o.githubSignIn.clientID, ClientSecret: o.githubSignIn.clientSecret, Endpoint: authgate.GitHubEndpoint(o.githubAPI)}
 		}
@@ -503,12 +510,12 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	}
 	// --store keeps snapshot definitions across a restart (agni issues 1639, 1732). Without it they
 	// live in memory, which still recovers a snapshot the registry evicted.
-	if o.storeDir != "" {
-		st, err := newOSSnapshotStore(filepath.Join(o.storeDir, storeSnapshotsDir))
+	if o.store != nil {
+		recs, err := storeRecords(o.store, storeSnapshotsDir)
 		if err != nil {
 			return err
 		}
-		projectResolver.Snapshots = st
+		projectResolver.Snapshots = &osSnapshotStore{recs: recs}
 	}
 	// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
 	// installed process-wide, at startup and never mutated after (C22). Its RULES join the catalog
@@ -528,12 +535,12 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// --store holds stored review runs, apart from the read-only design mounts. Without it, the
 	// review resource methods report that they are not configured rather than discarding runs.
 	var reviewStore service.ReviewStore
-	if o.storeDir != "" {
-		st, err := newOSReviewStore(filepath.Join(o.storeDir, storeReviewsDir))
+	if o.store != nil {
+		recs, err := storeRecords(o.store, storeReviewsDir)
 		if err != nil {
 			return err
 		}
-		reviewStore = st
+		reviewStore = newReviewStore(recs)
 	}
 	checkSvc, reviewSvc, err := serveRuleServices(loader, reviewStore, specs, profilePath, conventionCfg, projectResolver, cmd.ErrOrStderr())
 	if err != nil {
@@ -564,7 +571,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	projectSvc, designSvc, packSvc, err := storeServices(life, table, o.storeDir, o.uploadsDir, projectStore, projectResolver, checkSvc, guard, cmd.ErrOrStderr())
+	projectSvc, designSvc, packSvc, err := storeServices(life, table, o.store, o.uploadsDir, projectStore, projectResolver, checkSvc, guard, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}
@@ -697,8 +704,12 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 
 	var handler http.Handler = mux
 	if o.auth != "" {
-		gate := authgate.New(authgate.Store(o.storeDir), o.trustedProxies)
-		go pruneTokens(life, o.storeDir, cmd.ErrOrStderr())
+		tokens, err := o.store.Tokens()
+		if err != nil {
+			return err
+		}
+		gate := authgate.New(tokens, o.trustedProxies)
+		go pruneTokens(life, tokens, cmd.ErrOrStderr())
 		if gs := o.githubSignIn; gs != nil {
 			pub := o.publicURL
 			if pub == "" {
@@ -1221,12 +1232,12 @@ func bindFreePort(addr string) (net.Listener, error) {
 // tokenPruneInterval is how often a server with --auth deletes the tokens that have expired.
 var tokenPruneInterval = 24 * time.Hour
 
-// pruneTokens deletes the expired tokens in storeDir now, and every tokenPruneInterval until ctx
+// pruneTokens deletes the expired tokens in tokens now, and every tokenPruneInterval until ctx
 // ends (agni issue 1778). A GitHub sign-in mints a 30-day token each time, and the store would
 // otherwise keep each one after it stops working.
-func pruneTokens(ctx context.Context, storeDir string, log io.Writer) {
+func pruneTokens(ctx context.Context, tokens authgate.Keys, log io.Writer) {
 	prune := func() {
-		if n, err := authgate.Prune(ctx, authgate.Store(storeDir), time.Now()); err != nil {
+		if n, err := authgate.Prune(ctx, tokens, time.Now()); err != nil {
 			fmt.Fprintf(log, "note: deleting expired tokens: %v\n", err)
 		} else if n > 0 {
 			fmt.Fprintf(log, "deleted %d expired tokens\n", n)

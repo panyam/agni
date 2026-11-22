@@ -4,8 +4,9 @@ title: Running the gate
 
 `make testall` is the full gate. It has four parts, `make testall-test`, `make testall-scan`, `make
 testall-docs` and `make browser-test`, and `testall-core` is the first three. CI runs them as parallel
-jobs, and together they are exactly `testall`. `testall-test` runs as three jobs, `testall-go`,
-`testall-web` and `testall-dist`. `browser-test` runs as five shards on five runners, each with `make
+jobs, and together they are exactly `testall`. `testall-test` runs as four jobs, `testall-go`,
+`testall-web`, `testall-dist` and `testall-stores`. `testall-stores` reruns the store tests on sqlite,
+postgres and the Datastore emulator, which it starts in Docker (agni issue 1733). `browser-test` runs as five shards on five runners, each with `make
 browser-test SHARD=i/5`. The split is only about wall time. The scanners and the tutorial
 captures took about two and a half minutes each, in one job with the tests, so a PR waited for all of
 them in a row. A pull request or a push to main that changes only the README, the changelog,

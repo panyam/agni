@@ -53,22 +53,27 @@ func serveCmd() *cobra.Command {
 			if access.connectionsKey != "" && (!access.auth || storeURL == "" || uploadsURL == "") {
 				return fmt.Errorf("--connections-key checks each caller's own connections, so it needs --auth %s, --store and --uploads", authgate.Tokens)
 			}
-			table, err := serveTable(specs, mountRoot, storeURL, uploadsURL, access)
+			st, uploadsDir, err := storeurl.Open(storeURL, uploadsURL)
 			if err != nil {
 				return err
 			}
-			storeDir := ""
-			if storeURL != "" {
-				if storeDir, _, err = storeurl.Folders(storeURL, ""); err != nil {
-					return err
-				}
+			defer st.Close()
+			table, err := serveTable(specs, mountRoot, st, uploadsDir, access)
+			if err != nil {
+				return err
 			}
 			proxies, err := authgate.ParseProxies(trustedProxy)
 			if err != nil {
 				return err
 			}
-			if err := authgate.CheckFlags(auth, storeDir, tlsCert, tlsKey, addr, proxies); err != nil {
+			if err := authgate.CheckFlags(auth, storeURL, tlsCert, tlsKey, addr, proxies); err != nil {
 				return err
+			}
+			var tokens authgate.Keys
+			if auth != "" {
+				if tokens, err = st.Tokens(); err != nil {
+					return err
+				}
 			}
 			// With NO web dir named and no default one present, serve the API alone, as `agni serve`
 			// does (agni 735). A deployment that only publishes a corpus for --params-url has no
@@ -107,7 +112,7 @@ func serveCmd() *cobra.Command {
 			} else {
 				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at %s://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, scheme, displayAddr(addr), len(table.List()))
 			}
-			return listen(&http.Server{Addr: addr, Handler: guard(mux, auth, storeDir, proxies), ReadHeaderTimeout: 10 * time.Second}, tlsCert, tlsKey)
+			return listen(&http.Server{Addr: addr, Handler: guard(mux, tokens, proxies), ReadHeaderTimeout: 10 * time.Second}, tlsCert, tlsKey)
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8090", "address to listen on")
@@ -116,7 +121,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&webDir, "web-dir", "datasheet/web", "directory holding the workbench's built assets (templates/DatasheetsPage.html, static/datasheets.js, static/pdf.worker.js); the default is where a repo checkout keeps them, after `make ui`")
 	c.Flags().StringVar(&viewerURL, "viewer-url", "", "where the viewer (`agni serve`) is served, e.g. http://host:8080; the workbench's heading links home there, and is plain text when this is empty")
 	c.Flags().StringVar(&corpusDir, "corpus", "", "the corpus store: published PartSpecs with their corpus.index.json, served over PartSpecService for `agni serve --params-url`, and the workbench's drafts under drafts/. It is indexed at start when the index is missing or stale. Empty serves neither, and the workbench cannot save")
-	c.Flags().StringVar(&storeURL, "store", "", "agni serve's --store, as a URL such as file:///srv/agni/meta; with --uploads, the workbench also serves the mounts agni serve made at runtime, such as a GitHub snapshot, and sees a new one within a second. It only reads them")
+	c.Flags().StringVar(&storeURL, "store", "", "agni serve's --store, as a URL such as file:///srv/agni/meta, sqlite:///srv/agni.db, postgres://agni@db/agni or datastore://project?namespace=agni; with --uploads, the workbench also serves the mounts agni serve made at runtime, such as a GitHub snapshot, and sees a new one within a second. It only reads them")
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "agni serve's --uploads, as a URL such as file:///srv/agni/files, where the runtime mounts' files are. Needs --store")
 	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` keeps in --store, the same ones agni serve accepts, and refuses a call without one (agni issue 1765). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost or --trusted-proxy names the proxy that ends TLS")
 	c.Flags().StringVar(&access.connectionsKey, "connections-key", "", "agni serve's --connections-key, as env:NAME or file:/abs/path (agni issue 1778). With --auth, a caller sees a private mount when their own connection in --store reads its repo. agnids reads people's tokens and never refreshes or writes one, so a signed-in token that has expired reads as no until agni serve refreshes it. Without it, --auth hides every private mount. Needs --auth, --store and --uploads")
@@ -266,20 +271,30 @@ func serveMounts(specs []string, root string) ([]mounts.Mount, error) {
 // connection, since it can't tell who may read one (agni issue 1728). With --connections-key it
 // opens agni serve's connections and people's sealed tokens for reading, and the caller's own
 // connection decides (agni issue 1778).
-func serveTable(specs []string, root, storeURL, uploadsURL string, access tableAccess) (*mountset.Table, error) {
+func serveTable(specs []string, root string, st *storeurl.Store, uploadsDir string, access tableAccess) (*mountset.Table, error) {
 	ms, err := serveMounts(specs, root)
 	if err != nil {
 		return nil, err
 	}
-	storeDir, uploadsDir, err := storeurl.Folders(storeURL, uploadsURL)
-	if err != nil {
-		return nil, err
-	}
 	cfg := mountset.Config{Fixed: ms, ReadOnly: true, HidePrivate: access.auth && !access.checks(), GitHubAPI: access.githubAPI}
-	if storeDir != "" && uploadsDir != "" {
-		cfg.Uploads, cfg.Records = uploadsDir, filepath.Join(storeDir, mountset.RecordsDir)
+	if st != nil && uploadsDir != "" {
+		cfg.Uploads = uploadsDir
+		// A sqlite store keeps the mounts, connections and tokens in its database (agni issue 1733).
+		stores, err := st.TableStores()
+		if err != nil {
+			return nil, err
+		}
+		if stores != nil && !access.checks() {
+			stores.Connections, stores.UserTokens = nil, nil
+		}
+		cfg.Stores = stores
+		if st.Dir != "" {
+			cfg.Records = filepath.Join(st.Dir, mountset.RecordsDir)
+			if access.checks() {
+				cfg.Connections, cfg.UserTokens = filepath.Join(st.Dir, mountset.ConnectionsDir), filepath.Join(st.Dir, mountset.UserTokensDir)
+			}
+		}
 		if access.checks() {
-			cfg.Connections, cfg.UserTokens = filepath.Join(storeDir, mountset.ConnectionsDir), filepath.Join(storeDir, mountset.UserTokensDir)
 			cfg.ConnectionsKey = access.connectionsKey
 		}
 	}
@@ -350,13 +365,14 @@ func (p *DatasheetsPage) Load(r *http.Request, w http.ResponseWriter, app *goal.
 	return nil, false
 }
 
-// guard puts the token check in front of h when auth asks for one (agni issue 1765). proxies are the
-// proxies that end TLS in front of agnids (agni issue 1810).
-func guard(h http.Handler, auth, storeDir string, proxies core.TrustedProxies) http.Handler {
-	if auth == "" {
+// guard puts the token check in front of h, checking tokens against tokens (agni issue 1765). Nil
+// tokens, for a server without --auth, checks nothing. proxies are the proxies that end TLS in front
+// of agnids (agni issue 1810).
+func guard(h http.Handler, tokens authgate.Keys, proxies core.TrustedProxies) http.Handler {
+	if tokens == nil {
 		return h
 	}
-	return authgate.New(authgate.Store(storeDir), proxies).Wrap(h)
+	return authgate.New(tokens, proxies).Wrap(h)
 }
 
 // listen serves srv until a signal, over TLS when certFile names a certificate.

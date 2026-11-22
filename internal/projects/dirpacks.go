@@ -18,25 +18,27 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // packViewsDir is the folder under the uploads mount's root that holds each pack's files. No design
 // id can start with '@', so it never meets a design's views, and DirStore's sweep passes over it.
 const packViewsDir = "@packs"
 
-// DirPacks keeps packs as one protojson file each, `<id>.json`, in a folder (agni issue 1704). A
+// DirPacks keeps packs as one protojson record each, `<id>.json`, in a records.Store (agni issues
+// 1704, 1733). A
 // pack's files are kept by hash in the uploads' BlobDir, beside the designs' files. Each version of a
 // pack's files is linked into a view, `@packs/<id>/<rev>/` under the uploads mount, which is never
 // changed once built. So a pack's relative paths resolve against a mount:// folder on any host that
 // serves the uploads mount.
 //
-// A write goes to a temporary file and is renamed into place, so a reader sees the old record or the
-// new one. One mutex serialises every write.
+// Each write replaces a record whole, so a reader sees the old record or the new one. One mutex
+// serialises every write.
 type DirPacks struct {
-	dir   string
+	recs  records.Store
 	blobs *BlobDir // nil when the server keeps no files
 	views string   // the uploads mount's root, "" when the server keeps no files
 	mount string
@@ -50,14 +52,16 @@ var _ service.PackStore = (*DirPacks)(nil)
 // blob folder and the root it serves as the mount named mount, and both are nil and "" on a server
 // with no uploads. Such a store keeps packs whose config names only mount:// URIs.
 func NewDirPacks(dir string, blobs *BlobDir, views, mount string) (*DirPacks, error) {
-	abs, err := filepath.Abs(dir)
+	d, err := records.NewDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(abs, 0o750); err != nil {
-		return nil, err
-	}
-	return &DirPacks{dir: abs, blobs: blobs, views: views, mount: mount}, nil
+	return NewPacks(d, blobs, views, mount), nil
+}
+
+// NewPacks is NewDirPacks with the records in recs, each pack at `<id>.json` (agni issue 1733).
+func NewPacks(recs records.Store, blobs *BlobDir, views, mount string) *DirPacks {
+	return &DirPacks{recs: recs, blobs: blobs, views: views, mount: mount}
 }
 
 func (r *DirPacks) clock() time.Time {
@@ -67,28 +71,23 @@ func (r *DirPacks) clock() time.Time {
 	return time.Now().UTC().Truncate(time.Second)
 }
 
-func (r *DirPacks) path(id string) (string, error) {
+func (r *DirPacks) key(id string) (string, error) {
 	if !idPattern.MatchString(id) {
 		return "", fmt.Errorf("%w: pack id %q is not a valid id", service.ErrInvalidArgument, id)
 	}
-	return filepath.Join(r.dir, id+".json"), nil
+	return id + ".json", nil
 }
 
 // Pack reads one pack, or answers ErrNotFound.
-func (r *DirPacks) Pack(_ context.Context, id string) (*webapi.Pack, error) {
-	return r.load(id)
+func (r *DirPacks) Pack(ctx context.Context, id string) (*webapi.Pack, error) {
+	return r.load(ctx, id)
 }
 
-func (r *DirPacks) load(id string) (*webapi.Pack, error) {
+func (r *DirPacks) load(ctx context.Context, id string) (*webapi.Pack, error) {
 	if !idPattern.MatchString(id) {
 		return nil, fmt.Errorf("%w: no pack %s", service.ErrNotFound, service.PackName(id))
 	}
-	root, err := os.OpenRoot(r.dir)
-	if err != nil {
-		return nil, err
-	}
-	defer root.Close()
-	b, err := root.ReadFile(id + ".json")
+	b, err := r.recs.Get(ctx, id+".json")
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("%w: no pack %s", service.ErrNotFound, service.PackName(id))
 	}
@@ -104,14 +103,14 @@ func (r *DirPacks) load(id string) (*webapi.Pack, error) {
 
 // Packs reads every pack, ordered by name.
 func (r *DirPacks) Packs(ctx context.Context) ([]*webapi.Pack, error) {
-	entries, err := os.ReadDir(r.dir)
+	entries, err := r.recs.List(ctx, "")
 	if err != nil {
 		return nil, err
 	}
 	var out []*webapi.Pack
 	for _, e := range entries {
-		id, ok := strings.CutSuffix(e.Name(), ".json")
-		if !ok || e.IsDir() || !idPattern.MatchString(id) {
+		id, ok := strings.CutSuffix(e.Name, ".json")
+		if !ok || e.Dir || !idPattern.MatchString(id) {
 			continue
 		}
 		p, err := r.Pack(ctx, id)
@@ -131,7 +130,7 @@ func (r *DirPacks) CreatePack(ctx context.Context, id string, p *webapi.Pack, bl
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, err := r.load(id); err == nil {
+	if _, err := r.load(ctx, id); err == nil {
 		return nil, fmt.Errorf("%w: %s", service.ErrAlreadyExists, service.PackName(id))
 	} else if !errors.Is(err, service.ErrNotFound) {
 		return nil, err
@@ -143,7 +142,7 @@ func (r *DirPacks) CreatePack(ctx context.Context, id string, p *webapi.Pack, bl
 func (r *DirPacks) UpdatePack(ctx context.Context, id string, update func(*webapi.Pack) error, blobs service.BlobSource) (*webapi.Pack, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	cur, err := r.load(id)
+	cur, err := r.load(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -156,14 +155,14 @@ func (r *DirPacks) UpdatePack(ctx context.Context, id string, update func(*webap
 
 // DeletePack removes a pack's record. Its views stay until the next Sweep, so a snapshot read under
 // it keeps answering until it is read again.
-func (r *DirPacks) DeletePack(_ context.Context, id string) error {
-	p, err := r.path(id)
+func (r *DirPacks) DeletePack(ctx context.Context, id string) error {
+	k, err := r.key(id)
 	if err != nil {
 		return err
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if err := os.Remove(p); errors.Is(err, fs.ErrNotExist) {
+	if err := r.recs.Delete(ctx, k); errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("%w: no pack %s", service.ErrNotFound, service.PackName(id))
 	} else if err != nil {
 		return err
@@ -216,27 +215,15 @@ func (r *DirPacks) commit(ctx context.Context, id string, in *webapi.Pack, blobs
 		p.Uri = u.String()
 	}
 	p.UpdateTime = timestamppb.New(r.clock())
-	dst, err := r.path(id)
+	k, err := r.key(id)
 	if err != nil {
 		return nil, err
 	}
-	b, err := protojson.MarshalOptions{Multiline: true}.Marshal(p)
+	b, err := protojson.Marshal(p)
 	if err != nil {
 		return nil, err
 	}
-	tmp, err := os.CreateTemp(r.dir, ".new-*.json")
-	if err != nil {
-		return nil, err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(b); err != nil {
-		tmp.Close()
-		return nil, err
-	}
-	if err := tmp.Close(); err != nil {
-		return nil, err
-	}
-	if err := os.Rename(tmp.Name(), dst); err != nil {
+	if err := r.recs.Put(ctx, k, b); err != nil {
 		return nil, err
 	}
 	return p, nil

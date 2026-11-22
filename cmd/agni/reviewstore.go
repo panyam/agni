@@ -7,25 +7,26 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/panyam/agni/core/results"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	"github.com/panyam/agni/internal/records"
 	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// osReviewStore is the filesystem-backed service.ReviewStore, writing one results document per run
-// into the reviews folder of the store `agni serve --store` names. That directory is a WRITABLE volume, mounted
+// osReviewStore is the service.ReviewStore under `agni serve --store`, keeping one results document
+// per run as a record under the store's reviews folder, in files or in sqlite (agni issue 1733). That directory is a WRITABLE volume, mounted
 // separately from the read-only design mounts, so persisting runs never writes into a design mount.
 //
 // There is no index. Ids lead with a UTC timestamp, so filenames sort chronologically as plain
 // strings and a listing is a directory read plus a sort, parsing only the page a client asked for.
 type osReviewStore struct {
-	dir string
-	now func() time.Time // the clock, which a test freezes
+	recs records.Store
+	now  func() time.Time // the clock, which a test freezes
 
 	mu   sync.Mutex
 	last time.Time // the latest creation time this store handed out
@@ -46,7 +47,17 @@ func newOSReviewStore(dir string) (*osReviewStore, error) {
 	case !info.IsDir():
 		return nil, fmt.Errorf("--store, its reviews folder %s: not a directory", dir)
 	}
-	return &osReviewStore{dir: dir, now: time.Now}, nil
+	d, err := records.NewDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("--store, its reviews folder %s: %w", dir, err)
+	}
+	return newReviewStore(d), nil
+}
+
+// newReviewStore returns a store keeping each run as a record in recs, as a folder or sqlite keeps
+// them (agni issue 1733).
+func newReviewStore(recs records.Store) *osReviewStore {
+	return &osReviewStore{recs: recs, now: time.Now}
 }
 
 // reviewFileSuffix is what marks a file in the store as a run. Anything else in the directory is
@@ -54,22 +65,26 @@ func newOSReviewStore(dir string) (*osReviewStore, error) {
 // not break a listing.
 const reviewFileSuffix = ".results.json"
 
-// path is where a run lives, at the store root when it belongs to no project and in a per-project
-// subdirectory when it does. Runs written before projects existed sit at the root and so read back
-// as belonging to no project, which is correct and needs no migration.
-func (s *osReviewStore) path(parent, id string) string {
-	return filepath.Join(s.dirFor(parent), id+reviewFileSuffix)
+// key is where a run lives, at the store root when it belongs to no project and in a per-project
+// folder when it does. Runs written before projects existed sit at the root and so read back as
+// belonging to no project, which is correct and needs no migration.
+func (s *osReviewStore) key(parent, id string) string {
+	if dir := s.dirFor(parent); dir != "" {
+		return records.Join(dir, id+reviewFileSuffix)
+	}
+	return id + reviewFileSuffix
 }
 
-// dirFor returns the directory that holds a parent's runs. A parent that is not a well-formed
-// project name resolves to the root. It cannot escape the store, because SplitReviewName has already
-// rejected any parent that is not "projects/{id}" and a project id cannot contain a separator.
+// dirFor returns the folder that holds a parent's runs, "" for the root. A parent that is not a
+// well-formed project name resolves to the root. It cannot escape the store, because
+// SplitReviewName has already rejected any parent that is not "projects/{id}", a project id cannot
+// contain a separator, and the records store refuses a key that climbs out.
 func (s *osReviewStore) dirFor(parent string) string {
 	id, ok := service.ProjectID(parent)
 	if !ok || id == "" {
-		return s.dir
+		return ""
 	}
-	return filepath.Join(s.dir, id)
+	return id
 }
 
 // Create writes the document under a fresh id and returns its resource name and creation time.
@@ -79,8 +94,9 @@ func (s *osReviewStore) dirFor(parent string) string {
 // second, and at second resolution they would sort by the random tail instead of by time. A coarse
 // clock, such as Windows' can be, gives runs made back to back the same nanosecond too, so each
 // creation time is at least a nanosecond after the last one this store handed out. The tail covers a
-// tie between two processes, and O_EXCL makes an exact collision fail rather than overwrite.
-func (s *osReviewStore) Create(_ context.Context, parent string, doc *checkspb.CheckResults) (string, string, error) {
+// tie between two processes, and the store's exclusive create makes an exact collision fail rather
+// than overwrite.
+func (s *osReviewStore) Create(ctx context.Context, parent string, doc *checkspb.CheckResults) (string, string, error) {
 	now := s.after(s.now().UTC())
 	createdAt := now.Format(time.RFC3339)
 	// Stamp before marshalling, so the file on disk holds the same creation time the caller gets.
@@ -88,7 +104,9 @@ func (s *osReviewStore) Create(_ context.Context, parent string, doc *checkspb.C
 	if err != nil {
 		return "", "", err
 	}
-	b, err := results.Marshal(stamped)
+	// Compact, since a run holds every verdict and runs to megabytes (agni issue 1823). It is still
+	// a results document results.Parse reads.
+	b, err := protojson.Marshal(stamped)
 	if err != nil {
 		return "", "", err
 	}
@@ -97,28 +115,18 @@ func (s *osReviewStore) Create(_ context.Context, parent string, doc *checkspb.C
 		return "", "", err
 	}
 	id := fmt.Sprintf("%s.%09dZ-%s", now.Format("20060102T150405"), now.Nanosecond(), hex.EncodeToString(suffix[:]))
-	if dir := s.dirFor(parent); dir != s.dir {
-		if err := os.MkdirAll(dir, 0o700); err != nil {
-			return "", "", err
-		}
-	}
-	f, err := os.OpenFile(s.path(parent, id), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return "", "", err
-	}
-	defer f.Close()
-	if _, err := f.Write(b); err != nil {
+	if err := s.recs.Create(ctx, s.key(parent, id), b); err != nil {
 		return "", "", err
 	}
 	return service.ReviewName(parent, id), createdAt, nil
 }
 
-func (s *osReviewStore) Get(_ context.Context, name string) (*checkspb.CheckResults, error) {
+func (s *osReviewStore) Get(ctx context.Context, name string) (*checkspb.CheckResults, error) {
 	parent, id, ok := service.SplitReviewName(name)
 	if !ok {
 		return nil, fmt.Errorf("%w: %q is not a review name", service.ErrInvalidArgument, name)
 	}
-	b, err := os.ReadFile(s.path(parent, id))
+	b, err := s.recs.Get(ctx, s.key(parent, id))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("%w: no review %q", service.ErrNotFound, name)
 	}
@@ -128,36 +136,34 @@ func (s *osReviewStore) Get(_ context.Context, name string) (*checkspb.CheckResu
 	return results.Parse(b)
 }
 
-func (s *osReviewStore) List(_ context.Context, parent string, pageSize int, pageToken, designFilter string) ([]*checkspb.CheckResults, []string, string, error) {
+func (s *osReviewStore) List(ctx context.Context, parent string, pageSize int, pageToken, designFilter string) ([]*checkspb.CheckResults, []string, string, error) {
 	// Read one project's directory, or the root plus every project's when parent is empty. No
 	// document is opened until a page is built.
 	owners := []string{parent}
 	if parent == "" {
-		subs, err := os.ReadDir(s.dir)
+		subs, err := s.recs.List(ctx, "")
 		if err != nil {
 			return nil, nil, "", err
 		}
 		for _, e := range subs {
-			if e.IsDir() {
-				owners = append(owners, service.ProjectName(e.Name()))
+			if e.Dir {
+				owners = append(owners, service.ProjectName(e.Name))
 			}
 		}
 	}
 	var ids []string
 	owner := map[string]string{}
 	for _, o := range owners {
-		entries, err := os.ReadDir(s.dirFor(o))
+		// A project with no runs yet lists empty rather than failing.
+		entries, err := s.recs.List(ctx, s.dirFor(o))
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				continue // a project with no runs yet lists empty rather than failing
-			}
 			return nil, nil, "", err
 		}
 		for _, e := range entries {
-			if e.IsDir() {
+			if e.Dir {
 				continue
 			}
-			if id, ok := strings.CutSuffix(e.Name(), reviewFileSuffix); ok {
+			if id, ok := strings.CutSuffix(e.Name, reviewFileSuffix); ok {
 				ids = append(ids, id)
 				owner[id] = o
 			}
@@ -168,7 +174,7 @@ func (s *osReviewStore) List(_ context.Context, parent string, pageSize int, pag
 	// A document that will not parse is SKIPPED rather than failing the listing, so one corrupt file
 	// in a long-lived volume cannot make every run unlistable.
 	return service.PageReviews(ids, pageSize, pageToken, designFilter, func(id string) *checkspb.CheckResults {
-		b, err := os.ReadFile(s.path(owner[id], id))
+		b, err := s.recs.Get(ctx, s.key(owner[id], id))
 		if err != nil {
 			return nil
 		}
@@ -180,12 +186,12 @@ func (s *osReviewStore) List(_ context.Context, parent string, pageSize int, pag
 	}, func(id string) string { return service.ReviewName(owner[id], id) })
 }
 
-func (s *osReviewStore) Delete(_ context.Context, name string) error {
+func (s *osReviewStore) Delete(ctx context.Context, name string) error {
 	parent, id, ok := service.SplitReviewName(name)
 	if !ok {
 		return fmt.Errorf("%w: %q is not a review name", service.ErrInvalidArgument, name)
 	}
-	err := os.Remove(s.path(parent, id))
+	err := s.recs.Delete(ctx, s.key(parent, id))
 	if errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%w: no review %q", service.ErrNotFound, name)
 	}

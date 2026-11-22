@@ -22,6 +22,7 @@ import (
 
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/rules/intent"
 	"github.com/panyam/goapplib/storage/blobs"
@@ -31,7 +32,8 @@ import (
 // DirStore is the folder adapter of service.DesignStore (agni issues 1693, 1696, 1739). It keeps a
 // design's record apart from its files.
 //
-// The record is one YAML file per design, `<id>.yaml` in the store's records folder. It holds the
+// The record is one YAML record per design, `<id>.yaml`, in a records.Store: a folder for `--store
+// file://`, or sqlite rows for `--store sqlite://` (agni issue 1733). It holds the
 // design's title, series and flatten_hierarchy, and each artifact's type, entry and manifest of paths
 // and hashes. It holds no file bytes.
 //
@@ -46,12 +48,12 @@ import (
 // view stays until Sweep finds nothing pointing at it, so a snapshot read from it keeps answering.
 // One mutex serialises every write, since a write is rare beside reads.
 type DirStore struct {
-	records string   // the records folder, one <id>.yaml per design
-	views   string   // the uploads mount's root, "" when the server keeps no files
-	blobs   *BlobDir // nil when the server keeps no files
-	mount   string
-	mu      sync.Mutex
-	now     func() time.Time // the clock writes are stamped with; time.Now when nil
+	recs  records.Store // one <id>.yaml per design, and revisions/<id>/<rev>.yaml
+	views string        // the uploads mount's root, "" when the server keeps no files
+	blobs *BlobDir      // nil when the server keeps no files
+	mount string
+	mu    sync.Mutex
+	now   func() time.Time // the clock writes are stamped with; time.Now when nil
 	// pins names the revisions of a design something still refers to, such as a report, so a prune
 	// keeps them (agni issue 1774). Set by WithRevisionPins; nil pins none.
 	pins func(ctx context.Context, id string) (map[string]bool, error)
@@ -71,19 +73,23 @@ const draftDescriptor = "design.draft.yaml"
 // viewsDir is the folder under the uploads folder that a server serves as the uploads mount.
 const viewsDir = "designs"
 
-// NewDirStore returns a store keeping records in records and files in uploads, each created if
-// absent. mount names the mount a server serves the views under, and each design's URIs are written
-// against it. With uploads empty the store keeps records only, and a write of an artifact's files is
-// FAILED_PRECONDITION.
-func NewDirStore(records, uploads, mount string) (*DirStore, error) {
-	recs, err := filepath.Abs(records)
+// NewDirStore returns a store keeping records as files in the folder recordsDir and files in uploads,
+// each created if absent. It is NewStore over a records.Dir.
+func NewDirStore(recordsDir, uploads, mount string) (*DirStore, error) {
+	d, err := records.NewDir(recordsDir)
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(recs, 0o750); err != nil {
-		return nil, err
-	}
-	s := &DirStore{records: recs, mount: mount}
+	return NewStore(d, uploads, mount)
+}
+
+// NewStore returns a store keeping records in recs and files in uploads, created if absent. mount
+// names the mount a server serves the views under, and each design's URIs are written against it.
+// With uploads empty the store keeps records only, and a write of an artifact's files is
+// FAILED_PRECONDITION. The views are folders on this server's disk whatever recs is, since the
+// engine reads a design through a folder.
+func NewStore(recs records.Store, uploads, mount string) (*DirStore, error) {
+	s := &DirStore{recs: recs, mount: mount}
 	if uploads == "" {
 		return s, nil
 	}
@@ -309,16 +315,16 @@ func (s *DirStore) Designs(ctx context.Context) ([]*webapi.Design, error) {
 	return out, nil
 }
 
-// ids lists the designs the records folder holds, ordered by id.
+// ids lists the designs the records hold, ordered by id.
 func (s *DirStore) ids() ([]string, error) {
-	entries, err := os.ReadDir(s.records)
+	entries, err := s.recs.List(context.Background(), "")
 	if err != nil {
 		return nil, err
 	}
 	var out []string
 	for _, e := range entries {
-		id, ok := strings.CutSuffix(e.Name(), ".yaml")
-		if ok && !e.IsDir() && idPattern.MatchString(id) {
+		id, ok := strings.CutSuffix(e.Name, ".yaml")
+		if ok && !e.Dir && idPattern.MatchString(id) {
 			out = append(out, id)
 		}
 	}
@@ -398,11 +404,11 @@ func (s *DirStore) DeleteDesign(_ context.Context, id string) error {
 	if _, err := s.load(id); err != nil {
 		return err
 	}
-	if err := os.Remove(s.recordPath(id)); err != nil {
+	if err := s.recs.Delete(context.Background(), recordKey(id)); err != nil {
 		return err
 	}
 	// Its revisions go with it, and the next sweep removes their views and files.
-	return os.RemoveAll(s.revisionsOf(id))
+	return s.recs.DeleteDir(context.Background(), s.revisionsOf(id))
 }
 
 // Artifacts reads a design's artifacts from its record, ordered by id.
@@ -581,20 +587,7 @@ func (s *DirStore) commit(id string, rec *recordYAML) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(s.records, ".put-*")
-	if err != nil {
-		return err
-	}
-	if _, err := tmp.Write(out); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
-		return err
-	}
-	return os.Rename(tmp.Name(), s.recordPath(id))
+	return s.recs.Put(context.Background(), recordKey(id), out)
 }
 
 // revOf names a view by what it holds: its descriptor and every artifact's paths and hashes. Two
@@ -728,20 +721,15 @@ func (s *DirStore) Sweep(keep map[string]bool, grace time.Duration, more ...blob
 	return views, removed, err
 }
 
-func (s *DirStore) recordPath(id string) string { return filepath.Join(s.records, id+".yaml") }
+// recordKey is where design id's record sits in the records.
+func recordKey(id string) string { return id + ".yaml" }
 
-// load reads a design's record, and ErrNotFound for an id the store does not hold. It reads through
-// an os.Root over the records folder, so a symlink there cannot lead a read outside it.
+// load reads a design's record, and ErrNotFound for an id the store does not hold.
 func (s *DirStore) load(id string) (recordYAML, error) {
 	if !idPattern.MatchString(id) {
 		return recordYAML{}, fmt.Errorf("%w: no stored design %s", service.ErrNotFound, service.StandaloneDesignName(id))
 	}
-	r, err := os.OpenRoot(s.records)
-	if err != nil {
-		return recordYAML{}, err
-	}
-	defer r.Close()
-	raw, err := r.ReadFile(id + ".yaml")
+	raw, err := s.recs.Get(context.Background(), recordKey(id))
 	if errors.Is(err, fs.ErrNotExist) {
 		return recordYAML{}, fmt.Errorf("%w: no stored design %s", service.ErrNotFound, service.StandaloneDesignName(id))
 	}

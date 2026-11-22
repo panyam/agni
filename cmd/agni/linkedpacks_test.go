@@ -59,7 +59,7 @@ func TestAPushMovesALinkedPackAndTheReportNamesItsCommit(t *testing.T) {
 	secret := []byte("hook-secret")
 	var f *follower
 	url := serveViewer(t, viewerOpts{
-		storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL(),
+		store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL(),
 		webhookSecret: secret, follow: func(fl *follower) { f = fl }, uploadMaxBytes: 1 << 26,
 	})
 	must := func(out string, err error) string {

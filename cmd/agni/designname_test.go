@@ -33,16 +33,17 @@ func designServer(t *testing.T, store, uploads string, mounted ...mounts.Mount) 
 	loader := service.NewCachingLoader(&osLoader{mounts: tableOf(ms), loader: newLoader()}, service.NewDesignCache(0))
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
 	resolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: tableOf(ms)}, Uploads: uploadedHost, UploadMaxBytes: 1 << 24}
-	snaps, err := newOSSnapshotStore(filepath.Join(store, storeSnapshotsDir))
+	st := testStore(t, store)
+	snaps, err := storeRecords(st, storeSnapshotsDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	resolver.Snapshots = snaps
+	resolver.Snapshots = &osSnapshotStore{recs: snaps}
 	checkSvc, reviewSvc, err := serveRuleServices(loader, nil, nil, "", nil, resolver, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, packSvc, err := storeServices(t.Context(), tableOf(ms), store, uploads, projectStore, resolver, checkSvc, nil, io.Discard)
+	projectSvc, designSvc, packSvc, err := storeServices(t.Context(), tableOf(ms), st, uploads, projectStore, resolver, checkSvc, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

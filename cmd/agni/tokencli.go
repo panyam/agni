@@ -7,21 +7,20 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/panyam/oneauth/core"
-	oafs "github.com/panyam/oneauth/stores/fs"
 
 	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/storeurl"
 )
 
 // tokenCmd makes, lists and revokes the tokens an `agni serve --auth tokens` checks (agni issue
-// 1627). It works on the --store folder directly rather than through the server, so making a token
+// 1627). It works on the --store directly rather than through the server, so making a token
 // takes access to the server's machine, and no API call can make one.
 func tokenCmd() *cobra.Command {
 	var storeURL string
 	cmd := &cobra.Command{
 		Use:   "token",
 		Short: "Make, list and revoke the tokens an agni serve --auth tokens accepts",
-		Long: `token manages the tokens a shared agni serve checks, kept in its --store folder. Run it on the
+		Long: `token manages the tokens a shared agni serve checks, kept in its --store. Run it on the
 server's machine, with the same --store the server was started with. A token's name is who it is
 for, a person or a tool, and the server records it as the caller on what it stores, such as a
 review run.
@@ -33,16 +32,19 @@ review run.
 create prints the token once. The store keeps only its hash. A revoked token stops working within
 a minute, since the server trusts a token it checked for that long.`,
 	}
-	cmd.PersistentFlags().StringVar(&storeURL, "store", "", "the --store of the agni serve these tokens are for, such as file:///srv/agni/meta (required)")
-	store := func() (*oafs.FSAPIKeyStore, error) {
+	cmd.PersistentFlags().StringVar(&storeURL, "store", "", "the --store of the agni serve these tokens are for, such as file:///srv/agni/meta, sqlite:///srv/agni.db, postgres://agni@db/agni or datastore://project?namespace=agni (required)")
+	// store opens --store's tokens, and closes the store when cmd ends, so a database connection or a
+	// Datastore client isn't left open.
+	store := func(cmd *cobra.Command) (authgate.Keys, error) {
 		if storeURL == "" {
 			return nil, fmt.Errorf("agni token needs --store, the same one the server was started with")
 		}
-		dir, _, err := storeurl.Folders(storeURL, "")
+		st, _, err := storeurl.Open(storeURL, "")
 		if err != nil {
 			return nil, err
 		}
-		return authgate.Store(dir), nil
+		cmd.PostRunE = func(*cobra.Command, []string) error { return st.Close() }
+		return st.Tokens()
 	}
 
 	create := &cobra.Command{
@@ -50,7 +52,7 @@ a minute, since the server trusts a token it checked for that long.`,
 		Short: "Make a token for a person or a tool, and print it once",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s, err := store()
+			s, err := store(cmd)
 			if err != nil {
 				return err
 			}
@@ -69,7 +71,7 @@ a minute, since the server trusts a token it checked for that long.`,
 		Short: "List the tokens, newest first, each with its id, who it is for, and when it was made",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			s, err := store()
+			s, err := store(cmd)
 			if err != nil {
 				return err
 			}
@@ -93,7 +95,7 @@ a minute, since the server trusts a token it checked for that long.`,
 		Short: "Revoke a token by the id agni token ls shows",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s, err := store()
+			s, err := store(cmd)
 			if err != nil {
 				return err
 			}

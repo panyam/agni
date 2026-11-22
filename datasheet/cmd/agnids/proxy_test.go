@@ -20,7 +20,7 @@ import (
 // 1810).
 func TestAgnidsBehindATrustedProxySetsASecureSession(t *testing.T) {
 	store := t.TempDir()
-	made, err := authgate.Store(store).CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "bob", Name: "bob"})
+	made, err := storeTokens(t, store).CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "bob", Name: "bob"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestAgnidsBehindATrustedProxySetsASecureSession(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		srv := httptest.NewServer(guard(http.NotFoundHandler(), authgate.Tokens, store, tp))
+		srv := httptest.NewServer(guard(http.NotFoundHandler(), storeTokens(t, store), tp))
 		defer srv.Close()
 		req, _ := http.NewRequest(http.MethodPost, srv.URL+"/signin", strings.NewReader(url.Values{"token": {made.FullKey}}.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")

@@ -118,10 +118,7 @@ func TestASharedServerChecksTokensOverTLS(t *testing.T) {
 	dir := t.TempDir()
 	certFile, keyFile, pool := selfSigned(t, dir)
 	store := filepath.Join(dir, "store")
-	storeURL := "file://" + filepath.ToSlash(store)
-	if !strings.HasPrefix(storeURL, "file:///") {
-		storeURL = "file:///" + strings.TrimPrefix(filepath.ToSlash(store), "/")
-	}
+	storeURL := testStoreURL(t, store)
 	token, err := runCobra(t, tokenCmd(), "create", "alice", "--store", storeURL)
 	if err != nil {
 		t.Fatalf("agni token create: %v", err)
@@ -136,7 +133,7 @@ func TestASharedServerChecksTokensOverTLS(t *testing.T) {
 	if err := os.MkdirAll(work, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	url := serveTLS(t, viewerOpts{storeDir: store, auth: authgate.Tokens, tlsCert: certFile, tlsKey: keyFile, extraMounts: nil, mountRoot: dir}, client)
+	url := serveTLS(t, viewerOpts{store: testStore(t, store), auth: authgate.Tokens, tlsCert: certFile, tlsKey: keyFile, extraMounts: nil, mountRoot: dir}, client)
 
 	protocols := []struct {
 		name string
@@ -194,13 +191,13 @@ func TestASharedServerChecksTokensOverTLS(t *testing.T) {
 func TestABrowserSignsInWithAToken(t *testing.T) {
 	dir := t.TempDir()
 	store := filepath.Join(dir, "store")
-	storeURL := "file:///" + strings.TrimPrefix(filepath.ToSlash(store), "/")
+	storeURL := testStoreURL(t, store)
 	out, err := runCobra(t, tokenCmd(), "create", "bob", "--store", storeURL)
 	if err != nil {
 		t.Fatal(err)
 	}
 	token, _, _ := strings.Cut(strings.TrimSpace(out), "\n")
-	url := serveViewer(t, viewerOpts{storeDir: store, auth: authgate.Tokens})
+	url := serveViewer(t, viewerOpts{store: testStore(t, store), auth: authgate.Tokens})
 	noFollow := &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 
 	req, _ := http.NewRequest(http.MethodGet, url+"/mounts/?x=1", nil)
@@ -263,12 +260,12 @@ func (c *cookieClient) Do(r *http.Request) (*http.Response, error) {
 func TestTheCLIReachesASharedServerWithAGNI_TOKEN(t *testing.T) {
 	dir := t.TempDir()
 	store := filepath.Join(dir, "store")
-	out, err := runCobra(t, tokenCmd(), "create", "ci", "--store", "file:///"+strings.TrimPrefix(filepath.ToSlash(store), "/"))
+	out, err := runCobra(t, tokenCmd(), "create", "ci", "--store", testStoreURL(t, store))
 	if err != nil {
 		t.Fatal(err)
 	}
 	token, _, _ := strings.Cut(strings.TrimSpace(out), "\n")
-	url := serveViewer(t, viewerOpts{storeDir: store, auth: authgate.Tokens})
+	url := serveViewer(t, viewerOpts{store: testStore(t, store), auth: authgate.Tokens})
 	t.Setenv(envToken, "")
 	if out, err := runMounts(t, "ls", "--remote", url); err == nil || !strings.Contains(err.Error(), "unauthenticated") {
 		t.Errorf("agni mounts ls --remote with no token = %q, %v; want unauthenticated", out, err)
@@ -286,7 +283,7 @@ func TestALocalServerWithoutAuthIsUnchanged(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "boards"), 0o750); err != nil {
 		t.Fatal(err)
 	}
-	url := serveViewer(t, viewerOpts{mountRoot: dir, storeDir: filepath.Join(dir, "store")})
+	url := serveViewer(t, viewerOpts{mountRoot: dir, store: testStore(t, filepath.Join(dir, "store"))})
 	info, err := webapiconnect.NewServerServiceClient(http.DefaultClient, url).GetServerInfo(context.Background(), connect.NewRequest(&webapi.GetServerInfoRequest{}))
 	if err != nil {
 		t.Fatalf("GetServerInfo with no token: %v", err)
@@ -310,7 +307,7 @@ func TestALocalServerWithoutAuthIsUnchanged(t *testing.T) {
 
 // agni token lists what it made, marks a revoked one, and never prints a hash.
 func TestTokenCommandListsAndRevokes(t *testing.T) {
-	storeURL := "file:///" + strings.TrimPrefix(filepath.ToSlash(filepath.Join(t.TempDir(), "store")), "/")
+	storeURL := testStoreURL(t, filepath.Join(t.TempDir(), "store"))
 	for _, who := range []string{"alice", "ci"} {
 		if _, err := runCobra(t, tokenCmd(), "create", who, "--store", storeURL); err != nil {
 			t.Fatal(err)
@@ -345,7 +342,7 @@ func TestTokenCommandListsAndRevokes(t *testing.T) {
 func TestServeDeletesExpiredTokens(t *testing.T) {
 	dir := t.TempDir()
 	store := filepath.Join(dir, "store")
-	keys := authgate.Store(store)
+	keys := testTokens(t, store)
 	past := time.Now().Add(-time.Hour)
 	if _, err := keys.CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "github:old", Name: "github sign-in", ExpiresAt: &past}); err != nil {
 		t.Fatal(err)
@@ -353,7 +350,7 @@ func TestServeDeletesExpiredTokens(t *testing.T) {
 	if _, err := keys.CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "ops", Name: "ops"}); err != nil {
 		t.Fatal(err)
 	}
-	serveViewer(t, viewerOpts{storeDir: store, uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens})
+	serveViewer(t, viewerOpts{store: testStore(t, store), uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens})
 	deadline := time.Now().Add(10 * time.Second)
 	for {
 		left, err := authgate.List(context.Background(), keys)

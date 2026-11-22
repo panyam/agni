@@ -25,7 +25,7 @@ func TestAPushWebhookMovesTheDesign(t *testing.T) {
 	secret := []byte("hook-secret")
 	var f *follower
 	url := serveViewer(t, viewerOpts{
-		storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL(),
+		store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL(),
 		webhookSecret: secret, follow: func(fl *follower) { f = fl },
 	})
 	must := func(out string, err error) string {
@@ -77,7 +77,7 @@ func TestAPushWebhookMovesTheDesign(t *testing.T) {
 	}
 
 	// A server not given the secret takes no deliveries.
-	plain := serveViewer(t, viewerOpts{storeDir: filepath.Join(dir, "store2"), uploadsDir: filepath.Join(dir, "uploads2"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	plain := serveViewer(t, viewerOpts{store: testStore(t, filepath.Join(dir, "store2")), uploadsDir: filepath.Join(dir, "uploads2"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
 	resp, err := http.DefaultClient.Do(repo.PushRequest(plain+githubHookPath, secret, "main"))
 	if err != nil {
 		t.Fatal(err)
@@ -98,7 +98,7 @@ func TestAPollSyncsADesignWhoseFolderChanged(t *testing.T) {
 	}
 	dir := t.TempDir()
 	url := serveViewer(t, viewerOpts{
-		storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"),
+		store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"),
 		extraMounts: []mounts.Mount{mountset.Folder("lab", lab)}, poll: 20 * time.Millisecond,
 	})
 	must := func(out string, err error) string {
@@ -153,7 +153,7 @@ func TestAMountWebhookIsMadeThroughItsConnection(t *testing.T) {
 	secret := []byte("hook-secret")
 	var f *follower
 	url := serveViewer(t, viewerOpts{
-		storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL(),
+		store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL(),
 		webhookSecret: secret, follow: func(fl *follower) { f = fl },
 	})
 	must := func(out string, err error) string {
@@ -206,7 +206,7 @@ func TestAMountWebhookIsMadeThroughItsConnection(t *testing.T) {
 		t.Errorf("after GitHub delivered a push of %s to the hook, designs artifacts bb =\n%s\nwant the schematic at it", c2, arts)
 	}
 
-	plain := serveViewer(t, viewerOpts{storeDir: filepath.Join(dir, "store2"), uploadsDir: filepath.Join(dir, "uploads2"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	plain := serveViewer(t, viewerOpts{store: testStore(t, filepath.Join(dir, "store2")), uploadsDir: filepath.Join(dir, "uploads2"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
 	must(runCobra(t, connectionsCmd(), "add", "admin", "--github-token", "env:AGNI_TEST_GITHUB_TOKEN", "--remote", plain))
 	must(runMounts(t, "add", "board", repo.Source(), "--connection", "admin", "--remote", plain))
 	if out, err := runMounts(t, "webhook", "board", "--url", hookURL, "--remote", plain); err == nil || !strings.Contains(err.Error(), "--github-webhook-secret") {

@@ -1,8 +1,8 @@
 # The repo gate: `make testall`, run as parallel jobs. `make testall-test` builds and tests the engine,
-# the examples, the web bundle and the Python client, as three jobs: testall-go, testall-web and
-# testall-dist. `make testall-scan` runs the static scanners. `make testall-docs` regenerates the
-# docsite's captures and images. `make browser-test` is the browser layout suite, split into ten
-# shards. Together they are exactly `make testall`. Keep this in lockstep with the Makefile; a step
+# the examples, the web bundle, the Python client and the store backends, as four jobs: testall-go,
+# testall-web, testall-dist and testall-stores. `make testall-scan` runs the static scanners. `make
+# testall-docs` regenerates the docsite's captures and images. `make browser-test` is the browser
+# layout suite, split into ten shards. Together they are exactly `make testall`. Keep this in lockstep with the Makefile; a step
 # added to one of those targets runs here for free. The split is only about wall time, since the gate
 # takes as long as its slowest job (agni issue 1147).
 name: ci
@@ -107,6 +107,24 @@ jobs:
 
       - name: make testall-dist
         run: make testall-dist
+
+  # The store tests on sqlite, postgres and Datastore (agni issue 1733). The script starts postgres and
+  # the Datastore emulator in Docker, each pinned by digest, so the job needs nothing but the runner's
+  # Docker.
+  testall-stores:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/agni/samples
+          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+
+      - name: make testall-stores
+        run: make testall-stores
 
   # The scanners read source alone, so this job needs Go and nothing the other jobs build.
   scan:

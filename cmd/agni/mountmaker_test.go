@@ -211,7 +211,7 @@ func TestTheUploadsSweepKeepsASnapshotsFiles(t *testing.T) {
 	if count != 3 {
 		t.Fatalf("the snapshot stored %d blobs; want 3 (README, one schematic held once, and the manifest)", count)
 	}
-	if _, _, _, err := storeServices(t.Context(), s.table, store, uploads, nil, &service.ProjectResolver{}, nil, nil, io.Discard); err != nil {
+	if _, _, _, err := storeServices(t.Context(), s.table, testStore(t, store), uploads, nil, &service.ProjectResolver{}, nil, nil, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	var left int
@@ -234,7 +234,7 @@ func TestServeMakesAGitHubMountOverConnect(t *testing.T) {
 	dir := t.TempDir()
 	store, uploads := filepath.Join(dir, "store"), filepath.Join(dir, "uploads")
 	serve := func() string {
-		return serveViewer(t, viewerOpts{storeDir: store, uploadsDir: uploads, githubAPI: gh.URL})
+		return serveViewer(t, viewerOpts{store: testStore(t, store), uploadsDir: uploads, githubAPI: gh.URL})
 	}
 	call := func(base, rpc, body string) (int, string) {
 		resp, err := http.Post(base+"/agni.v1.webapi.WorkspaceService/"+rpc, "application/json", strings.NewReader(body))

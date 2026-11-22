@@ -6,8 +6,10 @@
 # on 1.1.3 through the project. It checks and diffs the stored designs by name (agni issue 1695) and
 # compares each answer with the same command on the folders. Then it replaces 1.1.3's schematic,
 # restarts the server over the same store, and lists everything again. It checks that the report says
-# it ran on earlier files, and that the store's folder holds records and no board file. It kills only
-# the server it started.
+# it ran on earlier files, and that the store holds records and no board file. It kills only the
+# server it started. EXERCISE_STORE=sqlite keeps the store in one sqlite file, sqlite://<out>/store/agni.db,
+# in place of a folder of records (agni issue 1733). EXERCISE_STORE_URL names any other store, such as
+# a postgres:// database or a datastore:// namespace, which should start empty.
 set -euo pipefail
 
 agni=${AGNI:-bin/agni}
@@ -15,7 +17,13 @@ revs=${SAMPLES_REVISIONS:-tools/samples/revisions}
 # The project's design folders hold each revision's files beside a design.yaml that extends the
 # project; `make -C examples/jetson-project revision` copies them in.
 proj=${JETSON_PROJECT:-examples/jetson-project}
-out=${EXERCISE_OUT:-/tmp/agni-exercise}/design-store
+kind=${EXERCISE_STORE:-file}
+[ -n "${EXERCISE_STORE_URL:-}" ] && kind=${EXERCISE_STORE_URL%%://*}
+case $kind in
+  file) out=${EXERCISE_OUT:-/tmp/agni-exercise}/design-store ;;
+  sqlite | postgres | postgresql | datastore) out=${EXERCISE_OUT:-/tmp/agni-exercise}/design-store-$kind ;;
+  *) echo "EXERCISE_STORE=$kind: want file or sqlite, or a URL in EXERCISE_STORE_URL" >&2; exit 1 ;;
+esac
 port=${EXERCISE_PORT:-18691}
 url=http://127.0.0.1:$port
 
@@ -29,11 +37,15 @@ out=$(cd "$out" && pwd)
 agni=$(cd "$(dirname "$agni")" && pwd)/$(basename "$agni")
 store=$out/store
 uploads=$out/uploads
+db=$store/agni.db
+storeURL=file://$store
+[ "$kind" = sqlite ] && storeURL=sqlite://$db
+[ -n "${EXERCISE_STORE_URL:-}" ] && storeURL=$EXERCISE_STORE_URL
 pid=
 
 serve() {
   # From $out, so a checkout's unbuilt web/ is not taken for the viewer. The server answers the API.
-  (cd "$out" && exec "$agni" serve --store "file://$store" --uploads "file://$uploads" --addr "127.0.0.1:$port") >"$out/serve.log" 2>&1 &
+  (cd "$out" && exec "$agni" serve --store "$storeURL" --uploads "file://$uploads" --addr "127.0.0.1:$port") >"$out/serve.log" 2>&1 &
   pid=$!
   for _ in $(seq 1 100); do
     curl -fs -o /dev/null "$url/" && return 0
@@ -142,10 +154,22 @@ else
   fail=1
 fi
 # The store keeps records alone. Any file there that is not a YAML or JSON record is a design's
-# bytes in the wrong place.
-strays=$(find "$store" -type f ! -name '*.yaml' ! -name '*.json' | wc -l | tr -d ' ')
-records=$(find "$store/designs" -name '*.yaml' | wc -l | tr -d ' ')
+# bytes in the wrong place. A sqlite store is one database file beside its WAL, which holds no
+# KiCad file's text; a path to a .kicad_sch never has a parenthesis in it.
 blobs=$(find "$uploads/blobs" -type f | wc -l | tr -d ' ')
+if [ -n "${EXERCISE_STORE_URL:-}" ]; then
+  # A database or a namespace elsewhere has no folder here to look in, and the uploads must still
+  # hold every file.
+  strays=0
+  records=$(wc -l <"$out/series-after-restart.txt" | tr -d ' ')
+elif [ "$kind" = sqlite ]; then
+  strays=$(find "$store" -type f ! -name 'agni.db' ! -name 'agni.db-wal' ! -name 'agni.db-shm' | wc -l | tr -d ' ')
+  strays=$((strays + $(cat "$store"/agni.db* | LC_ALL=C grep -a -c -F '(kicad_' || true)))
+  records=$(wc -l <"$out/series-after-restart.txt" | tr -d ' ')
+else
+  strays=$(find "$store" -type f ! -name '*.yaml' ! -name '*.json' | wc -l | tr -d ' ')
+  records=$(find "$store/designs" -name '*.yaml' | wc -l | tr -d ' ')
+fi
 if [ "$strays" -eq 0 ] && [ "$records" -eq 2 ] && [ "$blobs" -gt 0 ]; then
   echo "PASS: the store holds $records design records and no other file, and the uploads hold $blobs files by hash"
 else

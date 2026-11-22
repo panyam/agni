@@ -12,6 +12,7 @@ import (
 
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records/recordstest"
 	"github.com/panyam/agni/service"
 )
 
@@ -19,10 +20,7 @@ import (
 func dirPacks(t *testing.T) (*DirPacks, *DirStore, layout) {
 	t.Helper()
 	ds, l := dirStore(t)
-	ps, err := NewDirPacks(t.TempDir(), ds.Blobs(), ViewsRoot(l.uploads), "uploads")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ps := NewPacks(recordstest.New(t), ds.Blobs(), ViewsRoot(l.uploads), "uploads")
 	return ps, ds, l
 }
 
@@ -116,10 +114,7 @@ func TestAPackAsksForContentsItLacks(t *testing.T) {
 // A store with no uploads keeps a pack naming mount:// URIs and refuses one with files.
 func TestAPackStoreWithoutUploadsKeepsConfigOnly(t *testing.T) {
 	ctx := context.Background()
-	ps, err := NewDirPacks(t.TempDir(), nil, "", "uploads")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ps := NewPacks(recordstest.New(t), nil, "", "uploads")
 	if p, err := ps.CreatePack(ctx, "shared", &webapi.Pack{Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://team/profiles"}}}, nil); err != nil || p.GetUri() != "" {
 		t.Errorf("a config-only pack = %v, %v; want it kept, with no view", p, err)
 	}

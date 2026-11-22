@@ -13,6 +13,8 @@ import (
 	"github.com/panyam/goapplib/storage/mounts"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records"
+	"github.com/panyam/agni/internal/records/recordstest"
 	"github.com/panyam/agni/service"
 )
 
@@ -109,8 +111,11 @@ func TestARevisionKeepsItsFilesBesideTheDesign(t *testing.T) {
 	if err := ds.DeleteDesign(ctx, "bb"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(l.records, revisionsDir, "bb")); !os.IsNotExist(err) {
-		t.Errorf("after DeleteDesign, its revisions = %v; want them gone", err)
+	if left, err := l.recs.List(ctx, records.Join(revisionsDir, "bb")); err != nil || len(left) != 0 {
+		t.Errorf("after DeleteDesign, its revisions = %v, %v; want them gone", left, err)
+	}
+	if _, err := os.Stat(filepath.Join(l.records, revisionsDir, "bb")); recordstest.Folder() && !os.IsNotExist(err) {
+		t.Errorf("after DeleteDesign, its revisions folder = %v; want it gone", err)
 	}
 	if views, _, err := ds.Sweep(nil, 0); err != nil || views != 2 {
 		t.Errorf("a sweep after the delete removed %d views, %v; want the design's and the revision's", views, err)

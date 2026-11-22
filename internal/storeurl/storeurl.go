@@ -1,6 +1,7 @@
-// Package storeurl reads the --store and --uploads URLs that agni serve and agnids share (agni
-// issues 1732, 1739, 1735). The scheme picks the adapter, so a later sqlite:// or s3:// registers
-// here without a new flag.
+// Package storeurl reads the --store and --uploads URLs that agni serve, agnids and `agni token`
+// share (agni issues 1732, 1733, 1739, 1735). The scheme picks the adapter: file:// keeps the store's
+// records as files in a folder, sqlite:// and postgres:// as rows through GORM, and datastore:// as
+// Datastore entities. A later scheme registers here without a new flag.
 package storeurl
 
 import (
@@ -13,8 +14,11 @@ import (
 
 // storeSchemes are the --store schemes this build knows, each with what it does or why it is refused.
 var storeSchemes = map[string]string{
-	"file":   "",
-	"sqlite": "is reserved for agni issue 1733 and not built yet",
+	"file":       "",
+	"sqlite":     "",
+	"postgres":   "",
+	"postgresql": "",
+	"datastore":  "",
 }
 
 // uploadsSchemes are the --uploads schemes this build knows.
@@ -74,10 +78,11 @@ func fileURL(abs string) string {
 	return "file:///" + strings.TrimPrefix(filepath.ToSlash(abs), "/")
 }
 
-// Folders reads --store and --uploads together. Uploads need a store to record what they hold,
+// folders reads a file:// --store and --uploads together. Open sends a sqlite:// store elsewhere
+// before it calls this. Uploads need a store to record what they hold,
 // so --uploads alone is refused. A store alone keeps records, such as review runs and snapshots, and
 // refuses a design's files.
-func Folders(store, uploads string) (storeDir, uploadsDir string, err error) {
+func folders(store, uploads string) (storeDir, uploadsDir string, err error) {
 	if storeDir, err = folderOf("store", store, storeSchemes); err != nil {
 		return "", "", err
 	}

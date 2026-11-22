@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/panyam/demokit"
 
@@ -144,6 +145,31 @@ func main() {
 		}
 		fmt.Printf("linked packs/house-live to the rules folder\n  %d house rule, hash %s\n", len(linked.GetConfig().GetConventions().GetRules()), linked.GetHash())
 		fmt.Printf("after a rule was added to its project.yaml, a poll moved it\n  %d house rules, hash %s\n", len(moved.GetConfig().GetConventions().GetRules()), moved.GetHash())
+		return nil
+	})
+
+	demo.Bind("sqlite").Run(func(demokit.StepContext) *demokit.StepResult {
+		lite, recs, closeDB, err := sqliteTour(filepath.Join(root, "sqlite"), mounted)
+		if err != nil {
+			return demokit.Errf("open the sqlite store: %v", err)
+		}
+		defer closeDB()
+		for _, rev := range []struct{ id, title, netlist string }{
+			{"mixer-rev-a", "Mixer rev A", "../common/designs/rev-a.edn"},
+			{"mixer-rev-b", "Mixer rev B", "../common/designs/rev-b.edn"},
+		} {
+			if _, _, err := lite.keep(ctx, rev.id, rev.title, rev.netlist); err != nil {
+				return demokit.Errf("keep %s in sqlite: %v", rev.id, err)
+			}
+		}
+		ks, err := keys(ctx, recs, "")
+		if err != nil {
+			return demokit.Errf("list the records: %v", err)
+		}
+		fmt.Printf("agni.db holds %d records:\n", len(ks))
+		for _, k := range ks {
+			fmt.Println("  " + k)
+		}
 		return nil
 	})
 
