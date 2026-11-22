@@ -9,18 +9,19 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-21, at `0c1990ed`.
+Last pruned 2026-11-21, at `42f7ea70`.
 
 ## At a glance
 
 **#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 0 of 11. It has no exercise yet, and its first ticket, #1800,
-writes `make exercise-enterprise` against the test suite's fake GitHub serving as a GHES host. A
-compose bundle (#1802) and a Helm chart (#1803) both deploy it.
+Server) is active from 2026-11-21, at 1 of 11. Its exercise is `make exercise-enterprise`, against
+a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job with
+`EXERCISE_ALLOW_WAITS=1`. At `42f7ea70` 14 steps pass, and 4 wait: three on #1801 and one on #1802.
+A compose bundle (#1802) and a Helm chart (#1803) both deploy it.
 
-- **Three tickets wait on library releases.** #1809 (Git LFS) on goapplib#203, #1810 (TLS ended at
-  a proxy) on oneauth#541, and #1811 (OIDC sign-in) on oneauth#542. agni moves to each release once
-  it ships.
+- **Five tickets wait on library releases.** #1809 (Git LFS) on goapplib#203, #1810 (TLS ended at
+  a proxy) on oneauth#541, #1811 (OIDC sign-in) on oneauth#542, #1730 (S3 and GCS) on goapplib#204
+  and #205, and #1729 (SharePoint) on goapplib#206. agni moves to each release once it ships.
 - **#1722** (linked sources) is no longer active, at 21 of 23. Its exercise passes at `0c1990ed`.
   #1729 (SharePoint) and #1730 (S3 and GCS) stay open there at P3.
 - **Parked work lives in each mission's `## Later` list.** The 62 `waiting` issues were closed into
@@ -33,8 +34,8 @@ compose bundle (#1802) and a Helm chart (#1803) both deploy it.
 
 ## Open, ranked
 
-1. **#1800**, `make exercise-enterprise`. Each step it can't pass yet names its ticket.
-2. **Then #1802 and #1801**, the bundle and packs linked from a repo, since the exercise needs both.
+1. **#1801 and #1802**, packs linked from a repo and the bundle. The exercise's four waiting steps
+   name them, and a PR that lands one turns its steps into PASS lines and drops the waits.
    #1808 (bootstrap) comes with the bundle. Its scope is still open: the leaning is a file beside
    `agni.yaml`, not inside it, that also declares runtime mounts.
 
