@@ -26,8 +26,10 @@ if wants postgres && [ -z "${AGNI_TEST_POSTGRES:-}" ]; then
   docker run -d --rm --name "$pg" -e POSTGRES_USER=agni -e POSTGRES_PASSWORD=agni -e POSTGRES_DB=agni \
     -p 127.0.0.1::5432 "$postgres_image" >/dev/null
   started+=("$pg")
-  for _ in $(seq 1 60); do docker exec "$pg" pg_isready -U agni -d agni >/dev/null 2>&1 && break; sleep 1; done
-  docker exec "$pg" pg_isready -U agni -d agni >/dev/null || { docker logs "$pg" >&2; exit 1; }
+  # Over TCP: the image first runs a server for initdb on the unix socket alone, then stops it, so a
+  # socket check can pass against that one and the tests then meet a server shutting down.
+  for _ in $(seq 1 60); do docker exec "$pg" pg_isready -h 127.0.0.1 -U agni -d agni >/dev/null 2>&1 && break; sleep 1; done
+  docker exec "$pg" pg_isready -h 127.0.0.1 -U agni -d agni >/dev/null || { docker logs "$pg" >&2; exit 1; }
   export AGNI_TEST_POSTGRES="postgres://agni@127.0.0.1:$(docker port "$pg" 5432 | head -1 | sed 's/.*://')/agni?sslmode=disable"
   export PGPASSWORD=agni
 fi
