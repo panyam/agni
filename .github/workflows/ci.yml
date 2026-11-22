@@ -219,7 +219,7 @@ jobs:
       # holds whatever the first job to save built, which never includes the GOOS=js build. The
       # wasm build took 22 to 37 s a shard without it and 1 to 6 s with it. Main saves; a pull
       # request only restores.
-      - uses: panyam/ci-actions/go-build-cache@a141bcd8a0a2018743f6e4cfde60bd734237b5cc # v0.1.2
+      - uses: panyam/ci-actions/go-build-cache@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
         with:
           key: browser
 
@@ -228,7 +228,7 @@ jobs:
       # points CHROME_PATH at it and the job downloads nothing and runs no apt (agni issue 1780).
       # `playwright-core install --with-deps` took 15 seconds to 5 minutes a job, since apt stalled on
       # font packages. On a runner without Chrome the action installs Playwright's Chromium instead.
-      - uses: panyam/ci-actions/setup-browser@a141bcd8a0a2018743f6e4cfde60bd734237b5cc # v0.1.2
+      - uses: panyam/ci-actions/setup-browser@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
         with:
           working-directory: web
 

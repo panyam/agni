@@ -36,6 +36,11 @@ func TestCheckAuthFlags(t *testing.T) {
 		{Tokens, "/s", "", "", ":8080", []string{"10.0.0.0/8"}, ""},
 		{Tokens, "/s", "", "", "10.0.0.5:8080", []string{"192.0.2.10"}, ""},
 		{Tokens, "", "", "", ":8080", []string{"10.0.0.0/8"}, "needs --store"},
+		// servicekit's check decides (servicekit#67): [::1] is loopback, a hostname that isn't
+		// localhost can resolve anywhere, and an address with no port names the flag.
+		{Tokens, "/s", "", "", "[::1]:8080", nil, ""},
+		{Tokens, "/s", "", "", "agni.internal:8080", nil, "in the clear"},
+		{Tokens, "/s", "", "", "localhost", nil, `--addr "localhost"`},
 	} {
 		proxies, err := ParseProxies(c.proxies)
 		if err != nil {

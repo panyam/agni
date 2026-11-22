@@ -4,15 +4,17 @@ package authgate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"html/template"
-	"net"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	skmw "github.com/panyam/servicekit/middleware"
 
 	"github.com/panyam/oneauth/apiauth"
 	"github.com/panyam/oneauth/core"
@@ -52,7 +54,7 @@ type Gate struct {
 	mw    *apiauth.APIMiddleware
 	// proxies are the proxies in front of the server that end TLS for it (agni issue 1810). A request
 	// they pass on as HTTPS gets Secure cookies, as one the server took over TLS itself does.
-	proxies core.TrustedProxies
+	proxies skmw.TrustedProxies
 	// github signs people in through a GitHub App, and is set by WithGitHub (agni issue 1772).
 	github *githubSignIns
 }
@@ -60,7 +62,7 @@ type Gate struct {
 // New checks tokens against store. proxies are the proxies that end TLS in front of the server, as
 // ParseProxies reads them from --trusted-proxy. Empty trusts no forwarded header, so a cookie is
 // Secure only on a request the server took over TLS itself.
-func New(store core.APIKeyStore, proxies core.TrustedProxies) *Gate {
+func New(store core.APIKeyStore, proxies skmw.TrustedProxies) *Gate {
 	g := &Gate{store: store, proxies: proxies}
 	g.mw = &apiauth.APIMiddleware{APIKeyStore: store, APIKeyCache: &apiauth.APIKeyCacheConfig{TTL: CacheTTL}}
 	rpc := connectauth.OnAuthError(g.mw)
@@ -197,8 +199,10 @@ func safeNext(next string) string {
 }
 
 // ParseProxies reads --trusted-proxy, each an address or a CIDR range such as 10.0.0.0/8.
-func ParseProxies(entries []string) (core.TrustedProxies, error) {
-	out, err := core.ParseTrustedProxies(entries)
+// servicekit's middleware owns the type, so every service on servicekit reads forwarding headers the
+// same way (panyam/servicekit#67).
+func ParseProxies(entries []string) (skmw.TrustedProxies, error) {
+	out, err := skmw.ParseTrustedProxies(entries)
 	if err != nil {
 		return nil, fmt.Errorf("--trusted-proxy: %w", err)
 	}
@@ -208,7 +212,7 @@ func ParseProxies(entries []string) (core.TrustedProxies, error) {
 // CheckFlags refuses a combination of --auth and the TLS flags that would serve tokens badly. A
 // server with trusted proxies may serve plain HTTP on any address, since the proxies end TLS in front
 // of it (agni issue 1810).
-func CheckFlags(auth, store, tlsCert, tlsKey, addr string, proxies core.TrustedProxies) error {
+func CheckFlags(auth, store, tlsCert, tlsKey, addr string, proxies skmw.TrustedProxies) error {
 	if (tlsCert == "") != (tlsKey == "") {
 		return fmt.Errorf("--tls-cert and --tls-key go together; pass both or neither")
 	}
@@ -222,23 +226,14 @@ func CheckFlags(auth, store, tlsCert, tlsKey, addr string, proxies core.TrustedP
 	if store == "" {
 		return fmt.Errorf("--auth %s needs --store, where the tokens agni token create makes are kept", Tokens)
 	}
-	if tlsCert == "" && len(proxies) == 0 && !loopbackAddr(addr) {
+	// servicekit's startup check decides, and the refusal names agni's flags.
+	switch err := skmw.CheckPlaintext(addr, tlsCert != "", proxies); {
+	case errors.Is(err, skmw.ErrPlaintextCredentials):
 		return fmt.Errorf("--auth %s on %s would send tokens over the network in the clear; pass --tls-cert and --tls-key, name the proxy that ends TLS in front of the server with --trusted-proxy, or listen on localhost only with --addr localhost:8080", Tokens, addr)
+	case err != nil:
+		return fmt.Errorf("--addr %q: %w", addr, err)
 	}
 	return nil
-}
-
-// loopbackAddr says whether addr listens on this machine only.
-func loopbackAddr(addr string) bool {
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		return false
-	}
-	if host == "localhost" {
-		return true
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
 }
 
 // Prune deletes the tokens whose expiry is at or before now, and returns how many it deleted (agni
