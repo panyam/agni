@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-22, at `2c561cb1`.
+Last pruned 2026-11-22, at `3ca8e373`.
 
 ## At a glance
 
@@ -22,7 +22,11 @@ agni behind an ingress that ends TLS.
 
 - **agni is on goapplib v0.7.27 and oneauth v0.3.16.** #1811 (OIDC) needs only agni wiring. #1730
   (S3 and GCS) and #1729 (SharePoint) have comments naming v0.7.27's folder views, `blobs.Cached`
-  and Entra workload identity. panyam/servicekit#67 will own one `TrustedProxies` type, and agni
+  and Entra workload identity. The plan is two PRs: mount kinds for both, then `--uploads s3://`
+  and `gs://` on `storeurl.Open`.
+- **`--store` takes `file://`, `sqlite://`, `postgres://` and `datastore://`** (PRs 1822 and 1825),
+  and two servers can share one store. #1802 and #1803 can offer postgres in place of a volume.
+  panyam/oneauth#549 would let `internal/authgate/keys.go` stop reading oneauth's tables. panyam/servicekit#67 will own one `TrustedProxies` type, and agni
   moves `internal/authgate` onto it once that ships.
 - **#1722** (linked sources) is no longer active, at 21 of 23. Its exercise passes at `0c1990ed`.
   #1729 (SharePoint) and #1730 (S3 and GCS) stay open there at P3.
