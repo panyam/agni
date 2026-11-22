@@ -134,11 +134,15 @@ func Find(ms []mounts.Mount, name string) (mounts.Mount, bool) {
 // Err maps an error from goapplib's storage module onto agni's service errors, so the transport
 // classifies it as it classifies agni's own. An error that wraps none of the library's sentinels
 // passes through unchanged. The message is kept.
+//
+// A Git LFS object the driver couldn't read is FAILED_PRECONDITION, whatever reason ErrLFS wraps
+// with it, since the mount and the file exist and the message names the file (agni issue 1809).
 func Err(err error) error {
 	if err == nil {
 		return nil
 	}
 	for _, m := range []struct{ lib, svc error }{
+		{mounts.ErrLFS, service.ErrFailedPrecondition},
 		{mounts.ErrNotFound, service.ErrNotFound},
 		{mounts.ErrExists, service.ErrAlreadyExists},
 		{mounts.ErrInvalidArgument, service.ErrInvalidArgument},

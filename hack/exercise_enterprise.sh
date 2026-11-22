@@ -4,7 +4,7 @@
 # needs no network and no GitHub account.
 #
 # The fake holds two private repos. hw/baseboard has the tutorial's gateway board at tags rev-b and
-# rev-c, and hw/agni-packs has the tutorial project's checks as a pack. alice is in org acme and can
+# rev-c, with the schematic and board kept in Git LFS (#1809), and hw/agni-packs has the tutorial project's checks as a pack. alice is in org acme and can
 # read both. mallory is in org acme and can read neither, as a contractor might.
 #
 # agni serve starts as the bundle will start it (#1802): TLS from a throwaway CA, --auth tokens,
@@ -72,7 +72,8 @@ cat >"$out/repos/seed.json" <<EOF
   "tokens": ["$server_token"],
   "repos": [
     {"repo": "hw/baseboard", "private": true, "readers": ["alice"], "tokens": ["$server_token"],
-     "commits": [{"tag": "rev-b", "dir": "rev-b"}, {"tag": "rev-c", "dir": "rev-c"}]},
+     "commits": [{"tag": "rev-b", "dir": "rev-b", "lfs": ["gateway.kicad_sch", "gateway.kicad_pcb"]},
+                 {"tag": "rev-c", "dir": "rev-c", "lfs": ["gateway.kicad_sch", "gateway.kicad_pcb"]}]},
     {"repo": "hw/agni-packs", "private": true, "readers": ["alice"], "tokens": ["$server_token"],
      "commits": [{"dir": "pack"}]}
   ]
@@ -102,6 +103,13 @@ ghes=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["web"])' "$ans
 revb=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["commits"]["hw/baseboard"]["rev-b"])' "$answer")
 revc=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["commits"]["hw/baseboard"]["rev-c"])' "$answer")
 echo "the fake is at $ghes; rev-b is $revb and rev-c is $revc"
+# The repo itself holds LFS pointers, so a check that matches the files' findings later shows that
+# agni read the objects.
+if curl -s -H "Authorization: Bearer $server_token" "$ghes/raw/hw/baseboard/$revb/gateway.kicad_sch" | grep -q '^version https://git-lfs.github.com/spec/v1'; then
+  pass "hw/baseboard keeps gateway.kicad_sch at rev-b as a Git LFS pointer"
+else
+  no "hw/baseboard's gateway.kicad_sch at rev-b isn't an LFS pointer, so the exercise checks no LFS read"
+fi
 
 step "a trap for any request to another host"
 # agni serve sends every outbound request through this proxy, except those to 127.0.0.1, which
@@ -210,7 +218,7 @@ stored=$(as alice check designs/bb --format json 2>"$out/check-bb.err" | finding
 local_=$("$agni" check "$out/repos/rev-b" --format json 2>/dev/null | findings)
 echo "designs/bb: ${stored:-none} findings; the rev-b files: $local_ findings"
 if [ -n "$stored" ] && [ "$stored" -gt 0 ] && [ "$stored" = "$local_" ]; then
-  pass "alice's check on designs/bb at rev-b gives the files' $local_ findings"
+  pass "alice's check on designs/bb at rev-b gives the files' $local_ findings, read from Git LFS"
 else
   no "alice's check on designs/bb; see $out/check-bb.err"
 fi
