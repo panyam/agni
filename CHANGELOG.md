@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+### Added
+
+- The CLI trusts a team's own CA from `AGNI_CA_FILE`, for every `--remote` call and for `agni login`
+  (issue 1800). The client libraries already took a CA file. `make exercise-enterprise` runs agni
+  serve with TLS, tokens and sign-in through a GitHub App against a fake GitHub Enterprise Server,
+  and CI runs it.
+
 ## [0.10.0] - 2026-11-21
 
 A design linked from a private GitHub repo opens only for the people who can read the repo. A person

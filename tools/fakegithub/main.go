@@ -9,7 +9,11 @@
 //
 //	{"api": "http://127.0.0.1:N", "raw": "http://127.0.0.1:N/raw", "commits": {"1.1.2": "<sha>"}}
 //
-// It is a test tool, built and started by web/browser/linkdesign.spec.ts, and never shipped.
+// With --seed, it serves a GitHub Enterprise Server instead, for make exercise-enterprise (agni issue
+// 1800). seed.go says what the seed file holds and what the control endpoints do.
+//
+// It is a test tool, built and started by web/browser/linkdesign.spec.ts and
+// hack/exercise_enterprise.sh, and never shipped.
 package main
 
 import (
@@ -47,7 +51,12 @@ func main() {
 	repo := flag.String("repo", "acme/board", "the fake repo, owner/name")
 	var cs commits
 	flag.Var(&cs, "commit", "tag=dir: commit dir's files and tag the commit; repeat in order")
+	seed := flag.String("seed", "", "a seed file for an Enterprise Server: users, an App and repos (seed.go)")
+	hookCA := flag.String("hook-ca", "", "with --seed, a CA file the fake trusts when it delivers a webhook over TLS")
 	flag.Parse()
+	if *seed != "" {
+		log.Fatal(serveEnterprise(*seed, *addr, *hookCA))
+	}
 	owner, name, ok := strings.Cut(*repo, "/")
 	if !ok || len(cs) == 0 {
 		log.Fatal("want --repo owner/name and at least one --commit tag=dir")

@@ -45,3 +45,8 @@ This file covers the release bundle, the images, the native tools, the fetched s
 - **Draw a planted copper fault as a near miss, never an overlap** (agni 1082). KiCad reads overlapping copper as one island and names it inconsistently between runs.
 - **`make seed-triage` rewrites every record file whole.** It reorders keys and requotes `'*'`. A change that only REMOVES records edits them by hand and lets `TestSeedTriage` confirm the result.
 - Restore the record files before running the update a second time. It diffs against the file on disk, so the records the first run removed would turn into `untriaged` groups.
+
+## The enterprise exercise
+
+- **`make exercise-enterprise` needs no network** (agni 1800). `tools/fakegithub --seed` plays a GitHub Enterprise Server, and its control address approves device codes and pushes commits with a signed webhook. A trap proxy fails the run if agni serve reaches any other host.
+- A step whose missing piece is an open ticket prints `FAIL (waits on #N)`. CI sets `EXERCISE_ALLOW_WAITS=1`, which passes the job on those alone. When a ticket lands, change its step to pass or fail, and drop the wait.
