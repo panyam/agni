@@ -92,7 +92,7 @@ func TestUploadsNamesABucket(t *testing.T) {
 		t.Errorf("--uploads s3:// = %v; want it refused for naming no bucket", err)
 	}
 	cache := filepath.Join(dir, "cache")
-	st, up, err := storeurl.Open(store, "gs://exports/agni", storeurl.WithUploadsCache("file://"+filepath.ToSlash(cache)))
+	st, up, err := storeurl.Open(store, "gs://exports/agni", storeurl.WithUploadsCache("file:///"+strings.TrimPrefix(filepath.ToSlash(cache), "/")))
 	if err != nil {
 		t.Fatal(err)
 	}
