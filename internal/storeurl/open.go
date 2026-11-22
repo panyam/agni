@@ -2,11 +2,21 @@ package storeurl
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/panyam/goapplib/storage/blobs"
+	gcsdrv "github.com/panyam/goapplib/storage/drivers/gcs"
+	"github.com/panyam/goapplib/storage/drivers/gcs/gcsblobs"
+	s3drv "github.com/panyam/goapplib/storage/drivers/s3"
+	"github.com/panyam/goapplib/storage/drivers/s3/s3blobs"
+	"github.com/panyam/goapplib/storage/mounts"
+	"golang.org/x/oauth2/google"
 
 	"cloud.google.com/go/datastore"
 
@@ -43,13 +53,86 @@ type Store struct {
 	// Records holds agni's own records, each kind under a folder of its own, such as "designs" or
 	// "reviews" (Sub).
 	Records records.Store
+	// UploadsRemote is an s3:// or gs:// --uploads, which holds every uploaded and snapshotted file,
+	// and "" for a file:// one (agni issue 1730). The uploads folder Open returns is then the local
+	// cache in front of it, which also holds the views.
+	UploadsRemote string
+	uploadsDir    string
+	opts          options
+}
+
+// options are Open's optional settings.
+type options struct {
+	uploadsCache            string
+	s3Endpoint, gcsEndpoint string
+}
+
+// Option sets one of Open's optional settings.
+type Option func(*options)
+
+// WithUploadsCache names the local folder in front of an s3:// or gs:// --uploads, which keeps
+// copies of the files and every view (--uploads-cache). Empty takes a folder named for the URL under
+// the user's cache folder.
+func WithUploadsCache(dir string) Option { return func(o *options) { o.uploadsCache = dir } }
+
+// WithEndpoints points an s3:// or gs:// --uploads at another S3 or Cloud Storage API, as
+// --s3-endpoint and --gcs-endpoint do for mounts. Empty takes each service's own.
+func WithEndpoints(s3Endpoint, gcsEndpoint string) Option {
+	return func(o *options) { o.s3Endpoint, o.gcsEndpoint = s3Endpoint, gcsEndpoint }
+}
+
+// uploadsLocal turns an s3:// or gs:// --uploads into the file:// URL of its local cache, and
+// returns the remote. A file:// or empty value comes back as it is, with no remote.
+func uploadsLocal(uploads string, o options) (local, remote string, err error) {
+	scheme, rest, _ := strings.Cut(uploads, "://")
+	if scheme != "s3" && scheme != "gs" {
+		return uploads, "", nil
+	}
+	if bucket, _, _ := strings.Cut(rest, "/"); bucket == "" || strings.ContainsAny(rest, "?#") {
+		return "", "", fmt.Errorf("--uploads %q names no bucket; write it as %s://<bucket>/<prefix>", uploads, scheme)
+	}
+	dir := o.uploadsCache
+	if dir == "" {
+		base, err := os.UserCacheDir()
+		if err != nil {
+			return "", "", fmt.Errorf("--uploads %q: no cache folder to keep its copies in; name one with --uploads-cache: %w", uploads, err)
+		}
+		sum := sha256.Sum256([]byte(uploads))
+		dir = filepath.Join(base, "agni", "uploads", hex.EncodeToString(sum[:6]))
+	} else if strings.Contains(dir, "://") {
+		if dir, err = folderOf("uploads-cache", dir, map[string]string{"file": ""}); err != nil {
+			return "", "", err
+		}
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", "", err
+	}
+	return fileURL(abs), strings.TrimSuffix(uploads, "/"), nil
 }
 
 // Open opens --store and reads --uploads. An empty store returns nil, and --uploads alone is
-// refused, since uploads need a store to record what they hold. A file:// folder and a sqlite://
+// refused, since uploads need a store to record what they hold. An s3:// or gs:// --uploads returns
+// its local cache as the uploads folder, and UploadBlobs reaches the bucket (agni issue 1730). A file:// folder and a sqlite://
 // file are created if absent. A postgres:// database and a Datastore project must exist, and Open
 // creates the tables it needs in them.
-func Open(store, uploads string) (*Store, string, error) {
+func Open(store, uploads string, opts ...Option) (*Store, string, error) {
+	var o options
+	for _, f := range opts {
+		f(&o)
+	}
+	uploads, remote, err := uploadsLocal(uploads, o)
+	if err != nil {
+		return nil, "", err
+	}
+	st, up, err := open(store, uploads)
+	if st != nil {
+		st.UploadsRemote, st.uploadsDir, st.opts = remote, up, o
+	}
+	return st, up, err
+}
+
+func open(store, uploads string) (*Store, string, error) {
 	scheme, _, _ := strings.Cut(store, "://")
 	switch scheme {
 	case "sqlite", "postgres", "postgresql", "datastore":
@@ -240,3 +323,51 @@ func closeDB(db *gorm.DB) error {
 	}
 	return sqlDB.Close()
 }
+
+// UploadBlobs opens the blob store under the uploads: the folder's own blobs for a file:// --uploads,
+// or the bucket behind a local copy for an s3:// or gs:// one (agni issue 1730). The bucket store
+// signs in with the server's own credentials: the AWS default chain, or Application Default
+// Credentials for Cloud Storage. Every Put reaches the bucket before it returns, and a file the
+// local folder lacks is fetched on demand, so a server that lost its cache refills it. It returns nil
+// for a store with no uploads.
+func (s *Store) UploadBlobs(ctx context.Context) (blobs.Linker, error) {
+	if s == nil || s.uploadsDir == "" {
+		return nil, nil
+	}
+	local, err := blobs.NewDir(filepath.Join(s.uploadsDir, "blobs"))
+	if err != nil {
+		return nil, fmt.Errorf("--uploads: %w", err)
+	}
+	var remote blobs.Store
+	switch scheme, _, _ := strings.Cut(s.UploadsRemote, "://"); scheme {
+	case "":
+		return local, nil
+	case "s3":
+		var o []s3blobs.Option
+		if s.opts.s3Endpoint != "" {
+			o = append(o, s3blobs.WithS3Options(s3drv.WithEndpoint(s.opts.s3Endpoint)))
+		}
+		remote, err = s3blobs.New(ctx, s.UploadsRemote, mounts.AWSCredentials{DefaultChain: true}, o...)
+	case "gs":
+		var o []gcsblobs.Option
+		if s.opts.gcsEndpoint != "" {
+			o = append(o, gcsblobs.WithGCSOptions(gcsdrv.WithEndpoint(s.opts.gcsEndpoint)))
+		}
+		// Application Default Credentials sign the requests, with write access, since uploads put
+		// files. A fake at --gcs-endpoint, as a test runs, takes no token.
+		var creds mounts.Credentials
+		if ts, tsErr := google.DefaultTokenSource(ctx, gcsReadWrite); tsErr == nil {
+			creds = mounts.Bearer(ts)
+		} else if s.opts.gcsEndpoint == "" {
+			return nil, fmt.Errorf("--uploads %q: no Application Default Credentials: %w", s.UploadsRemote, tsErr)
+		}
+		remote, err = gcsblobs.New(ctx, s.UploadsRemote, creds, o...)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("--uploads %q: %w", s.UploadsRemote, err)
+	}
+	return blobs.NewCached(remote, local), nil
+}
+
+// gcsReadWrite is the OAuth scope a gs:// --uploads signs with, since it writes objects.
+const gcsReadWrite = "https://www.googleapis.com/auth/devstorage.read_write"

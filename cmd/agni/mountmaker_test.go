@@ -215,7 +215,7 @@ func TestTheUploadsSweepKeepsASnapshotsFiles(t *testing.T) {
 	if count != 3 {
 		t.Fatalf("the snapshot stored %d blobs; want 3 (README, one schematic held once, and the manifest)", count)
 	}
-	if _, _, _, err := storeServices(t.Context(), s.table, testStore(t, store), uploads, nil, &service.ProjectResolver{}, nil, nil, io.Discard); err != nil {
+	if _, _, _, err := storeServices(t.Context(), s.table, testStore(t, store), uploads, nil, nil, &service.ProjectResolver{}, nil, nil, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	var left int

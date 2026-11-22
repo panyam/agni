@@ -97,6 +97,10 @@ type Config struct {
 	// at another host: an S3-compatible store such as MinIO, a national cloud, or a test's fake.
 	// Empty takes each service's public endpoint (agni issues 1729, 1730).
 	S3Endpoint, GCSEndpoint, GraphAPI string
+	// Blobs is the blob store under Uploads, when the server opened one itself, such as a bucket
+	// behind the uploads folder for an s3:// or gs:// --uploads (agni issue 1730). Nil opens
+	// <Uploads>/blobs.
+	Blobs blobs.Linker
 	// Subscriptions keeps the Graph change-notification subscriptions CreateWebhook makes on
 	// SharePoint mounts, one record per mount, so RenewSubscriptions finds them after a restart.
 	// Nil keeps none, and CreateWebhook refuses a SharePoint mount.
@@ -120,7 +124,7 @@ type Table struct {
 	reg     *mounts.Registry
 	conns   connections.Store
 	fixed   []mounts.Mount
-	blobs   *blobs.Dir
+	blobs   blobs.Linker
 	uploads string
 	upMount string
 	// svc gives connections' tokens and asks GitHub whether a person can read a repo, and users
@@ -161,6 +165,10 @@ func Open(cfg Config) (*Table, error) {
 			// A read-only reader can't make the folder either, so it waits for agni serve to
 			// (laterBlobs, agni issue 1767).
 			b = &laterBlobs{root: filepath.Join(cfg.Uploads, BlobsDir)}
+		} else if cfg.Blobs != nil {
+			// The server opened the blob store, such as a bucket behind the uploads folder (agni issue
+			// 1730).
+			t.blobs, b = cfg.Blobs, cfg.Blobs
 		} else {
 			d, err := blobs.NewDir(filepath.Join(cfg.Uploads, BlobsDir))
 			if err != nil {
@@ -202,8 +210,11 @@ func Open(cfg Config) (*Table, error) {
 			// A read-only reader can't make the folder, so it waits for agni serve to (laterStore).
 			store = &laterStore{dir: cfg.Records}
 		} else if cfg.Records != "" {
-			if err := migrate(context.Background(), cfg.Records, t.blobs, cfg.Log); err != nil {
-				return nil, fmt.Errorf("--store: %w", err)
+			// Records an older agni wrote sit beside a folder of blobs, never a bucket's.
+			if d, ok := t.blobs.(*blobs.Dir); ok {
+				if err := migrate(context.Background(), cfg.Records, d, cfg.Log); err != nil {
+					return nil, fmt.Errorf("--store: %w", err)
+				}
 			}
 			// #1758 kept git blob ids in <uploads>/links/git. goapplib keeps them as blob aliases,
 			// so nothing reads that folder now (agni issue 1761).
@@ -288,7 +299,7 @@ func Open(cfg Config) (*Table, error) {
 func (t *Table) Registry() *mounts.Registry { return t.reg }
 
 // Blobs is the blob store under --uploads, nil without one.
-func (t *Table) Blobs() *blobs.Dir { return t.blobs }
+func (t *Table) Blobs() blobs.Linker { return t.blobs }
 
 // List returns every mount the table serves: the fixed ones in configuration order, then the
 // runtime ones by name. A store that fails after a good read keeps the last good list.

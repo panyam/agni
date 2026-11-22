@@ -24,8 +24,8 @@ var storeSchemes = map[string]string{
 // uploadsSchemes are the --uploads schemes this build knows.
 var uploadsSchemes = map[string]string{
 	"file": "",
-	"s3":   "is reserved for agni issue 1730 and not built yet",
-	"gs":   "is reserved for agni issue 1730 and not built yet",
+	"s3":   "",
+	"gs":   "",
 }
 
 // folderOf reads a --store or --uploads value and returns the folder a file:// URL names. An empty

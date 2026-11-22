@@ -26,7 +26,7 @@ func TestStoreAndUploadsTakeFileURLs(t *testing.T) {
 		{store: "mysql://db/agni", wantErr: "this build knows datastore://, file://, postgres://, postgresql://, sqlite://"},
 		{store: "file://server/srv/agni", wantErr: "names the host"},
 		{store: "file://relative", wantErr: "names the host"},
-		{store: "file:///srv/agni/meta", uploads: "s3://bucket/agni", wantErr: "agni issue 1730"},
+		{store: "file:///srv/agni/meta", uploads: "ftp://bucket/agni", wantErr: "this build knows file://, gs://, s3://"},
 		{uploads: "file:///srv/agni/files", wantErr: "needs --store"},
 	} {
 		store, uploads, err := folders(tc.store, tc.uploads)

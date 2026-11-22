@@ -13,13 +13,13 @@ require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/johannesboyne/gofakes3 v1.2.0
 	github.com/klauspost/compress v1.20.2
-	github.com/panyam/goapplib v0.7.27
-	github.com/panyam/goapplib/storage v0.7.27
-	github.com/panyam/goapplib/storage/backends/gae v0.7.27
-	github.com/panyam/goapplib/storage/backends/gorm v0.7.27
-	github.com/panyam/goapplib/storage/drivers/gcs v0.7.27
-	github.com/panyam/goapplib/storage/drivers/msgraph v0.7.27
-	github.com/panyam/goapplib/storage/drivers/s3 v0.7.27
+	github.com/panyam/goapplib v0.7.30
+	github.com/panyam/goapplib/storage v0.7.30
+	github.com/panyam/goapplib/storage/backends/gae v0.7.30
+	github.com/panyam/goapplib/storage/backends/gorm v0.7.30
+	github.com/panyam/goapplib/storage/drivers/gcs v0.7.30
+	github.com/panyam/goapplib/storage/drivers/msgraph v0.7.30
+	github.com/panyam/goapplib/storage/drivers/s3 v0.7.30
 	github.com/panyam/goutils v0.1.15
 	github.com/panyam/jaala v0.1.101
 	github.com/panyam/jaala/frontends/mcp v0.1.101
@@ -31,11 +31,11 @@ require (
 	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.21
 	github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.21
 	github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.21
-	github.com/panyam/oneauth v0.3.16
-	github.com/panyam/oneauth/grpc v0.3.16
-	github.com/panyam/oneauth/oauth2 v0.3.16
-	github.com/panyam/oneauth/stores/gae v0.3.16
-	github.com/panyam/oneauth/stores/gorm v0.3.16
+	github.com/panyam/oneauth v0.3.19
+	github.com/panyam/oneauth/grpc v0.3.19
+	github.com/panyam/oneauth/oauth2 v0.3.19
+	github.com/panyam/oneauth/stores/gae v0.3.19
+	github.com/panyam/oneauth/stores/gorm v0.3.19
 	github.com/panyam/servicekit v0.2.5
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10

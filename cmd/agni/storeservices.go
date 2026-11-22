@@ -34,7 +34,7 @@ var sweepInterval = time.Hour
 // blobs go to the same folder, so they outlive a restart, and a sweep at startup and every hour
 // after removes what nothing names. The sweep stops when ctx ends. With --store it keeps packs too, and a pack's files go to --uploads beside the designs'.
 // With --store and checks, it keeps each design's reports, each run by checks.
-func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, guard *service.AccessGuard, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
+func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, uploadsDir string, upBlobs blobs.Linker, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, guard *service.AccessGuard, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
 	projectSvc := service.NewProjectService(projectStore)
 	var store service.DesignStore
 	var packStore service.PackStore
@@ -48,13 +48,28 @@ func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, 
 			}
 			recs[name] = r
 		}
-		dirStore, err := projects.NewStore(recs[storeDesignsDir], uploadsDir, uploadsMount)
+		var bd *projects.BlobDir
+		if upBlobs != nil {
+			bd = projects.NewBlobDirOver(upBlobs)
+		}
+		dirStore, err := projects.NewStoreOver(recs[storeDesignsDir], uploadsDir, uploadsMount, bd)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		projectRecs := projects.NewProjects(recs[storeProjectsDir])
 		packs := projects.NewPacks(recs[storePacksDir], dirStore.Blobs(), projects.ViewsRoot(uploadsDir), uploadsMount)
 		reports := projects.NewReports(recs[storeReportsDir])
+		// A view the uploads folder lacks, as after a bucket --uploads lost its local copy, is built
+		// again from the blobs (agni issue 1730).
+		for name, rebuild := range map[string]func(context.Context) (int, error){"design": dirStore.RebuildViews, "pack": packs.RebuildViews} {
+			n, err := rebuild(ctx)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if n > 0 {
+				fmt.Fprintf(log, "note: rebuilt %d %s views from the blobs in --uploads\n", n, name)
+			}
+		}
 		snapshots := &osSnapshotStore{recs: recs[storeSnapshotsDir]}
 		// A revision a report ran on stays while the report does, so the report keeps naming files the
 		// server holds (agni issue 1774).

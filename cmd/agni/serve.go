@@ -89,7 +89,7 @@ func serveCmd() *cobra.Command {
 	var mcp bool
 	var viewerRooms bool
 	var auth, tlsCert, tlsKey, connectionsKey string
-	var webhookSecretRef, graphStateRef string
+	var webhookSecretRef, graphStateRef, uploadsCache string
 	var s3Endpoint, gcsEndpoint, graphAPI string
 	var githubClientID, githubSecretRef, publicURL string
 	var githubAllow, trustedProxy []string
@@ -114,7 +114,7 @@ func serveCmd() *cobra.Command {
 			if viewerRooms && !mcp {
 				return fmt.Errorf("--viewer-rooms needs --mcp, since agents reach the viewer's tabs through /mcp")
 			}
-			store, uploadsDir, err := storeurl.Open(storeURL, uploadsURL)
+			store, uploadsDir, err := storeurl.Open(storeURL, uploadsURL, storeurl.WithUploadsCache(uploadsCache), storeurl.WithEndpoints(s3Endpoint, gcsEndpoint))
 			if err != nil {
 				return err
 			}
@@ -214,7 +214,8 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
 	c.Flags().StringVar(&storeURL, "store", "", "where this server keeps its records, as a URL: file:///srv/agni/meta keeps them as files in that folder, created if absent (agni issue 1732); sqlite:///srv/agni/agni.db in one sqlite file; postgres://agni@db/agni in postgres, with the password in PGPASSWORD; datastore://project?namespace=agni in Cloud Datastore (agni issue 1733). The records are designs, each artifact's manifest of paths and hashes, projects, packs, each design's reports, snapshot definitions and review runs; they hold no file bytes. Without it, snapshots live in memory, review runs are not kept, and no design can be created. In a container, mount a volume here")
-	c.Flags().StringVar(&uploadsURL, "uploads", "", "where this server keeps the files of designs its users upload, as a URL: file:///srv/agni/files, created if absent (agni issue 1739). It keeps each file once, by hash, and never changes one, and serves each design's files as the mount \""+uploadsMount+"\". Needs --store. Without it, a design's files cannot be written")
+	c.Flags().StringVar(&uploadsURL, "uploads", "", "where this server keeps the files of designs its users upload, as a URL: file:///srv/agni/files, created if absent (agni issue 1739), or a bucket, s3://<bucket>/<prefix> or gs://<bucket>/<prefix>, with a local copy in --uploads-cache (agni issue 1730). It keeps each file once, by hash, and never changes one, and serves each design's files as the mount \""+uploadsMount+"\". Needs --store. Without it, a design's files cannot be written")
+	c.Flags().StringVar(&uploadsCache, "uploads-cache", "", "the local folder in front of an s3:// or gs:// --uploads, as a path or file:// URL. It keeps a copy of each file the server reads and every design's view, and refills from the bucket when lost. Empty takes a folder named for the bucket under the user's cache folder (agni issue 1730)")
 	c.Flags().StringVar(&githubAPI, "github-api", "", "the GitHub REST API a github:// mount is read through; a test or a GitHub Enterprise server names its own")
 	_ = c.Flags().MarkHidden("github-api")
 	c.Flags().StringVar(&githubRaw, "github-raw", "", "the host a linked github:// artifact's files are downloaded from; a test names its own")
@@ -449,6 +450,11 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	runtime := o.store != nil && o.uploadsDir != ""
 	if runtime {
 		cfg.Uploads, cfg.ConnectionsKey = o.uploadsDir, o.connectionsKey
+		// One blob store serves the mounts and the stored designs: the folder's, or a bucket behind it
+		// (agni issue 1730).
+		if cfg.Blobs, err = o.store.UploadBlobs(life); err != nil {
+			return err
+		}
 		// A SharePoint mount's Graph subscription is a record in --store (agni issue 1729).
 		if cfg.Subscriptions, err = storeRecords(o.store, storeSubscriptionsDir); err != nil {
 			return err
@@ -592,7 +598,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	projectSvc, designSvc, packSvc, err := storeServices(life, table, o.store, o.uploadsDir, projectStore, projectResolver, checkSvc, guard, cmd.ErrOrStderr())
+	projectSvc, designSvc, packSvc, err := storeServices(life, table, o.store, o.uploadsDir, table.Blobs(), projectStore, projectResolver, checkSvc, guard, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}

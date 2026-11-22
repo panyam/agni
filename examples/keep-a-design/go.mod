@@ -6,7 +6,7 @@ require (
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/agni/examples/common v0.0.0
 	github.com/panyam/demokit v0.0.33
-	github.com/panyam/goapplib/storage v0.7.27
+	github.com/panyam/goapplib/storage v0.7.30
 	google.golang.org/protobuf v1.36.12
 )
 
@@ -93,13 +93,13 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/panyam/demokit/notebook v0.0.33 // indirect
-	github.com/panyam/goapplib/storage/drivers/gcs v0.7.27 // indirect
-	github.com/panyam/goapplib/storage/drivers/msgraph v0.7.27 // indirect
-	github.com/panyam/goapplib/storage/drivers/s3 v0.7.27 // indirect
+	github.com/panyam/goapplib/storage/drivers/gcs v0.7.30 // indirect
+	github.com/panyam/goapplib/storage/drivers/msgraph v0.7.30 // indirect
+	github.com/panyam/goapplib/storage/drivers/s3 v0.7.30 // indirect
 	github.com/panyam/gocurrent v0.1.3 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
-	github.com/panyam/oneauth v0.3.16 // indirect
+	github.com/panyam/oneauth v0.3.19 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
