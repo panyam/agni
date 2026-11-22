@@ -117,8 +117,8 @@ github.com/panyam/oneauth/stores/gae v0.3.16 h1:dhz9V0P3/Fg8GZ4B9H8S5o1Jf0Ot/oUj
 github.com/panyam/oneauth/stores/gae v0.3.16/go.mod h1:uORNXD/+Ed8C/c/f/h8P/l15NU0tj6EP9cURp/BaVdA=
 github.com/panyam/oneauth/stores/gorm v0.3.16 h1:L1aqA+W9jUl0oF+PsGvFON/S1AUjvYbid4Pv0JFsy6Y=
 github.com/panyam/oneauth/stores/gorm v0.3.16/go.mod h1:h1Z1d0lMaPBMqE0vfQhgjPdHUa5Ysx2Ysu7p4lDPyL4=
-github.com/panyam/servicekit v0.2.4 h1:W+ISlSkvc3BB+Qrtq84kMmSnwEm4XRPb93SpffWZqmk=
-github.com/panyam/servicekit v0.2.4/go.mod h1:GslqqjqDYzMw9a3h8LRTAmydHUIPV6VjAeOmWHjCzck=
+github.com/panyam/servicekit v0.2.5 h1:MM5O/ygcNk7fpT5Zpt9iwJRdRi547sKtS4sMRvGfSmQ=
+github.com/panyam/servicekit v0.2.5/go.mod h1:TJj7SAdDr74CiIXmS5jotGxfQ7qbqusK8wp0tn8KRrY=
 github.com/panyam/templar v0.1.2 h1:JFOx31tCFDfu299iF8fKA0yu6fDB4vopEaB/coT1kMQ=
 github.com/panyam/templar v0.1.2/go.mod h1:Pqn7VhOod9MGZ0GqrwoHw16jFjiAxPgWXZBAFou1fZ0=
 github.com/pierrec/lz4/v4 v4.1.27 h1:+PhzhWDrjRj89TH2sw43nE3+4+W8lSxIuQadEHZyjUk=
