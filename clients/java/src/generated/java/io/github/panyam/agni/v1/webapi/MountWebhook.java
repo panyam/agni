@@ -7,7 +7,8 @@ package io.github.panyam.agni.v1.webapi;
 
 /**
  * <pre>
- * MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server.
+ * MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server, or a Microsoft
+ * Graph subscription that sends a SharePoint mount's drive changes (agni issue 1729).
  * </pre>
  *
  * Protobuf type {@code agni.v1.webapi.MountWebhook}
@@ -37,6 +38,7 @@ private static final long serialVersionUID = 0L;
     url_ = "";
     events_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    subscriptionId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -57,6 +59,7 @@ private static final long serialVersionUID = 0L;
             io.github.panyam.agni.v1.webapi.MountWebhook.class, io.github.panyam.agni.v1.webapi.MountWebhook.Builder.class);
   }
 
+  private int bitField0_;
   public static final int MOUNT_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object mount_ = "";
@@ -155,7 +158,7 @@ private static final long serialVersionUID = 0L;
   private long id_ = 0L;
   /**
    * <pre>
-   * id is GitHub's id for the hook.
+   * id is GitHub's id for the hook, and 0 for a Graph subscription.
    * </pre>
    *
    * <code>int64 id = 3 [json_name = "id"];</code>
@@ -282,6 +285,83 @@ private static final long serialVersionUID = 0L;
     return created_;
   }
 
+  public static final int SUBSCRIPTION_ID_FIELD_NUMBER = 7;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object subscriptionId_ = "";
+  /**
+   * <pre>
+   * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+   * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+   * it does on its own.
+   * </pre>
+   *
+   * <code>string subscription_id = 7 [json_name = "subscriptionId"];</code>
+   * @return The subscriptionId.
+   */
+  @java.lang.Override
+  public java.lang.String getSubscriptionId() {
+    java.lang.Object ref = subscriptionId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      subscriptionId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+   * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+   * it does on its own.
+   * </pre>
+   *
+   * <code>string subscription_id = 7 [json_name = "subscriptionId"];</code>
+   * @return The bytes for subscriptionId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSubscriptionIdBytes() {
+    java.lang.Object ref = subscriptionId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      subscriptionId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int EXPIRE_TIME_FIELD_NUMBER = 8;
+  private com.google.protobuf.Timestamp expireTime_;
+  /**
+   * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+   * @return Whether the expireTime field is set.
+   */
+  @java.lang.Override
+  public boolean hasExpireTime() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+   * @return The expireTime.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getExpireTime() {
+    return expireTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : expireTime_;
+  }
+  /**
+   * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getExpireTimeOrBuilder() {
+    return expireTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : expireTime_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -314,6 +394,12 @@ private static final long serialVersionUID = 0L;
     if (created_ != false) {
       output.writeBool(6, created_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(subscriptionId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 7, subscriptionId_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(8, getExpireTime());
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -342,6 +428,13 @@ private static final long serialVersionUID = 0L;
     if (created_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(6, created_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(subscriptionId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, subscriptionId_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(8, getExpireTime());
     }
     return size;
   }
@@ -379,6 +472,13 @@ private static final long serialVersionUID = 0L;
         .equals(other.getEventsList())) return false;
     if (getCreated()
         != other.getCreated()) return false;
+    if (!getSubscriptionId()
+        .equals(other.getSubscriptionId())) return false;
+    if (hasExpireTime() != other.hasExpireTime()) return false;
+    if (hasExpireTime()) {
+      if (!getExpireTime()
+          .equals(other.getExpireTime())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -406,6 +506,12 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + CREATED_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getCreated());
+    hash = (37 * hash) + SUBSCRIPTION_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getSubscriptionId().hashCode();
+    if (hasExpireTime()) {
+      hash = (37 * hash) + EXPIRE_TIME_FIELD_NUMBER;
+      hash = (53 * hash) + getExpireTime().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -505,7 +611,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server.
+   * MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server, or a Microsoft
+   * Graph subscription that sends a SharePoint mount's drive changes (agni issue 1729).
    * </pre>
    *
    * Protobuf type {@code agni.v1.webapi.MountWebhook}
@@ -529,13 +636,19 @@ private static final long serialVersionUID = 0L;
 
     // Construct using io.github.panyam.agni.v1.webapi.MountWebhook.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetExpireTimeFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -548,6 +661,12 @@ private static final long serialVersionUID = 0L;
       events_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
       created_ = false;
+      subscriptionId_ = "";
+      expireTime_ = null;
+      if (expireTimeBuilder_ != null) {
+        expireTimeBuilder_.dispose();
+        expireTimeBuilder_ = null;
+      }
       return this;
     }
 
@@ -600,6 +719,17 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000020) != 0)) {
         result.created_ = created_;
       }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.subscriptionId_ = subscriptionId_;
+      }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.expireTime_ = expireTimeBuilder_ == null
+            ? expireTime_
+            : expireTimeBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -644,6 +774,14 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getCreated() != false) {
         setCreated(other.getCreated());
+      }
+      if (!other.getSubscriptionId().isEmpty()) {
+        subscriptionId_ = other.subscriptionId_;
+        bitField0_ |= 0x00000040;
+        onChanged();
+      }
+      if (other.hasExpireTime()) {
+        mergeExpireTime(other.getExpireTime());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -699,6 +837,18 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 48
+            case 58: {
+              subscriptionId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 58
+            case 66: {
+              input.readMessage(
+                  internalGetExpireTimeFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 66
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -903,7 +1053,7 @@ private static final long serialVersionUID = 0L;
     private long id_ ;
     /**
      * <pre>
-     * id is GitHub's id for the hook.
+     * id is GitHub's id for the hook, and 0 for a Graph subscription.
      * </pre>
      *
      * <code>int64 id = 3 [json_name = "id"];</code>
@@ -915,7 +1065,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * id is GitHub's id for the hook.
+     * id is GitHub's id for the hook, and 0 for a Graph subscription.
      * </pre>
      *
      * <code>int64 id = 3 [json_name = "id"];</code>
@@ -931,7 +1081,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * id is GitHub's id for the hook.
+     * id is GitHub's id for the hook, and 0 for a Graph subscription.
      * </pre>
      *
      * <code>int64 id = 3 [json_name = "id"];</code>
@@ -1228,6 +1378,227 @@ private static final long serialVersionUID = 0L;
       created_ = false;
       onChanged();
       return this;
+    }
+
+    private java.lang.Object subscriptionId_ = "";
+    /**
+     * <pre>
+     * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+     * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+     * it does on its own.
+     * </pre>
+     *
+     * <code>string subscription_id = 7 [json_name = "subscriptionId"];</code>
+     * @return The subscriptionId.
+     */
+    public java.lang.String getSubscriptionId() {
+      java.lang.Object ref = subscriptionId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        subscriptionId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+     * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+     * it does on its own.
+     * </pre>
+     *
+     * <code>string subscription_id = 7 [json_name = "subscriptionId"];</code>
+     * @return The bytes for subscriptionId.
+     */
+    public com.google.protobuf.ByteString
+        getSubscriptionIdBytes() {
+      java.lang.Object ref = subscriptionId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        subscriptionId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+     * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+     * it does on its own.
+     * </pre>
+     *
+     * <code>string subscription_id = 7 [json_name = "subscriptionId"];</code>
+     * @param value The subscriptionId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSubscriptionId(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      subscriptionId_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+     * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+     * it does on its own.
+     * </pre>
+     *
+     * <code>string subscription_id = 7 [json_name = "subscriptionId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSubscriptionId() {
+      subscriptionId_ = getDefaultInstance().getSubscriptionId();
+      bitField0_ = (bitField0_ & ~0x00000040);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+     * drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+     * it does on its own.
+     * </pre>
+     *
+     * <code>string subscription_id = 7 [json_name = "subscriptionId"];</code>
+     * @param value The bytes for subscriptionId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSubscriptionIdBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      subscriptionId_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp expireTime_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> expireTimeBuilder_;
+    /**
+     * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+     * @return Whether the expireTime field is set.
+     */
+    public boolean hasExpireTime() {
+      return ((bitField0_ & 0x00000080) != 0);
+    }
+    /**
+     * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+     * @return The expireTime.
+     */
+    public com.google.protobuf.Timestamp getExpireTime() {
+      if (expireTimeBuilder_ == null) {
+        return expireTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : expireTime_;
+      } else {
+        return expireTimeBuilder_.getMessage();
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+     */
+    public Builder setExpireTime(com.google.protobuf.Timestamp value) {
+      if (expireTimeBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        expireTime_ = value;
+      } else {
+        expireTimeBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+     */
+    public Builder setExpireTime(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (expireTimeBuilder_ == null) {
+        expireTime_ = builderForValue.build();
+      } else {
+        expireTimeBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+     */
+    public Builder mergeExpireTime(com.google.protobuf.Timestamp value) {
+      if (expireTimeBuilder_ == null) {
+        if (((bitField0_ & 0x00000080) != 0) &&
+          expireTime_ != null &&
+          expireTime_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getExpireTimeBuilder().mergeFrom(value);
+        } else {
+          expireTime_ = value;
+        }
+      } else {
+        expireTimeBuilder_.mergeFrom(value);
+      }
+      if (expireTime_ != null) {
+        bitField0_ |= 0x00000080;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+     */
+    public Builder clearExpireTime() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      expireTime_ = null;
+      if (expireTimeBuilder_ != null) {
+        expireTimeBuilder_.dispose();
+        expireTimeBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getExpireTimeBuilder() {
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return internalGetExpireTimeFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getExpireTimeOrBuilder() {
+      if (expireTimeBuilder_ != null) {
+        return expireTimeBuilder_.getMessageOrBuilder();
+      } else {
+        return expireTime_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : expireTime_;
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp expire_time = 8 [json_name = "expireTime"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        internalGetExpireTimeFieldBuilder() {
+      if (expireTimeBuilder_ == null) {
+        expireTimeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getExpireTime(),
+                getParentForChildren(),
+                isClean());
+        expireTime_ = null;
+      }
+      return expireTimeBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.MountWebhook)

@@ -21,14 +21,14 @@ import (
 	"github.com/panyam/goapplib/storage/drivers/msgraph/graphtest"
 )
 
-// jetsonSheets is the Jetson AGX Thor baseboard's schematic, rev 1.1.3, from agni-samples (make
-// samples-revisions): every .kicad_sch file, keyed by name.
+// jetsonSheets is the Jetson AGX Thor baseboard's schematic from agni-samples' oracle corpus (make
+// samples-oracle, which the gate fetches): every .kicad_sch file, keyed by name.
 func jetsonSheets(t *testing.T) map[string][]byte {
 	t.Helper()
-	dir := filepath.Join("..", "..", "tools", "samples", "revisions", "jetson-agx-thor-baseboard-1.1.3")
+	dir := filepath.Join("..", "..", "tools", "samples", "boards", "jetson-agx-thor-baseboard")
 	names, err := filepath.Glob(filepath.Join(dir, "*.kicad_sch"))
 	if err != nil || len(names) < 10 {
-		t.Fatalf("the Jetson 1.1.3 sheets are missing (make samples-revisions): %v, %d files", err, len(names))
+		t.Fatalf("the Jetson baseboard's sheets are missing (make samples-oracle): %v, %d files", err, len(names))
 	}
 	out := map[string][]byte{}
 	for _, n := range names {
