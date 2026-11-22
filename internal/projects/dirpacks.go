@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -130,27 +129,48 @@ func (r *DirPacks) CreatePack(ctx context.Context, id string, p *webapi.Pack, bl
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, err := r.load(ctx, id); err == nil {
-		return nil, fmt.Errorf("%w: %s", service.ErrAlreadyExists, service.PackName(id))
-	} else if !errors.Is(err, service.ErrNotFound) {
-		return nil, err
-	}
-	return r.commit(ctx, id, p, blobs)
-}
-
-// UpdatePack changes a pack under the store's lock.
-func (r *DirPacks) UpdatePack(ctx context.Context, id string, update func(*webapi.Pack) error, blobs service.BlobSource) (*webapi.Pack, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	cur, err := r.load(ctx, id)
+	out, b, err := r.build(ctx, id, p, blobs)
 	if err != nil {
 		return nil, err
 	}
-	next := proto.Clone(cur).(*webapi.Pack)
-	if err := update(next); err != nil {
+	// The store refuses a taken id, across servers sharing it too (agni issue 1823).
+	if err := r.recs.Create(ctx, id+".json", b); errors.Is(err, fs.ErrExist) {
+		return nil, fmt.Errorf("%w: %s", service.ErrAlreadyExists, service.PackName(id))
+	} else if err != nil {
 		return nil, err
 	}
-	return r.commit(ctx, id, next, blobs)
+	return out, nil
+}
+
+// UpdatePack changes a pack as one change of its record (records.Update): when another server wrote
+// the pack in between, update runs again on what it wrote (agni issue 1823).
+func (r *DirPacks) UpdatePack(ctx context.Context, id string, update func(*webapi.Pack) error, blobs service.BlobSource) (*webapi.Pack, error) {
+	k, err := r.key(id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: no pack %s", service.ErrNotFound, service.PackName(id))
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out *webapi.Pack
+	err = records.Update(ctx, r.recs, k, func(old []byte, exists bool) ([]byte, error) {
+		if !exists {
+			return nil, fmt.Errorf("%w: no pack %s", service.ErrNotFound, service.PackName(id))
+		}
+		next := &webapi.Pack{}
+		if err := protojson.Unmarshal(old, next); err != nil {
+			return nil, fmt.Errorf("pack %s: %w", id, err)
+		}
+		if err := update(next); err != nil {
+			return nil, err
+		}
+		p, b, err := r.build(ctx, id, next, blobs)
+		out = p
+		return b, err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // DeletePack removes a pack's record. Its views stay until the next Sweep, so a snapshot read under
@@ -185,9 +205,9 @@ func (r *DirPacks) Hashes(ctx context.Context) (map[string]bool, error) {
 	return out, nil
 }
 
-// commit stores p's files and builds their view, then writes p's record over the old one. The caller
-// holds the lock.
-func (r *DirPacks) commit(ctx context.Context, id string, in *webapi.Pack, blobs service.BlobSource) (*webapi.Pack, error) {
+// build stores in's files and builds their view, and returns the pack's record and its bytes for the
+// caller to write. The view goes first, so a reader of the new record finds its files.
+func (r *DirPacks) build(ctx context.Context, id string, in *webapi.Pack, blobs service.BlobSource) (*webapi.Pack, []byte, error) {
 	p := &webapi.Pack{
 		Name:   service.PackName(id),
 		Title:  in.GetTitle(),
@@ -199,34 +219,27 @@ func (r *DirPacks) commit(ctx context.Context, id string, in *webapi.Pack, blobs
 	}
 	files, err := r.keepFiles(ctx, in.GetFiles(), blobs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	p.Files = files
 	p.Hash = service.PackHash(p)
 	if len(files) > 0 {
 		rev := strings.TrimPrefix(p.GetHash(), "sha256:")[:12]
 		if err := r.buildView(id, rev, files); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		u, err := mounts.NewURI(r.mount, path.Join(packViewsDir, id, rev))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		p.Uri = u.String()
 	}
 	p.UpdateTime = timestamppb.New(r.clock())
-	k, err := r.key(id)
-	if err != nil {
-		return nil, err
-	}
 	b, err := protojson.Marshal(p)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if err := r.recs.Put(ctx, k, b); err != nil {
-		return nil, err
-	}
-	return p, nil
+	return p, b, nil
 }
 
 // keepFiles checks a pack's files against their hashes and stores each as a blob. It returns the

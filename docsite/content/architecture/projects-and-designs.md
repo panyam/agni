@@ -458,7 +458,17 @@ sqlite://` and `postgres://`. `gaerecords.GAE` keeps each key as a Datastore ent
 `AgniRecord`, for `--store datastore://`. Datastore holds about 1 MiB in an entity, and a stored
 report runs to 15 MB, so a larger record goes in part entities first. Its head entity names the
 parts only once all of them are written. These are the three backends goapplib's stores have too:
-a folder, GORM and Datastore. The project, pack, report, snapshot and review stores sit on the same
+a folder, GORM and Datastore.
+
+Two servers can share one store. Say both add an artifact to one design at the same moment. Each
+reads the design's record, adds its artifact and writes the record back, so a plain write would
+keep only the later one. So a change goes through `records.Update` (agni issue 1823). It reads the
+record with its version, and it writes only if the record is still at that version. A writer that
+loses reads the newer record and makes its change again. The version is a hash of the file under a
+lock file in a folder store, a `rev` column in SQL, and a `rev` field checked in a transaction in
+Datastore. Designs, their revisions, packs and projects change this way. A server that dies while
+writing a large record to Datastore can leave its parts behind, and `agni serve` sweeps them every
+hour. The project, pack, report, snapshot and review stores sit on the same
 port. The views stay folders on the server's disk in every case, because the engine reads a design
 through a folder. Runtime mounts, connections and tokens use goapplib's and oneauth's own GORM or
 Datastore stores in the same database or namespace.

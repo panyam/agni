@@ -56,7 +56,9 @@ type DesignStore interface {
 	DesignReader
 	// CreateDesign makes a design with no artifacts.
 	CreateDesign(ctx context.Context, id string, rec DesignRecord) (*webapi.Design, error)
-	// UpdateDesign changes a design's record. update edits the record in place, under the store's lock.
+	// UpdateDesign changes a design's record. update edits the record in place. A store shared by
+	// several servers runs update again on the newer record when another one wrote it in between
+	// (agni issue 1823), so update must keep no side effects.
 	UpdateDesign(ctx context.Context, id string, update func(*DesignRecord)) (*webapi.Design, error)
 	// DeleteDesign removes a design and its artifacts.
 	DeleteDesign(ctx context.Context, id string) error

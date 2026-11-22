@@ -52,7 +52,7 @@ func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, 
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		records := projects.NewProjects(recs[storeProjectsDir])
+		projectRecs := projects.NewProjects(recs[storeProjectsDir])
 		packs := projects.NewPacks(recs[storePacksDir], dirStore.Blobs(), projects.ViewsRoot(uploadsDir), uploadsMount)
 		reports := projects.NewReports(recs[storeReportsDir])
 		snapshots := &osSnapshotStore{recs: recs[storeSnapshotsDir]}
@@ -72,7 +72,12 @@ func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, 
 			return pinned, nil
 		})
 		store, packStore, reportStore = dirStore, packs, reports
-		projectSvc.WithRecords(records)
+		// A Datastore store can strand a large record's parts when a server dies mid-write, and sweeps
+		// them as the uploads are swept (agni issue 1823).
+		if sw, ok := st.Records.(records.Sweeper); ok {
+			go sweepRecords(ctx, sw, log)
+		}
+		projectSvc.WithRecords(projectRecs)
 		if blobs := dirStore.Blobs(); blobs != nil && resolver != nil {
 			resolver.Blobs = blobs
 			// The sweep runs at startup and then every sweepInterval while the server runs, so a
@@ -132,6 +137,28 @@ func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, 
 		designSvc.WithProjectPacks(projectPacker(ms, packSvc, resolver.Blobs))
 	}
 	return projectSvc, designSvc, packSvc, nil
+}
+
+// sweepRecords sweeps a store's stranded records now and every sweepInterval until ctx ends.
+func sweepRecords(ctx context.Context, sw records.Sweeper, log io.Writer) {
+	sweep := func() {
+		if n, err := sw.Sweep(ctx, sweepGrace); err != nil {
+			fmt.Fprintf(log, "note: sweeping --store: %v\n", err)
+		} else if n > 0 {
+			fmt.Fprintf(log, "note: swept %d stranded parts of large records from --store\n", n)
+		}
+	}
+	sweep()
+	tick := time.NewTicker(sweepInterval)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			sweep()
+		}
+	}
 }
 
 // storeRecords is the records of one kind under --store, under the folder name. A file:// store

@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"strconv"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -40,6 +42,8 @@ type recordEntity struct {
 	Version string    `datastore:"version,noindex"`
 	Parts   int       `datastore:"parts,noindex"`
 	Updated time.Time `datastore:"updated,noindex"`
+	// Rev counts the record's writes. Replace writes only when it still holds the count Read saw.
+	Rev int64 `datastore:"rev,noindex"`
 }
 
 // partEntity is one slice of a large body. Its key's parent is the record's head key.
@@ -53,8 +57,8 @@ type partEntity struct {
 //
 // A body larger than partSize is written as parts first, then the head is switched to them in a
 // transaction, so a reader sees the old record or the new one. A writer that dies between the two
-// leaves parts no head names. Nothing reads them, and the next write to the record doesn't remove
-// them either, so they stay until the namespace is cleaned.
+// leaves parts no head names. Nothing reads them, and Sweep deletes them once they are older than a
+// write could take.
 type GAE struct {
 	client    *datastore.Client
 	namespace string
@@ -85,17 +89,24 @@ func (s *GAE) partKeys(head *datastore.Key, version string, n int) []*datastore.
 
 // Get reads the head, then its parts when the body is split.
 func (s *GAE) Get(ctx context.Context, k string) ([]byte, error) {
+	b, _, err := s.Read(ctx, k)
+	return b, err
+}
+
+// Read reads the head, then its parts when the body is split, and returns the head's rev.
+func (s *GAE) Read(ctx context.Context, k string) ([]byte, records.Version, error) {
 	if err := records.CheckKey(k); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	var head recordEntity
 	if err := s.client.Get(ctx, s.key(k), &head); errors.Is(err, datastore.ErrNoSuchEntity) {
-		return nil, fmt.Errorf("record %s: %w", k, fs.ErrNotExist)
+		return nil, "", fmt.Errorf("record %s: %w", k, fs.ErrNotExist)
 	} else if err != nil {
-		return nil, err
+		return nil, "", err
 	}
+	ver := records.Version(strconv.FormatInt(head.Rev, 10))
 	if head.Parts == 0 {
-		return head.Body, nil
+		return head.Body, ver, nil
 	}
 	// The parts come back putBatch at a time, since a gRPC client also receives 4 MiB per message.
 	keys := s.partKeys(s.key(k), head.Version, head.Parts)
@@ -103,29 +114,47 @@ func (s *GAE) Get(ctx context.Context, k string) ([]byte, error) {
 	for i := 0; i < len(keys); i += putBatch {
 		parts := make([]partEntity, min(putBatch, len(keys)-i))
 		if err := s.client.GetMulti(ctx, keys[i:i+len(parts)], parts); err != nil {
-			return nil, fmt.Errorf("record %s: %w", k, err)
+			return nil, "", fmt.Errorf("record %s: %w", k, err)
 		}
 		for _, p := range parts {
 			out = append(out, p.Body...)
 		}
 	}
-	return out, nil
+	return out, ver, nil
 }
 
 // Put writes key, replacing any record it had.
 func (s *GAE) Put(ctx context.Context, k string, body []byte) error {
-	return s.write(ctx, k, body, false)
+	return s.write(ctx, k, body, func(*recordEntity) error { return nil })
 }
 
 // Create writes key in a transaction that first checks no head exists.
 func (s *GAE) Create(ctx context.Context, k string, body []byte) error {
-	return s.write(ctx, k, body, true)
+	return s.write(ctx, k, body, func(old *recordEntity) error {
+		if old != nil {
+			return fmt.Errorf("record %s: %w", k, fs.ErrExist)
+		}
+		return nil
+	})
+}
+
+// Replace writes key in a transaction that first checks the head's rev is still ver.
+func (s *GAE) Replace(ctx context.Context, k string, body []byte, ver records.Version) error {
+	return s.write(ctx, k, body, func(old *recordEntity) error {
+		switch {
+		case old == nil:
+			return fmt.Errorf("record %s: %w", k, fs.ErrNotExist)
+		case strconv.FormatInt(old.Rev, 10) != string(ver):
+			return fmt.Errorf("record %s: %w", k, records.ErrConflict)
+		}
+		return nil
+	})
 }
 
 // write puts a large body's parts, then the head in a transaction, then deletes the parts of the
-// version it replaced. With exclusive, a head already there fails the transaction with fs.ErrExist
-// and the new parts are deleted.
-func (s *GAE) write(ctx context.Context, k string, body []byte, exclusive bool) error {
+// version it replaced. check sees the head the transaction read, nil for none, and an error from it
+// fails the write and deletes the new parts.
+func (s *GAE) write(ctx context.Context, k string, body []byte, check func(old *recordEntity) error) error {
 	if err := records.CheckKey(k); err != nil {
 		return err
 	}
@@ -135,7 +164,7 @@ func (s *GAE) write(ctx context.Context, k string, body []byte, exclusive bool) 
 	if len(body) <= partSize {
 		head.Body = body
 	} else {
-		v, err := version()
+		v, err := s.version()
 		if err != nil {
 			return err
 		}
@@ -160,14 +189,20 @@ func (s *GAE) write(ctx context.Context, k string, body []byte, exclusive bool) 
 		old, hadOld = recordEntity{}, false
 		switch err := tx.Get(headKey, &old); {
 		case err == nil:
-			if exclusive {
-				return fmt.Errorf("record %s: %w", k, fs.ErrExist)
-			}
 			hadOld = true
 		case !errors.Is(err, datastore.ErrNoSuchEntity):
 			return err
 		}
-		_, err := tx.Put(headKey, &head)
+		var seen *recordEntity
+		if hadOld {
+			seen = &old
+		}
+		if err := check(seen); err != nil {
+			return err
+		}
+		next := head
+		next.Rev = old.Rev + 1
+		_, err := tx.Put(headKey, &next)
 		return err
 	}, datastore.MaxAttempts(16))
 	if err != nil {
@@ -258,11 +293,62 @@ func (s *GAE) DeleteDir(ctx context.Context, dir string) error {
 	return nil
 }
 
-// version names one write's parts, so a new body's parts never meet an old one's.
-func version() (string, error) {
+// version names one write's parts, so a new body's parts never meet an old one's. It starts with the
+// write's time in hex nanoseconds, so Sweep can tell a part's age from its key alone.
+func (s *GAE) version() (string, error) {
 	var b [8]byte
 	if _, err := rand.Read(b[:]); err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(b[:]), nil
+	return strconv.FormatInt(s.now().UnixNano(), 16) + "-" + hex.EncodeToString(b[:]), nil
+}
+
+// writtenAt reads the time a part's version starts with, and false for a name it can't read.
+func writtenAt(partName string) (time.Time, bool) {
+	ns, _, ok := strings.Cut(partName, "-")
+	if !ok {
+		return time.Time{}, false
+	}
+	n, err := strconv.ParseInt(ns, 16, 64)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return time.Unix(0, n), true
+}
+
+// Sweep deletes the part entities no head names that were written more than grace ago, and returns
+// how many (agni issue 1823). A writer that died between writing a large body's parts and switching
+// the head to them leaves such parts. grace spares a write still in flight, and a part whose name
+// it can't read is left alone.
+func (s *GAE) Sweep(ctx context.Context, grace time.Duration) (int, error) {
+	keys, err := s.client.GetAll(ctx, datastore.NewQuery(partKind).Namespace(s.namespace).KeysOnly(), nil)
+	if err != nil {
+		return 0, err
+	}
+	cutoff := s.now().Add(-grace)
+	heads := map[string]*recordEntity{}
+	var gone []*datastore.Key
+	for _, k := range keys {
+		at, ok := writtenAt(k.Name)
+		if !ok || at.After(cutoff) || k.Parent == nil {
+			continue
+		}
+		head, seen := heads[k.Parent.Name]
+		if !seen {
+			var h recordEntity
+			switch err := s.client.Get(ctx, k.Parent, &h); {
+			case err == nil:
+				head = &h
+			case !errors.Is(err, datastore.ErrNoSuchEntity):
+				return 0, err
+			}
+			heads[k.Parent.Name] = head
+		}
+		v, _, _ := strings.Cut(k.Name, ".")
+		if head == nil || head.Parts == 0 || head.Version != v {
+			gone = append(gone, k)
+		}
+	}
+	s.deleteParts(ctx, gone)
+	return len(gone), nil
 }

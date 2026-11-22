@@ -116,53 +116,62 @@ func (s *DirStore) Revisions(_ context.Context, id string) ([]*webapi.DesignRevi
 	return out, nil
 }
 
-// keepRevision writes rec as the revision named by its view, adding ref to one already kept. Callers
-// hold s.mu.
+// keepRevision writes rec as the revision named by its view, adding ref to one already kept. Each
+// revision record changes through records.Update, so a ref another server adds meanwhile stays
+// (agni issue 1823). Callers hold s.mu.
 func (s *DirStore) keepRevision(id string, rec recordYAML, ref string) (revisionYAML, error) {
+	ctx := context.Background()
 	dir := s.revisionsOf(id)
-	p := records.Join(dir, rec.Rev+".yaml")
-	var r revisionYAML
-	if raw, err := s.recs.Get(context.Background(), p); err == nil {
-		if err := yaml.Unmarshal(raw, &r); err != nil {
-			return revisionYAML{}, fmt.Errorf("%s: %w", p, err)
+	var kept revisionYAML
+	err := records.Update(ctx, s.recs, records.Join(dir, rec.Rev+".yaml"), func(old []byte, exists bool) ([]byte, error) {
+		kept = revisionYAML{CreateTime: s.clock(), Record: rec}
+		if exists {
+			kept = revisionYAML{}
+			if err := yaml.Unmarshal(old, &kept); err != nil {
+				return nil, fmt.Errorf("revision %s of %s: %w", rec.Rev, id, err)
+			}
+			if ref == "" || slices.Contains(kept.Refs, ref) {
+				return nil, nil
+			}
 		}
-		if ref == "" || slices.Contains(r.Refs, ref) {
-			return r, nil
+		if ref != "" {
+			kept.Refs = append(kept.Refs, ref)
+			slices.Sort(kept.Refs)
 		}
-	} else if !errors.Is(err, fs.ErrNotExist) {
-		return revisionYAML{}, err
-	} else {
-		r = revisionYAML{CreateTime: s.clock(), Record: rec}
+		return yaml.Marshal(&kept)
+	})
+	if err != nil || ref == "" {
+		return kept, err
 	}
-	if ref != "" {
-		r.Refs = append(r.Refs, ref)
-		slices.Sort(r.Refs)
-		// A ref names one revision, so it moves here from any other that held it (agni issue 1774).
-		// Linking a design's artifacts one at a time names each step, and the last one keeps it.
-		others, err := s.loadRevisions(id)
+	// A ref names one revision, so it moves here from any other that held it (agni issue 1774).
+	// Linking a design's artifacts one at a time names each step, and the last one keeps it.
+	others, err := s.loadRevisions(id)
+	if err != nil {
+		return revisionYAML{}, err
+	}
+	for name, o := range others {
+		if name == rec.Rev || !slices.Contains(o.Refs, ref) {
+			continue
+		}
+		err := records.Update(ctx, s.recs, records.Join(dir, name+".yaml"), func(old []byte, exists bool) ([]byte, error) {
+			if !exists {
+				return nil, nil
+			}
+			var r revisionYAML
+			if err := yaml.Unmarshal(old, &r); err != nil {
+				return nil, fmt.Errorf("revision %s of %s: %w", name, id, err)
+			}
+			if !slices.Contains(r.Refs, ref) {
+				return nil, nil
+			}
+			r.Refs = slices.DeleteFunc(r.Refs, func(x string) bool { return x == ref })
+			return yaml.Marshal(&r)
+		})
 		if err != nil {
 			return revisionYAML{}, err
 		}
-		for name, o := range others {
-			if name == rec.Rev || !slices.Contains(o.Refs, ref) {
-				continue
-			}
-			o.Refs = slices.DeleteFunc(o.Refs, func(x string) bool { return x == ref })
-			if err := s.writeRevision(dir, name, o); err != nil {
-				return revisionYAML{}, err
-			}
-		}
 	}
-	return r, s.writeRevision(dir, rec.Rev, r)
-}
-
-// writeRevision writes r as revision name in dir, replacing the record whole.
-func (s *DirStore) writeRevision(dir, name string, r revisionYAML) error {
-	out, err := yaml.Marshal(&r)
-	if err != nil {
-		return err
-	}
-	return s.recs.Put(context.Background(), records.Join(dir, name+".yaml"), out)
+	return kept, nil
 }
 
 // loadRevisions reads design id's kept revisions by id. None is an empty map. Callers hold s.mu.

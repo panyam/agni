@@ -5,12 +5,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -498,4 +500,50 @@ func artifactURI(t *testing.T, s string) mounts.URI {
 		t.Fatal(err)
 	}
 	return u
+}
+
+// Two servers share one store and add a different artifact to one design at the same moment. Both
+// artifacts stay, since each write goes through records.Update and the loser reads the winner's
+// record again (agni issue 1823). Each server is a DirStore of its own over the same records and
+// uploads, so the in-process mutex doesn't serialize them.
+func TestTwoServersWritingOneDesignLoseNeitherArtifact(t *testing.T) {
+	ctx := context.Background()
+	l := layout{records: t.TempDir(), uploads: t.TempDir()}
+	a, err := NewStore(recordstest.At(t, l.records), l.uploads, "uploads")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := NewStore(recordstest.At(t, l.records), l.uploads, "uploads")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.CreateDesign(ctx, "mul", service.DesignRecord{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.CreateDesign(ctx, "mul", service.DesignRecord{}); !errors.Is(err, service.ErrAlreadyExists) {
+		t.Fatalf("the second server's create of mul = %v, want ErrAlreadyExists", err)
+	}
+	const rounds = 6
+	for i := range rounds {
+		var wg sync.WaitGroup
+		errs := make([]error, 2)
+		for j, ds := range []*DirStore{a, b} {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				id := fmt.Sprintf("notes-%d-%d", i, j)
+				_, errs[j] = put(ctx, ds, "mul", arts{id: {id + ".txt": id}})
+			}()
+		}
+		wg.Wait()
+		for _, err := range errs {
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	all, err := a.Artifacts(ctx, "mul")
+	if err != nil || len(all) != 2*rounds {
+		t.Fatalf("after %d rounds of two racing writes, mul holds %d artifacts, %v; want %d", rounds, len(all), err, 2*rounds)
+	}
 }

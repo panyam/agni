@@ -9,11 +9,13 @@ package records
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"path"
 	"sort"
 	"strings"
+	"time"
 )
 
 // Store keeps records by key. A key is a clean slash path: no leading or trailing slash, no empty,
@@ -22,8 +24,11 @@ import (
 //
 // A missing record is fs.ErrNotExist and a taken key on Create is fs.ErrExist, so a caller tests both
 // with errors.Is as it did against the OS. Each write replaces a record whole, so a reader sees the
-// old record or the new one and never a mix. Nothing here serializes a read-modify-write; a caller
-// that needs one holds its own lock.
+// old record or the new one and never a mix.
+//
+// A read-modify-write goes through Read and Replace, or Update around them. Replace writes only when
+// the record is still at the version Read saw, across processes sharing the store, so two servers
+// editing one record can't lose either edit (agni issue 1823).
 type Store interface {
 	// Get returns the record at key, or fs.ErrNotExist.
 	Get(ctx context.Context, key string) ([]byte, error)
@@ -40,6 +45,58 @@ type Store interface {
 	List(ctx context.Context, dir string) ([]Entry, error)
 	// DeleteDir removes every record under dir. A dir holding nothing is no error.
 	DeleteDir(ctx context.Context, dir string) error
+	// Read returns the record at key and its version, or fs.ErrNotExist. The version changes with
+	// every write that changes the record, Put included.
+	Read(ctx context.Context, key string) ([]byte, Version, error)
+	// Replace writes the record at key if it is still at version ver. A record written since is
+	// ErrConflict, and one deleted since is fs.ErrNotExist.
+	Replace(ctx context.Context, key string, body []byte, ver Version) error
+}
+
+// Sweeper is a Store that leaves garbage a crashed writer can strand, such as Datastore's parts of a
+// large record, and removes it when asked. A server calls Sweep beside its uploads sweep. grace
+// spares a write still in flight. It returns how much it removed.
+type Sweeper interface {
+	Sweep(ctx context.Context, grace time.Duration) (int, error)
+}
+
+// Version names one write of a record, as Read returns it. Only the backend that returned it reads
+// it.
+type Version string
+
+// ErrConflict is a Replace whose record changed after the Read it names.
+var ErrConflict = errors.New("records: the record changed since it was read")
+
+// updateAttempts is how often Update retries a write another writer beat.
+const updateAttempts = 32
+
+// Update reads the record at key, hands it to fn, and writes what fn returns, all as one change: a
+// record another writer changed in between is read again and fn runs again, up to updateAttempts
+// times. exists says whether the record was there. fn returning a nil body with no error deletes
+// nothing and writes nothing. An error from fn stops Update and comes back as it is. fn may run more
+// than once, so it must not keep side effects from a run whose write lost.
+func Update(ctx context.Context, s Store, key string, fn func(old []byte, exists bool) ([]byte, error)) error {
+	for range updateAttempts {
+		old, ver, err := s.Read(ctx, key)
+		exists := err == nil
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		body, err := fn(old, exists)
+		if err != nil || body == nil {
+			return err
+		}
+		if exists {
+			err = s.Replace(ctx, key, body, ver)
+		} else {
+			err = s.Create(ctx, key, body)
+		}
+		if errors.Is(err, ErrConflict) || errors.Is(err, fs.ErrExist) || (exists && errors.Is(err, fs.ErrNotExist)) {
+			continue
+		}
+		return err
+	}
+	return fmt.Errorf("record %s: %w after %d attempts", key, ErrConflict, updateAttempts)
 }
 
 // Entry is one name List found under a folder.
@@ -187,6 +244,22 @@ func (p sub) List(ctx context.Context, d string) ([]Entry, error) {
 		return nil, err
 	}
 	return p.s.List(ctx, full)
+}
+
+func (p sub) Read(ctx context.Context, k string) ([]byte, Version, error) {
+	full, err := p.key(k)
+	if err != nil {
+		return nil, "", err
+	}
+	return p.s.Read(ctx, full)
+}
+
+func (p sub) Replace(ctx context.Context, k string, body []byte, ver Version) error {
+	full, err := p.key(k)
+	if err != nil {
+		return err
+	}
+	return p.s.Replace(ctx, full, body, ver)
 }
 
 func (p sub) DeleteDir(ctx context.Context, d string) error {

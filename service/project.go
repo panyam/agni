@@ -218,10 +218,17 @@ type ProjectService struct {
 // ProjectRecords keeps the projects a server stores, each a title and a list of design names (agni
 // issue 1694). Get of an id it does not hold is ErrNotFound, and so is Delete. Put creates or
 // replaces. List returns every record ordered by name. Each record's name is "projects/{id}".
+//
+// Create and Update hold across servers sharing the records (agni issue 1823). Create of a taken id
+// is ErrAlreadyExists. Update hands the record to update and writes what update leaves, running it
+// again on the newer record when another writer changed it in between, so update must keep no side
+// effects. Update of an id it does not hold is ErrNotFound.
 type ProjectRecords interface {
 	Get(ctx context.Context, id string) (*webapi.Project, error)
 	List(ctx context.Context) ([]*webapi.Project, error)
 	Put(ctx context.Context, id string, p *webapi.Project) error
+	Create(ctx context.Context, id string, p *webapi.Project) error
+	Update(ctx context.Context, id string, update func(*webapi.Project) error) (*webapi.Project, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -372,11 +379,6 @@ func (s *ProjectService) CreateProject(ctx context.Context, req *webapi.CreatePr
 	} else if !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
-	if _, err := s.records.Get(ctx, id); err == nil {
-		return nil, fmt.Errorf("%w: %s", ErrAlreadyExists, name)
-	} else if !errors.Is(err, ErrNotFound) {
-		return nil, err
-	}
 	designs, err := designNames(req.GetProject().GetDesigns())
 	if err != nil {
 		return nil, err
@@ -386,7 +388,7 @@ func (s *ProjectService) CreateProject(ctx context.Context, req *webapi.CreatePr
 		return nil, err
 	}
 	p := &webapi.Project{Name: name, Title: orID(req.GetProject().GetTitle(), id), Designs: designs, DefaultPacks: packs}
-	if err := s.records.Put(ctx, id, p); err != nil {
+	if err := s.records.Create(ctx, id, p); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -395,7 +397,7 @@ func (s *ProjectService) CreateProject(ctx context.Context, req *webapi.CreatePr
 // UpdateProject changes a stored project's title, designs or default packs, the fields update_mask
 // names.
 func (s *ProjectService) UpdateProject(ctx context.Context, req *webapi.UpdateProjectRequest) (*webapi.Project, error) {
-	id, p, err := s.stored(ctx, req.GetProject().GetName())
+	id, _, err := s.stored(ctx, req.GetProject().GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -403,26 +405,26 @@ func (s *ProjectService) UpdateProject(ctx context.Context, req *webapi.UpdatePr
 	if len(paths) == 0 {
 		paths = []string{"title", "designs", "default_packs"}
 	}
-	for _, f := range paths {
-		switch f {
-		case "title":
-			p.Title = orID(req.GetProject().GetTitle(), id)
-		case "designs":
-			if p.Designs, err = designNames(req.GetProject().GetDesigns()); err != nil {
-				return nil, err
+	return s.records.Update(ctx, id, func(p *webapi.Project) error {
+		var err error
+		for _, f := range paths {
+			switch f {
+			case "title":
+				p.Title = orID(req.GetProject().GetTitle(), id)
+			case "designs":
+				if p.Designs, err = designNames(req.GetProject().GetDesigns()); err != nil {
+					return err
+				}
+			case "default_packs":
+				if p.DefaultPacks, err = packNames(req.GetProject().GetDefaultPacks()); err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("%w: update_mask names %q; a stored project's title, designs and default_packs can change", ErrInvalidArgument, f)
 			}
-		case "default_packs":
-			if p.DefaultPacks, err = packNames(req.GetProject().GetDefaultPacks()); err != nil {
-				return nil, err
-			}
-		default:
-			return nil, fmt.Errorf("%w: update_mask names %q; a stored project's title, designs and default_packs can change", ErrInvalidArgument, f)
 		}
-	}
-	if err := s.records.Put(ctx, id, p); err != nil {
-		return nil, err
-	}
-	return p, nil
+		return nil
+	})
 }
 
 // DeleteProject removes a stored project. The designs it lists stay.

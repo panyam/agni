@@ -98,6 +98,51 @@ func (r *DirProjects) Put(ctx context.Context, id string, p *webapi.Project) err
 	return r.recs.Put(ctx, k, b)
 }
 
+// Create writes a new record, or answers ErrAlreadyExists, across servers sharing the records.
+func (r *DirProjects) Create(ctx context.Context, id string, p *webapi.Project) error {
+	k, err := r.key(id)
+	if err != nil {
+		return err
+	}
+	b, err := protojson.Marshal(p)
+	if err != nil {
+		return err
+	}
+	if err := r.recs.Create(ctx, k, b); errors.Is(err, fs.ErrExist) {
+		return fmt.Errorf("%w: %s", service.ErrAlreadyExists, service.ProjectName(id))
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Update changes a record as one change of it (records.Update), running update again when another
+// writer changed the record in between.
+func (r *DirProjects) Update(ctx context.Context, id string, update func(*webapi.Project) error) (*webapi.Project, error) {
+	k, err := r.key(id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: no project %s", service.ErrNotFound, service.ProjectName(id))
+	}
+	var out *webapi.Project
+	err = records.Update(ctx, r.recs, k, func(old []byte, exists bool) ([]byte, error) {
+		if !exists {
+			return nil, fmt.Errorf("%w: no project %s", service.ErrNotFound, service.ProjectName(id))
+		}
+		out = &webapi.Project{}
+		if err := protojson.Unmarshal(old, out); err != nil {
+			return nil, fmt.Errorf("project %s: %w", id, err)
+		}
+		if err := update(out); err != nil {
+			return nil, err
+		}
+		return protojson.Marshal(out)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Delete removes a record, or answers ErrNotFound.
 func (r *DirProjects) Delete(ctx context.Context, id string) error {
 	k, err := r.key(id)
