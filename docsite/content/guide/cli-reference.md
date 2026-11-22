@@ -302,7 +302,7 @@ schematic, else its board.
 
 ### `connections`
 
-The sign-ins an `agni serve --store` reads private repos through (agni issue 1724). Each names where
+The sign-ins an `agni serve --store` reads private repos, buckets and SharePoint folders through (agni issues 1724, 1729, 1730). Each names where
 its secret is, `env:NAME` or `file:/abs/path`, never the secret.
 
 | Subcommand | What it does |
@@ -310,6 +310,9 @@ its secret is, `env:NAME` or `file:/abs/path`, never the secret.
 | `ls` | list the connections, each with its kind, where its secret is, and its status |
 | `add <id> --github-token <ref>` | keep a token connection |
 | `add <id> --github-app <app-id> --installation <id> --key <ref>` | keep a GitHub App installation |
+| `add <id> --aws [--access-key-id <id> --key <ref>] [--role-arn <arn>] [--region <r>]` | keep an AWS connection for `s3://` mounts; with no key, the server's default chain |
+| `add <id> --gcp [--key <ref>]` | keep a Google Cloud connection for `gs://` mounts; with no key, Application Default Credentials |
+| `add <id> --entra-tenant <t> --entra-client <app-id> --entra-auth <how> [--key <ref>] [--cert <ref>]` | keep an Entra connection for `msgraph://` mounts, signing in with a secret, a certificate, a managed identity or workload identity |
 | `rm <id>` | remove a connection no mount reads through |
 
 `agni mounts add <name> <source> --connection <id>` mounts a private repo through one.
@@ -695,6 +698,8 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--datasheets-url <url>` | where the datasheets workbench is served, such as `http://host:8090` for a running `agnids serve`; the landing page links its Datasheets card there, and hides it when this is empty |
 | `--store <url>` | where the server keeps its records, as a folder `file:///srv/agni/meta`, a sqlite file `sqlite:///srv/agni/agni.db`, a postgres database `postgres://agni@db/agni` (password from `PGPASSWORD`) or Datastore `datastore://my-project?namespace=agni`: stored designs and their manifests, projects, snapshot definitions and review runs, and no file bytes. Without it snapshots live in memory, review runs are not kept and no design can be created (see [Running the server](../running-the-server/#the-store-and-the-uploads)) |
 | `--uploads <url>` | where the server keeps uploaded designs' files, as `file:///srv/agni/files`, created if absent: each file once, by hash, served as the mount `uploads`. Needs `--store` |
+| `--msgraph-client-state <ref>` | where the secret Microsoft Graph echoes in each change notification is; with it the server takes notifications at `/hooks/msgraph` and renews each SharePoint mount's subscription (agni issue 1729). Needs `--store` and `--uploads` |
+| `--s3-endpoint <url>`, `--gcs-endpoint <url>`, `--graph-api <url>` | the S3, Cloud Storage or Microsoft Graph API the bucket and SharePoint mounts read, for an S3-compatible store such as MinIO or a national cloud; empty is each service's own (agni issues 1729, 1730) |
 | `--query-budget <work>` | the most work any one query may do, over the query, check and review rpcs alike; a request may ask for less and never more. 0, the default, enforces none (see [A work budget for served queries](../running-the-server/#a-work-budget-for-served-queries)) |
 | `--query-budget-warn <work>` | log every served query that costs more than this, with the query and a suggested budget (default 10,000,000; 0 logs none) |
 | `--design-cache <n>` | how many reads the server keeps between requests (a parse, a derived design, a drawing, a board or a built model, each counting once), each checked against its files on every use (default 15; 0 keeps none; see [Kept reads](../running-the-server/#kept-reads)) |

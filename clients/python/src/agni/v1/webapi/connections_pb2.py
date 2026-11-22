@@ -26,7 +26,7 @@ from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n agni/v1/webapi/connections.proto\x12\x0e\x61gni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb7\x04\n\nConnection\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x32\n\x04kind\x18\x02 \x01(\x0e\x32\x1e.agni.v1.webapi.ConnectionKindR\x04kind\x12!\n\x0c\x64isplay_name\x18\x03 \x01(\tR\x0b\x64isplayName\x12\x19\n\x08\x62\x61se_url\x18\x04 \x01(\tR\x07\x62\x61seUrl\x12\x15\n\x06\x61pp_id\x18\x05 \x01(\tR\x05\x61ppId\x12\'\n\x0finstallation_id\x18\x06 \x01(\x03R\x0einstallationId\x12\x1d\n\nkey_source\x18\x07 \x01(\tR\tkeySource\x12!\n\x0ctoken_source\x18\x08 \x01(\tR\x0btokenSource\x12\x38\n\x06status\x18\t \x01(\x0e\x32 .agni.v1.webapi.ConnectionStatusR\x06status\x12\x1d\n\nlast_error\x18\n \x01(\tR\tlastError\x12;\n\x0b\x63reate_time\x18\x0b \x01(\x0b\x32\x1a.google.protobuf.TimestampR\ncreateTime\x12>\n\rlast_use_time\x18\x0c \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x0blastUseTime\x12\x35\n\x05scope\x18\r \x01(\x0e\x32\x1f.agni.v1.webapi.ConnectionScopeR\x05scope\x12\x14\n\x05owner\x18\x0e \x01(\tR\x05owner\"\x99\x01\n\x17\x43reateConnectionRequest\x12#\n\rconnection_id\x18\x01 \x01(\tR\x0c\x63onnectionId\x12:\n\nconnection\x18\x02 \x01(\x0b\x32\x1a.agni.v1.webapi.ConnectionR\nconnection\x12\x1d\n\nuser_token\x18\x03 \x01(\tR\tuserToken\"*\n\x14GetConnectionRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"\x18\n\x16ListConnectionsRequest\"W\n\x17ListConnectionsResponse\x12<\n\x0b\x63onnections\x18\x01 \x03(\x0b\x32\x1a.agni.v1.webapi.ConnectionR\x0b\x63onnections\"-\n\x17\x44\x65leteConnectionRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name*m\n\x0f\x43onnectionScope\x12 \n\x1c\x43ONNECTION_SCOPE_UNSPECIFIED\x10\x00\x12\x1b\n\x17\x43ONNECTION_SCOPE_SERVER\x10\x01\x12\x1b\n\x17\x43ONNECTION_SCOPE_PERSON\x10\x02*\x94\x01\n\x0e\x43onnectionKind\x12\x1f\n\x1b\x43ONNECTION_KIND_UNSPECIFIED\x10\x00\x12\x1e\n\x1a\x43ONNECTION_KIND_GITHUB_APP\x10\x01\x12 \n\x1c\x43ONNECTION_KIND_GITHUB_TOKEN\x10\x02\x12\x1f\n\x1b\x43ONNECTION_KIND_GITHUB_USER\x10\x03*m\n\x10\x43onnectionStatus\x12!\n\x1d\x43ONNECTION_STATUS_UNSPECIFIED\x10\x00\x12\x18\n\x14\x43ONNECTION_STATUS_OK\x10\x01\x12\x1c\n\x18\x43ONNECTION_STATUS_FAILED\x10\x02\x32\xf8\x02\n\x11\x43onnectionService\x12W\n\x10\x43reateConnection\x12\'.agni.v1.webapi.CreateConnectionRequest\x1a\x1a.agni.v1.webapi.Connection\x12Q\n\rGetConnection\x12$.agni.v1.webapi.GetConnectionRequest\x1a\x1a.agni.v1.webapi.Connection\x12\x62\n\x0fListConnections\x12&.agni.v1.webapi.ListConnectionsRequest\x1a\'.agni.v1.webapi.ListConnectionsResponse\x12S\n\x10\x44\x65leteConnection\x12\'.agni.v1.webapi.DeleteConnectionRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n agni/v1/webapi/connections.proto\x12\x0e\x61gni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa3\x06\n\nConnection\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x32\n\x04kind\x18\x02 \x01(\x0e\x32\x1e.agni.v1.webapi.ConnectionKindR\x04kind\x12!\n\x0c\x64isplay_name\x18\x03 \x01(\tR\x0b\x64isplayName\x12\x19\n\x08\x62\x61se_url\x18\x04 \x01(\tR\x07\x62\x61seUrl\x12\x15\n\x06\x61pp_id\x18\x05 \x01(\tR\x05\x61ppId\x12\'\n\x0finstallation_id\x18\x06 \x01(\x03R\x0einstallationId\x12\x1d\n\nkey_source\x18\x07 \x01(\tR\tkeySource\x12!\n\x0ctoken_source\x18\x08 \x01(\tR\x0btokenSource\x12\x38\n\x06status\x18\t \x01(\x0e\x32 .agni.v1.webapi.ConnectionStatusR\x06status\x12\x1d\n\nlast_error\x18\n \x01(\tR\tlastError\x12;\n\x0b\x63reate_time\x18\x0b \x01(\x0b\x32\x1a.google.protobuf.TimestampR\ncreateTime\x12>\n\rlast_use_time\x18\x0c \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x0blastUseTime\x12\x35\n\x05scope\x18\r \x01(\x0e\x32\x1f.agni.v1.webapi.ConnectionScopeR\x05scope\x12\x14\n\x05owner\x18\x0e \x01(\tR\x05owner\x12\"\n\raccess_key_id\x18\x0f \x01(\tR\x0b\x61\x63\x63\x65ssKeyId\x12\x19\n\x08role_arn\x18\x10 \x01(\tR\x07roleArn\x12\x16\n\x06region\x18\x11 \x01(\tR\x06region\x12\x1b\n\ttenant_id\x18\x12 \x01(\tR\x08tenantId\x12\x1b\n\tclient_id\x18\x13 \x01(\tR\x08\x63lientId\x12\x38\n\nentra_auth\x18\x14 \x01(\x0e\x32\x19.agni.v1.webapi.EntraAuthR\tentraAuth\x12\x1f\n\x0b\x63\x65rt_source\x18\x15 \x01(\tR\ncertSource\"\x99\x01\n\x17\x43reateConnectionRequest\x12#\n\rconnection_id\x18\x01 \x01(\tR\x0c\x63onnectionId\x12:\n\nconnection\x18\x02 \x01(\x0b\x32\x1a.agni.v1.webapi.ConnectionR\nconnection\x12\x1d\n\nuser_token\x18\x03 \x01(\tR\tuserToken\"*\n\x14GetConnectionRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"\x18\n\x16ListConnectionsRequest\"W\n\x17ListConnectionsResponse\x12<\n\x0b\x63onnections\x18\x01 \x03(\x0b\x32\x1a.agni.v1.webapi.ConnectionR\x0b\x63onnections\"-\n\x17\x44\x65leteConnectionRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name*\x9d\x01\n\tEntraAuth\x12\x1a\n\x16\x45NTRA_AUTH_UNSPECIFIED\x10\x00\x12\x15\n\x11\x45NTRA_AUTH_SECRET\x10\x01\x12\x1a\n\x16\x45NTRA_AUTH_CERTIFICATE\x10\x02\x12\x1f\n\x1b\x45NTRA_AUTH_MANAGED_IDENTITY\x10\x03\x12 \n\x1c\x45NTRA_AUTH_WORKLOAD_IDENTITY\x10\x04*m\n\x0f\x43onnectionScope\x12 \n\x1c\x43ONNECTION_SCOPE_UNSPECIFIED\x10\x00\x12\x1b\n\x17\x43ONNECTION_SCOPE_SERVER\x10\x01\x12\x1b\n\x17\x43ONNECTION_SCOPE_PERSON\x10\x02*\xe1\x01\n\x0e\x43onnectionKind\x12\x1f\n\x1b\x43ONNECTION_KIND_UNSPECIFIED\x10\x00\x12\x1e\n\x1a\x43ONNECTION_KIND_GITHUB_APP\x10\x01\x12 \n\x1c\x43ONNECTION_KIND_GITHUB_TOKEN\x10\x02\x12\x1f\n\x1b\x43ONNECTION_KIND_GITHUB_USER\x10\x03\x12\x17\n\x13\x43ONNECTION_KIND_AWS\x10\x04\x12\x17\n\x13\x43ONNECTION_KIND_GCP\x10\x05\x12\x19\n\x15\x43ONNECTION_KIND_ENTRA\x10\x06*m\n\x10\x43onnectionStatus\x12!\n\x1d\x43ONNECTION_STATUS_UNSPECIFIED\x10\x00\x12\x18\n\x14\x43ONNECTION_STATUS_OK\x10\x01\x12\x1c\n\x18\x43ONNECTION_STATUS_FAILED\x10\x02\x32\xf8\x02\n\x11\x43onnectionService\x12W\n\x10\x43reateConnection\x12\'.agni.v1.webapi.CreateConnectionRequest\x1a\x1a.agni.v1.webapi.Connection\x12Q\n\rGetConnection\x12$.agni.v1.webapi.GetConnectionRequest\x1a\x1a.agni.v1.webapi.Connection\x12\x62\n\x0fListConnections\x12&.agni.v1.webapi.ListConnectionsRequest\x1a\'.agni.v1.webapi.ListConnectionsResponse\x12S\n\x10\x44\x65leteConnection\x12\'.agni.v1.webapi.DeleteConnectionRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,24 +34,26 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agni.v1.webapi.connections_
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
-  _globals['_CONNECTIONSCOPE']._serialized_start=1046
-  _globals['_CONNECTIONSCOPE']._serialized_end=1155
-  _globals['_CONNECTIONKIND']._serialized_start=1158
-  _globals['_CONNECTIONKIND']._serialized_end=1306
-  _globals['_CONNECTIONSTATUS']._serialized_start=1308
-  _globals['_CONNECTIONSTATUS']._serialized_end=1417
+  _globals['_ENTRAAUTH']._serialized_start=1283
+  _globals['_ENTRAAUTH']._serialized_end=1440
+  _globals['_CONNECTIONSCOPE']._serialized_start=1442
+  _globals['_CONNECTIONSCOPE']._serialized_end=1551
+  _globals['_CONNECTIONKIND']._serialized_start=1554
+  _globals['_CONNECTIONKIND']._serialized_end=1779
+  _globals['_CONNECTIONSTATUS']._serialized_start=1781
+  _globals['_CONNECTIONSTATUS']._serialized_end=1890
   _globals['_CONNECTION']._serialized_start=115
-  _globals['_CONNECTION']._serialized_end=682
-  _globals['_CREATECONNECTIONREQUEST']._serialized_start=685
-  _globals['_CREATECONNECTIONREQUEST']._serialized_end=838
-  _globals['_GETCONNECTIONREQUEST']._serialized_start=840
-  _globals['_GETCONNECTIONREQUEST']._serialized_end=882
-  _globals['_LISTCONNECTIONSREQUEST']._serialized_start=884
-  _globals['_LISTCONNECTIONSREQUEST']._serialized_end=908
-  _globals['_LISTCONNECTIONSRESPONSE']._serialized_start=910
-  _globals['_LISTCONNECTIONSRESPONSE']._serialized_end=997
-  _globals['_DELETECONNECTIONREQUEST']._serialized_start=999
-  _globals['_DELETECONNECTIONREQUEST']._serialized_end=1044
-  _globals['_CONNECTIONSERVICE']._serialized_start=1420
-  _globals['_CONNECTIONSERVICE']._serialized_end=1796
+  _globals['_CONNECTION']._serialized_end=918
+  _globals['_CREATECONNECTIONREQUEST']._serialized_start=921
+  _globals['_CREATECONNECTIONREQUEST']._serialized_end=1074
+  _globals['_GETCONNECTIONREQUEST']._serialized_start=1076
+  _globals['_GETCONNECTIONREQUEST']._serialized_end=1118
+  _globals['_LISTCONNECTIONSREQUEST']._serialized_start=1120
+  _globals['_LISTCONNECTIONSREQUEST']._serialized_end=1144
+  _globals['_LISTCONNECTIONSRESPONSE']._serialized_start=1146
+  _globals['_LISTCONNECTIONSRESPONSE']._serialized_end=1233
+  _globals['_DELETECONNECTIONREQUEST']._serialized_start=1235
+  _globals['_DELETECONNECTIONREQUEST']._serialized_end=1280
+  _globals['_CONNECTIONSERVICE']._serialized_start=1893
+  _globals['_CONNECTIONSERVICE']._serialized_end=2269
 # @@protoc_insertion_point(module_scope)

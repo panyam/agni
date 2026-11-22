@@ -118,7 +118,7 @@ type WorkspaceService struct {
 	guard *AccessGuard
 	// hooks makes a mount's GitHub webhook with hookSecret, and both are set by WithWebhooks.
 	hooks      WebhookMaker
-	hookSecret []byte
+	hookSecrets WebhookSecrets
 	// signInURL is where a person signs in with GitHub, and is set by WithSignInURL.
 	signInURL string
 }

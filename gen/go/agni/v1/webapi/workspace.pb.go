@@ -9,6 +9,7 @@ package webapi
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -33,6 +34,14 @@ const (
 	MountKind_MOUNT_KIND_UPLOADS MountKind = 2
 	// MOUNT_KIND_GITHUB is a snapshot of a GitHub repo at one commit, kept in --uploads.
 	MountKind_MOUNT_KIND_GITHUB MountKind = 3
+	// MOUNT_KIND_S3 is a snapshot of an S3 bucket prefix, each object at the version it had, kept in
+	// --uploads (agni issue 1730).
+	MountKind_MOUNT_KIND_S3 MountKind = 4
+	// MOUNT_KIND_GCS is the same for a Google Cloud Storage bucket prefix (agni issue 1730).
+	MountKind_MOUNT_KIND_GCS MountKind = 5
+	// MOUNT_KIND_MSGRAPH is a snapshot of a SharePoint or OneDrive folder through Microsoft Graph,
+	// each file at the version it had, kept in --uploads (agni issue 1729).
+	MountKind_MOUNT_KIND_MSGRAPH MountKind = 6
 )
 
 // Enum value maps for MountKind.
@@ -42,12 +51,18 @@ var (
 		1: "MOUNT_KIND_FILE",
 		2: "MOUNT_KIND_UPLOADS",
 		3: "MOUNT_KIND_GITHUB",
+		4: "MOUNT_KIND_S3",
+		5: "MOUNT_KIND_GCS",
+		6: "MOUNT_KIND_MSGRAPH",
 	}
 	MountKind_value = map[string]int32{
 		"MOUNT_KIND_UNSPECIFIED": 0,
 		"MOUNT_KIND_FILE":        1,
 		"MOUNT_KIND_UPLOADS":     2,
 		"MOUNT_KIND_GITHUB":      3,
+		"MOUNT_KIND_S3":          4,
+		"MOUNT_KIND_GCS":         5,
+		"MOUNT_KIND_MSGRAPH":     6,
 	}
 )
 
@@ -288,10 +303,15 @@ type CreateMountRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the new mount's handle. It follows the rules of a mount:// authority.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// source names what to mount, as a URL. github://<owner>/<repo> is the one source this build
-	// makes. A public repo needs no sign-in, and a private one reads through a connection.
+	// source names what to mount, as a URL: github://<owner>/<repo>, s3://<bucket>/<prefix>,
+	// gs://<bucket>/<prefix>, or msgraph://sites/<site>/drives/<drive>/root/<folder> (also
+	// msgraph://drives/<drive>/root/<folder>) for SharePoint and OneDrive (agni issues 1729, 1730).
+	// A public repo or bucket needs no sign-in. A private one reads through a connection: a GitHub
+	// kind for a repo, CONNECTION_KIND_AWS for S3, CONNECTION_KIND_GCP for Cloud Storage, and
+	// CONNECTION_KIND_ENTRA for Graph, which always needs one.
 	Source string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	// ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
+	// ref is the tag, branch or commit to snapshot, for a repo. Empty means the repo's default branch.
+	// A bucket or a drive has no refs, so ref stays empty and the snapshot pins each file's version.
 	Ref string `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
 	// connection is the connection the server reads the source through, "connections/{connection}"
 	// (agni issue 1724). Empty reads a public source with no sign-in.
@@ -443,9 +463,10 @@ type CreateMountWebhookRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the mount's handle.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// url is where GitHub sends the pushes: the server's /hooks/github as GitHub reaches it, such as
-	// "https://agni.example.com/hooks/github". The server can't tell its own public address, so the
-	// caller names it.
+	// url is where the host sends the changes: the server's /hooks/github as GitHub reaches it, such
+	// as "https://agni.example.com/hooks/github", or its /hooks/msgraph for a SharePoint mount, which
+	// Graph requires to be https. The server can't tell its own public address, so the caller names
+	// it.
 	Url           string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -495,14 +516,15 @@ func (x *CreateMountWebhookRequest) GetUrl() string {
 	return ""
 }
 
-// MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server.
+// MountWebhook is a GitHub webhook that sends a mount's repo's pushes to the server, or a Microsoft
+// Graph subscription that sends a SharePoint mount's drive changes (agni issue 1729).
 type MountWebhook struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// mount is the mount's handle.
 	Mount string `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
 	// source is the repo the hook is on, such as "github://acme/board".
 	Source string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	// id is GitHub's id for the hook.
+	// id is GitHub's id for the hook, and 0 for a Graph subscription.
 	Id int64 `protobuf:"varint,3,opt,name=id,proto3" json:"id,omitempty"`
 	// url is where the hook sends its deliveries.
 	Url string `protobuf:"bytes,4,opt,name=url,proto3" json:"url,omitempty"`
@@ -510,9 +532,14 @@ type MountWebhook struct {
 	Events []string `protobuf:"bytes,5,rep,name=events,proto3" json:"events,omitempty"`
 	// created is true when the call made the hook, and false when a hook sending to url was there and
 	// was updated.
-	Created       bool `protobuf:"varint,6,opt,name=created,proto3" json:"created,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Created bool `protobuf:"varint,6,opt,name=created,proto3" json:"created,omitempty"`
+	// subscription_id is Graph's id for a subscription, and empty for a GitHub hook. Graph ends a
+	// drive subscription at expire_time, about 30 days on, unless the server renews it first, which
+	// it does on its own.
+	SubscriptionId string                 `protobuf:"bytes,7,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	ExpireTime     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=expire_time,json=expireTime,proto3" json:"expire_time,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MountWebhook) Reset() {
@@ -585,6 +612,20 @@ func (x *MountWebhook) GetCreated() bool {
 		return x.Created
 	}
 	return false
+}
+
+func (x *MountWebhook) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *MountWebhook) GetExpireTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpireTime
+	}
+	return nil
 }
 
 type GetMountRequest struct {
@@ -1561,7 +1602,7 @@ var File_agni_v1_webapi_workspace_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\n" +
-	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\x1a\x1cagni/v1/webapi/project.proto\"\xa9\x02\n" +
+	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cagni/v1/webapi/project.proto\"\xa9\x02\n" +
 	"\x05Mount\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n" +
@@ -1589,14 +1630,17 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x13DeleteMountResponse\"A\n" +
 	"\x19CreateMountWebhookRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
-	"\x03url\x18\x02 \x01(\tR\x03url\"\x90\x01\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\"\xf6\x01\n" +
 	"\fMountWebhook\x12\x14\n" +
 	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12\x0e\n" +
 	"\x02id\x18\x03 \x01(\x03R\x02id\x12\x10\n" +
 	"\x03url\x18\x04 \x01(\tR\x03url\x12\x16\n" +
 	"\x06events\x18\x05 \x03(\tR\x06events\x12\x18\n" +
-	"\acreated\x18\x06 \x01(\bR\acreated\"%\n" +
+	"\acreated\x18\x06 \x01(\bR\acreated\x12'\n" +
+	"\x0fsubscription_id\x18\a \x01(\tR\x0esubscriptionId\x12;\n" +
+	"\vexpire_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"expireTime\"%\n" +
 	"\x0fGetMountRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"I\n" +
 	"\x11ListMountsRequest\x12.\n" +
@@ -1660,12 +1704,15 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\n" +
 	"UnreadFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason*k\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason*\xaa\x01\n" +
 	"\tMountKind\x12\x1a\n" +
 	"\x16MOUNT_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fMOUNT_KIND_FILE\x10\x01\x12\x16\n" +
 	"\x12MOUNT_KIND_UPLOADS\x10\x02\x12\x15\n" +
-	"\x11MOUNT_KIND_GITHUB\x10\x03*T\n" +
+	"\x11MOUNT_KIND_GITHUB\x10\x03\x12\x11\n" +
+	"\rMOUNT_KIND_S3\x10\x04\x12\x12\n" +
+	"\x0eMOUNT_KIND_GCS\x10\x05\x12\x16\n" +
+	"\x12MOUNT_KIND_MSGRAPH\x10\x06*T\n" +
 	"\bFileKind\x12\x19\n" +
 	"\x15FILE_KIND_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10FILE_KIND_DESIGN\x10\x01\x12\x17\n" +
@@ -1720,42 +1767,44 @@ var file_agni_v1_webapi_workspace_proto_goTypes = []any{
 	(*ProposeDesignsResponse)(nil),    // 20: agni.v1.webapi.ProposeDesignsResponse
 	(*ProposedDesign)(nil),            // 21: agni.v1.webapi.ProposedDesign
 	(*UnreadFile)(nil),                // 22: agni.v1.webapi.UnreadFile
-	(*Design)(nil),                    // 23: agni.v1.webapi.Design
+	(*timestamppb.Timestamp)(nil),     // 23: google.protobuf.Timestamp
+	(*Design)(nil),                    // 24: agni.v1.webapi.Design
 }
 var file_agni_v1_webapi_workspace_proto_depIdxs = []int32{
 	0,  // 0: agni.v1.webapi.Mount.kind:type_name -> agni.v1.webapi.MountKind
-	1,  // 1: agni.v1.webapi.ListMountsRequest.opens:type_name -> agni.v1.webapi.FileKind
-	2,  // 2: agni.v1.webapi.ListMountsResponse.mounts:type_name -> agni.v1.webapi.Mount
-	1,  // 3: agni.v1.webapi.DirEntry.kind:type_name -> agni.v1.webapi.FileKind
-	1,  // 4: agni.v1.webapi.ListDirRequest.opens:type_name -> agni.v1.webapi.FileKind
-	11, // 5: agni.v1.webapi.ListDirResponse.entries:type_name -> agni.v1.webapi.DirEntry
-	16, // 6: agni.v1.webapi.ListDesignFilesResponse.files:type_name -> agni.v1.webapi.DesignFile
-	21, // 7: agni.v1.webapi.ProposeDesignsResponse.designs:type_name -> agni.v1.webapi.ProposedDesign
-	22, // 8: agni.v1.webapi.ProposeDesignsResponse.unread:type_name -> agni.v1.webapi.UnreadFile
-	23, // 9: agni.v1.webapi.ProposedDesign.design:type_name -> agni.v1.webapi.Design
-	9,  // 10: agni.v1.webapi.WorkspaceService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
-	8,  // 11: agni.v1.webapi.WorkspaceService.GetMount:input_type -> agni.v1.webapi.GetMountRequest
-	3,  // 12: agni.v1.webapi.WorkspaceService.CreateMount:input_type -> agni.v1.webapi.CreateMountRequest
-	4,  // 13: agni.v1.webapi.WorkspaceService.DeleteMount:input_type -> agni.v1.webapi.DeleteMountRequest
-	6,  // 14: agni.v1.webapi.WorkspaceService.CreateMountWebhook:input_type -> agni.v1.webapi.CreateMountWebhookRequest
-	12, // 15: agni.v1.webapi.WorkspaceService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
-	14, // 16: agni.v1.webapi.WorkspaceService.ListDesignFiles:input_type -> agni.v1.webapi.ListDesignFilesRequest
-	19, // 17: agni.v1.webapi.WorkspaceService.ProposeDesigns:input_type -> agni.v1.webapi.ProposeDesignsRequest
-	17, // 18: agni.v1.webapi.WorkspaceService.DeclareCompanion:input_type -> agni.v1.webapi.DeclareCompanionRequest
-	10, // 19: agni.v1.webapi.WorkspaceService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
-	2,  // 20: agni.v1.webapi.WorkspaceService.GetMount:output_type -> agni.v1.webapi.Mount
-	2,  // 21: agni.v1.webapi.WorkspaceService.CreateMount:output_type -> agni.v1.webapi.Mount
-	5,  // 22: agni.v1.webapi.WorkspaceService.DeleteMount:output_type -> agni.v1.webapi.DeleteMountResponse
-	7,  // 23: agni.v1.webapi.WorkspaceService.CreateMountWebhook:output_type -> agni.v1.webapi.MountWebhook
-	13, // 24: agni.v1.webapi.WorkspaceService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
-	15, // 25: agni.v1.webapi.WorkspaceService.ListDesignFiles:output_type -> agni.v1.webapi.ListDesignFilesResponse
-	20, // 26: agni.v1.webapi.WorkspaceService.ProposeDesigns:output_type -> agni.v1.webapi.ProposeDesignsResponse
-	18, // 27: agni.v1.webapi.WorkspaceService.DeclareCompanion:output_type -> agni.v1.webapi.DeclareCompanionResponse
-	19, // [19:28] is the sub-list for method output_type
-	10, // [10:19] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	23, // 1: agni.v1.webapi.MountWebhook.expire_time:type_name -> google.protobuf.Timestamp
+	1,  // 2: agni.v1.webapi.ListMountsRequest.opens:type_name -> agni.v1.webapi.FileKind
+	2,  // 3: agni.v1.webapi.ListMountsResponse.mounts:type_name -> agni.v1.webapi.Mount
+	1,  // 4: agni.v1.webapi.DirEntry.kind:type_name -> agni.v1.webapi.FileKind
+	1,  // 5: agni.v1.webapi.ListDirRequest.opens:type_name -> agni.v1.webapi.FileKind
+	11, // 6: agni.v1.webapi.ListDirResponse.entries:type_name -> agni.v1.webapi.DirEntry
+	16, // 7: agni.v1.webapi.ListDesignFilesResponse.files:type_name -> agni.v1.webapi.DesignFile
+	21, // 8: agni.v1.webapi.ProposeDesignsResponse.designs:type_name -> agni.v1.webapi.ProposedDesign
+	22, // 9: agni.v1.webapi.ProposeDesignsResponse.unread:type_name -> agni.v1.webapi.UnreadFile
+	24, // 10: agni.v1.webapi.ProposedDesign.design:type_name -> agni.v1.webapi.Design
+	9,  // 11: agni.v1.webapi.WorkspaceService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
+	8,  // 12: agni.v1.webapi.WorkspaceService.GetMount:input_type -> agni.v1.webapi.GetMountRequest
+	3,  // 13: agni.v1.webapi.WorkspaceService.CreateMount:input_type -> agni.v1.webapi.CreateMountRequest
+	4,  // 14: agni.v1.webapi.WorkspaceService.DeleteMount:input_type -> agni.v1.webapi.DeleteMountRequest
+	6,  // 15: agni.v1.webapi.WorkspaceService.CreateMountWebhook:input_type -> agni.v1.webapi.CreateMountWebhookRequest
+	12, // 16: agni.v1.webapi.WorkspaceService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
+	14, // 17: agni.v1.webapi.WorkspaceService.ListDesignFiles:input_type -> agni.v1.webapi.ListDesignFilesRequest
+	19, // 18: agni.v1.webapi.WorkspaceService.ProposeDesigns:input_type -> agni.v1.webapi.ProposeDesignsRequest
+	17, // 19: agni.v1.webapi.WorkspaceService.DeclareCompanion:input_type -> agni.v1.webapi.DeclareCompanionRequest
+	10, // 20: agni.v1.webapi.WorkspaceService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
+	2,  // 21: agni.v1.webapi.WorkspaceService.GetMount:output_type -> agni.v1.webapi.Mount
+	2,  // 22: agni.v1.webapi.WorkspaceService.CreateMount:output_type -> agni.v1.webapi.Mount
+	5,  // 23: agni.v1.webapi.WorkspaceService.DeleteMount:output_type -> agni.v1.webapi.DeleteMountResponse
+	7,  // 24: agni.v1.webapi.WorkspaceService.CreateMountWebhook:output_type -> agni.v1.webapi.MountWebhook
+	13, // 25: agni.v1.webapi.WorkspaceService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
+	15, // 26: agni.v1.webapi.WorkspaceService.ListDesignFiles:output_type -> agni.v1.webapi.ListDesignFilesResponse
+	20, // 27: agni.v1.webapi.WorkspaceService.ProposeDesigns:output_type -> agni.v1.webapi.ProposeDesignsResponse
+	18, // 28: agni.v1.webapi.WorkspaceService.DeclareCompanion:output_type -> agni.v1.webapi.DeclareCompanionResponse
+	20, // [20:29] is the sub-list for method output_type
+	11, // [11:20] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_workspace_proto_init() }

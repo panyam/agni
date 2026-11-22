@@ -102,9 +102,13 @@ func (s *ConnectionService) CreateConnection(ctx context.Context, req *webapi.Cr
 	c := connections.Connection{
 		ID: req.GetConnectionId(), Scope: connections.ScopeServer, Name: in.GetDisplayName(), BaseURL: in.GetBaseUrl(),
 		AppID: in.GetAppId(), InstallationID: in.GetInstallationId(), KeyRef: in.GetKeySource(), TokenRef: in.GetTokenSource(),
+		AccessKeyID: in.GetAccessKeyId(), RoleARN: in.GetRoleArn(), Region: in.GetRegion(),
+		TenantID: in.GetTenantId(), ClientID: in.GetClientId(), CertRef: in.GetCertSource(),
 		Status: connections.StatusOK, Created: time.Now().UTC(),
 	}
-	if c.BaseURL == "" {
+	// The server's GitHub API is a GitHub connection's default. An Entra connection's BaseURL is its
+	// authority host instead, and AWS and GCP use none.
+	if c.BaseURL == "" && githubKind(in.GetKind()) {
 		c.BaseURL = s.baseURL
 	}
 	person := in.GetScope() == webapi.ConnectionScope_CONNECTION_SCOPE_PERSON || in.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER
@@ -132,8 +136,19 @@ func (s *ConnectionService) CreateConnection(ctx context.Context, req *webapi.Cr
 		c.Kind = connections.KindGitHubApp
 	case in.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN:
 		c.Kind = connections.KindGitHubToken
+	case in.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_AWS:
+		c.Kind = connections.KindAWS
+	case in.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GCP:
+		c.Kind = connections.KindGCP
+	case in.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_ENTRA:
+		c.Kind = connections.KindEntra
+		auth, ok := entraAuths[in.GetEntraAuth()]
+		if !ok {
+			return nil, fmt.Errorf("%w: a CONNECTION_KIND_ENTRA connection names its entra_auth: secret, certificate, managed identity or workload identity", ErrInvalidArgument)
+		}
+		c.EntraAuth = auth
 	default:
-		return nil, fmt.Errorf("%w: a connection's kind is CONNECTION_KIND_GITHUB_APP, CONNECTION_KIND_GITHUB_TOKEN or CONNECTION_KIND_GITHUB_USER", ErrInvalidArgument)
+		return nil, fmt.Errorf("%w: a connection's kind is CONNECTION_KIND_GITHUB_APP, CONNECTION_KIND_GITHUB_TOKEN, CONNECTION_KIND_GITHUB_USER, CONNECTION_KIND_AWS, CONNECTION_KIND_GCP or CONNECTION_KIND_ENTRA", ErrInvalidArgument)
 	}
 	if err := c.Validate(); err != nil {
 		return nil, ConnectionErr(err)
@@ -158,6 +173,35 @@ func (s *ConnectionService) CreateConnection(ctx context.Context, req *webapi.Cr
 		}
 	}
 	return connectionProto(c), nil
+}
+
+// githubKind reports whether k signs in to GitHub, so an empty base_url takes the server's GitHub
+// API.
+func githubKind(k webapi.ConnectionKind) bool {
+	switch k {
+	case webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP, webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN,
+		webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER, webapi.ConnectionKind_CONNECTION_KIND_UNSPECIFIED:
+		return true
+	}
+	return false
+}
+
+// entraAuths maps the wire's EntraAuth onto goapplib's, both ways (agni issue 1729).
+var entraAuths = map[webapi.EntraAuth]connections.EntraAuth{
+	webapi.EntraAuth_ENTRA_AUTH_SECRET:            connections.EntraSecret,
+	webapi.EntraAuth_ENTRA_AUTH_CERTIFICATE:       connections.EntraCertificate,
+	webapi.EntraAuth_ENTRA_AUTH_MANAGED_IDENTITY:  connections.EntraManagedIdentity,
+	webapi.EntraAuth_ENTRA_AUTH_WORKLOAD_IDENTITY: connections.EntraWorkloadIdentity,
+}
+
+// connectionKinds is goapplib's kind for each wire kind a connection record can hold.
+var connectionKinds = map[connections.Kind]webapi.ConnectionKind{
+	connections.KindGitHubApp:   webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP,
+	connections.KindGitHubToken: webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN,
+	connections.KindGitHubUser:  webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER,
+	connections.KindAWS:         webapi.ConnectionKind_CONNECTION_KIND_AWS,
+	connections.KindGCP:         webapi.ConnectionKind_CONNECTION_KIND_GCP,
+	connections.KindEntra:       webapi.ConnectionKind_CONNECTION_KIND_ENTRA,
 }
 
 // taken is ErrAlreadyExists when owner keeps a connection id, where "" is the server.
@@ -256,14 +300,13 @@ func connectionProto(c connections.Connection) *webapi.Connection {
 	out := &webapi.Connection{
 		Name: ConnectionName(c.ID), DisplayName: c.Name, BaseUrl: c.BaseURL, AppId: c.AppID, InstallationId: c.InstallationID,
 		KeySource: c.KeyRef, TokenSource: c.TokenRef, LastError: c.LastError, Status: webapi.ConnectionStatus_CONNECTION_STATUS_OK,
+		AccessKeyId: c.AccessKeyID, RoleArn: c.RoleARN, Region: c.Region, TenantId: c.TenantID, ClientId: c.ClientID, CertSource: c.CertRef,
+		Kind: connectionKinds[c.Kind],
 	}
-	switch c.Kind {
-	case connections.KindGitHubApp:
-		out.Kind = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_APP
-	case connections.KindGitHubToken:
-		out.Kind = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_TOKEN
-	case connections.KindGitHubUser:
-		out.Kind = webapi.ConnectionKind_CONNECTION_KIND_GITHUB_USER
+	for wire, auth := range entraAuths {
+		if c.EntraAuth == auth {
+			out.EntraAuth = wire
+		}
 	}
 	out.Scope, out.Owner = webapi.ConnectionScope_CONNECTION_SCOPE_SERVER, c.Owner
 	if c.Scope == connections.ScopePerson {

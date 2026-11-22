@@ -126,7 +126,7 @@ public enum ConnectionScope
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return io.github.panyam.agni.v1.webapi.ConnectionsProto.getDescriptor().getEnumType(0);
+    return io.github.panyam.agni.v1.webapi.ConnectionsProto.getDescriptor().getEnumType(1);
   }
 
   private static final ConnectionScope[] VALUES = values();

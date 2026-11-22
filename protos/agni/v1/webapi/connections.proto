@@ -54,8 +54,11 @@ message Connection {
   // app_id and installation_id identify a GitHub App installation, for CONNECTION_KIND_GITHUB_APP.
   string app_id = 5;
   int64 installation_id = 6;
-  // key_source is where the App's private key is, "env:NAME" or "file:/abs/path", for
-  // CONNECTION_KIND_GITHUB_APP.
+  // key_source is where a secret is, "env:NAME" or "file:/abs/path": the App's private key for
+  // CONNECTION_KIND_GITHUB_APP, the secret access key for CONNECTION_KIND_AWS, the service account
+  // key file for CONNECTION_KIND_GCP, and for CONNECTION_KIND_ENTRA the client secret, the
+  // certificate's private key, or the workload identity token file, as entra_auth says. Empty for
+  // AWS, GCP and an Entra managed identity takes the host's own credentials.
   string key_source = 7;
   // token_source is where the token is, "env:NAME" or "file:/abs/path", for
   // CONNECTION_KIND_GITHUB_TOKEN.
@@ -73,6 +76,40 @@ message Connection {
   // owner is the subject of the person a CONNECTION_SCOPE_PERSON connection belongs to, the caller
   // who made it. It is empty for a server connection. Output only.
   string owner = 14;
+  // access_key_id is an AWS access key's id, for CONNECTION_KIND_AWS. It is set exactly when
+  // key_source names the secret access key. AWS doesn't treat it as a secret.
+  string access_key_id = 15;
+  // role_arn is a role a CONNECTION_KIND_AWS connection assumes before it signs, such as
+  // "arn:aws:iam::123456789012:role/reader". Empty assumes none.
+  string role_arn = 16;
+  // region is a CONNECTION_KIND_AWS connection's region, such as "us-east-1".
+  string region = 17;
+  // tenant_id and client_id are a CONNECTION_KIND_ENTRA app registration: its Entra tenant, as a
+  // GUID or a domain, and its application id. For a managed identity, client_id picks a
+  // user-assigned identity and may be empty.
+  string tenant_id = 18;
+  string client_id = 19;
+  // entra_auth says how a CONNECTION_KIND_ENTRA connection proves it is its app registration.
+  EntraAuth entra_auth = 20;
+  // cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
+  // "file:/abs/path". Its private key is at key_source.
+  string cert_source = 21;
+}
+
+// EntraAuth says how a CONNECTION_KIND_ENTRA connection signs in.
+enum EntraAuth {
+  ENTRA_AUTH_UNSPECIFIED = 0;
+  // ENTRA_AUTH_SECRET sends the client secret at key_source.
+  ENTRA_AUTH_SECRET = 1;
+  // ENTRA_AUTH_CERTIFICATE signs with the private key at key_source and names the certificate at
+  // cert_source.
+  ENTRA_AUTH_CERTIFICATE = 2;
+  // ENTRA_AUTH_MANAGED_IDENTITY asks the Azure host's managed identity for a token, so the
+  // connection holds no secret.
+  ENTRA_AUTH_MANAGED_IDENTITY = 3;
+  // ENTRA_AUTH_WORKLOAD_IDENTITY sends the Kubernetes service account token in the file at
+  // key_source, as AKS workload identity does.
+  ENTRA_AUTH_WORKLOAD_IDENTITY = 4;
 }
 
 enum ConnectionScope {
@@ -95,6 +132,16 @@ enum ConnectionKind {
   // CONNECTION_KIND_GITHUB_USER signs in as one person with their own GitHub token. It is always
   // CONNECTION_SCOPE_PERSON, and the server keeps the token sealed rather than naming where it is.
   CONNECTION_KIND_GITHUB_USER = 3;
+  // CONNECTION_KIND_AWS signs S3 requests: with the key pair access_key_id and key_source, or with
+  // the AWS SDK's default chain, such as an instance or IRSA role. It is a server connection only
+  // (agni issue 1730).
+  CONNECTION_KIND_AWS = 4;
+  // CONNECTION_KIND_GCP signs Cloud Storage requests with a service account key at key_source, or
+  // with Application Default Credentials. It is a server connection only (agni issue 1730).
+  CONNECTION_KIND_GCP = 5;
+  // CONNECTION_KIND_ENTRA signs Microsoft Graph requests as an Entra app registration, for
+  // SharePoint and OneDrive. It is a server connection only (agni issue 1729).
+  CONNECTION_KIND_ENTRA = 6;
 }
 
 enum ConnectionStatus {

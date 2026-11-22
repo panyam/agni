@@ -200,37 +200,38 @@ public final class WorkspaceProto extends com.google.protobuf.GeneratedFile {
       "designYaml\022\024\n\005files\030\004 \003(\tR\005files\022\022\n\004note" +
       "\030\005 \001(\tR\004note\022\032\n\010declared\030\006 \001(\010R\010declared" +
       "\"8\n\nUnreadFile\022\022\n\004path\030\001 \001(\tR\004path\022\026\n\006re" +
-      "ason\030\002 \001(\tR\006reason*k\n\tMountKind\022\032\n\026MOUNT" +
-      "_KIND_UNSPECIFIED\020\000\022\023\n\017MOUNT_KIND_FILE\020\001" +
-      "\022\026\n\022MOUNT_KIND_UPLOADS\020\002\022\025\n\021MOUNT_KIND_G" +
-      "ITHUB\020\003*T\n\010FileKind\022\031\n\025FILE_KIND_UNSPECI" +
-      "FIED\020\000\022\024\n\020FILE_KIND_DESIGN\020\001\022\027\n\023FILE_KIN" +
-      "D_DATASHEET\020\0022\244\006\n\020WorkspaceService\022S\n\nLi" +
-      "stMounts\022!.agni.v1.webapi.ListMountsRequ" +
-      "est\032\".agni.v1.webapi.ListMountsResponse\022" +
-      "B\n\010GetMount\022\037.agni.v1.webapi.GetMountReq" +
-      "uest\032\025.agni.v1.webapi.Mount\022H\n\013CreateMou" +
-      "nt\022\".agni.v1.webapi.CreateMountRequest\032\025" +
-      ".agni.v1.webapi.Mount\022V\n\013DeleteMount\022\".a" +
-      "gni.v1.webapi.DeleteMountRequest\032#.agni." +
-      "v1.webapi.DeleteMountResponse\022]\n\022CreateM" +
-      "ountWebhook\022).agni.v1.webapi.CreateMount" +
-      "WebhookRequest\032\034.agni.v1.webapi.MountWeb" +
-      "hook\022J\n\007ListDir\022\036.agni.v1.webapi.ListDir" +
-      "Request\032\037.agni.v1.webapi.ListDirResponse" +
-      "\022b\n\017ListDesignFiles\022&.agni.v1.webapi.Lis" +
-      "tDesignFilesRequest\032\'.agni.v1.webapi.Lis" +
-      "tDesignFilesResponse\022_\n\016ProposeDesigns\022%" +
-      ".agni.v1.webapi.ProposeDesignsRequest\032&." +
-      "agni.v1.webapi.ProposeDesignsResponse\022e\n" +
-      "\020DeclareCompanion\022\'.agni.v1.webapi.Decla" +
-      "reCompanionRequest\032(.agni.v1.webapi.Decl" +
-      "areCompanionResponseB\271\001\n\037io.github.panya" +
-      "m.agni.v1.webapiB\016WorkspaceProtoP\001Z,gith" +
-      "ub.com/panyam/agni/gen/go/agni/v1/webapi" +
-      "\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\V1\\Webapi" +
-      "\342\002\032Agni\\V1\\Webapi\\GPBMetadata\352\002\020Agni::V1" +
-      "::Webapib\006proto3"
+      "ason\030\002 \001(\tR\006reason*\252\001\n\tMountKind\022\032\n\026MOUN" +
+      "T_KIND_UNSPECIFIED\020\000\022\023\n\017MOUNT_KIND_FILE\020" +
+      "\001\022\026\n\022MOUNT_KIND_UPLOADS\020\002\022\025\n\021MOUNT_KIND_" +
+      "GITHUB\020\003\022\021\n\rMOUNT_KIND_S3\020\004\022\022\n\016MOUNT_KIN" +
+      "D_GCS\020\005\022\026\n\022MOUNT_KIND_MSGRAPH\020\006*T\n\010FileK" +
+      "ind\022\031\n\025FILE_KIND_UNSPECIFIED\020\000\022\024\n\020FILE_K" +
+      "IND_DESIGN\020\001\022\027\n\023FILE_KIND_DATASHEET\020\0022\244\006" +
+      "\n\020WorkspaceService\022S\n\nListMounts\022!.agni." +
+      "v1.webapi.ListMountsRequest\032\".agni.v1.we" +
+      "bapi.ListMountsResponse\022B\n\010GetMount\022\037.ag" +
+      "ni.v1.webapi.GetMountRequest\032\025.agni.v1.w" +
+      "ebapi.Mount\022H\n\013CreateMount\022\".agni.v1.web" +
+      "api.CreateMountRequest\032\025.agni.v1.webapi." +
+      "Mount\022V\n\013DeleteMount\022\".agni.v1.webapi.De" +
+      "leteMountRequest\032#.agni.v1.webapi.Delete" +
+      "MountResponse\022]\n\022CreateMountWebhook\022).ag" +
+      "ni.v1.webapi.CreateMountWebhookRequest\032\034" +
+      ".agni.v1.webapi.MountWebhook\022J\n\007ListDir\022" +
+      "\036.agni.v1.webapi.ListDirRequest\032\037.agni.v" +
+      "1.webapi.ListDirResponse\022b\n\017ListDesignFi" +
+      "les\022&.agni.v1.webapi.ListDesignFilesRequ" +
+      "est\032\'.agni.v1.webapi.ListDesignFilesResp" +
+      "onse\022_\n\016ProposeDesigns\022%.agni.v1.webapi." +
+      "ProposeDesignsRequest\032&.agni.v1.webapi.P" +
+      "roposeDesignsResponse\022e\n\020DeclareCompanio" +
+      "n\022\'.agni.v1.webapi.DeclareCompanionReque" +
+      "st\032(.agni.v1.webapi.DeclareCompanionResp" +
+      "onseB\271\001\n\037io.github.panyam.agni.v1.webapi" +
+      "B\016WorkspaceProtoP\001Z,github.com/panyam/ag" +
+      "ni/gen/go/agni/v1/webapi\242\002\003AVW\252\002\016Agni.V1" +
+      ".Webapi\312\002\016Agni\\V1\\Webapi\342\002\032Agni\\V1\\Webap" +
+      "i\\GPBMetadata\352\002\020Agni::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

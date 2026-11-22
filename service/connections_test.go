@@ -197,3 +197,64 @@ func TestTwoPeopleKeepConnectionsByOneID(t *testing.T) {
 		t.Errorf("after deleting his own, bob reads connections/alice-gh = %v, %v; want the server's", c, err)
 	}
 }
+
+// The server keeps AWS, GCP and Entra connections for bucket and SharePoint mounts, sends their
+// fields back, and leaves an Entra one's base_url empty rather than the server's GitHub API (agni
+// issues 1729, 1730). None can be a person's, and an Entra one names how it signs in.
+func TestTheServerKeepsCloudConnections(t *testing.T) {
+	store, err := fsstore.New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := service.NewConnectionService(store, nil).WithBaseURL("https://ghe.example.com/api/v3")
+	ctx := context.Background()
+	for _, c := range []struct {
+		id   string
+		in   *webapi.Connection
+		want func(*webapi.Connection) bool
+	}{
+		{"aws", &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_AWS, AccessKeyId: "AKIAFAKE", KeySource: "env:AWS_SECRET", RoleArn: "arn:aws:iam::1:role/r", Region: "us-east-1"},
+			func(o *webapi.Connection) bool {
+				return o.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_AWS && o.GetAccessKeyId() == "AKIAFAKE" && o.GetRoleArn() == "arn:aws:iam::1:role/r" && o.GetRegion() == "us-east-1" && o.GetBaseUrl() == ""
+			}},
+		{"aws-chain", &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_AWS},
+			func(o *webapi.Connection) bool {
+				return o.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_AWS && o.GetKeySource() == ""
+			}},
+		{"gcs", &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_GCP, KeySource: "file:/srv/sa.json"},
+			func(o *webapi.Connection) bool {
+				return o.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_GCP && o.GetKeySource() == "file:/srv/sa.json"
+			}},
+		{"sp", &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_ENTRA, TenantId: "contoso", ClientId: "app", EntraAuth: webapi.EntraAuth_ENTRA_AUTH_SECRET, KeySource: "env:ENTRA"},
+			func(o *webapi.Connection) bool {
+				return o.GetKind() == webapi.ConnectionKind_CONNECTION_KIND_ENTRA && o.GetTenantId() == "contoso" && o.GetClientId() == "app" &&
+					o.GetEntraAuth() == webapi.EntraAuth_ENTRA_AUTH_SECRET && o.GetBaseUrl() == ""
+			}},
+		{"sp-mi", &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_ENTRA, EntraAuth: webapi.EntraAuth_ENTRA_AUTH_MANAGED_IDENTITY},
+			func(o *webapi.Connection) bool {
+				return o.GetEntraAuth() == webapi.EntraAuth_ENTRA_AUTH_MANAGED_IDENTITY
+			}},
+	} {
+		out, err := svc.CreateConnection(ctx, &webapi.CreateConnectionRequest{ConnectionId: c.id, Connection: c.in})
+		if err != nil || !c.want(out) {
+			t.Errorf("CreateConnection %s = %v, %v", c.id, out, err)
+			continue
+		}
+		got, err := svc.GetConnection(ctx, &webapi.GetConnectionRequest{Name: "connections/" + c.id})
+		if err != nil || !c.want(got) {
+			t.Errorf("GetConnection %s = %v, %v; want what was kept", c.id, got, err)
+		}
+	}
+	for _, c := range []struct {
+		name string
+		in   *webapi.Connection
+	}{
+		{"an Entra connection with no entra_auth", &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_ENTRA, TenantId: "contoso", ClientId: "app", KeySource: "env:E"}},
+		{"an AWS access key with no secret", &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_AWS, AccessKeyId: "AKIAFAKE"}},
+		{"a person's AWS connection", &webapi.Connection{Kind: webapi.ConnectionKind_CONNECTION_KIND_AWS, Scope: webapi.ConnectionScope_CONNECTION_SCOPE_PERSON}},
+	} {
+		if _, err := svc.CreateConnection(ctx, &webapi.CreateConnectionRequest{ConnectionId: "bad", Connection: c.in}); !errors.Is(err, service.ErrInvalidArgument) {
+			t.Errorf("%s = %v; want INVALID_ARGUMENT", c.name, err)
+		}
+	}
+}
