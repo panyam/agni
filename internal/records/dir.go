@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -99,9 +98,9 @@ func (d *Dir) lock(ctx context.Context, key string) (func(), error) {
 			f.Close()
 			return func() { os.Remove(lk) }, nil
 		}
-		// On Windows a lock file another writer just removed can't be created again until its last
-		// handle closes, and that reads as a permission error. It's the same wait as a held lock.
-		busy := errors.Is(err, fs.ErrExist) || (runtime.GOOS == "windows" && errors.Is(err, fs.ErrPermission))
+		// On windows a lock file another writer just removed can't be created again until its last
+		// handle closes (openElsewhere). It's the same wait as a held lock.
+		busy := errors.Is(err, fs.ErrExist) || openElsewhere(err)
 		if !busy {
 			return nil, err
 		}
@@ -123,16 +122,13 @@ func (d *Dir) lock(ctx context.Context, key string) (func(), error) {
 // sharedWait is how long a rename or remove keeps trying while a reader has the file open.
 const sharedWait = 2 * time.Second
 
-// retryShared runs op again while it fails with a permission error on Windows. Reads take no lock,
-// and Windows refuses to rename over or remove a file another handle has open, with "Access is
-// denied". The reader closes the file within milliseconds, so a short retry gets through. Elsewhere
-// op runs once, since a rename over an open file succeeds there.
+// retryShared runs op again while windows refuses it because another handle has the file open
+// (openElsewhere). Reads take no lock, and windows refuses to rename over or remove an open file,
+// with "Access is denied" or a sharing violation. The reader closes the file within milliseconds,
+// so a short retry gets through. Elsewhere openElsewhere is false and op runs once.
 func retryShared(op func() error) error {
 	err := op()
-	if runtime.GOOS != "windows" {
-		return err
-	}
-	for deadline := time.Now().Add(sharedWait); err != nil && errors.Is(err, fs.ErrPermission) && time.Now().Before(deadline); {
+	for deadline := time.Now().Add(sharedWait); err != nil && openElsewhere(err) && time.Now().Before(deadline); {
 		time.Sleep(5 * time.Millisecond)
 		err = op()
 	}
