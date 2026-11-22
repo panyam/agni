@@ -33,6 +33,8 @@ type tour struct {
 	checks   *service.CheckService
 	uploaded map[string][]byte
 	root     string
+	// kept is the store's own blob folder, which a mount's reader fills when a link reads a file.
+	kept *projects.BlobDir
 }
 
 // newTour builds the services the way `agni serve --store --uploads` does (cmd/agni/storeservices.go).
@@ -46,7 +48,7 @@ func newTour(root, mounted string) (*tour, error) {
 		return nil, err
 	}
 	tree := projects.Tree{Mount: "fixtures", FS: os.DirFS(mounted)}
-	t := &tour{uploaded: map[string][]byte{}, root: root}
+	t := &tour{uploaded: map[string][]byte{}, root: root, kept: store.Blobs()}
 	t.projects = service.NewProjectService(projects.NewFSStore(tree)).WithRecords(records)
 	catalog := service.NewDesignCatalog(store, projects.NewMountedDesigns(tree))
 	t.designs = service.NewDesignService(catalog, t.blob).WithProjects(t.projects)
@@ -79,8 +81,12 @@ func newTour(root, mounted string) (*tour, error) {
 }
 
 func (t *tour) blob(_ context.Context, h string) ([]byte, bool) {
-	b, ok := t.uploaded[h]
-	return b, ok
+	if b, ok := t.uploaded[h]; ok {
+		return b, true
+	}
+	// A linked pack's files were read into the store's blobs by the mount's reader, as agni serve's
+	// uploads folder holds them.
+	return t.kept.Get(h)
 }
 
 // manifest is what a client sends first, each file's path, hash and size, and the contents by hash
@@ -238,4 +244,48 @@ func (t *tour) follow(ctx context.Context) (linked, synced, marked *webapi.Artif
 	}
 	marked, err = source()
 	return linked, synced, marked, err
+}
+
+// followPack links a pack to a project folder the server mounts, and lets a poll find a rule added
+// to its project.yaml (agni issue 1801). It returns the pack as linked and after the poll.
+func (t *tour) followPack(ctx context.Context) (linked, moved *webapi.Pack, err error) {
+	rules := filepath.Join(t.root, "rules")
+	if err := os.MkdirAll(rules, 0o750); err != nil {
+		return nil, nil, err
+	}
+	descriptor := filepath.Join(rules, "project.yaml")
+	// put writes a project.yaml with one house naming rule per name, and moves its time on, since a
+	// folder's version is its files' times.
+	step := 0
+	put := func(names ...string) error {
+		y := "name: house\ntitle: House rules\nconventions:\n  name: house\n  rules:\n"
+		for _, n := range names {
+			y += "    - name: " + n + "\n      allow: [\"^(GND|VCC|VDD)\"]\n"
+		}
+		if err := os.WriteFile(descriptor, []byte(y), 0o600); err != nil {
+			return err
+		}
+		step++
+		when := time.Now().Add(time.Duration(step) * 2 * time.Second)
+		return os.Chtimes(descriptor, when, when)
+	}
+	if err := put("power-net-naming"); err != nil {
+		return nil, nil, err
+	}
+	table, err := mountset.Open(mountset.Config{Fixed: []mounts.Mount{mountset.Folder("rules", rules)}, Uploads: filepath.Join(t.root, "uploads")})
+	if err != nil {
+		return nil, nil, err
+	}
+	t.packs.WithImporter(projects.PackFromFiles).WithLinks(table.Readers, "uploads", table, table.MountsOf)
+	if linked, err = t.packs.LinkPack(ctx, &webapi.LinkPackRequest{PackId: "house-live", Source: &webapi.ArtifactSource{Mount: "rules"}}); err != nil {
+		return nil, nil, err
+	}
+	if err := put("power-net-naming", "strict-net-naming"); err != nil {
+		return nil, nil, err
+	}
+	if _, err := t.packs.PollSources(ctx); err != nil {
+		return nil, nil, err
+	}
+	moved, err = t.packs.GetPack(ctx, &webapi.GetPackRequest{Name: "packs/house-live"})
+	return linked, moved, err
 }

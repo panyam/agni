@@ -315,6 +315,11 @@ func SourceString(src *webapi.ArtifactSource) string {
 // taken alone. It also returns the hashes of the files it downloaded, which can include files read
 // only to find the design.
 func (s *DesignService) readSource(ctx context.Context, r MountReader, version, p string) ([]*webapi.SnapshotFile, []string, error) {
+	return readSource(ctx, s.blobs, r, version, p)
+}
+
+// readSource is DesignService.readSource over blobs, so a linked pack reads its folder the same way.
+func readSource(ctx context.Context, blobs BlobSource, r MountReader, version, p string) ([]*webapi.SnapshotFile, []string, error) {
 	listed, err := r.List(ctx, version, p)
 	if err != nil {
 		return nil, nil, err
@@ -393,7 +398,7 @@ func (s *DesignService) readSource(ctx context.Context, r MountReader, version, 
 			readErr = err
 			return nil, err
 		}
-		b, _ := s.blobs(ctx, h)
+		b, _ := blobs(ctx, h)
 		return b, nil
 	}
 	group := artifactGroup(rels, read, path.Base(p))

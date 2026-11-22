@@ -15069,6 +15069,132 @@ impl<'de> serde::Deserialize<'de> for LinkArtifactRequest {
         deserializer.deserialize_struct("agni.v1.webapi.LinkArtifactRequest", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for LinkPackRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.pack_id.is_empty() {
+            len += 1;
+        }
+        if self.source.is_some() {
+            len += 1;
+        }
+        if !self.title.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.LinkPackRequest", len)?;
+        if !self.pack_id.is_empty() {
+            struct_ser.serialize_field("packId", &self.pack_id)?;
+        }
+        if let Some(v) = self.source.as_ref() {
+            struct_ser.serialize_field("source", v)?;
+        }
+        if !self.title.is_empty() {
+            struct_ser.serialize_field("title", &self.title)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for LinkPackRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "pack_id",
+            "packId",
+            "source",
+            "title",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            PackId,
+            Source,
+            Title,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "packId" | "pack_id" => Ok(GeneratedField::PackId),
+                            "source" => Ok(GeneratedField::Source),
+                            "title" => Ok(GeneratedField::Title),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = LinkPackRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.LinkPackRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<LinkPackRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut pack_id__ = None;
+                let mut source__ = None;
+                let mut title__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::PackId => {
+                            if pack_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("packId"));
+                            }
+                            pack_id__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Source => {
+                            if source__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("source"));
+                            }
+                            source__ = map_.next_value()?;
+                        }
+                        GeneratedField::Title => {
+                            if title__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("title"));
+                            }
+                            title__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(LinkPackRequest {
+                    pack_id: pack_id__.unwrap_or_default(),
+                    source: source__,
+                    title: title__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.LinkPackRequest", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for ListArtifactsRequest {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -20726,6 +20852,9 @@ impl serde::Serialize for Pack {
         if self.update_time.is_some() {
             len += 1;
         }
+        if self.source.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Pack", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -20748,6 +20877,9 @@ impl serde::Serialize for Pack {
         if let Some(v) = self.update_time.as_ref() {
             struct_ser.serialize_field("updateTime", v)?;
         }
+        if let Some(v) = self.source.as_ref() {
+            struct_ser.serialize_field("source", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -20766,6 +20898,7 @@ impl<'de> serde::Deserialize<'de> for Pack {
             "hash",
             "update_time",
             "updateTime",
+            "source",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -20777,6 +20910,7 @@ impl<'de> serde::Deserialize<'de> for Pack {
             Uri,
             Hash,
             UpdateTime,
+            Source,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -20805,6 +20939,7 @@ impl<'de> serde::Deserialize<'de> for Pack {
                             "uri" => Ok(GeneratedField::Uri),
                             "hash" => Ok(GeneratedField::Hash),
                             "updateTime" | "update_time" => Ok(GeneratedField::UpdateTime),
+                            "source" => Ok(GeneratedField::Source),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -20831,6 +20966,7 @@ impl<'de> serde::Deserialize<'de> for Pack {
                 let mut uri__ = None;
                 let mut hash__ = None;
                 let mut update_time__ = None;
+                let mut source__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -20875,6 +21011,12 @@ impl<'de> serde::Deserialize<'de> for Pack {
                             }
                             update_time__ = map_.next_value()?;
                         }
+                        GeneratedField::Source => {
+                            if source__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("source"));
+                            }
+                            source__ = map_.next_value()?;
+                        }
                     }
                 }
                 Ok(Pack {
@@ -20885,6 +21027,7 @@ impl<'de> serde::Deserialize<'de> for Pack {
                     uri: uri__.unwrap_or_default(),
                     hash: hash__.unwrap_or_default(),
                     update_time: update_time__,
+                    source: source__,
                 })
             }
         }
@@ -24269,6 +24412,9 @@ impl serde::Serialize for Report {
         if !self.revision.is_empty() {
             len += 1;
         }
+        if !self.pack_versions.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Report", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -24306,6 +24452,9 @@ impl serde::Serialize for Report {
         if !self.revision.is_empty() {
             struct_ser.serialize_field("revision", &self.revision)?;
         }
+        if !self.pack_versions.is_empty() {
+            struct_ser.serialize_field("packVersions", &self.pack_versions)?;
+        }
         struct_ser.end()
     }
 }
@@ -24335,6 +24484,8 @@ impl<'de> serde::Deserialize<'de> for Report {
             "source_versions",
             "sourceVersions",
             "revision",
+            "pack_versions",
+            "packVersions",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -24351,6 +24502,7 @@ impl<'de> serde::Deserialize<'de> for Report {
             FindingCount,
             SourceVersions,
             Revision,
+            PackVersions,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -24384,6 +24536,7 @@ impl<'de> serde::Deserialize<'de> for Report {
                             "findingCount" | "finding_count" => Ok(GeneratedField::FindingCount),
                             "sourceVersions" | "source_versions" => Ok(GeneratedField::SourceVersions),
                             "revision" => Ok(GeneratedField::Revision),
+                            "packVersions" | "pack_versions" => Ok(GeneratedField::PackVersions),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -24415,6 +24568,7 @@ impl<'de> serde::Deserialize<'de> for Report {
                 let mut finding_count__ = None;
                 let mut source_versions__ = None;
                 let mut revision__ = None;
+                let mut pack_versions__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -24493,6 +24647,14 @@ impl<'de> serde::Deserialize<'de> for Report {
                             }
                             revision__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::PackVersions => {
+                            if pack_versions__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("packVersions"));
+                            }
+                            pack_versions__ = Some(
+                                map_.next_value::<std::collections::HashMap<_, _>>()?
+                            );
+                        }
                     }
                 }
                 Ok(Report {
@@ -24508,6 +24670,7 @@ impl<'de> serde::Deserialize<'de> for Report {
                     finding_count: finding_count__.unwrap_or_default(),
                     source_versions: source_versions__.unwrap_or_default(),
                     revision: revision__.unwrap_or_default(),
+                    pack_versions: pack_versions__.unwrap_or_default(),
                 })
             }
         }
@@ -28998,6 +29161,241 @@ impl<'de> serde::Deserialize<'de> for SyncDesignResponse {
         deserializer.deserialize_struct("agni.v1.webapi.SyncDesignResponse", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for SyncPackRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.name.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.SyncPackRequest", len)?;
+        if !self.name.is_empty() {
+            struct_ser.serialize_field("name", &self.name)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for SyncPackRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "name",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Name,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "name" => Ok(GeneratedField::Name),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = SyncPackRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.SyncPackRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<SyncPackRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut name__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Name => {
+                            if name__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("name"));
+                            }
+                            name__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(SyncPackRequest {
+                    name: name__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.SyncPackRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for SyncPackResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if self.pack.is_some() {
+            len += 1;
+        }
+        if !self.from_version.is_empty() {
+            len += 1;
+        }
+        if !self.to_version.is_empty() {
+            len += 1;
+        }
+        if self.changed {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.SyncPackResponse", len)?;
+        if let Some(v) = self.pack.as_ref() {
+            struct_ser.serialize_field("pack", v)?;
+        }
+        if !self.from_version.is_empty() {
+            struct_ser.serialize_field("fromVersion", &self.from_version)?;
+        }
+        if !self.to_version.is_empty() {
+            struct_ser.serialize_field("toVersion", &self.to_version)?;
+        }
+        if self.changed {
+            struct_ser.serialize_field("changed", &self.changed)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for SyncPackResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "pack",
+            "from_version",
+            "fromVersion",
+            "to_version",
+            "toVersion",
+            "changed",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Pack,
+            FromVersion,
+            ToVersion,
+            Changed,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "pack" => Ok(GeneratedField::Pack),
+                            "fromVersion" | "from_version" => Ok(GeneratedField::FromVersion),
+                            "toVersion" | "to_version" => Ok(GeneratedField::ToVersion),
+                            "changed" => Ok(GeneratedField::Changed),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = SyncPackResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.SyncPackResponse")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<SyncPackResponse, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut pack__ = None;
+                let mut from_version__ = None;
+                let mut to_version__ = None;
+                let mut changed__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Pack => {
+                            if pack__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("pack"));
+                            }
+                            pack__ = map_.next_value()?;
+                        }
+                        GeneratedField::FromVersion => {
+                            if from_version__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("fromVersion"));
+                            }
+                            from_version__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ToVersion => {
+                            if to_version__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("toVersion"));
+                            }
+                            to_version__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Changed => {
+                            if changed__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("changed"));
+                            }
+                            changed__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(SyncPackResponse {
+                    pack: pack__,
+                    from_version: from_version__.unwrap_or_default(),
+                    to_version: to_version__.unwrap_or_default(),
+                    changed: changed__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.SyncPackResponse", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for Table {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -31411,6 +31809,97 @@ impl<'de> serde::Deserialize<'de> for UnlinkArtifactRequest {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.UnlinkArtifactRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for UnlinkPackRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.name.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.UnlinkPackRequest", len)?;
+        if !self.name.is_empty() {
+            struct_ser.serialize_field("name", &self.name)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for UnlinkPackRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "name",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Name,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "name" => Ok(GeneratedField::Name),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = UnlinkPackRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.UnlinkPackRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<UnlinkPackRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut name__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Name => {
+                            if name__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("name"));
+                            }
+                            name__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(UnlinkPackRequest {
+                    name: name__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.UnlinkPackRequest", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for UnreadFile {

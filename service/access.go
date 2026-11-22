@@ -33,6 +33,8 @@ type AccessGuard struct {
 	uploads string
 	// design checks the caller may open the design named "designs/{d}". The catalog sets it.
 	design func(ctx context.Context, name string) error
+	// pack checks the caller may open the pack with id. PackService.WithGuard sets it.
+	pack func(ctx context.Context, id string) error
 }
 
 // NewAccessGuard returns a guard over src. uploads names the mount uploaded designs' files are
@@ -125,8 +127,21 @@ func (g *AccessGuard) URI(ctx context.Context, uri mounts.URI) error {
 	if uri.Mount != g.uploads || g.uploads == "" {
 		return g.Mount(ctx, uri.Mount)
 	}
-	id, _, _ := strings.Cut(uri.Path, "/")
-	if id == "" || id == packViews || g.design == nil {
+	id, rest, _ := strings.Cut(uri.Path, "/")
+	if id == packViews {
+		// A pack's files sit at @packs/<pack>/<rev>/, and a pack read from a private source
+		// guards them (agni issue 1801).
+		pid, _, _ := strings.Cut(rest, "/")
+		if pid == "" || g.pack == nil {
+			return nil
+		}
+		err := g.pack(ctx, pid)
+		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidArgument) {
+			return nil
+		}
+		return err
+	}
+	if id == "" || g.design == nil {
 		return nil
 	}
 	err := g.design(ctx, StandaloneDesignName(id))

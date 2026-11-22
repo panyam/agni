@@ -65,3 +65,21 @@ func TestTheTourFollowsAFolder(t *testing.T) {
 		t.Errorf("after the second change to a design that marks, the netlist's source = %v; want it left at %s with a newer version noted", marked, synced.GetVersion())
 	}
 }
+
+// A poll reads a rule added to a linked pack's project.yaml into the pack (agni issue 1801).
+func TestTheTourFollowsAPack(t *testing.T) {
+	tr, err := newTour(t.TempDir(), mounted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	linked, moved, err := tr.followPack(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(linked.GetConfig().GetConventions().GetRules()); n != 1 || !linked.GetSource().GetFollow() {
+		t.Errorf("the linked pack holds %d rules, following %v; want one, followed", n, linked.GetSource().GetFollow())
+	}
+	if n := len(moved.GetConfig().GetConventions().GetRules()); n != 2 || moved.GetHash() == linked.GetHash() {
+		t.Errorf("after the poll the pack holds %d rules with hash %s; want two and a new hash", n, moved.GetHash())
+	}
+}

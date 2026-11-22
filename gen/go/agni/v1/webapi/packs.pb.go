@@ -24,6 +24,231 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type LinkPackRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
+	// name.
+	PackId string `protobuf:"bytes,1,opt,name=pack_id,json=packId,proto3" json:"pack_id,omitempty"`
+	// source names the mount, the folder holding project.yaml, and the ref. Its other fields are
+	// ignored. An empty path is the mount's root.
+	Source *ArtifactSource `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	// title is the pack's title. Empty takes project.yaml's title.
+	Title         string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LinkPackRequest) Reset() {
+	*x = LinkPackRequest{}
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LinkPackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LinkPackRequest) ProtoMessage() {}
+
+func (x *LinkPackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LinkPackRequest.ProtoReflect.Descriptor instead.
+func (*LinkPackRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *LinkPackRequest) GetPackId() string {
+	if x != nil {
+		return x.PackId
+	}
+	return ""
+}
+
+func (x *LinkPackRequest) GetSource() *ArtifactSource {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+func (x *LinkPackRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+type UnlinkPackRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "packs/{pack}"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnlinkPackRequest) Reset() {
+	*x = UnlinkPackRequest{}
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnlinkPackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnlinkPackRequest) ProtoMessage() {}
+
+func (x *UnlinkPackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnlinkPackRequest.ProtoReflect.Descriptor instead.
+func (*UnlinkPackRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *UnlinkPackRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type SyncPackRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "packs/{pack}"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncPackRequest) Reset() {
+	*x = SyncPackRequest{}
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncPackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncPackRequest) ProtoMessage() {}
+
+func (x *SyncPackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncPackRequest.ProtoReflect.Descriptor instead.
+func (*SyncPackRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SyncPackRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type SyncPackResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// pack is the pack after the sync.
+	Pack *Pack `protobuf:"bytes,1,opt,name=pack,proto3" json:"pack,omitempty"`
+	// from_version is the version the pack held before, and to_version the one it holds now, each a
+	// commit SHA on a github mount. They are equal when nothing moved.
+	FromVersion string `protobuf:"bytes,2,opt,name=from_version,json=fromVersion,proto3" json:"from_version,omitempty"`
+	ToVersion   string `protobuf:"bytes,3,opt,name=to_version,json=toVersion,proto3" json:"to_version,omitempty"`
+	// changed is true when the sync read new config or files.
+	Changed       bool `protobuf:"varint,4,opt,name=changed,proto3" json:"changed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncPackResponse) Reset() {
+	*x = SyncPackResponse{}
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncPackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncPackResponse) ProtoMessage() {}
+
+func (x *SyncPackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncPackResponse.ProtoReflect.Descriptor instead.
+func (*SyncPackResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SyncPackResponse) GetPack() *Pack {
+	if x != nil {
+		return x.Pack
+	}
+	return nil
+}
+
+func (x *SyncPackResponse) GetFromVersion() string {
+	if x != nil {
+		return x.FromVersion
+	}
+	return ""
+}
+
+func (x *SyncPackResponse) GetToVersion() string {
+	if x != nil {
+		return x.ToVersion
+	}
+	return ""
+}
+
+func (x *SyncPackResponse) GetChanged() bool {
+	if x != nil {
+		return x.Changed
+	}
+	return false
+}
+
 type ImportPackFilesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
@@ -40,7 +265,7 @@ type ImportPackFilesRequest struct {
 
 func (x *ImportPackFilesRequest) Reset() {
 	*x = ImportPackFilesRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -52,7 +277,7 @@ func (x *ImportPackFilesRequest) String() string {
 func (*ImportPackFilesRequest) ProtoMessage() {}
 
 func (x *ImportPackFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -65,7 +290,7 @@ func (x *ImportPackFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportPackFilesRequest.ProtoReflect.Descriptor instead.
 func (*ImportPackFilesRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ImportPackFilesRequest) GetPackId() string {
@@ -111,14 +336,19 @@ type Pack struct {
 	// config and the same files have the same hash. Output only.
 	Hash string `protobuf:"bytes,6,opt,name=hash,proto3" json:"hash,omitempty"`
 	// update_time is when the pack last changed. Output only.
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// source is where a linked pack was read from: its mount, folder and ref, whether it follows a
+	// branch, and the version it holds (agni issue 1801). Its read_hash is set only on a linked pack.
+	// An uploaded pack has none, or only access_source when it was read from a private source and
+	// then unlinked. Output only.
+	Source        *ArtifactSource `protobuf:"bytes,8,opt,name=source,proto3" json:"source,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Pack) Reset() {
 	*x = Pack{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -130,7 +360,7 @@ func (x *Pack) String() string {
 func (*Pack) ProtoMessage() {}
 
 func (x *Pack) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -143,7 +373,7 @@ func (x *Pack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pack.ProtoReflect.Descriptor instead.
 func (*Pack) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Pack) GetName() string {
@@ -195,6 +425,13 @@ func (x *Pack) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Pack) GetSource() *ArtifactSource {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
 type CreatePackRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// pack_id is the new pack's id, lowercase letters, digits, '.', '_' or '-'.
@@ -207,7 +444,7 @@ type CreatePackRequest struct {
 
 func (x *CreatePackRequest) Reset() {
 	*x = CreatePackRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -219,7 +456,7 @@ func (x *CreatePackRequest) String() string {
 func (*CreatePackRequest) ProtoMessage() {}
 
 func (x *CreatePackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -232,7 +469,7 @@ func (x *CreatePackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePackRequest.ProtoReflect.Descriptor instead.
 func (*CreatePackRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreatePackRequest) GetPackId() string {
@@ -258,7 +495,7 @@ type GetPackRequest struct {
 
 func (x *GetPackRequest) Reset() {
 	*x = GetPackRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +507,7 @@ func (x *GetPackRequest) String() string {
 func (*GetPackRequest) ProtoMessage() {}
 
 func (x *GetPackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +520,7 @@ func (x *GetPackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPackRequest.ProtoReflect.Descriptor instead.
 func (*GetPackRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetPackRequest) GetName() string {
@@ -308,7 +545,7 @@ type ListPacksRequest struct {
 
 func (x *ListPacksRequest) Reset() {
 	*x = ListPacksRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -320,7 +557,7 @@ func (x *ListPacksRequest) String() string {
 func (*ListPacksRequest) ProtoMessage() {}
 
 func (x *ListPacksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -333,7 +570,7 @@ func (x *ListPacksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPacksRequest.ProtoReflect.Descriptor instead.
 func (*ListPacksRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListPacksRequest) GetPageSize() int32 {
@@ -368,7 +605,7 @@ type ListPacksResponse struct {
 
 func (x *ListPacksResponse) Reset() {
 	*x = ListPacksResponse{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -380,7 +617,7 @@ func (x *ListPacksResponse) String() string {
 func (*ListPacksResponse) ProtoMessage() {}
 
 func (x *ListPacksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -393,7 +630,7 @@ func (x *ListPacksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPacksResponse.ProtoReflect.Descriptor instead.
 func (*ListPacksResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListPacksResponse) GetPacks() []*Pack {
@@ -423,7 +660,7 @@ type UpdatePackRequest struct {
 
 func (x *UpdatePackRequest) Reset() {
 	*x = UpdatePackRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -435,7 +672,7 @@ func (x *UpdatePackRequest) String() string {
 func (*UpdatePackRequest) ProtoMessage() {}
 
 func (x *UpdatePackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -448,7 +685,7 @@ func (x *UpdatePackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePackRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePackRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdatePackRequest) GetPack() *Pack {
@@ -474,7 +711,7 @@ type DeletePackRequest struct {
 
 func (x *DeletePackRequest) Reset() {
 	*x = DeletePackRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -486,7 +723,7 @@ func (x *DeletePackRequest) String() string {
 func (*DeletePackRequest) ProtoMessage() {}
 
 func (x *DeletePackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -499,7 +736,7 @@ func (x *DeletePackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePackRequest.ProtoReflect.Descriptor instead.
 func (*DeletePackRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeletePackRequest) GetName() string {
@@ -513,11 +750,25 @@ var File_agni_v1_webapi_packs_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_packs_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/packs.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1dagni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"{\n" +
+	"\x1aagni/v1/webapi/packs.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1cagni/v1/webapi/designs.proto\x1a\x1dagni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"x\n" +
+	"\x0fLinkPackRequest\x12\x17\n" +
+	"\apack_id\x18\x01 \x01(\tR\x06packId\x126\n" +
+	"\x06source\x18\x02 \x01(\v2\x1e.agni.v1.webapi.ArtifactSourceR\x06source\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\"'\n" +
+	"\x11UnlinkPackRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"%\n" +
+	"\x0fSyncPackRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"\x98\x01\n" +
+	"\x10SyncPackResponse\x12(\n" +
+	"\x04pack\x18\x01 \x01(\v2\x14.agni.v1.webapi.PackR\x04pack\x12!\n" +
+	"\ffrom_version\x18\x02 \x01(\tR\vfromVersion\x12\x1d\n" +
+	"\n" +
+	"to_version\x18\x03 \x01(\tR\ttoVersion\x12\x18\n" +
+	"\achanged\x18\x04 \x01(\bR\achanged\"{\n" +
 	"\x16ImportPackFilesRequest\x12\x17\n" +
 	"\apack_id\x18\x01 \x01(\tR\x06packId\x122\n" +
 	"\x05files\x18\x02 \x03(\v2\x1c.agni.v1.webapi.SnapshotFileR\x05files\x12\x14\n" +
-	"\x05title\x18\x03 \x01(\tR\x05title\"\xff\x01\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\"\xb7\x02\n" +
 	"\x04Pack\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x126\n" +
@@ -526,7 +777,8 @@ const file_agni_v1_webapi_packs_proto_rawDesc = "" +
 	"\x03uri\x18\x05 \x01(\tR\x03uri\x12\x12\n" +
 	"\x04hash\x18\x06 \x01(\tR\x04hash\x12;\n" +
 	"\vupdate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"V\n" +
+	"updateTime\x126\n" +
+	"\x06source\x18\b \x01(\v2\x1e.agni.v1.webapi.ArtifactSourceR\x06source\"V\n" +
 	"\x11CreatePackRequest\x12\x17\n" +
 	"\apack_id\x18\x01 \x01(\tR\x06packId\x12(\n" +
 	"\x04pack\x18\x02 \x01(\v2\x14.agni.v1.webapi.PackR\x04pack\"$\n" +
@@ -545,7 +797,7 @@ const file_agni_v1_webapi_packs_proto_rawDesc = "" +
 	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
 	"updateMask\"'\n" +
 	"\x11DeletePackRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name2\xc8\x03\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name2\xa1\x05\n" +
 	"\vPackService\x12E\n" +
 	"\n" +
 	"CreatePack\x12!.agni.v1.webapi.CreatePackRequest\x1a\x14.agni.v1.webapi.Pack\x12?\n" +
@@ -555,7 +807,11 @@ const file_agni_v1_webapi_packs_proto_rawDesc = "" +
 	"UpdatePack\x12!.agni.v1.webapi.UpdatePackRequest\x1a\x14.agni.v1.webapi.Pack\x12G\n" +
 	"\n" +
 	"DeletePack\x12!.agni.v1.webapi.DeletePackRequest\x1a\x16.google.protobuf.Empty\x12O\n" +
-	"\x0fImportPackFiles\x12&.agni.v1.webapi.ImportPackFilesRequest\x1a\x14.agni.v1.webapi.PackB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x0fImportPackFiles\x12&.agni.v1.webapi.ImportPackFilesRequest\x1a\x14.agni.v1.webapi.Pack\x12A\n" +
+	"\bLinkPack\x12\x1f.agni.v1.webapi.LinkPackRequest\x1a\x14.agni.v1.webapi.Pack\x12E\n" +
+	"\n" +
+	"UnlinkPack\x12!.agni.v1.webapi.UnlinkPackRequest\x1a\x14.agni.v1.webapi.Pack\x12M\n" +
+	"\bSyncPack\x12\x1f.agni.v1.webapi.SyncPackRequest\x1a .agni.v1.webapi.SyncPackResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_packs_proto_rawDescOnce sync.Once
@@ -569,48 +825,62 @@ func file_agni_v1_webapi_packs_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_packs_proto_rawDescData
 }
 
-var file_agni_v1_webapi_packs_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_agni_v1_webapi_packs_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_agni_v1_webapi_packs_proto_goTypes = []any{
-	(*ImportPackFilesRequest)(nil), // 0: agni.v1.webapi.ImportPackFilesRequest
-	(*Pack)(nil),                   // 1: agni.v1.webapi.Pack
-	(*CreatePackRequest)(nil),      // 2: agni.v1.webapi.CreatePackRequest
-	(*GetPackRequest)(nil),         // 3: agni.v1.webapi.GetPackRequest
-	(*ListPacksRequest)(nil),       // 4: agni.v1.webapi.ListPacksRequest
-	(*ListPacksResponse)(nil),      // 5: agni.v1.webapi.ListPacksResponse
-	(*UpdatePackRequest)(nil),      // 6: agni.v1.webapi.UpdatePackRequest
-	(*DeletePackRequest)(nil),      // 7: agni.v1.webapi.DeletePackRequest
-	(*SnapshotFile)(nil),           // 8: agni.v1.webapi.SnapshotFile
-	(*AnalysisConfig)(nil),         // 9: agni.v1.webapi.AnalysisConfig
-	(*timestamppb.Timestamp)(nil),  // 10: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),  // 11: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),          // 12: google.protobuf.Empty
+	(*LinkPackRequest)(nil),        // 0: agni.v1.webapi.LinkPackRequest
+	(*UnlinkPackRequest)(nil),      // 1: agni.v1.webapi.UnlinkPackRequest
+	(*SyncPackRequest)(nil),        // 2: agni.v1.webapi.SyncPackRequest
+	(*SyncPackResponse)(nil),       // 3: agni.v1.webapi.SyncPackResponse
+	(*ImportPackFilesRequest)(nil), // 4: agni.v1.webapi.ImportPackFilesRequest
+	(*Pack)(nil),                   // 5: agni.v1.webapi.Pack
+	(*CreatePackRequest)(nil),      // 6: agni.v1.webapi.CreatePackRequest
+	(*GetPackRequest)(nil),         // 7: agni.v1.webapi.GetPackRequest
+	(*ListPacksRequest)(nil),       // 8: agni.v1.webapi.ListPacksRequest
+	(*ListPacksResponse)(nil),      // 9: agni.v1.webapi.ListPacksResponse
+	(*UpdatePackRequest)(nil),      // 10: agni.v1.webapi.UpdatePackRequest
+	(*DeletePackRequest)(nil),      // 11: agni.v1.webapi.DeletePackRequest
+	(*ArtifactSource)(nil),         // 12: agni.v1.webapi.ArtifactSource
+	(*SnapshotFile)(nil),           // 13: agni.v1.webapi.SnapshotFile
+	(*AnalysisConfig)(nil),         // 14: agni.v1.webapi.AnalysisConfig
+	(*timestamppb.Timestamp)(nil),  // 15: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),  // 16: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),          // 17: google.protobuf.Empty
 }
 var file_agni_v1_webapi_packs_proto_depIdxs = []int32{
-	8,  // 0: agni.v1.webapi.ImportPackFilesRequest.files:type_name -> agni.v1.webapi.SnapshotFile
-	9,  // 1: agni.v1.webapi.Pack.config:type_name -> agni.v1.webapi.AnalysisConfig
-	8,  // 2: agni.v1.webapi.Pack.files:type_name -> agni.v1.webapi.SnapshotFile
-	10, // 3: agni.v1.webapi.Pack.update_time:type_name -> google.protobuf.Timestamp
-	1,  // 4: agni.v1.webapi.CreatePackRequest.pack:type_name -> agni.v1.webapi.Pack
-	1,  // 5: agni.v1.webapi.ListPacksResponse.packs:type_name -> agni.v1.webapi.Pack
-	1,  // 6: agni.v1.webapi.UpdatePackRequest.pack:type_name -> agni.v1.webapi.Pack
-	11, // 7: agni.v1.webapi.UpdatePackRequest.update_mask:type_name -> google.protobuf.FieldMask
-	2,  // 8: agni.v1.webapi.PackService.CreatePack:input_type -> agni.v1.webapi.CreatePackRequest
-	3,  // 9: agni.v1.webapi.PackService.GetPack:input_type -> agni.v1.webapi.GetPackRequest
-	4,  // 10: agni.v1.webapi.PackService.ListPacks:input_type -> agni.v1.webapi.ListPacksRequest
-	6,  // 11: agni.v1.webapi.PackService.UpdatePack:input_type -> agni.v1.webapi.UpdatePackRequest
-	7,  // 12: agni.v1.webapi.PackService.DeletePack:input_type -> agni.v1.webapi.DeletePackRequest
-	0,  // 13: agni.v1.webapi.PackService.ImportPackFiles:input_type -> agni.v1.webapi.ImportPackFilesRequest
-	1,  // 14: agni.v1.webapi.PackService.CreatePack:output_type -> agni.v1.webapi.Pack
-	1,  // 15: agni.v1.webapi.PackService.GetPack:output_type -> agni.v1.webapi.Pack
-	5,  // 16: agni.v1.webapi.PackService.ListPacks:output_type -> agni.v1.webapi.ListPacksResponse
-	1,  // 17: agni.v1.webapi.PackService.UpdatePack:output_type -> agni.v1.webapi.Pack
-	12, // 18: agni.v1.webapi.PackService.DeletePack:output_type -> google.protobuf.Empty
-	1,  // 19: agni.v1.webapi.PackService.ImportPackFiles:output_type -> agni.v1.webapi.Pack
-	14, // [14:20] is the sub-list for method output_type
-	8,  // [8:14] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	12, // 0: agni.v1.webapi.LinkPackRequest.source:type_name -> agni.v1.webapi.ArtifactSource
+	5,  // 1: agni.v1.webapi.SyncPackResponse.pack:type_name -> agni.v1.webapi.Pack
+	13, // 2: agni.v1.webapi.ImportPackFilesRequest.files:type_name -> agni.v1.webapi.SnapshotFile
+	14, // 3: agni.v1.webapi.Pack.config:type_name -> agni.v1.webapi.AnalysisConfig
+	13, // 4: agni.v1.webapi.Pack.files:type_name -> agni.v1.webapi.SnapshotFile
+	15, // 5: agni.v1.webapi.Pack.update_time:type_name -> google.protobuf.Timestamp
+	12, // 6: agni.v1.webapi.Pack.source:type_name -> agni.v1.webapi.ArtifactSource
+	5,  // 7: agni.v1.webapi.CreatePackRequest.pack:type_name -> agni.v1.webapi.Pack
+	5,  // 8: agni.v1.webapi.ListPacksResponse.packs:type_name -> agni.v1.webapi.Pack
+	5,  // 9: agni.v1.webapi.UpdatePackRequest.pack:type_name -> agni.v1.webapi.Pack
+	16, // 10: agni.v1.webapi.UpdatePackRequest.update_mask:type_name -> google.protobuf.FieldMask
+	6,  // 11: agni.v1.webapi.PackService.CreatePack:input_type -> agni.v1.webapi.CreatePackRequest
+	7,  // 12: agni.v1.webapi.PackService.GetPack:input_type -> agni.v1.webapi.GetPackRequest
+	8,  // 13: agni.v1.webapi.PackService.ListPacks:input_type -> agni.v1.webapi.ListPacksRequest
+	10, // 14: agni.v1.webapi.PackService.UpdatePack:input_type -> agni.v1.webapi.UpdatePackRequest
+	11, // 15: agni.v1.webapi.PackService.DeletePack:input_type -> agni.v1.webapi.DeletePackRequest
+	4,  // 16: agni.v1.webapi.PackService.ImportPackFiles:input_type -> agni.v1.webapi.ImportPackFilesRequest
+	0,  // 17: agni.v1.webapi.PackService.LinkPack:input_type -> agni.v1.webapi.LinkPackRequest
+	1,  // 18: agni.v1.webapi.PackService.UnlinkPack:input_type -> agni.v1.webapi.UnlinkPackRequest
+	2,  // 19: agni.v1.webapi.PackService.SyncPack:input_type -> agni.v1.webapi.SyncPackRequest
+	5,  // 20: agni.v1.webapi.PackService.CreatePack:output_type -> agni.v1.webapi.Pack
+	5,  // 21: agni.v1.webapi.PackService.GetPack:output_type -> agni.v1.webapi.Pack
+	9,  // 22: agni.v1.webapi.PackService.ListPacks:output_type -> agni.v1.webapi.ListPacksResponse
+	5,  // 23: agni.v1.webapi.PackService.UpdatePack:output_type -> agni.v1.webapi.Pack
+	17, // 24: agni.v1.webapi.PackService.DeletePack:output_type -> google.protobuf.Empty
+	5,  // 25: agni.v1.webapi.PackService.ImportPackFiles:output_type -> agni.v1.webapi.Pack
+	5,  // 26: agni.v1.webapi.PackService.LinkPack:output_type -> agni.v1.webapi.Pack
+	5,  // 27: agni.v1.webapi.PackService.UnlinkPack:output_type -> agni.v1.webapi.Pack
+	3,  // 28: agni.v1.webapi.PackService.SyncPack:output_type -> agni.v1.webapi.SyncPackResponse
+	20, // [20:29] is the sub-list for method output_type
+	11, // [11:20] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_packs_proto_init() }
@@ -619,6 +889,7 @@ func file_agni_v1_webapi_packs_proto_init() {
 		return
 	}
 	file_agni_v1_webapi_config_proto_init()
+	file_agni_v1_webapi_designs_proto_init()
 	file_agni_v1_webapi_snapshot_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -626,7 +897,7 @@ func file_agni_v1_webapi_packs_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_packs_proto_rawDesc), len(file_agni_v1_webapi_packs_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

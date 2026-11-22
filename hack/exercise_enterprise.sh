@@ -61,7 +61,11 @@ done
 cp "$out/repos/rev-b/"* "$out/repos/rev-c/"
 sed -i.bak 's/(property "Value" "120"/(property "Value" "60"/' "$out/repos/rev-c/gateway.kicad_sch" && rm "$out/repos/rev-c/gateway.kicad_sch.bak"
 cmp -s "$out/repos/rev-b/gateway.kicad_sch" "$out/repos/rev-c/gateway.kicad_sch" && { echo "rev-c changed nothing" >&2; exit 1; }
-cp -R "$tutorial/project.yaml" "$tutorial/profiles" "$tutorial/params" "$tutorial/lib" "$tutorial/queries" "$out/repos/pack/"
+# The pack starts without the datasheet parameters. A push below adds them, as a team adds the
+# parameters for a new regulator, and the next check runs the rules that read them.
+cp -R "$tutorial/project.yaml" "$tutorial/profiles" "$tutorial/lib" "$tutorial/queries" "$out/repos/pack/"
+grep -q '^params: \[params\]$' "$out/repos/pack/project.yaml" || { echo "the tutorial's project.yaml names no params folder" >&2; exit 1; }
+sed -i.bak '/^params: \[params\]$/d' "$out/repos/pack/project.yaml" && rm "$out/repos/pack/project.yaml.bak"
 
 server_token=$(openssl rand -hex 20)
 client_secret=$(openssl rand -hex 20)
@@ -216,22 +220,46 @@ else
 fi
 
 step "alice links the team's pack from hw/agni-packs on main"
-# agni packs link is #1801. Until then the command doesn't exist, and the three steps that need the
-# pack wait on it.
 if admin mounts add packs github://hw/agni-packs --ref main --connection hw >/dev/null 2>"$out/packs-mount.err" &&
-  as alice packs link house --mount packs --ref main >"$out/packs-link.txt" 2>&1; then
-  pass "the pack is linked from hw/agni-packs on main"
+  as alice packs link house packs@main >"$out/packs-link.txt" 2>&1 && grep -q "from packs@main at .*, followed" "$out/packs-link.txt"; then
+  pass "the pack is linked from hw/agni-packs on main, and follows it"
   pack_linked=1
 else
-  waits 1801 "linking a pack from a repo; see $out/packs-link.txt"
+  no "linking a pack from a repo; see $out/packs-link.txt and $out/packs-mount.err"
   pack_linked=
 fi
-if [ -n "$pack_linked" ] && as alice check designs/bb --pack house --format json >"$out/check-pack.json" 2>&1; then
-  pass "alice checks designs/bb under the linked pack"
+# fromParams counts the findings of rules that read a part's datasheet parameters, which the pack
+# holds none of until the push below.
+fromParams() { python3 -c 'import json,sys; print(sum(1 for f in json.load(sys.stdin)["findings"] if f["rule"] in ("supply-exceeds-abs-max", "pin-exceeds-abs-max", "regulator-output-exceeds-abs-max", "cap-voltage")))'; }
+before=
+if [ -n "$pack_linked" ] && as alice check designs/bb --pack house --format json >"$out/check-pack.json" 2>"$out/check-pack.err"; then
+  before=$(fromParams <"$out/check-pack.json")
+  pass "alice checks designs/bb under the linked pack, with $(findings <"$out/check-pack.json") findings"
 else
-  waits 1801 "checking designs/bb under the linked pack"
+  no "checking designs/bb under the linked pack; see $out/check-pack.err"
 fi
-waits 1801 "a push of a new rule to hw/agni-packs moves the pack, and the next check runs it"
+
+step "a push of the regulators' datasheet parameters to hw/agni-packs moves the pack, and the next check reads them"
+rm -rf "$out/repos/pack-2" && cp -R "$out/repos/pack" "$out/repos/pack-2" && cp -R "$tutorial/params" "$out/repos/pack-2/"
+sed -i.bak 's/^profiles: \[profiles\]$/profiles: [profiles]\
+params: [params]/' "$out/repos/pack-2/project.yaml" && rm "$out/repos/pack-2/project.yaml.bak"
+pushed=$(curl -s -X POST "$ctl/push" --data-urlencode "repo=hw/agni-packs" --data-urlencode "branch=main" \
+  --data-urlencode "dir=$out/repos/pack-2" --data-urlencode "hook=$url/hooks/github" --data-urlencode "secret=$AGNI_WEBHOOK_SECRET")
+psha=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("sha",""))' "$pushed" 2>/dev/null || true)
+moved=
+for _ in $(seq 1 50); do
+  as alice packs get house >"$out/pack-house.txt" 2>&1 || true
+  [ -n "$psha" ] && grep -q "at $psha, followed" "$out/pack-house.txt" && moved=1 && break
+  sleep 0.2
+done
+after=$(as alice check designs/bb --pack house --format json 2>"$out/check-pack-2.err" | fromParams || true)
+as alice reports create bb --pack house >"$out/report-pack.txt" 2>&1 || true
+echo "packs/house: ${psha:-no push}; datasheet findings before ${before:-none}, after ${after:-none}"
+if [ -n "$moved" ] && [ "${before:-x}" = 0 ] && [ "${after:-0}" -gt 0 ] && grep -q "packs/house at ${psha:0:12}" "$out/report-pack.txt"; then
+  pass "the push moved packs/house to ${psha:0:12}, the next check read the parameters ($after findings), and the report names the commit"
+else
+  no "the pack didn't move to ${psha:-a new commit}, read the parameters, or name it in a report; see $out/pack-house.txt and $out/report-pack.txt"
+fi
 
 step "a signed push to hw/baseboard's main moves a design that follows main"
 as alice designs create head >/dev/null
@@ -260,6 +288,8 @@ refused() {
 step "mallory, who can't read hw/baseboard, can't open designs/bb"
 as mallory designs get bb >"$out/mallory-get.txt" 2>&1 || true
 refused "designs/bb by name" "$out/mallory-get.txt"
+as mallory packs get house >"$out/mallory-pack.txt" 2>&1 || true
+refused "packs/house, read from hw/agni-packs, by name" "$out/mallory-pack.txt"
 as mallory check designs/bb >"$out/mallory-check.txt" 2>&1 || true
 refused "a check on designs/bb" "$out/mallory-check.txt"
 as mallory designs list >"$out/mallory-list.txt" 2>&1 || true
@@ -267,6 +297,12 @@ if grep -qw bb "$out/mallory-list.txt"; then
   no "mallory's listing names designs/bb; see $out/mallory-list.txt"
 else
   pass "mallory's listing leaves designs/bb out"
+fi
+as alice packs list >"$out/alice-packs.txt" 2>&1 || true
+if as mallory packs list >"$out/mallory-packs.txt" 2>&1 && ! grep -q "packs/house" "$out/mallory-packs.txt" && grep -q "packs/house" "$out/alice-packs.txt"; then
+  pass "mallory's pack listing leaves packs/house out, and alice's names it"
+else
+  no "mallory's pack listing names packs/house, or alice's doesn't; see $out/mallory-packs.txt and $out/alice-packs.txt"
 fi
 
 step "restart the server over the same folders, and read everything back"

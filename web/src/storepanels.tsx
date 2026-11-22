@@ -8,10 +8,11 @@ import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland } from "@panyam/tsappkit-solid";
 import type { Design, Project } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 import type { Pack } from "@panyam/agni-client/gen/agni/v1/webapi/packs_pb";
-import { packClient, projectClient, uploadsClient } from "./api.js";
+import { MountKind, type Mount } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
+import { packClient, projectClient, uploadsClient, workspaceClient } from "./api.js";
 import { DesignList, explain, FilePicker, listAll, listPacks, listProjects, StoreNav, when } from "./librarypanels.jsx";
 import { designId, type Picked } from "./libraryupload.js";
-import { importPack, lastSegment, packUrl, projectUrl } from "./storepages.js";
+import { importPack, lastSegment, linkPack, packSourceWords, packUrl, projectUrl } from "./storepages.js";
 
 // Projects lists the projects a server holds, with the form to make one.
 function Projects() {
@@ -215,12 +216,14 @@ function Packs() {
               </a>
               <span class="lb-when">
                 {k.files.length} files · {when(k)}
+                <Show when={packSourceWords(k)}> · from {packSourceWords(k)}</Show>
               </span>
             </li>
           )}
         </For>
       </ul>
       <PackUpload label="New pack" onDone={(k) => window.location.assign(packUrl(lastSegment(k.name)))} />
+      <PackLink onDone={(k) => window.location.assign(packUrl(lastSegment(k.name)))} />
     </div>
   );
 }
@@ -271,6 +274,74 @@ function PackUpload(props: { label: string; id?: string; onDone: (k: Pack) => vo
   );
 }
 
+// PackLink reads a pack from a project folder in a mount, at a ref, and follows the ref when it names
+// a branch or nothing (agni issue 1801). It names the mount, the folder holding project.yaml, and the
+// ref, as `agni packs link` takes them.
+function PackLink(props: { onDone: (k: Pack) => void }) {
+  const [mounts, setMounts] = createSignal<Mount[]>([]);
+  const [id, setId] = createSignal("");
+  const [mount, setMount] = createSignal("");
+  const [path, setPath] = createSignal("");
+  const [ref, setRef] = createSignal("");
+  const [status, setStatus] = createSignal("");
+  const [busy, setBusy] = createSignal(false);
+  void workspaceClient()
+    .listMounts({})
+    .then((r) => setMounts(r.mounts.filter((m) => !m.sourceHidden && m.kind !== MountKind.UPLOADS)))
+    .catch((err) => setStatus(explain(err)));
+  const choose = (name: string) => {
+    setMount(name);
+    // A mount over a repo starts from its own ref unless the person names another.
+    setRef(mounts().find((m) => m.name === name)?.ref ?? "");
+  };
+  const submit = async () => {
+    setBusy(true);
+    setStatus("Reading the project's rules…");
+    try {
+      props.onDone(await linkPack(packClient(), { packId: id(), mount: mount(), path: path(), ref: ref() }));
+    } catch (err) {
+      setStatus(explain(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form
+      class="lb-new"
+      data-testid="pack-link"
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        void submit();
+      }}
+    >
+      <h2>Link a pack from a mount</h2>
+      <p class="lb-note">The server reads the folder's project.yaml. A branch, or no ref, is followed, so a push moves the pack. A tag or commit pins it.</p>
+      <label>
+        Id <input name="id" pattern="[a-z0-9][a-z0-9._\-]*" placeholder="the project's name" value={id()} onInput={(e) => setId(e.currentTarget.value)} />
+      </label>
+      <label>
+        Mount{" "}
+        <select name="mount" value={mount()} onChange={(e) => choose(e.currentTarget.value)}>
+          <option value="">choose a mount</option>
+          <For each={mounts()}>{(m) => <option value={m.name}>{m.source ? `${m.name} (${m.source.replace(/^github:\/\//, "")})` : m.name}</option>}</For>
+        </select>
+      </label>
+      <label>
+        Folder <input name="path" placeholder="the mount's root" value={path()} onInput={(e) => setPath(e.currentTarget.value)} />
+      </label>
+      <label>
+        Ref <input name="ref" placeholder="the mount's branch" value={ref()} onInput={(e) => setRef(e.currentTarget.value)} />
+      </label>
+      <button type="submit" class="lb-submit" disabled={busy() || !mount()}>
+        Link the pack
+      </button>
+      <p class="lb-status" data-testid="pack-link-status">
+        {status()}
+      </p>
+    </form>
+  );
+}
+
 // PackPage shows what one pack holds, and replaces or deletes it.
 function PackPage(props: { id: string }) {
   const name = `packs/${props.id}`;
@@ -303,6 +374,41 @@ function PackPage(props: { id: string }) {
               <p class="lb-meta">
                 {name} · {k().hash.slice(0, 19)}… · updated {when(k())}
               </p>
+              <Show when={packSourceWords(k())}>
+                <p class="lb-meta" data-testid="pack-source">
+                  From {packSourceWords(k())}{" "}
+                  <Show when={k().source?.follow}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void packClient()
+                          .syncPack({ name })
+                          .then((r) => {
+                            if (r.pack) setPack(r.pack);
+                            setStatus(r.changed ? `Moved to ${r.toVersion.slice(0, 12)}.` : "Already at the source's version.");
+                          })
+                          .catch((err) => setStatus(explain(err)))
+                      }
+                    >
+                      Sync
+                    </button>{" "}
+                  </Show>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void packClient()
+                        .unlinkPack({ name })
+                        .then((next) => {
+                          setPack(next);
+                          setStatus("Unlinked. The pack keeps its rules, and no push moves it.");
+                        })
+                        .catch((err) => setStatus(explain(err)))
+                    }
+                  >
+                    Unlink
+                  </button>
+                </p>
+              </Show>
               <table class="lb-artifacts" data-testid="pack-tiers">
                 <tbody>
                   <Show when={cfg()?.conventions?.name}>
@@ -338,14 +444,16 @@ function PackPage(props: { id: string }) {
                   <For each={k().files}>{(f) => <li>{f.path}</li>}</For>
                 </ul>
               </details>
-              <PackUpload
-                label="Replace from a project folder"
-                id={props.id}
-                onDone={(next) => {
-                  setPack(next);
-                  setStatus("Replaced.");
-                }}
-              />
+              <Show when={!packSourceWords(k())}>
+                <PackUpload
+                  label="Replace from a project folder"
+                  id={props.id}
+                  onDone={(next) => {
+                    setPack(next);
+                    setStatus("Replaced.");
+                  }}
+                />
+              </Show>
               <button
                 type="button"
                 class="lb-delete"

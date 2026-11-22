@@ -125,6 +125,9 @@ func (s *DesignService) CreateReport(ctx context.Context, req *webapi.CreateRepo
 	for _, p := range read {
 		r.PackHashes = append(r.PackHashes, p.GetHash())
 	}
+	// It names the commit each linked pack was read at too, so a report after a push says which rules
+	// it ran (agni issue 1801).
+	r.PackVersions = PackVersions(read)
 	kept, err := s.reports.CreateReport(ctx, design, req.GetReportId(), r)
 	if err != nil {
 		return nil, err

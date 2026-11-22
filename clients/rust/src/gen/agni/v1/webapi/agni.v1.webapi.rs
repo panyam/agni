@@ -2743,6 +2743,11 @@ pub struct Report {
     /// such as one only uploaded to. Output only.
     #[prost(string, tag="12")]
     pub revision: ::prost::alloc::string::String,
+    /// pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+    /// then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+    /// with no history, has none. Output only.
+    #[prost(map="string, string", tag="13")]
+    pub pack_versions: ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
 }
 /// DesignRevision is a design's files as of one version of each linked source (agni issue 1725). Its
 /// name reads anywhere a design's name does: a snapshot's design, `agni check`, `agni diff`.
@@ -4140,6 +4145,47 @@ impl LexiconSource {
         }
     }
 }
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct LinkPackRequest {
+    /// pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
+    /// name.
+    #[prost(string, tag="1")]
+    pub pack_id: ::prost::alloc::string::String,
+    /// source names the mount, the folder holding project.yaml, and the ref. Its other fields are
+    /// ignored. An empty path is the mount's root.
+    #[prost(message, optional, tag="2")]
+    pub source: ::core::option::Option<ArtifactSource>,
+    /// title is the pack's title. Empty takes project.yaml's title.
+    #[prost(string, tag="3")]
+    pub title: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UnlinkPackRequest {
+    /// "packs/{pack}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SyncPackRequest {
+    /// "packs/{pack}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SyncPackResponse {
+    /// pack is the pack after the sync.
+    #[prost(message, optional, tag="1")]
+    pub pack: ::core::option::Option<Pack>,
+    /// from_version is the version the pack held before, and to_version the one it holds now, each a
+    /// commit SHA on a github mount. They are equal when nothing moved.
+    #[prost(string, tag="2")]
+    pub from_version: ::prost::alloc::string::String,
+    #[prost(string, tag="3")]
+    pub to_version: ::prost::alloc::string::String,
+    /// changed is true when the sync read new config or files.
+    #[prost(bool, tag="4")]
+    pub changed: bool,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ImportPackFilesRequest {
     /// pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
@@ -4185,6 +4231,12 @@ pub struct Pack {
     /// update_time is when the pack last changed. Output only.
     #[prost(message, optional, tag="7")]
     pub update_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    /// source is where a linked pack was read from: its mount, folder and ref, whether it follows a
+    /// branch, and the version it holds (agni issue 1801). Its read_hash is set only on a linked pack.
+    /// An uploaded pack has none, or only access_source when it was read from a private source and
+    /// then unlinked. Output only.
+    #[prost(message, optional, tag="8")]
+    pub source: ::core::option::Option<ArtifactSource>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreatePackRequest {

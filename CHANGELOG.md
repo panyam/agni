@@ -12,6 +12,13 @@ GitHub Release body carries.
 
 ### Added
 
+- A pack reads from a project folder in a repo and follows its branch (issue 1801). `agni packs link
+  house rules@main` links one, and a push webhook, `--poll` or `agni packs sync` moves it to the
+  branch's new commit, so the next check runs the new rules. A tag or commit pins it. Each report
+  names the commit its packs were read at. A pack from a private repo opens only for who can read the
+  repo. The packs page links one, and a linked pack's page has Sync and Unlink. The calls are
+  `PackService.LinkPack`, `UnlinkPack` and `SyncPack`, with `Pack.source` and `Report.pack_versions`.
+
 - The CLI trusts a team's own CA from `AGNI_CA_FILE`, for every `--remote` call and for `agni login`
   (issue 1800). The client libraries already took a CA file. `make exercise-enterprise` runs agni
   serve with TLS, tokens and sign-in through a GitHub App against a fake GitHub Enterprise Server,

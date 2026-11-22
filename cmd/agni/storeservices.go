@@ -112,7 +112,8 @@ func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir
 		// A snapshot may name its design, designs/{d}, and Ingest looks it up here (agni issue 1695).
 		resolver.Designs = catalog
 	}
-	packSvc := service.NewPackService(packStore, resolver.Blob).WithImporter(projects.PackFromFiles)
+	// A linked pack read from a private source opens only for who can read it (agni issue 1801).
+	packSvc := service.NewPackService(packStore, resolver.Blob).WithImporter(projects.PackFromFiles).WithGuard(guard)
 	if resolver != nil {
 		// A snapshot may name the packs it is read under, packs/{k} (agni issue 1704).
 		resolver.Packs = packSvc

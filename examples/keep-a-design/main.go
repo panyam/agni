@@ -2,7 +2,8 @@
 // It stores two revisions of a board as designs of one series, each holding a netlist artifact, keeps a
 // pack of house rules and a report under it (agni issue 1704), groups the designs in a project with a design
 // from a mounted folder, and shows what a mounted folder will not let it change. Last, it links a
-// design to a folder and lets a poll follow the folder's changes (agni issue 1726). The narration is in
+// design to a folder and lets a poll follow the folder's changes (agni issue 1726), and does the same
+// for a pack read from a project folder (agni issue 1801). The narration is in
 // the sidecar walkthrough.md, so this file only binds the steps that run engine code.
 //
 // The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
@@ -133,6 +134,16 @@ func main() {
 		fmt.Printf("linked to the folder holding rev A\n  version %s\n", linked.GetVersion())
 		fmt.Printf("after rev B replaced the folder's netlist, a poll synced it\n  version %s\n", synced.GetVersion())
 		fmt.Printf("after rev A came back, with the design set to mark\n  version %s\n  newer_version %s\n", marked.GetVersion(), marked.GetNewerVersion())
+		return nil
+	})
+
+	demo.Bind("followpack").Run(func(demokit.StepContext) *demokit.StepResult {
+		linked, moved, err := t.followPack(ctx)
+		if err != nil {
+			return demokit.Errf("follow the rules folder: %v", err)
+		}
+		fmt.Printf("linked packs/house-live to the rules folder\n  %d house rule, hash %s\n", len(linked.GetConfig().GetConventions().GetRules()), linked.GetHash())
+		fmt.Printf("after a rule was added to its project.yaml, a poll moved it\n  %d house rules, hash %s\n", len(moved.GetConfig().GetConventions().GetRules()), moved.GetHash())
 		return nil
 	})
 

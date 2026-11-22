@@ -3050,6 +3050,72 @@ pub mod pack_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn link_pack(
+            &mut self,
+            request: impl tonic::IntoRequest<super::LinkPackRequest>,
+        ) -> std::result::Result<tonic::Response<super::Pack>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.PackService/LinkPack",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.PackService", "LinkPack"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn unlink_pack(
+            &mut self,
+            request: impl tonic::IntoRequest<super::UnlinkPackRequest>,
+        ) -> std::result::Result<tonic::Response<super::Pack>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.PackService/UnlinkPack",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.PackService", "UnlinkPack"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn sync_pack(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SyncPackRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::SyncPackResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.PackService/SyncPack",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.PackService", "SyncPack"));
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated client implementations.

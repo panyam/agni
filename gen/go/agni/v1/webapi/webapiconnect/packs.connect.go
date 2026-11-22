@@ -47,6 +47,12 @@ const (
 	// PackServiceImportPackFilesProcedure is the fully-qualified name of the PackService's
 	// ImportPackFiles RPC.
 	PackServiceImportPackFilesProcedure = "/agni.v1.webapi.PackService/ImportPackFiles"
+	// PackServiceLinkPackProcedure is the fully-qualified name of the PackService's LinkPack RPC.
+	PackServiceLinkPackProcedure = "/agni.v1.webapi.PackService/LinkPack"
+	// PackServiceUnlinkPackProcedure is the fully-qualified name of the PackService's UnlinkPack RPC.
+	PackServiceUnlinkPackProcedure = "/agni.v1.webapi.PackService/UnlinkPack"
+	// PackServiceSyncPackProcedure is the fully-qualified name of the PackService's SyncPack RPC.
+	PackServiceSyncPackProcedure = "/agni.v1.webapi.PackService/SyncPack"
 )
 
 // PackServiceClient is a client for the agni.v1.webapi.PackService service.
@@ -73,6 +79,21 @@ type PackServiceClient interface {
 	// so a client sends what is named and asks again until the call succeeds. A folder with no
 	// project.yaml, or one that extends another, is INVALID_ARGUMENT.
 	ImportPackFiles(context.Context, *connect.Request[webapi.ImportPackFilesRequest]) (*connect.Response[webapi.Pack], error)
+	// LinkPack points a pack at a project folder in a mount, at a ref, and reads it as ImportPackFiles
+	// reads an uploaded folder (agni issue 1801). It creates the pack, or replaces one whole. The folder
+	// must hold a project.yaml. A ref that names a branch, or none, is followed: a push webhook, a poll
+	// or SyncPack moves the pack to the branch's new commit. A tag or a commit is pinned. The caller
+	// must be able to read the mount, and a pack read through a connection then opens only for a caller
+	// whose own connection can read the same source. An unknown mount or path is NOT_FOUND, the uploads
+	// mount is INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+	LinkPack(context.Context, *connect.Request[webapi.LinkPackRequest]) (*connect.Response[webapi.Pack], error)
+	// UnlinkPack makes a linked pack an uploaded one. Its config and files stay as they are, and no push
+	// moves it again. A pack read from a private source stays guarded by it. An uploaded pack is
+	// returned unchanged.
+	UnlinkPack(context.Context, *connect.Request[webapi.UnlinkPackRequest]) (*connect.Response[webapi.Pack], error)
+	// SyncPack brings a followed pack to its source's current version. A pinned pack, or one whose
+	// source hasn't moved, is left as it is. An uploaded pack is INVALID_ARGUMENT.
+	SyncPack(context.Context, *connect.Request[webapi.SyncPackRequest]) (*connect.Response[webapi.SyncPackResponse], error)
 }
 
 // NewPackServiceClient constructs a client for the agni.v1.webapi.PackService service. By default,
@@ -122,6 +143,24 @@ func NewPackServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(packServiceMethods.ByName("ImportPackFiles")),
 			connect.WithClientOptions(opts...),
 		),
+		linkPack: connect.NewClient[webapi.LinkPackRequest, webapi.Pack](
+			httpClient,
+			baseURL+PackServiceLinkPackProcedure,
+			connect.WithSchema(packServiceMethods.ByName("LinkPack")),
+			connect.WithClientOptions(opts...),
+		),
+		unlinkPack: connect.NewClient[webapi.UnlinkPackRequest, webapi.Pack](
+			httpClient,
+			baseURL+PackServiceUnlinkPackProcedure,
+			connect.WithSchema(packServiceMethods.ByName("UnlinkPack")),
+			connect.WithClientOptions(opts...),
+		),
+		syncPack: connect.NewClient[webapi.SyncPackRequest, webapi.SyncPackResponse](
+			httpClient,
+			baseURL+PackServiceSyncPackProcedure,
+			connect.WithSchema(packServiceMethods.ByName("SyncPack")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -133,6 +172,9 @@ type packServiceClient struct {
 	updatePack      *connect.Client[webapi.UpdatePackRequest, webapi.Pack]
 	deletePack      *connect.Client[webapi.DeletePackRequest, emptypb.Empty]
 	importPackFiles *connect.Client[webapi.ImportPackFilesRequest, webapi.Pack]
+	linkPack        *connect.Client[webapi.LinkPackRequest, webapi.Pack]
+	unlinkPack      *connect.Client[webapi.UnlinkPackRequest, webapi.Pack]
+	syncPack        *connect.Client[webapi.SyncPackRequest, webapi.SyncPackResponse]
 }
 
 // CreatePack calls agni.v1.webapi.PackService.CreatePack.
@@ -165,6 +207,21 @@ func (c *packServiceClient) ImportPackFiles(ctx context.Context, req *connect.Re
 	return c.importPackFiles.CallUnary(ctx, req)
 }
 
+// LinkPack calls agni.v1.webapi.PackService.LinkPack.
+func (c *packServiceClient) LinkPack(ctx context.Context, req *connect.Request[webapi.LinkPackRequest]) (*connect.Response[webapi.Pack], error) {
+	return c.linkPack.CallUnary(ctx, req)
+}
+
+// UnlinkPack calls agni.v1.webapi.PackService.UnlinkPack.
+func (c *packServiceClient) UnlinkPack(ctx context.Context, req *connect.Request[webapi.UnlinkPackRequest]) (*connect.Response[webapi.Pack], error) {
+	return c.unlinkPack.CallUnary(ctx, req)
+}
+
+// SyncPack calls agni.v1.webapi.PackService.SyncPack.
+func (c *packServiceClient) SyncPack(ctx context.Context, req *connect.Request[webapi.SyncPackRequest]) (*connect.Response[webapi.SyncPackResponse], error) {
+	return c.syncPack.CallUnary(ctx, req)
+}
+
 // PackServiceHandler is an implementation of the agni.v1.webapi.PackService service.
 type PackServiceHandler interface {
 	// CreatePack keeps a new pack. An id a pack already holds is ALREADY_EXISTS. A server started
@@ -189,6 +246,21 @@ type PackServiceHandler interface {
 	// so a client sends what is named and asks again until the call succeeds. A folder with no
 	// project.yaml, or one that extends another, is INVALID_ARGUMENT.
 	ImportPackFiles(context.Context, *connect.Request[webapi.ImportPackFilesRequest]) (*connect.Response[webapi.Pack], error)
+	// LinkPack points a pack at a project folder in a mount, at a ref, and reads it as ImportPackFiles
+	// reads an uploaded folder (agni issue 1801). It creates the pack, or replaces one whole. The folder
+	// must hold a project.yaml. A ref that names a branch, or none, is followed: a push webhook, a poll
+	// or SyncPack moves the pack to the branch's new commit. A tag or a commit is pinned. The caller
+	// must be able to read the mount, and a pack read through a connection then opens only for a caller
+	// whose own connection can read the same source. An unknown mount or path is NOT_FOUND, the uploads
+	// mount is INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+	LinkPack(context.Context, *connect.Request[webapi.LinkPackRequest]) (*connect.Response[webapi.Pack], error)
+	// UnlinkPack makes a linked pack an uploaded one. Its config and files stay as they are, and no push
+	// moves it again. A pack read from a private source stays guarded by it. An uploaded pack is
+	// returned unchanged.
+	UnlinkPack(context.Context, *connect.Request[webapi.UnlinkPackRequest]) (*connect.Response[webapi.Pack], error)
+	// SyncPack brings a followed pack to its source's current version. A pinned pack, or one whose
+	// source hasn't moved, is left as it is. An uploaded pack is INVALID_ARGUMENT.
+	SyncPack(context.Context, *connect.Request[webapi.SyncPackRequest]) (*connect.Response[webapi.SyncPackResponse], error)
 }
 
 // NewPackServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -234,6 +306,24 @@ func NewPackServiceHandler(svc PackServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(packServiceMethods.ByName("ImportPackFiles")),
 		connect.WithHandlerOptions(opts...),
 	)
+	packServiceLinkPackHandler := connect.NewUnaryHandler(
+		PackServiceLinkPackProcedure,
+		svc.LinkPack,
+		connect.WithSchema(packServiceMethods.ByName("LinkPack")),
+		connect.WithHandlerOptions(opts...),
+	)
+	packServiceUnlinkPackHandler := connect.NewUnaryHandler(
+		PackServiceUnlinkPackProcedure,
+		svc.UnlinkPack,
+		connect.WithSchema(packServiceMethods.ByName("UnlinkPack")),
+		connect.WithHandlerOptions(opts...),
+	)
+	packServiceSyncPackHandler := connect.NewUnaryHandler(
+		PackServiceSyncPackProcedure,
+		svc.SyncPack,
+		connect.WithSchema(packServiceMethods.ByName("SyncPack")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.PackService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PackServiceCreatePackProcedure:
@@ -248,6 +338,12 @@ func NewPackServiceHandler(svc PackServiceHandler, opts ...connect.HandlerOption
 			packServiceDeletePackHandler.ServeHTTP(w, r)
 		case PackServiceImportPackFilesProcedure:
 			packServiceImportPackFilesHandler.ServeHTTP(w, r)
+		case PackServiceLinkPackProcedure:
+			packServiceLinkPackHandler.ServeHTTP(w, r)
+		case PackServiceUnlinkPackProcedure:
+			packServiceUnlinkPackHandler.ServeHTTP(w, r)
+		case PackServiceSyncPackProcedure:
+			packServiceSyncPackHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -279,4 +375,16 @@ func (UnimplementedPackServiceHandler) DeletePack(context.Context, *connect.Requ
 
 func (UnimplementedPackServiceHandler) ImportPackFiles(context.Context, *connect.Request[webapi.ImportPackFilesRequest]) (*connect.Response[webapi.Pack], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.PackService.ImportPackFiles is not implemented"))
+}
+
+func (UnimplementedPackServiceHandler) LinkPack(context.Context, *connect.Request[webapi.LinkPackRequest]) (*connect.Response[webapi.Pack], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.PackService.LinkPack is not implemented"))
+}
+
+func (UnimplementedPackServiceHandler) UnlinkPack(context.Context, *connect.Request[webapi.UnlinkPackRequest]) (*connect.Response[webapi.Pack], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.PackService.UnlinkPack is not implemented"))
+}
+
+func (UnimplementedPackServiceHandler) SyncPack(context.Context, *connect.Request[webapi.SyncPackRequest]) (*connect.Response[webapi.SyncPackResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.PackService.SyncPack is not implemented"))
 }

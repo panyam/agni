@@ -63,6 +63,8 @@ private static final long serialVersionUID = 0L;
     switch (number) {
       case 11:
         return internalGetSourceVersions();
+      case 13:
+        return internalGetPackVersions();
       default:
         throw new RuntimeException(
             "Invalid map field number: " + number);
@@ -658,6 +660,109 @@ java.lang.String defaultValue) {
     }
   }
 
+  public static final int PACK_VERSIONS_FIELD_NUMBER = 13;
+  private static final class PackVersionsDefaultEntryHolder {
+    static final com.google.protobuf.MapEntry<
+        java.lang.String, java.lang.String> defaultEntry =
+            com.google.protobuf.MapEntry
+            .<java.lang.String, java.lang.String>newDefaultInstance(
+                io.github.panyam.agni.v1.webapi.DesignsProto.internal_static_agni_v1_webapi_Report_PackVersionsEntry_descriptor, 
+                com.google.protobuf.WireFormat.FieldType.STRING,
+                "",
+                com.google.protobuf.WireFormat.FieldType.STRING,
+                "");
+  }
+  @SuppressWarnings("serial")
+  private com.google.protobuf.MapField<
+      java.lang.String, java.lang.String> packVersions_;
+  private com.google.protobuf.MapField<java.lang.String, java.lang.String>
+  internalGetPackVersions() {
+    if (packVersions_ == null) {
+      return com.google.protobuf.MapField.emptyMapField(
+          PackVersionsDefaultEntryHolder.defaultEntry);
+    }
+    return packVersions_;
+  }
+  public int getPackVersionsCount() {
+    return internalGetPackVersions().getMap().size();
+  }
+  /**
+   * <pre>
+   * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+   * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+   * with no history, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+   */
+  @java.lang.Override
+  public boolean containsPackVersions(
+      java.lang.String key) {
+    java.util.Objects.requireNonNull(key, "map key");
+    return internalGetPackVersions().getMap().containsKey(key);
+  }
+  /**
+   * Use {@link #getPackVersionsMap()} instead.
+   */
+  @java.lang.Override
+  @java.lang.Deprecated
+  public java.util.Map<java.lang.String, java.lang.String> getPackVersions() {
+    return getPackVersionsMap();
+  }
+  /**
+   * <pre>
+   * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+   * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+   * with no history, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+   */
+  @java.lang.Override
+  public java.util.Map<java.lang.String, java.lang.String> getPackVersionsMap() {
+    return internalGetPackVersions().getMap();
+  }
+  /**
+   * <pre>
+   * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+   * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+   * with no history, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+   */
+  @java.lang.Override
+  public /* nullable */
+java.lang.String getPackVersionsOrDefault(
+      java.lang.String key,
+      /* nullable */
+java.lang.String defaultValue) {
+    java.util.Objects.requireNonNull(key, "map key");
+    java.util.Map<java.lang.String, java.lang.String> map =
+        internalGetPackVersions().getMap();
+    return map.containsKey(key) ? map.get(key) : defaultValue;
+  }
+  /**
+   * <pre>
+   * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+   * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+   * with no history, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+   */
+  @java.lang.Override
+  public java.lang.String getPackVersionsOrThrow(
+      java.lang.String key) {
+    java.util.Objects.requireNonNull(key, "map key");
+    java.util.Map<java.lang.String, java.lang.String> map =
+        internalGetPackVersions().getMap();
+    if (!map.containsKey(key)) {
+      throw new java.lang.IllegalArgumentException();
+    }
+    return map.get(key);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -711,6 +816,12 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revision_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 12, revision_);
     }
+    com.google.protobuf.GeneratedMessage
+      .serializeStringMapTo(
+        output,
+        internalGetPackVersions(),
+        PackVersionsDefaultEntryHolder.defaultEntry,
+        13);
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -777,6 +888,16 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revision_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(12, revision_);
     }
+    for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
+         : internalGetPackVersions().getMap().entrySet()) {
+      com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
+      packVersions__ = PackVersionsDefaultEntryHolder.defaultEntry.newBuilderForType()
+          .setKey(entry.getKey())
+          .setValue(entry.getValue())
+          .buildPartial();
+      size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(13, packVersions__);
+    }
     return size;
   }
   @java.lang.Override
@@ -831,6 +952,8 @@ java.lang.String defaultValue) {
         other.internalGetSourceVersions())) return false;
     if (!getRevision()
         .equals(other.getRevision())) return false;
+    if (!internalGetPackVersions().equals(
+        other.internalGetPackVersions())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -879,6 +1002,10 @@ java.lang.String defaultValue) {
     }
     hash = (37 * hash) + REVISION_FIELD_NUMBER;
     hash = (53 * hash) + getRevision().hashCode();
+    if (!internalGetPackVersions().getMap().isEmpty()) {
+      hash = (37 * hash) + PACK_VERSIONS_FIELD_NUMBER;
+      hash = (53 * hash) + internalGetPackVersions().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1000,6 +1127,8 @@ java.lang.String defaultValue) {
       switch (number) {
         case 11:
           return internalGetSourceVersions();
+        case 13:
+          return internalGetPackVersions();
         default:
           throw new RuntimeException(
               "Invalid map field number: " + number);
@@ -1011,6 +1140,8 @@ java.lang.String defaultValue) {
       switch (number) {
         case 11:
           return internalGetMutableSourceVersions();
+        case 13:
+          return internalGetMutablePackVersions();
         default:
           throw new RuntimeException(
               "Invalid map field number: " + number);
@@ -1068,6 +1199,7 @@ java.lang.String defaultValue) {
       findingCount_ = 0;
       internalGetMutableSourceVersions().clear();
       revision_ = "";
+      internalGetMutablePackVersions().clear();
       return this;
     }
 
@@ -1147,6 +1279,10 @@ java.lang.String defaultValue) {
       }
       if (((from_bitField0_ & 0x00000800) != 0)) {
         result.revision_ = revision_;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.packVersions_ = internalGetPackVersions();
+        result.packVersions_.makeImmutable();
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1228,6 +1364,9 @@ java.lang.String defaultValue) {
         bitField0_ |= 0x00000800;
         onChanged();
       }
+      internalGetMutablePackVersions().mergeFrom(
+          other.internalGetPackVersions());
+      bitField0_ |= 0x00001000;
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1320,6 +1459,15 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000800;
               break;
             } // case 98
+            case 106: {
+              com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
+              packVersions__ = input.readMessage(
+                  PackVersionsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+              internalGetMutablePackVersions().getMutableMap().put(
+                  packVersions__.getKey(), packVersions__.getValue());
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 106
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2772,6 +2920,175 @@ java.lang.String defaultValue) {
       revision_ = value;
       bitField0_ |= 0x00000800;
       onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.MapField<
+        java.lang.String, java.lang.String> packVersions_;
+    private com.google.protobuf.MapField<java.lang.String, java.lang.String>
+        internalGetPackVersions() {
+      if (packVersions_ == null) {
+        return com.google.protobuf.MapField.emptyMapField(
+            PackVersionsDefaultEntryHolder.defaultEntry);
+      }
+      return packVersions_;
+    }
+    private com.google.protobuf.MapField<java.lang.String, java.lang.String>
+        internalGetMutablePackVersions() {
+      if (packVersions_ == null) {
+        packVersions_ = com.google.protobuf.MapField.newMapField(
+            PackVersionsDefaultEntryHolder.defaultEntry);
+      }
+      if (!packVersions_.isMutable()) {
+        packVersions_ = packVersions_.copy();
+      }
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return packVersions_;
+    }
+    public int getPackVersionsCount() {
+      return internalGetPackVersions().getMap().size();
+    }
+    /**
+     * <pre>
+     * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+     * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+     * with no history, has none. Output only.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+     */
+    @java.lang.Override
+    public boolean containsPackVersions(
+        java.lang.String key) {
+      java.util.Objects.requireNonNull(key, "map key");
+      return internalGetPackVersions().getMap().containsKey(key);
+    }
+    /**
+     * Use {@link #getPackVersionsMap()} instead.
+     */
+    @java.lang.Override
+    @java.lang.Deprecated
+    public java.util.Map<java.lang.String, java.lang.String> getPackVersions() {
+      return getPackVersionsMap();
+    }
+    /**
+     * <pre>
+     * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+     * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+     * with no history, has none. Output only.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+     */
+    @java.lang.Override
+    public java.util.Map<java.lang.String, java.lang.String> getPackVersionsMap() {
+      return internalGetPackVersions().getMap();
+    }
+    /**
+     * <pre>
+     * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+     * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+     * with no history, has none. Output only.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+     */
+    @java.lang.Override
+    public /* nullable */
+java.lang.String getPackVersionsOrDefault(
+        java.lang.String key,
+        /* nullable */
+java.lang.String defaultValue) {
+      java.util.Objects.requireNonNull(key, "map key");
+      java.util.Map<java.lang.String, java.lang.String> map =
+          internalGetPackVersions().getMap();
+      return map.containsKey(key) ? map.get(key) : defaultValue;
+    }
+    /**
+     * <pre>
+     * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+     * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+     * with no history, has none. Output only.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+     */
+    @java.lang.Override
+    public java.lang.String getPackVersionsOrThrow(
+        java.lang.String key) {
+      java.util.Objects.requireNonNull(key, "map key");
+      java.util.Map<java.lang.String, java.lang.String> map =
+          internalGetPackVersions().getMap();
+      if (!map.containsKey(key)) {
+        throw new java.lang.IllegalArgumentException();
+      }
+      return map.get(key);
+    }
+    public Builder clearPackVersions() {
+      bitField0_ = (bitField0_ & ~0x00001000);
+      internalGetMutablePackVersions().getMutableMap()
+          .clear();
+      return this;
+    }
+    /**
+     * <pre>
+     * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+     * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+     * with no history, has none. Output only.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+     */
+    public Builder removePackVersions(
+        java.lang.String key) {
+      java.util.Objects.requireNonNull(key, "map key");
+      internalGetMutablePackVersions().getMutableMap()
+          .remove(key);
+      return this;
+    }
+    /**
+     * Use alternate mutation accessors instead.
+     */
+    @java.lang.Deprecated
+    public java.util.Map<java.lang.String, java.lang.String>
+        getMutablePackVersions() {
+      bitField0_ |= 0x00001000;
+      return internalGetMutablePackVersions().getMutableMap();
+    }
+    /**
+     * <pre>
+     * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+     * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+     * with no history, has none. Output only.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+     */
+    public Builder putPackVersions(
+        java.lang.String key,
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(key, "map key");
+      java.util.Objects.requireNonNull(value, "map value");
+      internalGetMutablePackVersions().getMutableMap()
+          .put(key, value);
+      bitField0_ |= 0x00001000;
+      return this;
+    }
+    /**
+     * <pre>
+     * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+     * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+     * with no history, has none. Output only.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+     */
+    public Builder putAllPackVersions(
+        java.util.Map<java.lang.String, java.lang.String> values) {
+      internalGetMutablePackVersions().getMutableMap()
+          .putAll(values);
+      bitField0_ |= 0x00001000;
       return this;
     }
 

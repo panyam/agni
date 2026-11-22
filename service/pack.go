@@ -9,6 +9,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -189,6 +190,20 @@ type PackService struct {
 	store    PackStore
 	blobs    BlobSource
 	importer PackImporter
+	// readers, uploadsMount, sources and mountsOf link packs to mounts (WithLinks).
+	readers      MountReaders
+	uploadsMount string
+	sources      SourceAccess
+	mountsOf     MountsOf
+	guard        *AccessGuard
+	now          func() time.Time
+}
+
+func (s *PackService) clock() time.Time {
+	if s.now != nil {
+		return s.now()
+	}
+	return time.Now()
 }
 
 // NewPackService returns a PackService over store, reading uploaded file contents from blobs. A nil
@@ -224,7 +239,14 @@ func (s *PackService) GetPack(ctx context.Context, req *webapi.GetPackRequest) (
 	if s.store == nil {
 		return nil, fmt.Errorf("%w: no pack %s; this server keeps no packs (start it with --store)", ErrNotFound, req.GetName())
 	}
-	return s.store.Pack(ctx, id)
+	p, err := s.store.Pack(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.open(ctx, p); err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 // ListPacks returns the packs this server holds, ordered by name.
@@ -235,9 +257,21 @@ func (s *PackService) ListPacks(ctx context.Context, req *webapi.ListPacksReques
 	if s.store == nil {
 		return &webapi.ListPacksResponse{}, nil
 	}
-	all, err := s.store.Packs(ctx)
+	stored, err := s.store.Packs(ctx)
 	if err != nil {
 		return nil, err
+	}
+	// A pack the caller can't open is left out, as a design is.
+	var all []*webapi.Pack
+	for _, p := range stored {
+		err := s.open(ctx, p)
+		if errors.Is(err, ErrPermissionDenied) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, p)
 	}
 	page, next := paginate(len(all), req.GetPageSize(), req.GetPageToken(), func(i int) string { return all[i].GetName() })
 	resp := &webapi.ListPacksResponse{NextPageToken: next}
@@ -266,6 +300,15 @@ func (s *PackService) UpdatePack(ctx context.Context, req *webapi.UpdatePackRequ
 			return nil, fmt.Errorf("%w: update_mask path %q; a pack's title, config and files can be changed", ErrInvalidArgument, p)
 		}
 	}
+	cur, err := s.GetPack(ctx, &webapi.GetPackRequest{Name: in.GetName()})
+	if err != nil {
+		return nil, err
+	}
+	// A sync would overwrite what a person put by hand, so a linked pack's config and files come
+	// from its source alone.
+	if packLinked(cur) && (slices.Contains(paths, "config") || slices.Contains(paths, "files")) {
+		return nil, fmt.Errorf("%w: %s is linked to %s; UnlinkPack it before changing its config or files", ErrFailedPrecondition, cur.GetName(), SourceString(cur.GetSource()))
+	}
 	return s.store.UpdatePack(ctx, id, func(p *webapi.Pack) error {
 		for _, f := range paths {
 			switch f {
@@ -289,6 +332,9 @@ func (s *PackService) DeletePack(ctx context.Context, req *webapi.DeletePackRequ
 	}
 	if s.store == nil {
 		return fmt.Errorf("%w: no pack %s", ErrNotFound, req.GetName())
+	}
+	if _, err := s.GetPack(ctx, &webapi.GetPackRequest{Name: req.GetName()}); err != nil {
+		return err
 	}
 	return s.store.DeletePack(ctx, id)
 }
@@ -315,15 +361,27 @@ func (s *PackService) ImportPackFiles(ctx context.Context, req *webapi.ImportPac
 	if s.store == nil {
 		return nil, errNoPackStore
 	}
+	seen := map[string]bool{}
+	for _, f := range req.GetFiles() {
+		if seen[f.GetPath()] {
+			return nil, fmt.Errorf("%w: %q is listed twice", ErrInvalidArgument, f.GetPath())
+		}
+		seen[f.GetPath()] = true
+	}
+	return s.keepFolder(ctx, req.GetPackId(), req.GetTitle(), req.GetFiles(), nil)
+}
+
+// keepFolder keeps the pack a project folder's files make as id, creating it or replacing it whole,
+// with src as its source. An empty id or title takes project.yaml's. Contents the server lacks are a
+// *BlobsMissingError naming the first one met. A nil src is an upload, which a linked pack refuses,
+// so a sync never overwrites what a person put and a put never hides a link.
+func (s *PackService) keepFolder(ctx context.Context, id, title string, files []*webapi.SnapshotFile, src *webapi.ArtifactSource) (*webapi.Pack, error) {
 	if s.importer == nil {
 		return nil, fmt.Errorf("%w: this server reads no project folders into packs", ErrFailedPrecondition)
 	}
 	byPath := map[string]*webapi.SnapshotFile{}
-	paths := make([]string, 0, len(req.GetFiles()))
-	for _, f := range req.GetFiles() {
-		if _, dup := byPath[f.GetPath()]; dup {
-			return nil, fmt.Errorf("%w: %q is listed twice", ErrInvalidArgument, f.GetPath())
-		}
+	paths := make([]string, 0, len(files))
+	for _, f := range files {
 		byPath[f.GetPath()] = f
 		paths = append(paths, f.GetPath())
 	}
@@ -335,7 +393,7 @@ func (s *PackService) ImportPackFiles(ctx context.Context, req *webapi.ImportPac
 		}
 		return b, nil
 	}
-	id, pack, kept, err := s.importer(paths, read)
+	pid, pack, kept, err := s.importer(paths, read)
 	var missing *missingContent
 	if errors.As(err, &missing) {
 		return nil, &BlobsMissingError{Hashes: []string{missing.hash}}
@@ -343,32 +401,39 @@ func (s *PackService) ImportPackFiles(ctx context.Context, req *webapi.ImportPac
 	if err != nil {
 		return nil, err
 	}
-	if req.GetPackId() != "" {
-		id = req.GetPackId()
+	if id == "" {
+		id = pid
 	}
 	if !newIDPattern.MatchString(id) {
 		return nil, fmt.Errorf("%w: pack id %q must be lowercase letters, digits, '.', '_' or '-', starting with a letter or digit", ErrInvalidArgument, id)
 	}
-	if req.GetTitle() != "" {
-		pack.Title = req.GetTitle()
+	if title != "" {
+		pack.Title = title
 	}
 	pack.Name = PackName(id)
 	pack.Files = nil
 	for _, p := range kept {
 		pack.Files = append(pack.Files, byPath[p])
 	}
+	pack.Source = src
 	if err := checkPack(pack); err != nil {
 		return nil, err
 	}
-	_, err = s.store.Pack(ctx, id)
+	cur, err := s.store.Pack(ctx, id)
 	if errors.Is(err, ErrNotFound) {
 		return s.store.CreatePack(ctx, id, pack, s.blobs)
 	}
 	if err != nil {
 		return nil, err
 	}
+	if err := s.open(ctx, cur); err != nil {
+		return nil, err
+	}
+	if src == nil && packLinked(cur) {
+		return nil, fmt.Errorf("%w: %s is linked to %s; UnlinkPack it before putting files", ErrFailedPrecondition, cur.GetName(), SourceString(cur.GetSource()))
+	}
 	return s.store.UpdatePack(ctx, id, func(p *webapi.Pack) error {
-		p.Title, p.Config, p.Files = pack.GetTitle(), pack.GetConfig(), pack.GetFiles()
+		p.Title, p.Config, p.Files, p.Source = pack.GetTitle(), pack.GetConfig(), pack.GetFiles(), pack.GetSource()
 		return nil
 	}, s.blobs)
 }

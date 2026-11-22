@@ -375,4 +375,68 @@ java.lang.String defaultValue);
    */
   com.google.protobuf.ByteString
       getRevisionBytes();
+
+  /**
+   * <pre>
+   * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+   * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+   * with no history, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+   */
+  int getPackVersionsCount();
+  /**
+   * <pre>
+   * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+   * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+   * with no history, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+   */
+  boolean containsPackVersions(
+      java.lang.String key);
+  /**
+   * Use {@link #getPackVersionsMap()} instead.
+   */
+  @java.lang.Deprecated
+  java.util.Map<java.lang.String, java.lang.String>
+  getPackVersions();
+  /**
+   * <pre>
+   * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+   * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+   * with no history, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+   */
+  java.util.Map<java.lang.String, java.lang.String>
+  getPackVersionsMap();
+  /**
+   * <pre>
+   * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+   * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+   * with no history, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+   */
+  /* nullable */
+java.lang.String getPackVersionsOrDefault(
+      java.lang.String key,
+      /* nullable */
+java.lang.String defaultValue);
+  /**
+   * <pre>
+   * pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+   * then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+   * with no history, has none. Output only.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; pack_versions = 13 [json_name = "packVersions"];</code>
+   */
+  java.lang.String getPackVersionsOrThrow(
+      java.lang.String key);
 }

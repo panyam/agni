@@ -5,6 +5,7 @@ package agni.v1.webapi;
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/webapi/config.proto";
+import "agni/v1/webapi/designs.proto";
 import "agni/v1/webapi/snapshot.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
@@ -46,6 +47,54 @@ service PackService {
   // so a client sends what is named and asks again until the call succeeds. A folder with no
   // project.yaml, or one that extends another, is INVALID_ARGUMENT.
   rpc ImportPackFiles(ImportPackFilesRequest) returns (Pack);
+
+  // LinkPack points a pack at a project folder in a mount, at a ref, and reads it as ImportPackFiles
+  // reads an uploaded folder (agni issue 1801). It creates the pack, or replaces one whole. The folder
+  // must hold a project.yaml. A ref that names a branch, or none, is followed: a push webhook, a poll
+  // or SyncPack moves the pack to the branch's new commit. A tag or a commit is pinned. The caller
+  // must be able to read the mount, and a pack read through a connection then opens only for a caller
+  // whose own connection can read the same source. An unknown mount or path is NOT_FOUND, the uploads
+  // mount is INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+  rpc LinkPack(LinkPackRequest) returns (Pack);
+
+  // UnlinkPack makes a linked pack an uploaded one. Its config and files stay as they are, and no push
+  // moves it again. A pack read from a private source stays guarded by it. An uploaded pack is
+  // returned unchanged.
+  rpc UnlinkPack(UnlinkPackRequest) returns (Pack);
+
+  // SyncPack brings a followed pack to its source's current version. A pinned pack, or one whose
+  // source hasn't moved, is left as it is. An uploaded pack is INVALID_ARGUMENT.
+  rpc SyncPack(SyncPackRequest) returns (SyncPackResponse);
+}
+
+message LinkPackRequest {
+  // pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
+  // name.
+  string pack_id = 1;
+  // source names the mount, the folder holding project.yaml, and the ref. Its other fields are
+  // ignored. An empty path is the mount's root.
+  ArtifactSource source = 2;
+  // title is the pack's title. Empty takes project.yaml's title.
+  string title = 3;
+}
+
+message UnlinkPackRequest {
+  string name = 1; // "packs/{pack}"
+}
+
+message SyncPackRequest {
+  string name = 1; // "packs/{pack}"
+}
+
+message SyncPackResponse {
+  // pack is the pack after the sync.
+  Pack pack = 1;
+  // from_version is the version the pack held before, and to_version the one it holds now, each a
+  // commit SHA on a github mount. They are equal when nothing moved.
+  string from_version = 2;
+  string to_version = 3;
+  // changed is true when the sync read new config or files.
+  bool changed = 4;
 }
 
 message ImportPackFilesRequest {
@@ -81,6 +130,11 @@ message Pack {
   string hash = 6;
   // update_time is when the pack last changed. Output only.
   google.protobuf.Timestamp update_time = 7;
+  // source is where a linked pack was read from: its mount, folder and ref, whether it follows a
+  // branch, and the version it holds (agni issue 1801). Its read_hash is set only on a linked pack.
+  // An uploaded pack has none, or only access_source when it was read from a private source and
+  // then unlinked. Output only.
+  ArtifactSource source = 8;
 }
 
 message CreatePackRequest {

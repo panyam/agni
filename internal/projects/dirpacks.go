@@ -193,6 +193,7 @@ func (r *DirPacks) commit(ctx context.Context, id string, in *webapi.Pack, blobs
 		Name:   service.PackName(id),
 		Title:  in.GetTitle(),
 		Config: in.GetConfig(),
+		Source: in.GetSource(),
 	}
 	if p.Title == "" {
 		p.Title = id

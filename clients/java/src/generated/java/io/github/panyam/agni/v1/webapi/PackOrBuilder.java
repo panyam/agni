@@ -208,4 +208,40 @@ public interface PackOrBuilder extends
    * <code>.google.protobuf.Timestamp update_time = 7 [json_name = "updateTime"];</code>
    */
   com.google.protobuf.TimestampOrBuilder getUpdateTimeOrBuilder();
+
+  /**
+   * <pre>
+   * source is where a linked pack was read from: its mount, folder and ref, whether it follows a
+   * branch, and the version it holds (agni issue 1801). Its read_hash is set only on a linked pack.
+   * An uploaded pack has none, or only access_source when it was read from a private source and
+   * then unlinked. Output only.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 8 [json_name = "source"];</code>
+   * @return Whether the source field is set.
+   */
+  boolean hasSource();
+  /**
+   * <pre>
+   * source is where a linked pack was read from: its mount, folder and ref, whether it follows a
+   * branch, and the version it holds (agni issue 1801). Its read_hash is set only on a linked pack.
+   * An uploaded pack has none, or only access_source when it was read from a private source and
+   * then unlinked. Output only.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 8 [json_name = "source"];</code>
+   * @return The source.
+   */
+  io.github.panyam.agni.v1.webapi.ArtifactSource getSource();
+  /**
+   * <pre>
+   * source is where a linked pack was read from: its mount, folder and ref, whether it follows a
+   * branch, and the version it holds (agni issue 1801). Its read_hash is set only on a linked pack.
+   * An uploaded pack has none, or only access_source when it was read from a private source and
+   * then unlinked. Output only.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.ArtifactSource source = 8 [json_name = "source"];</code>
+   */
+  io.github.panyam.agni.v1.webapi.ArtifactSourceOrBuilder getSourceOrBuilder();
 }

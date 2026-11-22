@@ -6,6 +6,8 @@ import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegen
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { AnalysisConfig } from "./config_pb";
 import { file_agni_v1_webapi_config } from "./config_pb";
+import type { ArtifactSource } from "./designs_pb";
+import { file_agni_v1_webapi_designs } from "./designs_pb";
 import type { SnapshotFile } from "./snapshot_pb";
 import { file_agni_v1_webapi_snapshot } from "./snapshot_pb";
 import type { EmptySchema, FieldMask, Timestamp } from "@bufbuild/protobuf/wkt";
@@ -16,7 +18,119 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/packs.proto.
  */
 export const file_agni_v1_webapi_packs: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9wYWNrcy5wcm90bxIOYWduaS52MS53ZWJhcGkiZQoWSW1wb3J0UGFja0ZpbGVzUmVxdWVzdBIPCgdwYWNrX2lkGAEgASgJEisKBWZpbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuU25hcHNob3RGaWxlEg0KBXRpdGxlGAMgASgJIswBCgRQYWNrEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSLgoGY29uZmlnGAMgASgLMh4uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcSKwoFZmlsZXMYBCADKAsyHC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdEZpbGUSCwoDdXJpGAUgASgJEgwKBGhhc2gYBiABKAkSLwoLdXBkYXRlX3RpbWUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIkgKEUNyZWF0ZVBhY2tSZXF1ZXN0Eg8KB3BhY2tfaWQYASABKAkSIgoEcGFjaxgCIAEoCzIULmFnbmkudjEud2ViYXBpLlBhY2siHgoOR2V0UGFja1JlcXVlc3QSDAoEbmFtZRgBIAEoCSJJChBMaXN0UGFja3NSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJRChFMaXN0UGFja3NSZXNwb25zZRIjCgVwYWNrcxgBIAMoCzIULmFnbmkudjEud2ViYXBpLlBhY2sSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJImgKEVVwZGF0ZVBhY2tSZXF1ZXN0EiIKBHBhY2sYASABKAsyFC5hZ25pLnYxLndlYmFwaS5QYWNrEi8KC3VwZGF0ZV9tYXNrGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzayIhChFEZWxldGVQYWNrUmVxdWVzdBIMCgRuYW1lGAEgASgJMsgDCgtQYWNrU2VydmljZRJFCgpDcmVhdGVQYWNrEiEuYWduaS52MS53ZWJhcGkuQ3JlYXRlUGFja1JlcXVlc3QaFC5hZ25pLnYxLndlYmFwaS5QYWNrEj8KB0dldFBhY2sSHi5hZ25pLnYxLndlYmFwaS5HZXRQYWNrUmVxdWVzdBoULmFnbmkudjEud2ViYXBpLlBhY2sSUAoJTGlzdFBhY2tzEiAuYWduaS52MS53ZWJhcGkuTGlzdFBhY2tzUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkxpc3RQYWNrc1Jlc3BvbnNlEkUKClVwZGF0ZVBhY2sSIS5hZ25pLnYxLndlYmFwaS5VcGRhdGVQYWNrUmVxdWVzdBoULmFnbmkudjEud2ViYXBpLlBhY2sSRwoKRGVsZXRlUGFjaxIhLmFnbmkudjEud2ViYXBpLkRlbGV0ZVBhY2tSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ek8KD0ltcG9ydFBhY2tGaWxlcxImLmFnbmkudjEud2ViYXBpLkltcG9ydFBhY2tGaWxlc1JlcXVlc3QaFC5hZ25pLnYxLndlYmFwaS5QYWNrQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_config, file_agni_v1_webapi_snapshot, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9wYWNrcy5wcm90bxIOYWduaS52MS53ZWJhcGkiYQoPTGlua1BhY2tSZXF1ZXN0Eg8KB3BhY2tfaWQYASABKAkSLgoGc291cmNlGAIgASgLMh4uYWduaS52MS53ZWJhcGkuQXJ0aWZhY3RTb3VyY2USDQoFdGl0bGUYAyABKAkiIQoRVW5saW5rUGFja1JlcXVlc3QSDAoEbmFtZRgBIAEoCSIfCg9TeW5jUGFja1JlcXVlc3QSDAoEbmFtZRgBIAEoCSJxChBTeW5jUGFja1Jlc3BvbnNlEiIKBHBhY2sYASABKAsyFC5hZ25pLnYxLndlYmFwaS5QYWNrEhQKDGZyb21fdmVyc2lvbhgCIAEoCRISCgp0b192ZXJzaW9uGAMgASgJEg8KB2NoYW5nZWQYBCABKAgiZQoWSW1wb3J0UGFja0ZpbGVzUmVxdWVzdBIPCgdwYWNrX2lkGAEgASgJEisKBWZpbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuU25hcHNob3RGaWxlEg0KBXRpdGxlGAMgASgJIvwBCgRQYWNrEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSLgoGY29uZmlnGAMgASgLMh4uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcSKwoFZmlsZXMYBCADKAsyHC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdEZpbGUSCwoDdXJpGAUgASgJEgwKBGhhc2gYBiABKAkSLwoLdXBkYXRlX3RpbWUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KBnNvdXJjZRgIIAEoCzIeLmFnbmkudjEud2ViYXBpLkFydGlmYWN0U291cmNlIkgKEUNyZWF0ZVBhY2tSZXF1ZXN0Eg8KB3BhY2tfaWQYASABKAkSIgoEcGFjaxgCIAEoCzIULmFnbmkudjEud2ViYXBpLlBhY2siHgoOR2V0UGFja1JlcXVlc3QSDAoEbmFtZRgBIAEoCSJJChBMaXN0UGFja3NSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJRChFMaXN0UGFja3NSZXNwb25zZRIjCgVwYWNrcxgBIAMoCzIULmFnbmkudjEud2ViYXBpLlBhY2sSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJImgKEVVwZGF0ZVBhY2tSZXF1ZXN0EiIKBHBhY2sYASABKAsyFC5hZ25pLnYxLndlYmFwaS5QYWNrEi8KC3VwZGF0ZV9tYXNrGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzayIhChFEZWxldGVQYWNrUmVxdWVzdBIMCgRuYW1lGAEgASgJMqEFCgtQYWNrU2VydmljZRJFCgpDcmVhdGVQYWNrEiEuYWduaS52MS53ZWJhcGkuQ3JlYXRlUGFja1JlcXVlc3QaFC5hZ25pLnYxLndlYmFwaS5QYWNrEj8KB0dldFBhY2sSHi5hZ25pLnYxLndlYmFwaS5HZXRQYWNrUmVxdWVzdBoULmFnbmkudjEud2ViYXBpLlBhY2sSUAoJTGlzdFBhY2tzEiAuYWduaS52MS53ZWJhcGkuTGlzdFBhY2tzUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkxpc3RQYWNrc1Jlc3BvbnNlEkUKClVwZGF0ZVBhY2sSIS5hZ25pLnYxLndlYmFwaS5VcGRhdGVQYWNrUmVxdWVzdBoULmFnbmkudjEud2ViYXBpLlBhY2sSRwoKRGVsZXRlUGFjaxIhLmFnbmkudjEud2ViYXBpLkRlbGV0ZVBhY2tSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ek8KD0ltcG9ydFBhY2tGaWxlcxImLmFnbmkudjEud2ViYXBpLkltcG9ydFBhY2tGaWxlc1JlcXVlc3QaFC5hZ25pLnYxLndlYmFwaS5QYWNrEkEKCExpbmtQYWNrEh8uYWduaS52MS53ZWJhcGkuTGlua1BhY2tSZXF1ZXN0GhQuYWduaS52MS53ZWJhcGkuUGFjaxJFCgpVbmxpbmtQYWNrEiEuYWduaS52MS53ZWJhcGkuVW5saW5rUGFja1JlcXVlc3QaFC5hZ25pLnYxLndlYmFwaS5QYWNrEk0KCFN5bmNQYWNrEh8uYWduaS52MS53ZWJhcGkuU3luY1BhY2tSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuU3luY1BhY2tSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_config, file_agni_v1_webapi_designs, file_agni_v1_webapi_snapshot, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp]);
+
+/**
+ * @generated from message agni.v1.webapi.LinkPackRequest
+ */
+export type LinkPackRequest = Message<"agni.v1.webapi.LinkPackRequest"> & {
+  /**
+   * pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
+   * name.
+   *
+   * @generated from field: string pack_id = 1;
+   */
+  packId: string;
+
+  /**
+   * source names the mount, the folder holding project.yaml, and the ref. Its other fields are
+   * ignored. An empty path is the mount's root.
+   *
+   * @generated from field: agni.v1.webapi.ArtifactSource source = 2;
+   */
+  source?: ArtifactSource | undefined;
+
+  /**
+   * title is the pack's title. Empty takes project.yaml's title.
+   *
+   * @generated from field: string title = 3;
+   */
+  title: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.LinkPackRequest.
+ * Use `create(LinkPackRequestSchema)` to create a new message.
+ */
+export const LinkPackRequestSchema: GenMessage<LinkPackRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_packs, 0);
+
+/**
+ * @generated from message agni.v1.webapi.UnlinkPackRequest
+ */
+export type UnlinkPackRequest = Message<"agni.v1.webapi.UnlinkPackRequest"> & {
+  /**
+   * "packs/{pack}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.UnlinkPackRequest.
+ * Use `create(UnlinkPackRequestSchema)` to create a new message.
+ */
+export const UnlinkPackRequestSchema: GenMessage<UnlinkPackRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_packs, 1);
+
+/**
+ * @generated from message agni.v1.webapi.SyncPackRequest
+ */
+export type SyncPackRequest = Message<"agni.v1.webapi.SyncPackRequest"> & {
+  /**
+   * "packs/{pack}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.SyncPackRequest.
+ * Use `create(SyncPackRequestSchema)` to create a new message.
+ */
+export const SyncPackRequestSchema: GenMessage<SyncPackRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_packs, 2);
+
+/**
+ * @generated from message agni.v1.webapi.SyncPackResponse
+ */
+export type SyncPackResponse = Message<"agni.v1.webapi.SyncPackResponse"> & {
+  /**
+   * pack is the pack after the sync.
+   *
+   * @generated from field: agni.v1.webapi.Pack pack = 1;
+   */
+  pack?: Pack | undefined;
+
+  /**
+   * from_version is the version the pack held before, and to_version the one it holds now, each a
+   * commit SHA on a github mount. They are equal when nothing moved.
+   *
+   * @generated from field: string from_version = 2;
+   */
+  fromVersion: string;
+
+  /**
+   * @generated from field: string to_version = 3;
+   */
+  toVersion: string;
+
+  /**
+   * changed is true when the sync read new config or files.
+   *
+   * @generated from field: bool changed = 4;
+   */
+  changed: boolean;
+};
+
+/**
+ * Describes the message agni.v1.webapi.SyncPackResponse.
+ * Use `create(SyncPackResponseSchema)` to create a new message.
+ */
+export const SyncPackResponseSchema: GenMessage<SyncPackResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_packs, 3);
 
 /**
  * @generated from message agni.v1.webapi.ImportPackFilesRequest
@@ -51,7 +165,7 @@ export type ImportPackFilesRequest = Message<"agni.v1.webapi.ImportPackFilesRequ
  * Use `create(ImportPackFilesRequestSchema)` to create a new message.
  */
 export const ImportPackFilesRequestSchema: GenMessage<ImportPackFilesRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 0);
+  messageDesc(file_agni_v1_webapi_packs, 4);
 
 /**
  * Pack is a set of rules kept on a server, named "packs/{pack}".
@@ -114,6 +228,16 @@ export type Pack = Message<"agni.v1.webapi.Pack"> & {
    * @generated from field: google.protobuf.Timestamp update_time = 7;
    */
   updateTime?: Timestamp | undefined;
+
+  /**
+   * source is where a linked pack was read from: its mount, folder and ref, whether it follows a
+   * branch, and the version it holds (agni issue 1801). Its read_hash is set only on a linked pack.
+   * An uploaded pack has none, or only access_source when it was read from a private source and
+   * then unlinked. Output only.
+   *
+   * @generated from field: agni.v1.webapi.ArtifactSource source = 8;
+   */
+  source?: ArtifactSource | undefined;
 };
 
 /**
@@ -121,7 +245,7 @@ export type Pack = Message<"agni.v1.webapi.Pack"> & {
  * Use `create(PackSchema)` to create a new message.
  */
 export const PackSchema: GenMessage<Pack> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 1);
+  messageDesc(file_agni_v1_webapi_packs, 5);
 
 /**
  * @generated from message agni.v1.webapi.CreatePackRequest
@@ -147,7 +271,7 @@ export type CreatePackRequest = Message<"agni.v1.webapi.CreatePackRequest"> & {
  * Use `create(CreatePackRequestSchema)` to create a new message.
  */
 export const CreatePackRequestSchema: GenMessage<CreatePackRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 2);
+  messageDesc(file_agni_v1_webapi_packs, 6);
 
 /**
  * @generated from message agni.v1.webapi.GetPackRequest
@@ -166,7 +290,7 @@ export type GetPackRequest = Message<"agni.v1.webapi.GetPackRequest"> & {
  * Use `create(GetPackRequestSchema)` to create a new message.
  */
 export const GetPackRequestSchema: GenMessage<GetPackRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 3);
+  messageDesc(file_agni_v1_webapi_packs, 7);
 
 /**
  * @generated from message agni.v1.webapi.ListPacksRequest
@@ -200,7 +324,7 @@ export type ListPacksRequest = Message<"agni.v1.webapi.ListPacksRequest"> & {
  * Use `create(ListPacksRequestSchema)` to create a new message.
  */
 export const ListPacksRequestSchema: GenMessage<ListPacksRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 4);
+  messageDesc(file_agni_v1_webapi_packs, 8);
 
 /**
  * @generated from message agni.v1.webapi.ListPacksResponse
@@ -224,7 +348,7 @@ export type ListPacksResponse = Message<"agni.v1.webapi.ListPacksResponse"> & {
  * Use `create(ListPacksResponseSchema)` to create a new message.
  */
 export const ListPacksResponseSchema: GenMessage<ListPacksResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 5);
+  messageDesc(file_agni_v1_webapi_packs, 9);
 
 /**
  * @generated from message agni.v1.webapi.UpdatePackRequest
@@ -251,7 +375,7 @@ export type UpdatePackRequest = Message<"agni.v1.webapi.UpdatePackRequest"> & {
  * Use `create(UpdatePackRequestSchema)` to create a new message.
  */
 export const UpdatePackRequestSchema: GenMessage<UpdatePackRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 6);
+  messageDesc(file_agni_v1_webapi_packs, 10);
 
 /**
  * @generated from message agni.v1.webapi.DeletePackRequest
@@ -270,7 +394,7 @@ export type DeletePackRequest = Message<"agni.v1.webapi.DeletePackRequest"> & {
  * Use `create(DeletePackRequestSchema)` to create a new message.
  */
 export const DeletePackRequestSchema: GenMessage<DeletePackRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 7);
+  messageDesc(file_agni_v1_webapi_packs, 11);
 
 /**
  * This file defines PackService, which keeps the packs a server holds (agni issue 1704). A pack is
@@ -354,6 +478,45 @@ export const PackService: GenService<{
     methodKind: "unary";
     input: typeof ImportPackFilesRequestSchema;
     output: typeof PackSchema;
+  },
+  /**
+   * LinkPack points a pack at a project folder in a mount, at a ref, and reads it as ImportPackFiles
+   * reads an uploaded folder (agni issue 1801). It creates the pack, or replaces one whole. The folder
+   * must hold a project.yaml. A ref that names a branch, or none, is followed: a push webhook, a poll
+   * or SyncPack moves the pack to the branch's new commit. A tag or a commit is pinned. The caller
+   * must be able to read the mount, and a pack read through a connection then opens only for a caller
+   * whose own connection can read the same source. An unknown mount or path is NOT_FOUND, the uploads
+   * mount is INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+   *
+   * @generated from rpc agni.v1.webapi.PackService.LinkPack
+   */
+  linkPack: {
+    methodKind: "unary";
+    input: typeof LinkPackRequestSchema;
+    output: typeof PackSchema;
+  },
+  /**
+   * UnlinkPack makes a linked pack an uploaded one. Its config and files stay as they are, and no push
+   * moves it again. A pack read from a private source stays guarded by it. An uploaded pack is
+   * returned unchanged.
+   *
+   * @generated from rpc agni.v1.webapi.PackService.UnlinkPack
+   */
+  unlinkPack: {
+    methodKind: "unary";
+    input: typeof UnlinkPackRequestSchema;
+    output: typeof PackSchema;
+  },
+  /**
+   * SyncPack brings a followed pack to its source's current version. A pinned pack, or one whose
+   * source hasn't moved, is left as it is. An uploaded pack is INVALID_ARGUMENT.
+   *
+   * @generated from rpc agni.v1.webapi.PackService.SyncPack
+   */
+  syncPack: {
+    methodKind: "unary";
+    input: typeof SyncPackRequestSchema;
+    output: typeof SyncPackResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_packs, 0);

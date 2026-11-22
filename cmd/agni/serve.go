@@ -551,9 +551,19 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		// An artifact links to a mount, and a mount with artifacts linked to it isn't deleted under
 		// them (agni issue 1723).
 		designSvc.WithLinks(table.Readers, uploadsMount).WithSourceChanges(table.MountsOf)
-		workspace.WithLinkedArtifacts(designSvc.LinkedTo)
-		// A push or a poll moves the designs that follow a branch or a folder (agni issue 1726).
-		f := &follower{designs: designSvc, life: life, log: cmd.ErrOrStderr()}
+		// A pack links to a project folder in a mount the same way (agni issue 1801).
+		packSvc.WithLinks(table.Readers, uploadsMount, table, table.MountsOf)
+		workspace.WithLinkedArtifacts(func(ctx context.Context, mount string) ([]string, error) {
+			arts, err := designSvc.LinkedTo(ctx, mount)
+			if err != nil {
+				return nil, err
+			}
+			packs, err := packSvc.LinkedTo(ctx, mount)
+			return append(arts, packs...), err
+		})
+		// A push or a poll moves the designs and packs that follow a branch or a folder (agni
+		// issues 1726, 1801).
+		f := &follower{designs: designSvc, packs: packSvc, life: life, log: cmd.ErrOrStderr()}
 		if len(o.webhookSecret) > 0 {
 			mux.Handle("POST "+githubHookPath, f.githubHook(o.webhookSecret))
 			workspace.WithWebhooks(table, o.webhookSecret)
