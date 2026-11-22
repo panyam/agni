@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/panyam/agni/internal/storeurl"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
 )
@@ -173,7 +174,7 @@ func TestAgnidsCarriesTheImageCommands(t *testing.T) {
 
 func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
 	root, store, uploads := t.TempDir(), t.TempDir(), t.TempDir()
-	table, err := serveTable([]string{"ds=" + root}, "", "file://"+filepath.ToSlash(store), "file://"+filepath.ToSlash(uploads), tableAccess{})
+	table, err := serveTable([]string{"ds=" + root}, "", openStore(t, store), uploads, tableAccess{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,4 +212,15 @@ func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
 	if got := call("CreateMount", `{"name":"x","source":"github://a/b"}`); !strings.Contains(got, "failed_precondition") {
 		t.Fatalf("CreateMount on agnids = %s; want failed_precondition, since agnids only reads mounts", got)
 	}
+}
+
+// openStore opens the file:// store in the folder dir, closing it when t ends.
+func openStore(t *testing.T, dir string) *storeurl.Store {
+	t.Helper()
+	st, _, err := storeurl.Open("file://"+filepath.ToSlash(dir), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { st.Close() })
+	return st
 }

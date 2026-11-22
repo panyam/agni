@@ -4,13 +4,11 @@ package authgate
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"html/template"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -42,8 +40,8 @@ const SessionCookie = "agni_session"
 var CacheTTL = time.Minute
 
 // Store is the store of the server's tokens, inside the --store folder.
-func Store(storeDir string) *oafs.FSAPIKeyStore {
-	return oafs.NewFSAPIKeyStore(filepath.Join(storeDir, StoreDir))
+func Store(storeDir string) Keys {
+	return fsKeys{oafs.NewFSAPIKeyStore(filepath.Join(storeDir, StoreDir))}
 }
 
 // Gate refuses every request without a valid token, apart from the health check, the viewer's
@@ -153,7 +151,7 @@ func (g *Gate) signIn(w http.ResponseWriter, r *http.Request) {
 			// Secure is set whenever the server speaks TLS. Without TLS the server listens on localhost
 			// only (CheckFlags), where a Secure cookie would never come back.
 			http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteStrictMode}) // #nosec G124 -- Secure follows TLS, as above
-			http.Redirect(w, r, next, http.StatusSeeOther) // #nosec G710 -- next came through safeNext, so it is a path on this server
+			http.Redirect(w, r, next, http.StatusSeeOther)                                                                                                     // #nosec G710 -- next came through safeNext, so it is a path on this server
 			return
 		}
 		page.Error = "That token isn't one this server knows, or it was revoked."
@@ -189,7 +187,7 @@ func safeNext(next string) string {
 }
 
 // CheckFlags refuses a combination of --auth and the TLS flags that would serve tokens badly.
-func CheckFlags(auth, storeDir, tlsCert, tlsKey, addr string) error {
+func CheckFlags(auth, store, tlsCert, tlsKey, addr string) error {
 	if (tlsCert == "") != (tlsKey == "") {
 		return fmt.Errorf("--tls-cert and --tls-key go together; pass both or neither")
 	}
@@ -200,7 +198,7 @@ func CheckFlags(auth, storeDir, tlsCert, tlsKey, addr string) error {
 	default:
 		return fmt.Errorf("--auth %q: the one kind this build checks is %q", auth, Tokens)
 	}
-	if storeDir == "" {
+	if store == "" {
 		return fmt.Errorf("--auth %s needs --store, where the tokens agni token create makes are kept", Tokens)
 	}
 	if tlsCert == "" && !loopbackAddr(addr) {
@@ -224,53 +222,22 @@ func loopbackAddr(addr string) bool {
 
 // Prune deletes the tokens whose expiry is at or before now, and returns how many it deleted (agni
 // issue 1778). Each GitHub sign-in mints a token that expires, so without this the store keeps one
-// file per sign-in for good. A token with no expiry, as `agni token create` makes, stays, and so does
-// a revoked one, which `agni token ls` still lists.
-func Prune(ctx context.Context, store *oafs.FSAPIKeyStore, now time.Time) (int, error) {
-	keys, err := List(ctx, store)
-	if err != nil {
-		return 0, err
-	}
-	n := 0
-	for _, k := range keys {
-		if k.ExpiresAt == nil || k.ExpiresAt.After(now) {
-			continue
-		}
-		if err := os.Remove(filepath.Join(store.StoragePath, "api_keys", k.KeyID+".json")); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return n, err
-		}
-		n++
-	}
-	return n, nil
+// record per sign-in for good. A token with no expiry, as `agni token create` makes, stays, and so
+// does a revoked one, which `agni token ls` still lists.
+func Prune(ctx context.Context, store Keys, now time.Time) (int, error) {
+	return store.deleteExpired(ctx, now)
 }
 
-// List returns every token in the store, newest first, without their hashes. A token deleted after
-// List reads the folder, as the expiry sweep does while the server runs, is left out rather than
-// failing the listing (agni issue 1796).
-func List(ctx context.Context, store *oafs.FSAPIKeyStore) ([]*core.APIKey, error) {
-	entries, err := os.ReadDir(filepath.Join(store.StoragePath, "api_keys"))
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
+// List returns every token in the store, newest first, without their hashes.
+func List(ctx context.Context, store Keys) ([]*core.APIKey, error) {
+	out, err := store.all(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var out []*core.APIKey
-	for _, e := range entries {
-		id, ok := strings.CutSuffix(e.Name(), ".json")
-		if !ok {
-			continue
-		}
-		resp, err := store.GetAPIKeyByID(ctx, &core.GetAPIKeyByIDRequest{KeyID: id})
-		if errors.Is(err, core.ErrAPIKeyNotFound) {
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		k := *resp.APIKey
-		k.KeyHash = ""
-		out = append(out, &k)
+	for i, k := range out {
+		c := *k
+		c.KeyHash = ""
+		out[i] = &c
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
 	return out, nil

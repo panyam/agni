@@ -449,7 +449,14 @@ store, holding each artifact's type, entry and manifest of paths and hashes. The
 by hash, in the uploads. A design reads through a view in the uploads mount,
 `<id>/<rev>/<artifact>/<path>`, whose files link to those blobs, beside a `design.yaml` the store
 writes from the record. A write builds a new revision's view and never changes an old one. A design
-with no artifact a reader opens has no view. A database adapter would keep the same records as rows.
+with no artifact a reader opens has no view.
+
+The records go through `internal/records.Store`, a few calls over slash-separated keys: get, put,
+create, delete and list (agni issue 1733). `records.Dir` keeps each key as a file, the layout above.
+`sqlrecords.SQL` keeps each key as a row of one table, `agni_records`, for `--store sqlite://`. The
+project, pack, report, snapshot and review stores sit on the same port. The views stay folders on the
+server's disk in both cases, because the engine reads a design through a folder. Runtime mounts,
+connections and tokens use goapplib's and oneauth's own GORM stores in the same database.
 
 A snapshot names a design by `designs/{design}` in `Snapshot.design`, and the server looks the name
 up at every read (agni issue 1695). So a snapshot rebuilt after a restart, or ingested again after an

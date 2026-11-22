@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/panyam/agni/internal/records/recordstest"
+	"github.com/panyam/agni/internal/records/sqlrecords"
 	"github.com/panyam/oneauth/core"
 )
 
@@ -58,7 +60,7 @@ func TestSafeNext(t *testing.T) {
 // which checks the delivery's signature, and still refuses its neighbors (agni issue 1726).
 func TestTheGateLetsAWebhookThroughWithNoToken(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusAccepted) })
-	h := New(Store(t.TempDir()), false).Wrap(next)
+	h := New(testKeys(t), false).Wrap(next)
 	for path, want := range map[string]int{"/hooks/github": http.StatusAccepted, "/hooks/gitlab": http.StatusUnauthorized, "/hooks/github/x": http.StatusUnauthorized} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}")))
@@ -72,7 +74,7 @@ func TestTheGateLetsAWebhookThroughWithNoToken(t *testing.T) {
 // revoked one (agni issue 1778).
 func TestPruneDeletesOnlyExpiredTokens(t *testing.T) {
 	ctx := context.Background()
-	store := Store(t.TempDir())
+	store := testKeys(t)
 	now := time.Now()
 	mint := func(subject string, expires *time.Time) string {
 		t.Helper()
@@ -122,7 +124,7 @@ func TestListSkipsAKeyDeletedWhileListing(t *testing.T) {
 	if _, err := keys.CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "ops", Name: "ops"}); err != nil {
 		t.Fatal(err)
 	}
-	gone := filepath.Join(keys.StoragePath, "api_keys", "gone.json")
+	gone := filepath.Join(dir, StoreDir, "api_keys", "gone.json")
 	if err := os.Symlink(filepath.Join(dir, "nowhere.json"), gone); err != nil {
 		t.Fatal(err)
 	}
@@ -133,4 +135,21 @@ func TestListSkipsAKeyDeletedWhileListing(t *testing.T) {
 	if len(left) != 1 || left[0].Subject != "ops" {
 		t.Fatalf("List = %v, want only ops", left)
 	}
+}
+
+// testKeys is an empty token store, kept as files or, with AGNI_TEST_RECORDS=sqlite, in sqlite.
+func testKeys(t *testing.T) Keys {
+	t.Helper()
+	if !recordstest.SQLite() {
+		return Store(t.TempDir())
+	}
+	db, err := sqlrecords.OpenSQLite(filepath.Join(t.TempDir(), "agni.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	k, err := SQLStore(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return k
 }

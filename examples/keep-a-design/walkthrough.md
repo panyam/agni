@@ -118,3 +118,11 @@ Note over You: a rule is added to project.yaml
 You ->> Agni: PollSources
 Agni -->> You: packs/house-live moved, two rules
 ```
+
+## Keep the same records in sqlite {#sqlite}
+
+> Every record so far was a small file under one folder. `agni serve --store sqlite:///srv/agni.db` keeps the same records as rows of one database file, with the same services over them. This step builds a second server over a sqlite file, keeps both revisions there, and lists the database's records. Each one is a design's record, with its artifacts' paths and hashes. The netlists themselves went to the uploads folder, as they did for the folder store. Runtime mounts, connections and tokens go into the same database file, in goapplib's and oneauth's tables.
+
+```bash
+agni serve --store sqlite:///srv/agni.db --uploads file:///srv/agni/files
+```

@@ -34,7 +34,7 @@ func TestADiffOfTwoRevisionsMatchesADiffOfTheirFiles(t *testing.T) {
 	c1 := repo.Head("main")
 	c2 := repo.Commit("main", map[string]string{"hw/bb.kicad_sch": v2Sheet}, nil)
 	dir := t.TempDir()
-	url := serveViewer(t, viewerOpts{storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	url := serveViewer(t, viewerOpts{store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
 	must := func(out string, err error) string {
 		t.Helper()
 		if err != nil {
@@ -122,7 +122,7 @@ func TestAReportKeepsTheRevisionItRanOn(t *testing.T) {
 	c1 := repo.Head("main")
 	c2 := repo.Commit("main", map[string]string{"hw/bb.kicad_sch": v2Sheet}, nil)
 	dir := t.TempDir()
-	url := serveViewer(t, viewerOpts{storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	url := serveViewer(t, viewerOpts{store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
 	must := func(out string, err error) string {
 		t.Helper()
 		if err != nil {

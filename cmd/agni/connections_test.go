@@ -45,7 +45,7 @@ func TestAPrivateRepoReadsThroughATokenConnection(t *testing.T) {
 	gh, head := privateRepo(t)
 	t.Setenv("AGNI_TEST_GITHUB_TOKEN", secretToken)
 	dir := t.TempDir()
-	opts := viewerOpts{storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()}
+	opts := viewerOpts{store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()}
 	url := serveViewer(t, opts)
 	must := func(out string, err error) string {
 		t.Helper()
@@ -128,7 +128,7 @@ func TestAPrivateRepoReadsThroughAnAppInstallation(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	url := serveViewer(t, viewerOpts{storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	url := serveViewer(t, viewerOpts{store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
 	cmd := connectionsCmd()
 	if out, err := runCobra(t, cmd, "add", "acme-app", "--github-app", "12345", "--installation", "1", "--key", "file:"+key, "--base-url", app.URL, "--remote", url); err != nil {
 		t.Fatalf("connections add --github-app = %q, %v", out, err)

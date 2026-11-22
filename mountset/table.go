@@ -77,12 +77,25 @@ type Config struct {
 	// 1772). goapplib refreshes a signed-in person's token through it, and revokes it on a
 	// disconnect. Nil keeps pasted tokens alone, which need neither.
 	GitHubApp *oauth2.Config
+	// Stores, when set, hold the runtime mount records, the connections and people's tokens in place
+	// of the Records, Connections and UserTokens folders, as `--store sqlite://` does (agni issue
+	// 1733). A records folder that an older agni wrote is migrated, and a Stores is not, since no
+	// older agni wrote one.
+	Stores *Stores
 	// HidePrivate leaves out every mount that reads through a connection, from List and from
 	// Resolve, for a server that asks who its callers are but can't check their connections. agnids
 	// with --auth and no --connections-key is one (agni issue 1728). With ReadOnly, Connections,
 	// UserTokens and ConnectionsKey, a reader checks callers through CanRead instead (agni issue
 	// 1778).
 	HidePrivate bool
+}
+
+// Stores are the record stores a Table reads and writes in place of folders under --store. A nil
+// field keeps none of that kind, as an empty folder name does.
+type Stores struct {
+	Mounts      mounts.RecordStore
+	Connections connections.Store
+	UserTokens  outbound.UserTokenStore
 }
 
 // Table is a server's live mount list over goapplib's mounts registry (agni issues 1735, 1759). The
@@ -147,7 +160,9 @@ func Open(cfg Config) (*Table, error) {
 		}
 		gh = github.New(b, ghOpts...)
 		drivers = append(drivers, gh)
-		if cfg.Records != "" && cfg.ReadOnly {
+		if cfg.Stores != nil {
+			store = cfg.Stores.Mounts
+		} else if cfg.Records != "" && cfg.ReadOnly {
 			// A read-only reader can't make the folder, so it waits for agni serve to (laterStore).
 			store = &laterStore{dir: cfg.Records}
 		} else if cfg.Records != "" {
@@ -167,33 +182,39 @@ func Open(cfg Config) (*Table, error) {
 	}
 	drivers = append(drivers, folder.New(folderOpts...))
 	opts := []mounts.Option{mounts.WithFixed(cfg.Fixed...), mounts.WithLimits(cfg.Limits)}
-	if cfg.Connections != "" && cfg.ReadOnly && cfg.ConnectionsKey != "" && cfg.UserTokens != "" {
-		// A reader answers CanRead through people's own connections, and writes neither the records
-		// nor the tokens (see readonly.go). It hands no mount a token, since it builds no snapshot.
-		cs, err := connstore.New(cfg.Connections)
-		if err != nil {
+	var cs connections.Store
+	var users outbound.UserTokenStore
+	switch {
+	case cfg.Stores != nil:
+		cs, users = cfg.Stores.Connections, cfg.Stores.UserTokens
+	case cfg.Connections != "":
+		var err error
+		if cs, err = connstore.New(cfg.Connections); err != nil {
 			return nil, fmt.Errorf("--store: %w", err)
 		}
+		if cfg.UserTokens != "" {
+			users = fs.NewFSUserTokenStore(cfg.UserTokens)
+		}
+	}
+	if cs != nil && cfg.ReadOnly && cfg.ConnectionsKey != "" && users != nil {
+		// A reader answers CanRead through people's own connections, and writes neither the records
+		// nor the tokens (see readonly.go). It hands no mount a token, since it builds no snapshot.
 		t.conns = readOnlyConnections{cs}
-		t.users = readOnlyTokens{fs.NewFSUserTokenStore(cfg.UserTokens)}
+		t.users = readOnlyTokens{users}
 		copts := []connections.Option{connections.WithUserTokens(t.users, cfg.ConnectionsKey, noRefresh)}
 		if gh != nil {
 			copts = append(copts, connections.WithReadCheck(gh.CanRead))
 		}
 		t.svc = connections.NewService(t.conns, copts...)
 	}
-	if cfg.Connections != "" && !cfg.ReadOnly {
-		cs, err := connstore.New(cfg.Connections)
-		if err != nil {
-			return nil, fmt.Errorf("--store: %w", err)
-		}
+	if cs != nil && !cfg.ReadOnly {
 		t.conns = cs
 		var copts []connections.Option
 		if gh != nil {
 			copts = append(copts, connections.WithReadCheck(gh.CanRead))
 		}
-		if cfg.ConnectionsKey != "" && cfg.UserTokens != "" {
-			t.users = fs.NewFSUserTokenStore(cfg.UserTokens)
+		if cfg.ConnectionsKey != "" && users != nil {
+			t.users = users
 			app := &oauth2.Config{Endpoint: ghendpoint.Endpoint}
 			if cfg.GitHubApp != nil {
 				app = cfg.GitHubApp

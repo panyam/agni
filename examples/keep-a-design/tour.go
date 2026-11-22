@@ -17,6 +17,8 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/internal/records"
+	"github.com/panyam/agni/internal/records/sqlrecords"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	_ "github.com/panyam/agni/stdlib/relations"     // the fact base every datalog rule reads
@@ -37,32 +39,34 @@ type tour struct {
 	kept *projects.BlobDir
 }
 
-// newTour builds the services the way `agni serve --store --uploads` does (cmd/agni/storeservices.go).
+// newTour builds the services the way `agni serve --store file://<root> --uploads` does
+// (cmd/agni/storeservices.go), keeping each record as a file under root.
 func newTour(root, mounted string) (*tour, error) {
-	store, err := projects.NewDirStore(filepath.Join(root, "designs"), filepath.Join(root, "uploads"), "uploads")
+	recs, err := records.NewDir(root)
 	if err != nil {
 		return nil, err
 	}
-	records, err := projects.NewDirProjects(filepath.Join(root, "projects"))
+	return newTourOver(recs, root, mounted)
+}
+
+// newTourOver builds the services over recs, a folder or a sqlite database, with the uploads under
+// root (agni issue 1733). Each kind of record sits under a folder of its own name, as in --store.
+func newTourOver(recs records.Store, root, mounted string) (*tour, error) {
+	store, err := projects.NewStore(records.Sub(recs, "designs"), filepath.Join(root, "uploads"), "uploads")
 	if err != nil {
 		return nil, err
 	}
+	kept := projects.NewProjects(records.Sub(recs, "projects"))
 	tree := projects.Tree{Mount: "fixtures", FS: os.DirFS(mounted)}
 	t := &tour{uploaded: map[string][]byte{}, root: root, kept: store.Blobs()}
-	t.projects = service.NewProjectService(projects.NewFSStore(tree)).WithRecords(records)
+	t.projects = service.NewProjectService(projects.NewFSStore(tree)).WithRecords(kept)
 	catalog := service.NewDesignCatalog(store, projects.NewMountedDesigns(tree))
 	t.designs = service.NewDesignService(catalog, t.blob).WithProjects(t.projects)
-	packs, err := projects.NewDirPacks(filepath.Join(root, "packs"), store.Blobs(), projects.ViewsRoot(filepath.Join(root, "uploads")), "uploads")
-	if err != nil {
-		return nil, err
-	}
+	packs := projects.NewPacks(records.Sub(recs, "packs"), store.Blobs(), projects.ViewsRoot(filepath.Join(root, "uploads")), "uploads")
 	t.packs = service.NewPackService(packs, t.blob)
 	// A report runs a check, so the tour serves the uploads mount through fshost, the way the lexicon
 	// example serves a folder, and checks a stored design by name under its packs (agni issue 1704).
-	reports, err := projects.NewDirReports(filepath.Join(root, "reports"))
-	if err != nil {
-		return nil, err
-	}
+	reports := projects.NewReports(records.Sub(recs, "reports"))
 	eng, err := agni.New()
 	if err != nil {
 		return nil, err
@@ -288,4 +292,57 @@ func (t *tour) followPack(ctx context.Context) (linked, moved *webapi.Pack, err 
 	}
 	moved, err = t.packs.GetPack(ctx, &webapi.GetPackRequest{Name: "packs/house-live"})
 	return linked, moved, err
+}
+
+// sqliteTour builds a second tour whose records are rows of one sqlite file, root/agni.db, as
+// `agni serve --store sqlite://<root>/agni.db --uploads file://<root>/uploads` keeps them (agni issue
+// 1733). It returns the tour, the records and a func that closes the database.
+func sqliteTour(root, mounted string) (*tour, records.Store, func() error, error) {
+	db, err := sqlrecords.OpenSQLite(filepath.Join(root, "agni.db"))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	closeDB := func() error {
+		sqlDB, err := db.DB()
+		if err != nil {
+			return err
+		}
+		return sqlDB.Close()
+	}
+	recs, err := sqlrecords.NewSQL(db)
+	if err != nil {
+		closeDB()
+		return nil, nil, nil, err
+	}
+	t, err := newTourOver(recs, root, mounted)
+	if err != nil {
+		closeDB()
+		return nil, nil, nil, err
+	}
+	return t, recs, closeDB, nil
+}
+
+// keys lists every record key under dir in recs, depth first, for showing what a store holds.
+func keys(ctx context.Context, recs records.Store, dir string) ([]string, error) {
+	ents, err := recs.List(ctx, dir)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, e := range ents {
+		k := e.Name
+		if dir != "" {
+			k = dir + "/" + e.Name
+		}
+		if !e.Dir {
+			out = append(out, k)
+			continue
+		}
+		more, err := keys(ctx, recs, k)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, more...)
+	}
+	return out, nil
 }

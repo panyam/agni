@@ -9,7 +9,10 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/internal/records/recordstest"
+	"github.com/panyam/agni/internal/storeurl"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/goapplib/storage/mounts"
@@ -65,4 +68,36 @@ func TestUploadsRefuseAMountNamedUploads(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "already declared") {
 		t.Fatalf("withUploadsMount over a mount named uploads = %v, want a refusal", err)
 	}
+}
+
+// testStoreURL is the --store URL of a test server's store over the folder dir: the folder itself,
+// or, with AGNI_TEST_RECORDS=sqlite, a sqlite database in it (agni issue 1733).
+func testStoreURL(dir string) string {
+	slash := "/" + strings.TrimPrefix(filepath.ToSlash(dir), "/")
+	if recordstest.SQLite() {
+		return "sqlite://" + slash + "/agni.db"
+	}
+	return "file://" + slash
+}
+
+// testStore opens testStoreURL(dir). Each call opens a new handle on the same records, as a
+// restarted server does, and the test closes it when it ends.
+func testStore(t testing.TB, dir string) *storeurl.Store {
+	t.Helper()
+	st, _, err := storeurl.Open(testStoreURL(dir), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { st.Close() })
+	return st
+}
+
+// testTokens is the token store of the --store testStore opens over dir.
+func testTokens(t testing.TB, dir string) authgate.Keys {
+	t.Helper()
+	k, err := testStore(t, dir).Tokens()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return k
 }

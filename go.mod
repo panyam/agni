@@ -6,9 +6,11 @@ require (
 	connectrpc.com/connect v1.21.1
 	github.com/bodgit/sevenzip v1.6.5
 	github.com/ebitengine/purego v0.8.4
+	github.com/glebarez/sqlite v1.11.0
 	github.com/klauspost/compress v1.20.2
 	github.com/panyam/goapplib v0.7.26
 	github.com/panyam/goapplib/storage v0.7.26
+	github.com/panyam/goapplib/storage/backends/gorm v0.7.26
 	github.com/panyam/goutils v0.1.15
 	github.com/panyam/jaala v0.1.101
 	github.com/panyam/jaala/frontends/mcp v0.1.101
@@ -23,6 +25,7 @@ require (
 	github.com/panyam/oneauth v0.3.16
 	github.com/panyam/oneauth/grpc v0.3.16
 	github.com/panyam/oneauth/oauth2 v0.3.16
+	github.com/panyam/oneauth/stores/gorm v0.3.16
 	github.com/panyam/servicekit v0.2.4
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -32,6 +35,7 @@ require (
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
+	gorm.io/gorm v1.31.2
 )
 
 require (
@@ -45,8 +49,10 @@ require (
 	github.com/buger/jsonparser v1.6.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fernet/fernet-go v0.0.0-20240119011108-303da6aec611 // indirect
+	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
@@ -56,6 +62,9 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/panyam/gocurrent v0.1.3 // indirect
 	github.com/panyam/jaala/frontends/cypher v0.1.101 // indirect
@@ -67,6 +76,7 @@ require (
 	github.com/prometheus/common v0.72.0 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.22.0 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/stangelandcl/ppmd v0.1.1 // indirect
@@ -91,6 +101,10 @@ require (
 	golang.org/x/time v0.16.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
+	modernc.org/libc v1.22.5 // indirect
+	modernc.org/mathutil v1.5.0 // indirect
+	modernc.org/memory v1.5.0 // indirect
+	modernc.org/sqlite v1.23.1 // indirect
 )
 
 tool (

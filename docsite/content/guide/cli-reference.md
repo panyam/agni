@@ -317,7 +317,7 @@ its secret is, `env:NAME` or `file:/abs/path`, never the secret.
 ### `token`
 
 The tokens an `agni serve --auth tokens` accepts (agni issue 1627). Each command works on the
-server's `--store` folder directly, on the server's machine.
+server's `--store` directly, on the server's machine.
 
 | Subcommand | What it does |
 |---|---|
@@ -693,7 +693,7 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--params-url <url>` | read published PartSpecs from a datasheet service instead, such as `agnids serve --corpus` (see [Datasheets](../datasheets/#serving-a-shared-corpus)); not with `--params` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
 | `--datasheets-url <url>` | where the datasheets workbench is served, such as `http://host:8090` for a running `agnids serve`; the landing page links its Datasheets card there, and hides it when this is empty |
-| `--store <url>` | where the server keeps its records, as `file:///srv/agni/meta`, created if absent: stored designs and their manifests, projects, snapshot definitions and review runs, and no file bytes. Without it snapshots live in memory, review runs are not kept and no design can be created (see [Running the server](../running-the-server/#the-store-and-the-uploads)) |
+| `--store <url>` | where the server keeps its records, as a folder `file:///srv/agni/meta` or one sqlite file `sqlite:///srv/agni/agni.db`, created if absent: stored designs and their manifests, projects, snapshot definitions and review runs, and no file bytes. Without it snapshots live in memory, review runs are not kept and no design can be created (see [Running the server](../running-the-server/#the-store-and-the-uploads)) |
 | `--uploads <url>` | where the server keeps uploaded designs' files, as `file:///srv/agni/files`, created if absent: each file once, by hash, served as the mount `uploads`. Needs `--store` |
 | `--query-budget <work>` | the most work any one query may do, over the query, check and review rpcs alike; a request may ask for less and never more. 0, the default, enforces none (see [A work budget for served queries](../running-the-server/#a-work-budget-for-served-queries)) |
 | `--query-budget-warn <work>` | log every served query that costs more than this, with the query and a suggested budget (default 10,000,000; 0 logs none) |

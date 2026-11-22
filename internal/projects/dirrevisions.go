@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -15,6 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records"
 	"github.com/panyam/agni/service"
 )
 
@@ -33,7 +32,7 @@ type revisionYAML struct {
 
 var _ service.RevisionStore = (*DirStore)(nil)
 
-func (s *DirStore) revisionsOf(id string) string { return filepath.Join(s.records, revisionsDir, id) }
+func (s *DirStore) revisionsOf(id string) string { return records.Join(revisionsDir, id) }
 
 // PutRevision keeps design id with writes applied as a revision, building its view, and leaves the
 // design's record as it is.
@@ -121,12 +120,9 @@ func (s *DirStore) Revisions(_ context.Context, id string) ([]*webapi.DesignRevi
 // hold s.mu.
 func (s *DirStore) keepRevision(id string, rec recordYAML, ref string) (revisionYAML, error) {
 	dir := s.revisionsOf(id)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return revisionYAML{}, err
-	}
-	p := filepath.Join(dir, rec.Rev+".yaml")
+	p := records.Join(dir, rec.Rev+".yaml")
 	var r revisionYAML
-	if raw, err := os.ReadFile(p); err == nil { // #nosec G304 -- p is the records folder, a design id and a hex revision id
+	if raw, err := s.recs.Get(context.Background(), p); err == nil {
 		if err := yaml.Unmarshal(raw, &r); err != nil {
 			return revisionYAML{}, fmt.Errorf("%s: %w", p, err)
 		}
@@ -152,59 +148,42 @@ func (s *DirStore) keepRevision(id string, rec recordYAML, ref string) (revision
 				continue
 			}
 			o.Refs = slices.DeleteFunc(o.Refs, func(x string) bool { return x == ref })
-			if err := writeRevision(dir, name, o); err != nil {
+			if err := s.writeRevision(dir, name, o); err != nil {
 				return revisionYAML{}, err
 			}
 		}
 	}
-	return r, writeRevision(dir, rec.Rev, r)
+	return r, s.writeRevision(dir, rec.Rev, r)
 }
 
-// writeRevision writes r as revision name in dir, through a temporary file, so a reader never sees
-// half of it.
-func writeRevision(dir, name string, r revisionYAML) error {
+// writeRevision writes r as revision name in dir, replacing the record whole.
+func (s *DirStore) writeRevision(dir, name string, r revisionYAML) error {
 	out, err := yaml.Marshal(&r)
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".put-*")
-	if err != nil {
-		return err
-	}
-	if _, err := tmp.Write(out); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
-		return err
-	}
-	return os.Rename(tmp.Name(), filepath.Join(dir, name+".yaml"))
+	return s.recs.Put(context.Background(), records.Join(dir, name+".yaml"), out)
 }
 
 // loadRevisions reads design id's kept revisions by id. None is an empty map. Callers hold s.mu.
 func (s *DirStore) loadRevisions(id string) (map[string]revisionYAML, error) {
-	entries, err := os.ReadDir(s.revisionsOf(id))
-	if errors.Is(err, fs.ErrNotExist) {
-		return map[string]revisionYAML{}, nil
-	}
+	entries, err := s.recs.List(context.Background(), s.revisionsOf(id))
 	if err != nil {
 		return nil, err
 	}
 	out := map[string]revisionYAML{}
 	for _, e := range entries {
-		name, ok := strings.CutSuffix(e.Name(), ".yaml")
-		if !ok || e.IsDir() || strings.HasPrefix(name, ".") {
+		name, ok := strings.CutSuffix(e.Name, ".yaml")
+		if !ok || e.Dir {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(s.revisionsOf(id), e.Name())) // #nosec G304 -- a file the store wrote under its records folder
+		raw, err := s.recs.Get(context.Background(), records.Join(s.revisionsOf(id), e.Name))
 		if err != nil {
 			return nil, err
 		}
 		var r revisionYAML
 		if err := yaml.Unmarshal(raw, &r); err != nil {
-			return nil, fmt.Errorf("%s: %w", e.Name(), err)
+			return nil, fmt.Errorf("%s: %w", e.Name, err)
 		}
 		out[name] = r
 	}
@@ -324,7 +303,7 @@ func (s *DirStore) pruneRevisions(ctx context.Context, id, current string) error
 		if name == current || len(r.Refs) > 0 || pinned[name] {
 			continue
 		}
-		if err := os.Remove(filepath.Join(s.revisionsOf(id), name+".yaml")); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := s.recs.Delete(ctx, records.Join(s.revisionsOf(id), name+".yaml")); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 	}

@@ -34,7 +34,7 @@ func TestTheDesignsCommandLinksSyncsAndUnlinksAGitHubArtifact(t *testing.T) {
 	})
 	v1 := repo.Head("main")
 	dir := t.TempDir()
-	opts := viewerOpts{storeDir: filepath.Join(dir, "store"), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()}
+	opts := viewerOpts{store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()}
 	url := serveViewer(t, opts)
 	must := func(out string, err error) string {
 		t.Helper()

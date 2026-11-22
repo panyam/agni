@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/panyam/agni/internal/authgate"
+	"github.com/panyam/agni/internal/records/recordstest"
 )
 
 // A design linked from a private repo opens for a teammate whose own GitHub connection reads the
@@ -35,13 +36,13 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	store := filepath.Join(dir, "store")
 	tokens := map[string]string{}
 	for _, who := range []string{"ops", "alice", "bob"} {
-		out, err := runCobra(t, tokenCmd(), "create", who, "--store", "file:///"+strings.TrimPrefix(filepath.ToSlash(store), "/"))
+		out, err := runCobra(t, tokenCmd(), "create", who, "--store", testStoreURL(store))
 		if err != nil {
 			t.Fatalf("agni token create %s: %v", who, err)
 		}
 		tokens[who], _, _ = strings.Cut(strings.TrimSpace(out), "\n")
 	}
-	url := serveViewer(t, viewerOpts{storeDir: store, uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens,
+	url := serveViewer(t, viewerOpts{store: testStore(t, store), uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens,
 		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL()})
 	as := func(who string) { t.Setenv(envToken, tokens[who]) }
 	must := func(out string, err error) string {
@@ -128,27 +129,30 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 		resp.Body.Close()
 	}
 
-	// Before goapplib v0.7.23 a person's connection lived beside the server's, as <id>.yaml, and the
-	// store reads one left there as its owner's (agni issue 1778).
-	people, _ := filepath.Glob(filepath.Join(store, "connections", "people", "*", "alice-gh.yaml"))
-	var hers string
-	for _, f := range people {
-		if b, err := os.ReadFile(f); err == nil && strings.Contains(string(b), "owner: alice\n") {
-			hers = f
+	// A folder store's older layout. A sqlite store has none, since no older agni wrote one.
+	if !recordstest.SQLite() {
+		// Before goapplib v0.7.23 a person's connection lived beside the server's, as <id>.yaml, and the
+		// store reads one left there as its owner's (agni issue 1778).
+		people, _ := filepath.Glob(filepath.Join(store, "connections", "people", "*", "alice-gh.yaml"))
+		var hers string
+		for _, f := range people {
+			if b, err := os.ReadFile(f); err == nil && strings.Contains(string(b), "owner: alice\n") {
+				hers = f
+			}
 		}
-	}
-	if hers == "" {
-		t.Fatalf("no record of alice's alice-gh among %q", people)
-	}
-	if err := os.Rename(hers, filepath.Join(store, "connections", "alice-gh.yaml")); err != nil {
-		t.Fatal(err)
-	}
-	if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", url)); !strings.Contains(out, "alice-gh\tgithub-user\tsealed, for alice") {
-		t.Errorf("alice's connections ls with her record where an older store kept it = %q; want her alice-gh", out)
-	}
-	as("bob")
-	if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", url)); !strings.Contains(out, "sealed, for bob") || strings.Contains(out, "for alice") {
-		t.Errorf("bob's connections ls beside alice's older record = %q; want his alone", out)
+		if hers == "" {
+			t.Fatalf("no record of alice's alice-gh among %q", people)
+		}
+		if err := os.Rename(hers, filepath.Join(store, "connections", "alice-gh.yaml")); err != nil {
+			t.Fatal(err)
+		}
+		if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", url)); !strings.Contains(out, "alice-gh\tgithub-user\tsealed, for alice") {
+			t.Errorf("alice's connections ls with her record where an older store kept it = %q; want her alice-gh", out)
+		}
+		as("bob")
+		if out := must(runCobra(t, connectionsCmd(), "ls", "--remote", url)); !strings.Contains(out, "sealed, for bob") || strings.Contains(out, "for alice") {
+			t.Errorf("bob's connections ls beside alice's older record = %q; want his alone", out)
+		}
 	}
 
 	if err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
@@ -186,7 +190,7 @@ func TestADesignLinkedWithoutAuthIsGuardedOnceAuthIsOn(t *testing.T) {
 		return out
 	}
 
-	open := serveViewer(t, viewerOpts{storeDir: store, uploadsDir: uploads,
+	open := serveViewer(t, viewerOpts{store: testStore(t, store), uploadsDir: uploads,
 		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL()})
 	must(runCobra(t, connectionsCmd(), "add", "acme", "--github-token", "env:AGNI_TEST_GITHUB_TOKEN", "--remote", open))
 	must(runMounts(t, "add", "board", "github://acme/board", "--connection", "acme", "--remote", open))
@@ -200,12 +204,12 @@ func TestADesignLinkedWithoutAuthIsGuardedOnceAuthIsOn(t *testing.T) {
 	must(runDesigns(t, open, "unlink", "bb", "schematic"))
 	must(runMounts(t, "rm", "board", "--remote", open))
 
-	out, err := runCobra(t, tokenCmd(), "create", "bob", "--store", "file:///"+strings.TrimPrefix(filepath.ToSlash(store), "/"))
+	out, err := runCobra(t, tokenCmd(), "create", "bob", "--store", testStoreURL(store))
 	if err != nil {
 		t.Fatalf("agni token create bob: %v", err)
 	}
 	bob, _, _ := strings.Cut(strings.TrimSpace(out), "\n")
-	guarded := serveViewer(t, viewerOpts{storeDir: store, uploadsDir: uploads, auth: authgate.Tokens,
+	guarded := serveViewer(t, viewerOpts{store: testStore(t, store), uploadsDir: uploads, auth: authgate.Tokens,
 		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL()})
 	t.Setenv(envToken, bob)
 	if out, err := runDesigns(t, guarded, "get", "bb"); err == nil || !strings.Contains(err.Error(), "permission_denied") || !strings.Contains(err.Error(), "github://acme/board") {

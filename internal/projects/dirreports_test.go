@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records/recordstest"
 	"github.com/panyam/agni/service"
 )
 
@@ -15,10 +16,7 @@ import (
 // reports go with DeleteReports (agni issue 1704).
 func TestDirReportsKeepsAndListsNewestFirst(t *testing.T) {
 	ctx := context.Background()
-	rs, err := NewDirReports(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	rs := NewReports(recordstest.New(t))
 	clock := time.Date(2026, 11, 18, 10, 0, 0, 0, time.UTC)
 	rs.now = func() time.Time { return clock }
 	first, err := rs.CreateReport(ctx, "gw", "", &webapi.Report{Packs: []string{"packs/a"}, DesignChanged: true})

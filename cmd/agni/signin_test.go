@@ -43,12 +43,12 @@ func signInServer(t *testing.T, gh *githubtest.Server) (url, ops string) {
 	t.Setenv(envToken, "")
 	dir := t.TempDir()
 	store := filepath.Join(dir, "store")
-	out, err := runCobra(t, tokenCmd(), "create", "ops", "--store", "file:///"+strings.TrimPrefix(filepath.ToSlash(store), "/"))
+	out, err := runCobra(t, tokenCmd(), "create", "ops", "--store", testStoreURL(store))
 	if err != nil {
 		t.Fatalf("agni token create ops: %v", err)
 	}
 	ops, _, _ = strings.Cut(strings.TrimSpace(out), "\n")
-	url = serveViewer(t, viewerOpts{storeDir: store, uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens,
+	url = serveViewer(t, viewerOpts{store: testStore(t, store), uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens,
 		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL(),
 		githubSignIn: &githubSignIn{clientID: appClientID, clientSecret: appSecret, allow: []string{"org:acme"}}})
 	return url, ops

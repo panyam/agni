@@ -7,11 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"google.golang.org/protobuf/encoding/protojson"
@@ -19,32 +16,32 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records"
 	"github.com/panyam/agni/service"
 )
 
-// DirReports keeps reports as one protojson file each, `<design>/<report>.json`, in a folder (agni
-// issue 1704). A report is a few hundred findings, so a file each is enough. A write goes to a
-// temporary file and is renamed into place, so a reader sees the whole report or none. One mutex
-// serialises every write.
+// DirReports keeps reports as one protojson record each, `<design>/<report>.json` (agni issues
+// 1704, 1733). A report is a few hundred findings, so a record each is enough. The records sit in a
+// folder or in sqlite, as records.Store keeps them. Each is written whole, so a reader sees the whole
+// report or none, and the store refuses a create of a taken id.
 type DirReports struct {
-	dir string
-	mu  sync.Mutex
-	now func() time.Time
+	recs records.Store
+	now  func() time.Time
 }
 
 var _ service.ReportStore = (*DirReports)(nil)
 
-// NewDirReports returns reports kept in dir, created if absent.
+// NewDirReports returns reports kept as files in dir, created if absent.
 func NewDirReports(dir string) (*DirReports, error) {
-	abs, err := filepath.Abs(dir)
+	d, err := records.NewDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(abs, 0o750); err != nil {
-		return nil, err
-	}
-	return &DirReports{dir: abs, now: time.Now}, nil
+	return NewReports(d), nil
 }
+
+// NewReports returns reports kept in recs, each at `<design>/<report>.json`.
+func NewReports(recs records.Store) *DirReports { return &DirReports{recs: recs, now: time.Now} }
 
 func (r *DirReports) ids(design, id string) error {
 	if !idPattern.MatchString(design) {
@@ -66,7 +63,7 @@ func mint(now time.Time) (string, error) {
 }
 
 // CreateReport keeps a new report.
-func (r *DirReports) CreateReport(_ context.Context, design, id string, in *webapi.Report) (*webapi.Report, error) {
+func (r *DirReports) CreateReport(ctx context.Context, design, id string, in *webapi.Report) (*webapi.Report, error) {
 	now := r.now().UTC()
 	if id == "" {
 		var err error
@@ -85,49 +82,24 @@ func (r *DirReports) CreateReport(_ context.Context, design, id string, in *weba
 	if err != nil {
 		return nil, err
 	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	dir := filepath.Join(r.dir, design)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return nil, err
-	}
-	dst := filepath.Join(dir, id+".json")
-	if _, err := os.Stat(dst); err == nil {
+	if err := r.recs.Create(ctx, records.Join(design, id+".json"), b); errors.Is(err, fs.ErrExist) {
 		return nil, fmt.Errorf("%w: %s", service.ErrAlreadyExists, out.GetName())
-	}
-	tmp, err := os.CreateTemp(dir, ".new-*.json")
-	if err != nil {
-		return nil, err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(b); err != nil {
-		tmp.Close()
-		return nil, err
-	}
-	if err := tmp.Close(); err != nil {
-		return nil, err
-	}
-	if err := os.Rename(tmp.Name(), dst); err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
 // Report reads one report, or answers ErrNotFound.
-func (r *DirReports) Report(_ context.Context, design, id string) (*webapi.Report, error) {
+func (r *DirReports) Report(ctx context.Context, design, id string) (*webapi.Report, error) {
 	if err := r.ids(design, id); err != nil {
 		return nil, fmt.Errorf("%w: no report %s", service.ErrNotFound, service.ReportName(design, id))
 	}
-	return r.load(design, id)
+	return r.load(ctx, design, id)
 }
 
-func (r *DirReports) load(design, id string) (*webapi.Report, error) {
-	root, err := os.OpenRoot(r.dir)
-	if err != nil {
-		return nil, err
-	}
-	defer root.Close()
-	b, err := root.ReadFile(filepath.Join(design, id+".json"))
+func (r *DirReports) load(ctx context.Context, design, id string) (*webapi.Report, error) {
+	b, err := r.recs.Get(ctx, records.Join(design, id+".json"))
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("%w: no report %s", service.ErrNotFound, service.ReportName(design, id))
 	}
@@ -142,24 +114,21 @@ func (r *DirReports) load(design, id string) (*webapi.Report, error) {
 }
 
 // Reports reads every report of a design, newest first.
-func (r *DirReports) Reports(_ context.Context, design string) ([]*webapi.Report, error) {
+func (r *DirReports) Reports(ctx context.Context, design string) ([]*webapi.Report, error) {
 	if !idPattern.MatchString(design) {
 		return nil, nil
 	}
-	entries, err := os.ReadDir(filepath.Join(r.dir, design))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
+	entries, err := r.recs.List(ctx, design)
 	if err != nil {
 		return nil, err
 	}
 	var out []*webapi.Report
 	for _, e := range entries {
-		id, ok := strings.CutSuffix(e.Name(), ".json")
-		if !ok || e.IsDir() || !idPattern.MatchString(id) {
+		id, ok := strings.CutSuffix(e.Name, ".json")
+		if !ok || e.Dir || !idPattern.MatchString(id) {
 			continue
 		}
-		rep, err := r.load(design, id)
+		rep, err := r.load(ctx, design, id)
 		if err != nil {
 			return nil, err
 		}
@@ -176,13 +145,11 @@ func (r *DirReports) Reports(_ context.Context, design string) ([]*webapi.Report
 }
 
 // DeleteReport removes one report, or answers ErrNotFound.
-func (r *DirReports) DeleteReport(_ context.Context, design, id string) error {
+func (r *DirReports) DeleteReport(ctx context.Context, design, id string) error {
 	if err := r.ids(design, id); err != nil {
 		return fmt.Errorf("%w: no report %s", service.ErrNotFound, service.ReportName(design, id))
 	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if err := os.Remove(filepath.Join(r.dir, design, id+".json")); errors.Is(err, fs.ErrNotExist) {
+	if err := r.recs.Delete(ctx, records.Join(design, id+".json")); errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("%w: no report %s", service.ErrNotFound, service.ReportName(design, id))
 	} else if err != nil {
 		return err
@@ -191,11 +158,9 @@ func (r *DirReports) DeleteReport(_ context.Context, design, id string) error {
 }
 
 // DeleteReports removes a design's reports.
-func (r *DirReports) DeleteReports(_ context.Context, design string) error {
+func (r *DirReports) DeleteReports(ctx context.Context, design string) error {
 	if !idPattern.MatchString(design) {
 		return fmt.Errorf("%w: design id %q is not a valid id", service.ErrInvalidArgument, design)
 	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return os.RemoveAll(filepath.Join(r.dir, design))
+	return r.recs.DeleteDir(ctx, design)
 }

@@ -103,7 +103,7 @@ func TestAgnidsWithAuthServesAPrivateMountToItsReaders(t *testing.T) {
 		tokens[who] = made.FullKey
 	}
 
-	table, err := serveTable(nil, "", "file://"+filepath.ToSlash(store), "file://"+filepath.ToSlash(uploads),
+	table, err := serveTable(nil, "", openStore(t, store), uploads,
 		tableAccess{auth: true, connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL})
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +114,7 @@ func TestAgnidsWithAuthServesAPrivateMountToItsReaders(t *testing.T) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	srv := httptest.NewServer(guard(newWorkbenchMux(table, workbenchAccess{guard: service.NewAccessGuard(table, ""), hideRoots: true}, "", nil, "", "", nil), authgate.Tokens, store, false))
+	srv := httptest.NewServer(guard(newWorkbenchMux(table, workbenchAccess{guard: service.NewAccessGuard(table, ""), hideRoots: true}, "", nil, "", "", nil), authgate.Store(store), false))
 	defer srv.Close()
 	before := storeSum(t, store)
 

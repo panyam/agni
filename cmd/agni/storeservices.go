@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/panyam/goapplib/storage/blobs"
 	"github.com/panyam/goapplib/storage/mounts"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/internal/records"
+	"github.com/panyam/agni/internal/storeurl"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
@@ -30,33 +29,33 @@ var sweepInterval = time.Hour
 
 // storeServices builds the project, design and pack services `agni serve` answers with (agni issues
 // 1694, 1704, 1732, 1736, 1739). Its designs are the records it keeps: with --store, the designs and
-// projects its callers create or add from a mounted folder, as records under storeDir. With --uploads it keeps their
+// projects its callers create or add from a mounted folder, as records in st. With --uploads it keeps their
 // files too, by hash under uploadsDir, and serves each design's view as the mount "uploads". Uploaded
 // blobs go to the same folder, so they outlive a restart, and a sweep at startup and every hour
 // after removes what nothing names. The sweep stops when ctx ends. With --store it keeps packs too, and a pack's files go to --uploads beside the designs'.
 // With --store and checks, it keeps each design's reports, each run by checks.
-func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, guard *service.AccessGuard, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
+func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, uploadsDir string, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, guard *service.AccessGuard, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
 	projectSvc := service.NewProjectService(projectStore)
 	var store service.DesignStore
 	var packStore service.PackStore
 	var reportStore service.ReportStore
-	if storeDir != "" {
-		dirStore, err := projects.NewDirStore(filepath.Join(storeDir, storeDesignsDir), uploadsDir, uploadsMount)
+	if st != nil {
+		recs := map[string]records.Store{}
+		for _, name := range []string{storeDesignsDir, storeProjectsDir, storePacksDir, storeReportsDir, storeSnapshotsDir} {
+			r, err := storeRecords(st, name)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			recs[name] = r
+		}
+		dirStore, err := projects.NewStore(recs[storeDesignsDir], uploadsDir, uploadsMount)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		records, err := projects.NewDirProjects(filepath.Join(storeDir, storeProjectsDir))
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		packs, err := projects.NewDirPacks(filepath.Join(storeDir, storePacksDir), dirStore.Blobs(), projects.ViewsRoot(uploadsDir), uploadsMount)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		reports, err := projects.NewDirReports(filepath.Join(storeDir, storeReportsDir))
-		if err != nil {
-			return nil, nil, nil, err
-		}
+		records := projects.NewProjects(recs[storeProjectsDir])
+		packs := projects.NewPacks(recs[storePacksDir], dirStore.Blobs(), projects.ViewsRoot(uploadsDir), uploadsMount)
+		reports := projects.NewReports(recs[storeReportsDir])
+		snapshots := &osSnapshotStore{recs: recs[storeSnapshotsDir]}
 		// A revision a report ran on stays while the report does, so the report keeps naming files the
 		// server holds (agni issue 1774).
 		dirStore.WithRevisionPins(func(ctx context.Context, id string) (map[string]bool, error) {
@@ -79,7 +78,7 @@ func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir
 			// The sweep runs at startup and then every sweepInterval while the server runs, so a
 			// server up for weeks doesn't keep every replaced artifact's files (agni issue 1742).
 			sweep := func() error {
-				return sweepUploads(ms, dirStore, packs, storeDir, log)
+				return sweepUploads(ms, dirStore, packs, snapshots, log)
 			}
 			if err := sweep(); err != nil {
 				return nil, nil, nil, err
@@ -135,42 +134,26 @@ func storeServices(ctx context.Context, ms *mountset.Table, storeDir, uploadsDir
 	return projectSvc, designSvc, packSvc, nil
 }
 
-// snapshotHashes reads every stored snapshot definition in dir and returns the hashes of the files
-// each one sent, so the sweep keeps them. A missing dir holds none.
-func snapshotHashes(dir string) (map[string]bool, error) {
-	out := map[string]bool{}
-	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
-		return out, nil
+// storeRecords is the records of one kind under --store, under the folder name. A file:// store
+// makes that folder now, so a path there that is no folder fails at startup. A sqlite store keeps
+// them as rows under the name.
+func storeRecords(store *storeurl.Store, name string) (records.Store, error) {
+	if store.Dir == "" {
+		return store.Sub(name), nil
 	}
+	d, err := records.NewDir(filepath.Join(store.Dir, name))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("--store: %w", err)
 	}
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
-			continue
-		}
-		b, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- a definition in the store's own folder
-		if err != nil {
-			return nil, err
-		}
-		def := &webapi.Snapshot{}
-		if err := protojson.Unmarshal(b, def); err != nil {
-			return nil, fmt.Errorf("%s: %w", e.Name(), err)
-		}
-		for _, f := range def.GetFiles() {
-			out[f.GetSha256()] = true
-		}
-	}
-	return out, nil
+	return d, nil
 }
 
 // sweepUploads removes the design views, pack views and blobs in --uploads that nothing names and
 // that are older than sweepGrace. A blob is named by a design's record, a stored snapshot, a pack,
 // or a runtime mount's snapshot manifest through the mounts registry. It logs what it removed.
-func sweepUploads(ms *mountset.Table, dirStore *projects.DirStore, packs *projects.DirPacks, storeDir string, log io.Writer) error {
+func sweepUploads(ms *mountset.Table, dirStore *projects.DirStore, packs *projects.DirPacks, snapshots *osSnapshotStore, log io.Writer) error {
 	ctx := context.Background()
-	keep, err := snapshotHashes(filepath.Join(storeDir, storeSnapshotsDir))
+	keep, err := snapshots.Hashes(ctx)
 	if err != nil {
 		return fmt.Errorf("sweeping --uploads: %w", err)
 	}
