@@ -9,15 +9,19 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/datastore"
+
 	"github.com/panyam/oneauth/core"
 	oafs "github.com/panyam/oneauth/stores/fs"
+	oagae "github.com/panyam/oneauth/stores/gae"
 	oagorm "github.com/panyam/oneauth/stores/gorm"
 	"gorm.io/gorm"
 )
 
 // Keys is the store of the server's tokens: oneauth's API key store, plus the listing and the expiry
 // sweep that List and Prune need and oneauth's interface lacks. Store keeps them as files under a
-// --store folder, and SQLStore as rows of a --store database (agni issue 1733).
+// --store folder, SQLStore as rows of a sqlite or postgres database, and GAEStore as Datastore
+// entities (agni issue 1733).
 type Keys interface {
 	core.APIKeyStore
 	// all returns every token, hashes included.
@@ -108,4 +112,61 @@ func (k sqlKeys) all(ctx context.Context) ([]*core.APIKey, error) {
 func (k sqlKeys) deleteExpired(ctx context.Context, now time.Time) (int, error) {
 	res := k.db.WithContext(ctx).Where("expires_at IS NOT NULL AND expires_at <= ?", now).Delete(&oagorm.APIKeyModel{})
 	return int(res.RowsAffected), res.Error
+}
+
+// gaeKeys lists oneauth's APIKey entities in Datastore for the two calls oneauth's Datastore
+// APIKeyStore has no method for. It reads each key back through the store, so oneauth still owns
+// the entity's fields.
+type gaeKeys struct {
+	*oagae.APIKeyStore
+	client    *datastore.Client
+	namespace string
+}
+
+// GAEStore is the store of the server's tokens in Datastore, in namespace.
+func GAEStore(client *datastore.Client, namespace string) Keys {
+	return gaeKeys{oagae.NewAPIKeyStore(client, namespace), client, namespace}
+}
+
+func (k gaeKeys) ids(ctx context.Context) ([]*datastore.Key, error) {
+	return k.client.GetAll(ctx, datastore.NewQuery(oagae.KindAPIKey).Namespace(k.namespace).KeysOnly(), nil)
+}
+
+func (k gaeKeys) all(ctx context.Context) ([]*core.APIKey, error) {
+	ids, err := k.ids(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var out []*core.APIKey
+	for _, id := range ids {
+		resp, err := k.GetAPIKeyByID(ctx, &core.GetAPIKeyByIDRequest{KeyID: id.Name})
+		if errors.Is(err, core.ErrAPIKeyNotFound) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, resp.APIKey)
+	}
+	return out, nil
+}
+
+func (k gaeKeys) deleteExpired(ctx context.Context, now time.Time) (int, error) {
+	keys, err := k.all(ctx)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, key := range keys {
+		if key.ExpiresAt == nil || key.ExpiresAt.After(now) {
+			continue
+		}
+		dk := datastore.NameKey(oagae.KindAPIKey, key.KeyID, nil)
+		dk.Namespace = k.namespace
+		if err := k.client.Delete(ctx, dk); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
 }

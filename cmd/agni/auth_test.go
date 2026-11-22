@@ -118,7 +118,7 @@ func TestASharedServerChecksTokensOverTLS(t *testing.T) {
 	dir := t.TempDir()
 	certFile, keyFile, pool := selfSigned(t, dir)
 	store := filepath.Join(dir, "store")
-	storeURL := testStoreURL(store)
+	storeURL := testStoreURL(t, store)
 	token, err := runCobra(t, tokenCmd(), "create", "alice", "--store", storeURL)
 	if err != nil {
 		t.Fatalf("agni token create: %v", err)
@@ -191,7 +191,7 @@ func TestASharedServerChecksTokensOverTLS(t *testing.T) {
 func TestABrowserSignsInWithAToken(t *testing.T) {
 	dir := t.TempDir()
 	store := filepath.Join(dir, "store")
-	storeURL := testStoreURL(store)
+	storeURL := testStoreURL(t, store)
 	out, err := runCobra(t, tokenCmd(), "create", "bob", "--store", storeURL)
 	if err != nil {
 		t.Fatal(err)
@@ -260,7 +260,7 @@ func (c *cookieClient) Do(r *http.Request) (*http.Response, error) {
 func TestTheCLIReachesASharedServerWithAGNI_TOKEN(t *testing.T) {
 	dir := t.TempDir()
 	store := filepath.Join(dir, "store")
-	out, err := runCobra(t, tokenCmd(), "create", "ci", "--store", testStoreURL(store))
+	out, err := runCobra(t, tokenCmd(), "create", "ci", "--store", testStoreURL(t, store))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +307,7 @@ func TestALocalServerWithoutAuthIsUnchanged(t *testing.T) {
 
 // agni token lists what it made, marks a revoked one, and never prints a hash.
 func TestTokenCommandListsAndRevokes(t *testing.T) {
-	storeURL := testStoreURL(filepath.Join(t.TempDir(), "store"))
+	storeURL := testStoreURL(t, filepath.Join(t.TempDir(), "store"))
 	for _, who := range []string{"alice", "ci"} {
 		if _, err := runCobra(t, tokenCmd(), "create", who, "--store", storeURL); err != nil {
 			t.Fatal(err)

@@ -8,7 +8,8 @@
 # restarts the server over the same store, and lists everything again. It checks that the report says
 # it ran on earlier files, and that the store holds records and no board file. It kills only the
 # server it started. EXERCISE_STORE=sqlite keeps the store in one sqlite file, sqlite://<out>/store/agni.db,
-# in place of a folder of records (agni issue 1733).
+# in place of a folder of records (agni issue 1733). EXERCISE_STORE_URL names any other store, such as
+# a postgres:// database or a datastore:// namespace, which should start empty.
 set -euo pipefail
 
 agni=${AGNI:-bin/agni}
@@ -17,10 +18,11 @@ revs=${SAMPLES_REVISIONS:-tools/samples/revisions}
 # project; `make -C examples/jetson-project revision` copies them in.
 proj=${JETSON_PROJECT:-examples/jetson-project}
 kind=${EXERCISE_STORE:-file}
+[ -n "${EXERCISE_STORE_URL:-}" ] && kind=${EXERCISE_STORE_URL%%://*}
 case $kind in
   file) out=${EXERCISE_OUT:-/tmp/agni-exercise}/design-store ;;
-  sqlite) out=${EXERCISE_OUT:-/tmp/agni-exercise}/design-store-sqlite ;;
-  *) echo "EXERCISE_STORE=$kind: want file or sqlite" >&2; exit 1 ;;
+  sqlite | postgres | postgresql | datastore) out=${EXERCISE_OUT:-/tmp/agni-exercise}/design-store-$kind ;;
+  *) echo "EXERCISE_STORE=$kind: want file or sqlite, or a URL in EXERCISE_STORE_URL" >&2; exit 1 ;;
 esac
 port=${EXERCISE_PORT:-18691}
 url=http://127.0.0.1:$port
@@ -38,6 +40,7 @@ uploads=$out/uploads
 db=$store/agni.db
 storeURL=file://$store
 [ "$kind" = sqlite ] && storeURL=sqlite://$db
+[ -n "${EXERCISE_STORE_URL:-}" ] && storeURL=$EXERCISE_STORE_URL
 pid=
 
 serve() {
@@ -154,7 +157,12 @@ fi
 # bytes in the wrong place. A sqlite store is one database file beside its WAL, which holds no
 # KiCad file's text; a path to a .kicad_sch never has a parenthesis in it.
 blobs=$(find "$uploads/blobs" -type f | wc -l | tr -d ' ')
-if [ "$kind" = sqlite ]; then
+if [ -n "${EXERCISE_STORE_URL:-}" ]; then
+  # A database or a namespace elsewhere has no folder here to look in, and the uploads must still
+  # hold every file.
+  strays=0
+  records=$(wc -l <"$out/series-after-restart.txt" | tr -d ' ')
+elif [ "$kind" = sqlite ]; then
   strays=$(find "$store" -type f ! -name 'agni.db' ! -name 'agni.db-wal' ! -name 'agni.db-shm' | wc -l | tr -d ' ')
   strays=$((strays + $(cat "$store"/agni.db* | LC_ALL=C grep -a -c -F '(kicad_' || true)))
   records=$(wc -l <"$out/series-after-restart.txt" | tr -d ' ')

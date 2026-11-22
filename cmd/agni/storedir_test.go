@@ -70,21 +70,18 @@ func TestUploadsRefuseAMountNamedUploads(t *testing.T) {
 	}
 }
 
-// testStoreURL is the --store URL of a test server's store over the folder dir: the folder itself,
-// or, with AGNI_TEST_RECORDS=sqlite, a sqlite database in it (agni issue 1733).
-func testStoreURL(dir string) string {
-	slash := "/" + strings.TrimPrefix(filepath.ToSlash(dir), "/")
-	if recordstest.SQLite() {
-		return "sqlite://" + slash + "/agni.db"
-	}
-	return "file://" + slash
+// testStoreURL is the --store URL of a test server's store over the folder dir, in the backend
+// AGNI_TEST_RECORDS names (agni issue 1733).
+func testStoreURL(t testing.TB, dir string) string {
+	t.Helper()
+	return recordstest.StoreURL(t, dir)
 }
 
-// testStore opens testStoreURL(dir). Each call opens a new handle on the same records, as a
+// testStore opens testStoreURL(t, dir). Each call opens a new handle on the same records, as a
 // restarted server does, and the test closes it when it ends.
 func testStore(t testing.TB, dir string) *storeurl.Store {
 	t.Helper()
-	st, _, err := storeurl.Open(testStoreURL(dir), "")
+	st, _, err := storeurl.Open(testStoreURL(t, dir), "")
 	if err != nil {
 		t.Fatal(err)
 	}

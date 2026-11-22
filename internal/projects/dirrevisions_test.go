@@ -114,7 +114,7 @@ func TestARevisionKeepsItsFilesBesideTheDesign(t *testing.T) {
 	if left, err := l.recs.List(ctx, records.Join(revisionsDir, "bb")); err != nil || len(left) != 0 {
 		t.Errorf("after DeleteDesign, its revisions = %v, %v; want them gone", left, err)
 	}
-	if _, err := os.Stat(filepath.Join(l.records, revisionsDir, "bb")); !recordstest.SQLite() && !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(l.records, revisionsDir, "bb")); recordstest.Folder() && !os.IsNotExist(err) {
 		t.Errorf("after DeleteDesign, its revisions folder = %v; want it gone", err)
 	}
 	if views, _, err := ds.Sweep(nil, 0); err != nil || views != 2 {

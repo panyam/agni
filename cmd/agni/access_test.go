@@ -36,7 +36,7 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	store := filepath.Join(dir, "store")
 	tokens := map[string]string{}
 	for _, who := range []string{"ops", "alice", "bob"} {
-		out, err := runCobra(t, tokenCmd(), "create", who, "--store", testStoreURL(store))
+		out, err := runCobra(t, tokenCmd(), "create", who, "--store", testStoreURL(t, store))
 		if err != nil {
 			t.Fatalf("agni token create %s: %v", who, err)
 		}
@@ -130,7 +130,7 @@ func TestALinkedDesignOpensOnlyForWhoCanReadItsRepo(t *testing.T) {
 	}
 
 	// A folder store's older layout. A sqlite store has none, since no older agni wrote one.
-	if !recordstest.SQLite() {
+	if recordstest.Folder() {
 		// Before goapplib v0.7.23 a person's connection lived beside the server's, as <id>.yaml, and the
 		// store reads one left there as its owner's (agni issue 1778).
 		people, _ := filepath.Glob(filepath.Join(store, "connections", "people", "*", "alice-gh.yaml"))
@@ -204,7 +204,7 @@ func TestADesignLinkedWithoutAuthIsGuardedOnceAuthIsOn(t *testing.T) {
 	must(runDesigns(t, open, "unlink", "bb", "schematic"))
 	must(runMounts(t, "rm", "board", "--remote", open))
 
-	out, err := runCobra(t, tokenCmd(), "create", "bob", "--store", testStoreURL(store))
+	out, err := runCobra(t, tokenCmd(), "create", "bob", "--store", testStoreURL(t, store))
 	if err != nil {
 		t.Fatalf("agni token create bob: %v", err)
 	}

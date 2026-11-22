@@ -464,7 +464,7 @@ func TestTheSweepKeepsWhatIsNamedAndWhatIsNew(t *testing.T) {
 // included, so a temp file left behind shows. sqlite lists its keys.
 func recordNames(t *testing.T, l layout) []string {
 	t.Helper()
-	if !recordstest.SQLite() {
+	if recordstest.Folder() {
 		return dirNames(t, l.records)
 	}
 	ents, err := l.recs.List(context.Background(), "")

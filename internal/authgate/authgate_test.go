@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/panyam/agni/internal/records/recordstest"
-	"github.com/panyam/agni/internal/records/sqlrecords"
 	"github.com/panyam/oneauth/core"
 )
 
@@ -137,19 +136,19 @@ func TestListSkipsAKeyDeletedWhileListing(t *testing.T) {
 	}
 }
 
-// testKeys is an empty token store, kept as files or, with AGNI_TEST_RECORDS=sqlite, in sqlite.
+// testKeys is an empty token store in the backend AGNI_TEST_RECORDS names.
 func testKeys(t *testing.T) Keys {
 	t.Helper()
-	if !recordstest.SQLite() {
-		return Store(t.TempDir())
+	dir := t.TempDir()
+	switch recordstest.Backend() {
+	case "sqlite", "postgres":
+		k, err := SQLStore(recordstest.DB(t, dir))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return k
+	case "datastore":
+		return GAEStore(recordstest.Datastore(t, dir))
 	}
-	db, err := sqlrecords.OpenSQLite(filepath.Join(t.TempDir(), "agni.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	k, err := SQLStore(db)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return k
+	return Store(dir)
 }

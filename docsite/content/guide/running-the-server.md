@@ -200,17 +200,26 @@ project. See [interface profiles](../interface-profiles/) and
 `serve --store <url>` names where the server keeps its records, and `serve --uploads <url>` names
 where it keeps the files of designs its users upload (agni issues 1732, 1739). `--uploads` takes a
 `file://` URL naming a folder, created if absent, such as `--uploads file:///srv/agni/files`.
-`--store` takes one of two URLs. A bare path is refused with the `file://` form it meant.
+`--store` takes one of four kinds of URL (agni issue 1733). A bare path is refused with the `file://`
+form it meant.
 
 - `--store file:///srv/agni/meta` keeps each record as a small YAML or JSON file in that folder.
-- `--store sqlite:///srv/agni/agni.db` keeps every record as a row of one sqlite database file
-  (agni issue 1733). The file and its folder are created if absent, and the file is readable by the
-  server's user alone. Runtime mounts, connections, people's sealed tokens and the `--auth` tokens
-  go into the same file. `agni token` and `agnids serve --store` take the same URL.
+- `--store sqlite:///srv/agni/agni.db` keeps every record as a row of one sqlite database file. The
+  file and its folder are created if absent, and the file is readable by the server's user alone.
+- `--store postgres://agni@db.internal:5432/agni?sslmode=require` keeps them as rows in a postgres
+  database, which must exist. The password comes from `PGPASSWORD` or a passfile (`PGPASSFILE`, or
+  `~/.pgpass`), and a URL with a password in it is refused, since it would show in `ps`. Options
+  such as `sslmode` and `search_path` pass through to the driver.
+- `--store datastore://my-project?namespace=agni` keeps them as entities in Cloud Datastore, or
+  Firestore in Datastore mode, in that namespace. It signs in with Application Default Credentials,
+  and `datastore://?namespace=agni` takes the project from them. `DATASTORE_EMULATOR_HOST` points it
+  at the emulator.
 
-A sqlite store is one file to back up, and several processes can open it at once. The records are
-the same in both, so the rest of this page applies to either. A server doesn't move records from one
-kind of store to the other, so pick one when you first start it.
+In each, runtime mounts, connections, people's sealed tokens and the `--auth` tokens go into the same
+store. `agni token` and `agnids serve --store` take the same URL. sqlite and postgres go through
+GORM, and the server creates the tables it needs on start. The records are the same in all four, so
+the rest of this page applies to any of them. A server doesn't move records from one kind of store to
+another, so pick one when you first start it.
 
 The store keeps records and no file bytes. It holds each stored design's record, with every
 artifact's paths and hashes, the projects, each snapshot's definition and the review runs. The

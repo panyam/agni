@@ -70,12 +70,49 @@ func CheckKey(key string) error {
 	return nil
 }
 
-// checkDir is CheckKey for a folder, where "" names the top.
-func checkDir(dir string) error {
+// CheckDir is CheckKey for a folder, where "" names the top.
+func CheckDir(dir string) error {
 	if dir == "" {
 		return nil
 	}
 	return CheckKey(dir)
+}
+
+// KeysUnder keeps the keys that sit below dir, byte for byte. "" keeps them all. A backend whose
+// query can over-match, such as a LIKE that ignores case, filters its answer through it.
+func KeysUnder(dir string, keys []string) []string {
+	if dir == "" {
+		return keys
+	}
+	out := keys[:0:0]
+	for _, k := range keys {
+		if strings.HasPrefix(k, dir+"/") {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+// EntriesUnder turns the full keys below dir into what List returns: one entry per name directly
+// under dir, a folder when more segments follow, ordered by name. It ignores keys not below dir.
+// A backend that can only list keys, such as SQL or Datastore, answers List through it.
+func EntriesUnder(dir string, keys []string) []Entry {
+	prefix := ""
+	if dir != "" {
+		prefix = dir + "/"
+	}
+	var out []Entry
+	seen := map[string]bool{}
+	for _, k := range KeysUnder(dir, keys) {
+		name, _, isDir := strings.Cut(strings.TrimPrefix(k, prefix), "/")
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, Entry{Name: name, Dir: isDir})
+	}
+	sortEntries(out)
+	return out
 }
 
 // Join joins key segments with slashes. It does not check the result.

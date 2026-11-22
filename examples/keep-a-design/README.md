@@ -15,7 +15,7 @@ project with a design from a mounted folder, and see what a mounted folder will 
 - A pack, `packs/{pack}`, keeps a project.yaml's rules on the server, and its hash moves when they change.
 - A report checks a stored design against packs, and says later when the design's files changed since.
 - A pack linked to a project folder moves when the folder changes, as a design linked to one does.
-- The same records can sit in one sqlite file, `--store sqlite://`, in place of a folder (agni issue 1733).
+- The same records can sit in one sqlite file, `--store sqlite://`, in place of a folder, and in postgres or Datastore the same way (agni issue 1733).
 
 ## Run it
 

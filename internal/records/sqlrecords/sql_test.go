@@ -65,3 +65,12 @@ func TestOpenSQLitePragmas(t *testing.T) {
 		}
 	}
 }
+
+// The same contract on postgres, when AGNI_TEST_POSTGRES names one (make test-stores starts it).
+func TestPostgresContract(t *testing.T) {
+	if os.Getenv(recordstest.PostgresEnv) == "" {
+		t.Skipf("%s names no postgres; make test-stores runs this", recordstest.PostgresEnv)
+	}
+	t.Setenv(recordstest.BackendEnv, "postgres")
+	recordstest.Run(t, func(t *testing.T) records.Store { return recordstest.New(t) })
+}

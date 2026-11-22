@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: test-sqlite exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -299,10 +299,16 @@ odb-oracle: samples-oracle
 test:
 	$(GO) test ./...
 
-# The store tests again, with every record kept in sqlite in place of a folder (agni issue 1733).
-# recordstest.BackendEnv picks the backend, so a test of a store runs once against each.
-test-sqlite:
-	AGNI_TEST_RECORDS=sqlite $(GO) test ./internal/projects/... ./internal/authgate/... ./internal/storeurl/... ./cmd/agni/...
+# The store tests again on each backend --store takes besides a folder: sqlite, postgres and
+# Datastore (agni issue 1733). recordstest.BackendEnv picks the backend. The script starts postgres
+# and the Datastore emulator in Docker unless AGNI_TEST_POSTGRES or DATASTORE_EMULATOR_HOST names one.
+# BACKENDS="postgres" runs one.
+BACKENDS ?=
+test-stores:
+	GO=$(GO) ./hack/test_stores.sh $(BACKENDS)
+
+# testall-stores is test-stores as a gate job of its own, since it needs Docker and two services.
+testall-stores: samples-oracle ui test-stores
 
 # The Python client (agni issue 728) against a real binary and a real server. Its venv is its own and
 # small (protobuf, openpyxl, pytest), separate from the docling one `make setup` builds, and is rebuilt
@@ -416,11 +422,13 @@ exercise-revision-audit: agni python-venv
 # The design-store mission's exercise (agni issues 1691, 1696, 1746): Jetson 1.1.2 and 1.1.3 pushed to
 # a server as two designs of one series with their project as a pack, a report kept through a project,
 # 1.1.3's schematic replaced, and the store read back after a restart. It runs the checkout's binary on
-# its own port and writes under EXERCISE_OUT. STORE=sqlite keeps the store in sqlite (agni issue 1733).
+# its own port and writes under EXERCISE_OUT. STORE=sqlite keeps the store in sqlite, and STORE_URL
+# names any other store, such as postgres:// or datastore:// (agni issue 1733).
 STORE ?= file
+STORE_URL ?=
 exercise-design-store: agni samples-revisions
 	$(MAKE) -C examples/jetson-project revision
-	AGNI=$(CURDIR)/bin/agni EXERCISE_OUT=$(EXERCISE_OUT) EXERCISE_STORE=$(STORE) ./hack/exercise_design_store.sh
+	AGNI=$(CURDIR)/bin/agni EXERCISE_OUT=$(EXERCISE_OUT) EXERCISE_STORE=$(STORE) EXERCISE_STORE_URL=$(STORE_URL) ./hack/exercise_design_store.sh
 
 # The runtime-mounts exercise (agni issue 1735): a GitHub mount over Antmicro's Jetson baseboard at
 # 1.1.2 made on a running server, browsed, and listed again after a restart. It reads GitHub, so it
@@ -831,23 +839,23 @@ catalog-docs-check: catalog-docs
 # "minutes per run", and it is 17s for 12 assertions on top of a `ui` build the gate already does.
 testall: testall-core browser-test
 
-# testall-core is the gate without the browser suite. CI runs testall-test as three jobs and puts
+# testall-core is the gate without the browser suite. CI runs testall-test as four jobs and puts
 # them beside testall-scan, testall-docs and five browser-test shards, so the gate takes as long as
 # the slowest job rather than all of them in a row (agni issue 1147). `make testall` still runs every
 # target here, in the order below.
 testall-core: testall-test testall-scan testall-docs
 
-# testall-test builds and tests the engine, the examples, the web bundle and the Python client, and
-# checks every committed tree that a generator writes. CI runs its three parts as three jobs of about
-# two minutes each.
-testall-test: testall-go testall-web testall-dist
+# testall-test builds and tests the engine, the examples, the web bundle, the Python client and the
+# store backends, and checks every committed tree that a generator writes. CI runs its four parts as
+# four jobs.
+testall-test: testall-go testall-web testall-dist testall-stores
 
 # test and web-test declare no prerequisites and read the corpus and the bundle that samples-oracle
 # and ui leave behind, so each part below starts with those two.
 #
 # testall-go is the Go engine and the generated-tree checks. tidyall-check comes first, so "updates to
 # go.mod needed" is diagnosed there rather than as a later test failure.
-testall-go: tidyall-check ir-model-check fixture-copies-check proto-check samples-oracle ui test test-sqlite datasheet-test
+testall-go: tidyall-check ir-model-check fixture-copies-check proto-check samples-oracle ui test datasheet-test
 
 # testall-web is the wasm engine and the three web packages' unit suites.
 testall-web: samples-oracle ui wasm-test web-test

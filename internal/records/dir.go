@@ -127,7 +127,7 @@ func (d *Dir) Delete(_ context.Context, key string) error {
 // List reads dir's folder. It leaves out dot files, which are temp files or an operator's notes, and
 // folders holding no record.
 func (d *Dir) List(_ context.Context, dir string) ([]Entry, error) {
-	if err := checkDir(dir); err != nil {
+	if err := CheckDir(dir); err != nil {
 		return nil, err
 	}
 	ents, err := os.ReadDir(d.path(dir))
@@ -172,7 +172,7 @@ func holdsRecords(dir string) bool {
 
 // DeleteDir removes dir's folder and everything in it.
 func (d *Dir) DeleteDir(_ context.Context, dir string) error {
-	if err := checkDir(dir); err != nil {
+	if err := CheckDir(dir); err != nil {
 		return err
 	}
 	if dir == "" {

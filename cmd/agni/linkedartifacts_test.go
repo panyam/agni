@@ -74,7 +74,7 @@ func TestTheDesignsCommandLinksSyncsAndUnlinksAGitHubArtifact(t *testing.T) {
 	if !strings.Contains(out, "from bb/hw/bb.kicad_sch@main at "+v2) {
 		t.Errorf("after a restart, designs artifacts = %q; want the schematic at the new head", out)
 	}
-	if out, err := runDesigns(t, url, "put", "bb", "board", filepath.Join(dir, "store")); err == nil || !strings.Contains(err.Error(), "UnlinkArtifact") {
+	if out, err := runDesigns(t, url, "put", "bb", "board", filepath.Join(dir, "uploads")); err == nil || !strings.Contains(err.Error(), "UnlinkArtifact") {
 		t.Errorf("designs put over a linked board = %q, %v; want a refusal saying to unlink", out, err)
 	}
 	must(runDesigns(t, url, "unlink", "bb", "board"))

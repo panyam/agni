@@ -32,7 +32,7 @@ review run.
 create prints the token once. The store keeps only its hash. A revoked token stops working within
 a minute, since the server trusts a token it checked for that long.`,
 	}
-	cmd.PersistentFlags().StringVar(&storeURL, "store", "", "the --store of the agni serve these tokens are for, such as file:///srv/agni/meta or sqlite:///srv/agni.db (required)")
+	cmd.PersistentFlags().StringVar(&storeURL, "store", "", "the --store of the agni serve these tokens are for, such as file:///srv/agni/meta, sqlite:///srv/agni.db, postgres://agni@db/agni or datastore://project?namespace=agni (required)")
 	store := func() (authgate.Keys, error) {
 		if storeURL == "" {
 			return nil, fmt.Errorf("agni token needs --store, the same one the server was started with")

@@ -6,6 +6,9 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/internal/records/recordstest"
+	"github.com/panyam/oneauth/core"
 )
 
 func TestStoreAndUploadsTakeFileURLs(t *testing.T) {
@@ -20,7 +23,7 @@ func TestStoreAndUploadsTakeFileURLs(t *testing.T) {
 		{store: "file:///srv/agni/meta", uploads: "file:///srv/agni/files", wantStore: "/srv/agni/meta", wantUploads: "/srv/agni/files"},
 		{store: "file://localhost/srv/agni/meta", wantStore: "/srv/agni/meta"},
 		{store: "/srv/agni/meta", wantErr: "names a path with no scheme; write it as file:///"},
-		{store: "postgres://db/agni", wantErr: "this build knows file://, sqlite://"},
+		{store: "mysql://db/agni", wantErr: "this build knows datastore://, file://, postgres://, postgresql://, sqlite://"},
 		{store: "file://server/srv/agni", wantErr: "names the host"},
 		{store: "file://relative", wantErr: "names the host"},
 		{store: "file:///srv/agni/meta", uploads: "s3://bucket/agni", wantErr: "agni issue 1730"},
@@ -106,5 +109,72 @@ func TestOpenKeepsAFileStoreAsFolders(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "projects", "p.json")); err != nil {
 		t.Fatalf("a file store keeps projects/p.json as a file: %v", err)
+	}
+}
+
+func TestOpenRefusesABadPostgresOrDatastoreURL(t *testing.T) {
+	for _, tc := range []struct{ store, want string }{
+		{"postgres://agni:hunter2@db/agni", "names a password; put it in PGPASSWORD"},
+		{"postgres://db", "names no host or database"},
+		{"postgres:///agni", "names no host or database"},
+		{"datastore://proj/extra", "datastore://<project>?namespace=<ns>"},
+		{"datastore://proj?database=x", "takes namespace and nothing else"},
+	} {
+		_, _, err := Open(tc.store, "")
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("Open(%q) = %v, want an error naming %q", tc.store, err, tc.want)
+		}
+		if err != nil && strings.Contains(err.Error(), "hunter2") {
+			t.Errorf("Open(%q) put the password in its error: %v", tc.store, err)
+		}
+	}
+}
+
+// Open over a live postgres or Datastore emulator, when make test-stores starts one, keeps records
+// and hands out the table's stores and the tokens.
+func TestOpenALiveDatabaseOrDatastore(t *testing.T) {
+	for name, u := range map[string]func(t *testing.T) string{
+		"postgres": func(t *testing.T) string {
+			if os.Getenv(recordstest.PostgresEnv) == "" {
+				t.Skip("no postgres; make test-stores runs this")
+			}
+			t.Setenv(recordstest.BackendEnv, "postgres")
+			return recordstest.StoreURL(t, t.TempDir())
+		},
+		"datastore": func(t *testing.T) string {
+			if os.Getenv("DATASTORE_EMULATOR_HOST") == "" {
+				t.Skip("no Datastore emulator; make test-stores runs this")
+			}
+			t.Setenv(recordstest.BackendEnv, "datastore")
+			return recordstest.StoreURL(t, t.TempDir())
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			st, _, err := Open(u(t), "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer st.Close()
+			if err := st.Sub("projects").Put(t.Context(), "p.json", []byte("{}")); err != nil {
+				t.Fatal(err)
+			}
+			if b, err := st.Records.Get(t.Context(), "projects/p.json"); err != nil || string(b) != "{}" {
+				t.Fatalf("Get = %q, %v", b, err)
+			}
+			stores, err := st.TableStores()
+			if err != nil || stores == nil || stores.Mounts == nil || stores.Connections == nil || stores.UserTokens == nil {
+				t.Fatalf("TableStores = %+v, %v; want all three", stores, err)
+			}
+			if _, err := stores.Mounts.ListMounts(t.Context()); err != nil {
+				t.Fatalf("ListMounts on a fresh store: %v", err)
+			}
+			keys, err := st.Tokens()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := keys.ListSubjectAPIKeys(t.Context(), &core.ListSubjectAPIKeysRequest{Subject: "nobody"}); err != nil {
+				t.Fatalf("tokens on a fresh store: %v", err)
+			}
+		})
 	}
 }

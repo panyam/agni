@@ -1,5 +1,5 @@
 // Package sqlrecords keeps a server's records in a SQL database through GORM, for `--store
-// sqlite://` (agni issue 1733). It is apart from package records so that a program reading only
+// sqlite://` and `--store postgres://` (agni issue 1733). It is apart from package records so that a program reading only
 // folders never links a database driver.
 package sqlrecords
 
@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"sort"
 	"strings"
 	"time"
 
@@ -103,60 +102,51 @@ func (s *SQL) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// under scopes a query to the keys below dir. It compares ranges rather than using LIKE, so an id
-// holding '_' or '%' needs no escaping: every key under "a/b" sorts from "a/b/" up to "a/b0", since
-// '0' follows '/'.
+// under scopes a query to the keys that may sit below dir, with LIKE and an escaped prefix. LIKE
+// ignores the column's collation, which a range scan over "dir/" to "dir0" would depend on, and
+// postgres's default collations don't sort '/' before '0' byte by byte. sqlite's LIKE ignores ASCII
+// case, so a caller keeps only the keys that start with the prefix exactly.
 func under(q *gorm.DB, dir string) *gorm.DB {
 	if dir == "" {
 		return q
 	}
-	return q.Where("record_key >= ? AND record_key < ?", dir+"/", dir+"0")
+	esc := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(dir + "/")
+	return q.Where(`record_key LIKE ? ESCAPE '\'`, esc+"%")
 }
 
 // List reads the keys below dir and keeps the segment after dir of each.
 func (s *SQL) List(ctx context.Context, dir string) ([]records.Entry, error) {
-	if err := checkDir(dir); err != nil {
+	if err := records.CheckDir(dir); err != nil {
 		return nil, err
 	}
 	var keys []string
-	if err := under(s.db.WithContext(ctx).Model(&row{}), dir).Order("record_key").Pluck("record_key", &keys).Error; err != nil {
+	if err := under(s.db.WithContext(ctx).Model(&row{}), dir).Pluck("record_key", &keys).Error; err != nil {
 		return nil, err
 	}
-	prefix := ""
-	if dir != "" {
-		prefix = dir + "/"
-	}
-	var out []records.Entry
-	seen := map[string]bool{}
-	for _, k := range keys {
-		rest := strings.TrimPrefix(k, prefix)
-		name, _, isDir := strings.Cut(rest, "/")
-		if seen[name] {
-			continue
-		}
-		seen[name] = true
-		out = append(out, records.Entry{Name: name, Dir: isDir})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out, nil
-}
-
-// checkDir is records.CheckKey for a folder, where "" names the top.
-func checkDir(dir string) error {
-	if dir == "" {
-		return nil
-	}
-	return records.CheckKey(dir)
+	return records.EntriesUnder(dir, keys), nil
 }
 
 // DeleteDir removes the rows below dir.
 func (s *SQL) DeleteDir(ctx context.Context, dir string) error {
-	if err := checkDir(dir); err != nil {
+	if err := records.CheckDir(dir); err != nil {
 		return err
 	}
-	q := s.db.WithContext(ctx)
 	if dir == "" {
-		q = q.Where("1 = 1")
+		return s.db.WithContext(ctx).Where("1 = 1").Delete(&row{}).Error
 	}
-	return under(q, dir).Delete(&row{}).Error
+	// LIKE may match a key under the same folder in another case on sqlite, so the exact keys are
+	// listed first and deleted by name.
+	var keys []string
+	if err := under(s.db.WithContext(ctx).Model(&row{}), dir).Pluck("record_key", &keys).Error; err != nil {
+		return err
+	}
+	keys = records.KeysUnder(dir, keys)
+	for len(keys) > 0 {
+		n := min(len(keys), 500)
+		if err := s.db.WithContext(ctx).Where("record_key IN ?", keys[:n]).Delete(&row{}).Error; err != nil {
+			return err
+		}
+		keys = keys[n:]
+	}
+	return nil
 }

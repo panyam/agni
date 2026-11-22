@@ -1,7 +1,7 @@
 // Package storeurl reads the --store and --uploads URLs that agni serve, agnids and `agni token`
 // share (agni issues 1732, 1733, 1739, 1735). The scheme picks the adapter: file:// keeps the store's
-// records as files in a folder, and sqlite:// as rows of one database file. A later postgres:// or
-// s3:// registers here without a new flag.
+// records as files in a folder, sqlite:// and postgres:// as rows through GORM, and datastore:// as
+// Datastore entities. A later scheme registers here without a new flag.
 package storeurl
 
 import (
@@ -14,8 +14,11 @@ import (
 
 // storeSchemes are the --store schemes this build knows, each with what it does or why it is refused.
 var storeSchemes = map[string]string{
-	"file":   "",
-	"sqlite": "",
+	"file":       "",
+	"sqlite":     "",
+	"postgres":   "",
+	"postgresql": "",
+	"datastore":  "",
 }
 
 // uploadsSchemes are the --uploads schemes this build knows.

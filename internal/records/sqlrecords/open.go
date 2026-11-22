@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/glebarez/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -36,6 +37,17 @@ func OpenSQLite(path string) (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open("file:"+path+"?"+q.Encode()), &gorm.Config{Logger: logger.Discard})
 	if err != nil {
 		return nil, fmt.Errorf("sqlite %s: %w", path, err)
+	}
+	return db, nil
+}
+
+// OpenPostgres opens the postgres database dsn names, a postgres:// URL or a key=value string as
+// pgx reads them. The password comes from PGPASSWORD or a passfile, as libpq's do, so it never
+// sits on a command line. The pure-Go pgx driver needs no cgo either.
+func OpenPostgres(dsn string) (*gorm.DB, error) {
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		return nil, fmt.Errorf("postgres: %w", err)
 	}
 	return db, nil
 }

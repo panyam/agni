@@ -43,7 +43,7 @@ func signInServer(t *testing.T, gh *githubtest.Server) (url, ops string) {
 	t.Setenv(envToken, "")
 	dir := t.TempDir()
 	store := filepath.Join(dir, "store")
-	out, err := runCobra(t, tokenCmd(), "create", "ops", "--store", testStoreURL(store))
+	out, err := runCobra(t, tokenCmd(), "create", "ops", "--store", testStoreURL(t, store))
 	if err != nil {
 		t.Fatalf("agni token create ops: %v", err)
 	}
