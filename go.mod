@@ -7,8 +7,8 @@ require (
 	github.com/bodgit/sevenzip v1.6.5
 	github.com/ebitengine/purego v0.8.4
 	github.com/klauspost/compress v1.20.2
-	github.com/panyam/goapplib v0.7.25
-	github.com/panyam/goapplib/storage v0.7.25
+	github.com/panyam/goapplib v0.7.26
+	github.com/panyam/goapplib/storage v0.7.26
 	github.com/panyam/goutils v0.1.15
 	github.com/panyam/jaala v0.1.101
 	github.com/panyam/jaala/frontends/mcp v0.1.101
@@ -20,9 +20,9 @@ require (
 	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.21
 	github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.21
 	github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.21
-	github.com/panyam/oneauth v0.3.14
-	github.com/panyam/oneauth/grpc v0.3.14
-	github.com/panyam/oneauth/oauth2 v0.3.14
+	github.com/panyam/oneauth v0.3.16
+	github.com/panyam/oneauth/grpc v0.3.16
+	github.com/panyam/oneauth/oauth2 v0.3.16
 	github.com/panyam/servicekit v0.2.4
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -35,7 +35,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute/metadata v0.9.0 // indirect
+	cloud.google.com/go/compute/metadata v0.10.0 // indirect
 	github.com/alexedwards/scs/v2 v2.9.0 // indirect
 	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
@@ -57,7 +57,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/panyam/gocurrent v0.1.2 // indirect
+	github.com/panyam/gocurrent v0.1.3 // indirect
 	github.com/panyam/jaala/frontends/cypher v0.1.101 // indirect
 	github.com/panyam/templar v0.1.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect

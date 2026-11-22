@@ -201,7 +201,7 @@ func Open(cfg Config) (*Table, error) {
 			copts = append(copts, connections.WithUserTokens(t.users, cfg.ConnectionsKey, app))
 		}
 		t.svc = connections.NewService(cs, copts...)
-		opts = append(opts, mounts.WithCredentials(t.svc.TokenSource))
+		opts = append(opts, mounts.WithCredentials(t.svc.Credentials))
 	}
 	t.gh = gh
 	t.githubAPI = cfg.GitHubAPI

@@ -17,6 +17,15 @@ GitHub Release body carries.
   serve with TLS, tokens and sign-in through a GitHub App against a fake GitHub Enterprise Server,
   and CI runs it.
 
+### Changed
+
+- agni builds on goapplib v0.7.26 and oneauth v0.3.16 in every module. goapplib's mount drivers now
+  take a typed credential instead of a token source, and agni passes the connection service's
+  `Credentials`. A `github://` mount now swaps a Git LFS pointer for its object, and a snapshot fails
+  with the path named when it can't. A folder mount refuses a pointer the same way. agni's own test
+  and exercise step for that come in issue 1809. S3, GCS and SharePoint mounts, and oneauth's OIDC
+  sign-in and trusted proxies, need agni wiring in issues 1729, 1730, 1810 and 1811.
+
 ## [0.10.0] - 2026-11-21
 
 A design linked from a private GitHub repo opens only for the people who can read the repo. A person

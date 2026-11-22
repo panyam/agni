@@ -39,7 +39,7 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/panyam/agni v0.0.0 // indirect
 	github.com/panyam/demokit/notebook v0.0.28 // indirect
-	github.com/panyam/gocurrent v0.1.2 // indirect
+	github.com/panyam/gocurrent v0.1.3 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/afero v1.15.0 // indirect

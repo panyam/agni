@@ -5,7 +5,7 @@ go 1.27.4
 require (
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/agni/examples/common v0.0.0
-	github.com/panyam/demokit v0.0.31
+	github.com/panyam/demokit v0.0.33
 	github.com/panyam/mcpkit v0.8.21
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
@@ -13,6 +13,7 @@ require (
 
 require (
 	charm.land/lipgloss/v2 v2.0.3 // indirect
+	cloud.google.com/go/compute/metadata v0.10.0 // indirect
 	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -48,12 +49,12 @@ require (
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
-	github.com/panyam/demokit/notebook v0.0.28 // indirect
-	github.com/panyam/goapplib/storage v0.7.25 // indirect
-	github.com/panyam/gocurrent v0.1.2 // indirect
+	github.com/panyam/demokit/notebook v0.0.33 // indirect
+	github.com/panyam/goapplib/storage v0.7.26 // indirect
+	github.com/panyam/gocurrent v0.1.3 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
-	github.com/panyam/oneauth v0.3.14 // indirect
+	github.com/panyam/oneauth v0.3.16 // indirect
 	github.com/panyam/servicekit v0.2.4 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
