@@ -707,6 +707,32 @@ pub mod connection_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn rotate_connection(
+            &mut self,
+            request: impl tonic::IntoRequest<super::RotateConnectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::Connection>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.ConnectionService/RotateConnection",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "agni.v1.webapi.ConnectionService",
+                        "RotateConnection",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated client implementations.

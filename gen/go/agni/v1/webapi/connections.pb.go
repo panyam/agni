@@ -314,7 +314,11 @@ type Connection struct {
 	EntraAuth EntraAuth `protobuf:"varint,20,opt,name=entra_auth,json=entraAuth,proto3,enum=agni.v1.webapi.EntraAuth" json:"entra_auth,omitempty"`
 	// cert_source is where an ENTRA_AUTH_CERTIFICATE connection's certificate is, "env:NAME" or
 	// "file:/abs/path". Its private key is at key_source.
-	CertSource    string `protobuf:"bytes,21,opt,name=cert_source,json=certSource,proto3" json:"cert_source,omitempty"`
+	CertSource string `protobuf:"bytes,21,opt,name=cert_source,json=certSource,proto3" json:"cert_source,omitempty"`
+	// sealed says a server connection keeps its secret sealed in --store under --connections-key,
+	// as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
+	// token_source or key_source is then empty. Output only.
+	Sealed        bool `protobuf:"varint,22,opt,name=sealed,proto3" json:"sealed,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -496,6 +500,13 @@ func (x *Connection) GetCertSource() string {
 	return ""
 }
 
+func (x *Connection) GetSealed() bool {
+	if x != nil {
+		return x.Sealed
+	}
+	return false
+}
+
 type CreateConnectionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// connection_id is the new connection's id: a-z and 0-9 first, then also '-', '_' and '.'.
@@ -505,7 +516,16 @@ type CreateConnectionRequest struct {
 	// user_token is the caller's own GitHub token, for CONNECTION_KIND_GITHUB_USER. The server seals it
 	// under --connections-key and never sends it back. A token kind of person connection takes no
 	// token_source, since a reference would let a caller name a secret of the server's.
-	UserToken     string `protobuf:"bytes,3,opt,name=user_token,json=userToken,proto3" json:"user_token,omitempty"`
+	UserToken string `protobuf:"bytes,3,opt,name=user_token,json=userToken,proto3" json:"user_token,omitempty"`
+	// server_secret is a server connection's secret itself (agni issue 1802): the token for
+	// CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+	// secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+	// the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+	// holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
+	// connection's token_source or key_source stays empty. It suits a server in a container, whose
+	// environment and files the caller can't reach. A server started without --connections-key
+	// answers FAILED_PRECONDITION.
+	ServerSecret  string `protobuf:"bytes,4,opt,name=server_secret,json=serverSecret,proto3" json:"server_secret,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -561,6 +581,66 @@ func (x *CreateConnectionRequest) GetUserToken() string {
 	return ""
 }
 
+func (x *CreateConnectionRequest) GetServerSecret() string {
+	if x != nil {
+		return x.ServerSecret
+	}
+	return ""
+}
+
+type RotateConnectionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "connections/{connection}"
+	// server_secret is the new secret, as CreateConnectionRequest.server_secret takes it.
+	ServerSecret  string `protobuf:"bytes,2,opt,name=server_secret,json=serverSecret,proto3" json:"server_secret,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateConnectionRequest) Reset() {
+	*x = RotateConnectionRequest{}
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateConnectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateConnectionRequest) ProtoMessage() {}
+
+func (x *RotateConnectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateConnectionRequest.ProtoReflect.Descriptor instead.
+func (*RotateConnectionRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RotateConnectionRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RotateConnectionRequest) GetServerSecret() string {
+	if x != nil {
+		return x.ServerSecret
+	}
+	return ""
+}
+
 type GetConnectionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "connections/{connection}"
@@ -570,7 +650,7 @@ type GetConnectionRequest struct {
 
 func (x *GetConnectionRequest) Reset() {
 	*x = GetConnectionRequest{}
-	mi := &file_agni_v1_webapi_connections_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -582,7 +662,7 @@ func (x *GetConnectionRequest) String() string {
 func (*GetConnectionRequest) ProtoMessage() {}
 
 func (x *GetConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_connections_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +675,7 @@ func (x *GetConnectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConnectionRequest.ProtoReflect.Descriptor instead.
 func (*GetConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetConnectionRequest) GetName() string {
@@ -613,7 +693,7 @@ type ListConnectionsRequest struct {
 
 func (x *ListConnectionsRequest) Reset() {
 	*x = ListConnectionsRequest{}
-	mi := &file_agni_v1_webapi_connections_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -625,7 +705,7 @@ func (x *ListConnectionsRequest) String() string {
 func (*ListConnectionsRequest) ProtoMessage() {}
 
 func (x *ListConnectionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_connections_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -638,7 +718,7 @@ func (x *ListConnectionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConnectionsRequest.ProtoReflect.Descriptor instead.
 func (*ListConnectionsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{4}
 }
 
 type ListConnectionsResponse struct {
@@ -650,7 +730,7 @@ type ListConnectionsResponse struct {
 
 func (x *ListConnectionsResponse) Reset() {
 	*x = ListConnectionsResponse{}
-	mi := &file_agni_v1_webapi_connections_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -662,7 +742,7 @@ func (x *ListConnectionsResponse) String() string {
 func (*ListConnectionsResponse) ProtoMessage() {}
 
 func (x *ListConnectionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_connections_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -675,7 +755,7 @@ func (x *ListConnectionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConnectionsResponse.ProtoReflect.Descriptor instead.
 func (*ListConnectionsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListConnectionsResponse) GetConnections() []*Connection {
@@ -694,7 +774,7 @@ type DeleteConnectionRequest struct {
 
 func (x *DeleteConnectionRequest) Reset() {
 	*x = DeleteConnectionRequest{}
-	mi := &file_agni_v1_webapi_connections_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -706,7 +786,7 @@ func (x *DeleteConnectionRequest) String() string {
 func (*DeleteConnectionRequest) ProtoMessage() {}
 
 func (x *DeleteConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_connections_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_connections_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -719,7 +799,7 @@ func (x *DeleteConnectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteConnectionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_webapi_connections_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DeleteConnectionRequest) GetName() string {
@@ -733,7 +813,7 @@ var File_agni_v1_webapi_connections_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	"\n" +
-	" agni/v1/webapi/connections.proto\x12\x0eagni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa3\x06\n" +
+	" agni/v1/webapi/connections.proto\x12\x0eagni.v1.webapi\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbb\x06\n" +
 	"\n" +
 	"Connection\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x122\n" +
@@ -762,14 +842,19 @@ const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	"\n" +
 	"entra_auth\x18\x14 \x01(\x0e2\x19.agni.v1.webapi.EntraAuthR\tentraAuth\x12\x1f\n" +
 	"\vcert_source\x18\x15 \x01(\tR\n" +
-	"certSource\"\x99\x01\n" +
+	"certSource\x12\x16\n" +
+	"\x06sealed\x18\x16 \x01(\bR\x06sealed\"\xbe\x01\n" +
 	"\x17CreateConnectionRequest\x12#\n" +
 	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\x12:\n" +
 	"\n" +
 	"connection\x18\x02 \x01(\v2\x1a.agni.v1.webapi.ConnectionR\n" +
 	"connection\x12\x1d\n" +
 	"\n" +
-	"user_token\x18\x03 \x01(\tR\tuserToken\"*\n" +
+	"user_token\x18\x03 \x01(\tR\tuserToken\x12#\n" +
+	"\rserver_secret\x18\x04 \x01(\tR\fserverSecret\"R\n" +
+	"\x17RotateConnectionRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
+	"\rserver_secret\x18\x02 \x01(\tR\fserverSecret\"*\n" +
 	"\x14GetConnectionRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x18\n" +
 	"\x16ListConnectionsRequest\"W\n" +
@@ -798,12 +883,13 @@ const file_agni_v1_webapi_connections_proto_rawDesc = "" +
 	"\x10ConnectionStatus\x12!\n" +
 	"\x1dCONNECTION_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14CONNECTION_STATUS_OK\x10\x01\x12\x1c\n" +
-	"\x18CONNECTION_STATUS_FAILED\x10\x022\xf8\x02\n" +
+	"\x18CONNECTION_STATUS_FAILED\x10\x022\xd1\x03\n" +
 	"\x11ConnectionService\x12W\n" +
 	"\x10CreateConnection\x12'.agni.v1.webapi.CreateConnectionRequest\x1a\x1a.agni.v1.webapi.Connection\x12Q\n" +
 	"\rGetConnection\x12$.agni.v1.webapi.GetConnectionRequest\x1a\x1a.agni.v1.webapi.Connection\x12b\n" +
 	"\x0fListConnections\x12&.agni.v1.webapi.ListConnectionsRequest\x1a'.agni.v1.webapi.ListConnectionsResponse\x12S\n" +
-	"\x10DeleteConnection\x12'.agni.v1.webapi.DeleteConnectionRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x10DeleteConnection\x12'.agni.v1.webapi.DeleteConnectionRequest\x1a\x16.google.protobuf.Empty\x12W\n" +
+	"\x10RotateConnection\x12'.agni.v1.webapi.RotateConnectionRequest\x1a\x1a.agni.v1.webapi.ConnectionB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_connections_proto_rawDescOnce sync.Once
@@ -818,7 +904,7 @@ func file_agni_v1_webapi_connections_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_webapi_connections_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_agni_v1_webapi_connections_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_agni_v1_webapi_connections_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_agni_v1_webapi_connections_proto_goTypes = []any{
 	(EntraAuth)(0),                  // 0: agni.v1.webapi.EntraAuth
 	(ConnectionScope)(0),            // 1: agni.v1.webapi.ConnectionScope
@@ -826,32 +912,35 @@ var file_agni_v1_webapi_connections_proto_goTypes = []any{
 	(ConnectionStatus)(0),           // 3: agni.v1.webapi.ConnectionStatus
 	(*Connection)(nil),              // 4: agni.v1.webapi.Connection
 	(*CreateConnectionRequest)(nil), // 5: agni.v1.webapi.CreateConnectionRequest
-	(*GetConnectionRequest)(nil),    // 6: agni.v1.webapi.GetConnectionRequest
-	(*ListConnectionsRequest)(nil),  // 7: agni.v1.webapi.ListConnectionsRequest
-	(*ListConnectionsResponse)(nil), // 8: agni.v1.webapi.ListConnectionsResponse
-	(*DeleteConnectionRequest)(nil), // 9: agni.v1.webapi.DeleteConnectionRequest
-	(*timestamppb.Timestamp)(nil),   // 10: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),           // 11: google.protobuf.Empty
+	(*RotateConnectionRequest)(nil), // 6: agni.v1.webapi.RotateConnectionRequest
+	(*GetConnectionRequest)(nil),    // 7: agni.v1.webapi.GetConnectionRequest
+	(*ListConnectionsRequest)(nil),  // 8: agni.v1.webapi.ListConnectionsRequest
+	(*ListConnectionsResponse)(nil), // 9: agni.v1.webapi.ListConnectionsResponse
+	(*DeleteConnectionRequest)(nil), // 10: agni.v1.webapi.DeleteConnectionRequest
+	(*timestamppb.Timestamp)(nil),   // 11: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),           // 12: google.protobuf.Empty
 }
 var file_agni_v1_webapi_connections_proto_depIdxs = []int32{
 	2,  // 0: agni.v1.webapi.Connection.kind:type_name -> agni.v1.webapi.ConnectionKind
 	3,  // 1: agni.v1.webapi.Connection.status:type_name -> agni.v1.webapi.ConnectionStatus
-	10, // 2: agni.v1.webapi.Connection.create_time:type_name -> google.protobuf.Timestamp
-	10, // 3: agni.v1.webapi.Connection.last_use_time:type_name -> google.protobuf.Timestamp
+	11, // 2: agni.v1.webapi.Connection.create_time:type_name -> google.protobuf.Timestamp
+	11, // 3: agni.v1.webapi.Connection.last_use_time:type_name -> google.protobuf.Timestamp
 	1,  // 4: agni.v1.webapi.Connection.scope:type_name -> agni.v1.webapi.ConnectionScope
 	0,  // 5: agni.v1.webapi.Connection.entra_auth:type_name -> agni.v1.webapi.EntraAuth
 	4,  // 6: agni.v1.webapi.CreateConnectionRequest.connection:type_name -> agni.v1.webapi.Connection
 	4,  // 7: agni.v1.webapi.ListConnectionsResponse.connections:type_name -> agni.v1.webapi.Connection
 	5,  // 8: agni.v1.webapi.ConnectionService.CreateConnection:input_type -> agni.v1.webapi.CreateConnectionRequest
-	6,  // 9: agni.v1.webapi.ConnectionService.GetConnection:input_type -> agni.v1.webapi.GetConnectionRequest
-	7,  // 10: agni.v1.webapi.ConnectionService.ListConnections:input_type -> agni.v1.webapi.ListConnectionsRequest
-	9,  // 11: agni.v1.webapi.ConnectionService.DeleteConnection:input_type -> agni.v1.webapi.DeleteConnectionRequest
-	4,  // 12: agni.v1.webapi.ConnectionService.CreateConnection:output_type -> agni.v1.webapi.Connection
-	4,  // 13: agni.v1.webapi.ConnectionService.GetConnection:output_type -> agni.v1.webapi.Connection
-	8,  // 14: agni.v1.webapi.ConnectionService.ListConnections:output_type -> agni.v1.webapi.ListConnectionsResponse
-	11, // 15: agni.v1.webapi.ConnectionService.DeleteConnection:output_type -> google.protobuf.Empty
-	12, // [12:16] is the sub-list for method output_type
-	8,  // [8:12] is the sub-list for method input_type
+	7,  // 9: agni.v1.webapi.ConnectionService.GetConnection:input_type -> agni.v1.webapi.GetConnectionRequest
+	8,  // 10: agni.v1.webapi.ConnectionService.ListConnections:input_type -> agni.v1.webapi.ListConnectionsRequest
+	10, // 11: agni.v1.webapi.ConnectionService.DeleteConnection:input_type -> agni.v1.webapi.DeleteConnectionRequest
+	6,  // 12: agni.v1.webapi.ConnectionService.RotateConnection:input_type -> agni.v1.webapi.RotateConnectionRequest
+	4,  // 13: agni.v1.webapi.ConnectionService.CreateConnection:output_type -> agni.v1.webapi.Connection
+	4,  // 14: agni.v1.webapi.ConnectionService.GetConnection:output_type -> agni.v1.webapi.Connection
+	9,  // 15: agni.v1.webapi.ConnectionService.ListConnections:output_type -> agni.v1.webapi.ListConnectionsResponse
+	12, // 16: agni.v1.webapi.ConnectionService.DeleteConnection:output_type -> google.protobuf.Empty
+	4,  // 17: agni.v1.webapi.ConnectionService.RotateConnection:output_type -> agni.v1.webapi.Connection
+	13, // [13:18] is the sub-list for method output_type
+	8,  // [8:13] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
 	8,  // [8:8] is the sub-list for extension extendee
 	0,  // [0:8] is the sub-list for field type_name
@@ -868,7 +957,7 @@ func file_agni_v1_webapi_connections_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_connections_proto_rawDesc), len(file_agni_v1_webapi_connections_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

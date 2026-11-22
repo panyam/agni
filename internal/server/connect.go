@@ -987,3 +987,12 @@ func (a *Connection) DeleteConnection(ctx context.Context, req *connect.Request[
 	}
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
+
+// RotateConnection replaces a sealed server connection's secret (agni issue 1802).
+func (a *Connection) RotateConnection(ctx context.Context, req *connect.Request[webapi.RotateConnectionRequest]) (*connect.Response[webapi.Connection], error) {
+	out, err := a.svc.RotateConnection(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(out), nil
+}

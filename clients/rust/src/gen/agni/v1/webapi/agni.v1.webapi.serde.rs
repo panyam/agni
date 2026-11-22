@@ -2937,6 +2937,9 @@ impl serde::Serialize for Connection {
         if !self.cert_source.is_empty() {
             len += 1;
         }
+        if self.sealed {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Connection", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -3011,6 +3014,9 @@ impl serde::Serialize for Connection {
         if !self.cert_source.is_empty() {
             struct_ser.serialize_field("certSource", &self.cert_source)?;
         }
+        if self.sealed {
+            struct_ser.serialize_field("sealed", &self.sealed)?;
+        }
         struct_ser.end()
     }
 }
@@ -3057,6 +3063,7 @@ impl<'de> serde::Deserialize<'de> for Connection {
             "entraAuth",
             "cert_source",
             "certSource",
+            "sealed",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -3082,6 +3089,7 @@ impl<'de> serde::Deserialize<'de> for Connection {
             ClientId,
             EntraAuth,
             CertSource,
+            Sealed,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -3124,6 +3132,7 @@ impl<'de> serde::Deserialize<'de> for Connection {
                             "clientId" | "client_id" => Ok(GeneratedField::ClientId),
                             "entraAuth" | "entra_auth" => Ok(GeneratedField::EntraAuth),
                             "certSource" | "cert_source" => Ok(GeneratedField::CertSource),
+                            "sealed" => Ok(GeneratedField::Sealed),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -3164,6 +3173,7 @@ impl<'de> serde::Deserialize<'de> for Connection {
                 let mut client_id__ = None;
                 let mut entra_auth__ = None;
                 let mut cert_source__ = None;
+                let mut sealed__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -3294,6 +3304,12 @@ impl<'de> serde::Deserialize<'de> for Connection {
                             }
                             cert_source__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::Sealed => {
+                            if sealed__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("sealed"));
+                            }
+                            sealed__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Connection {
@@ -3318,6 +3334,7 @@ impl<'de> serde::Deserialize<'de> for Connection {
                     client_id: client_id__.unwrap_or_default(),
                     entra_auth: entra_auth__.unwrap_or_default(),
                     cert_source: cert_source__.unwrap_or_default(),
+                    sealed: sealed__.unwrap_or_default(),
                 })
             }
         }
@@ -3666,6 +3683,9 @@ impl serde::Serialize for CreateConnectionRequest {
         if !self.user_token.is_empty() {
             len += 1;
         }
+        if !self.server_secret.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.CreateConnectionRequest", len)?;
         if !self.connection_id.is_empty() {
             struct_ser.serialize_field("connectionId", &self.connection_id)?;
@@ -3675,6 +3695,9 @@ impl serde::Serialize for CreateConnectionRequest {
         }
         if !self.user_token.is_empty() {
             struct_ser.serialize_field("userToken", &self.user_token)?;
+        }
+        if !self.server_secret.is_empty() {
+            struct_ser.serialize_field("serverSecret", &self.server_secret)?;
         }
         struct_ser.end()
     }
@@ -3691,6 +3714,8 @@ impl<'de> serde::Deserialize<'de> for CreateConnectionRequest {
             "connection",
             "user_token",
             "userToken",
+            "server_secret",
+            "serverSecret",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -3698,6 +3723,7 @@ impl<'de> serde::Deserialize<'de> for CreateConnectionRequest {
             ConnectionId,
             Connection,
             UserToken,
+            ServerSecret,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -3722,6 +3748,7 @@ impl<'de> serde::Deserialize<'de> for CreateConnectionRequest {
                             "connectionId" | "connection_id" => Ok(GeneratedField::ConnectionId),
                             "connection" => Ok(GeneratedField::Connection),
                             "userToken" | "user_token" => Ok(GeneratedField::UserToken),
+                            "serverSecret" | "server_secret" => Ok(GeneratedField::ServerSecret),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -3744,6 +3771,7 @@ impl<'de> serde::Deserialize<'de> for CreateConnectionRequest {
                 let mut connection_id__ = None;
                 let mut connection__ = None;
                 let mut user_token__ = None;
+                let mut server_secret__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ConnectionId => {
@@ -3764,12 +3792,19 @@ impl<'de> serde::Deserialize<'de> for CreateConnectionRequest {
                             }
                             user_token__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::ServerSecret => {
+                            if server_secret__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("serverSecret"));
+                            }
+                            server_secret__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(CreateConnectionRequest {
                     connection_id: connection_id__.unwrap_or_default(),
                     connection: connection__,
                     user_token: user_token__.unwrap_or_default(),
+                    server_secret: server_secret__.unwrap_or_default(),
                 })
             }
         }
@@ -25870,6 +25905,115 @@ impl<'de> serde::Deserialize<'de> for ReviewSummary {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.ReviewSummary", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for RotateConnectionRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.name.is_empty() {
+            len += 1;
+        }
+        if !self.server_secret.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.RotateConnectionRequest", len)?;
+        if !self.name.is_empty() {
+            struct_ser.serialize_field("name", &self.name)?;
+        }
+        if !self.server_secret.is_empty() {
+            struct_ser.serialize_field("serverSecret", &self.server_secret)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for RotateConnectionRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "name",
+            "server_secret",
+            "serverSecret",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Name,
+            ServerSecret,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "name" => Ok(GeneratedField::Name),
+                            "serverSecret" | "server_secret" => Ok(GeneratedField::ServerSecret),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = RotateConnectionRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.RotateConnectionRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<RotateConnectionRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut name__ = None;
+                let mut server_secret__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Name => {
+                            if name__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("name"));
+                            }
+                            name__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ServerSecret => {
+                            if server_secret__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("serverSecret"));
+                            }
+                            server_secret__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(RotateConnectionRequest {
+                    name: name__.unwrap_or_default(),
+                    server_secret: server_secret__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.RotateConnectionRequest", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for RuleExpectation {

@@ -17,6 +17,10 @@ on:
       - pnpm-workspace.yaml
       - hack/image_smoke.sh
       - hack/compose_smoke.sh
+      # The enterprise exercise runs against the enterprise bundle here (agni issue 1802).
+      - hack/exercise_enterprise.sh
+      - hack/exercise-enterprise.compose.yaml
+      - tools/fakegithub/**
       # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
       - protos/agni/v1/webapi/**
       - deploy/**
@@ -31,6 +35,10 @@ on:
       - pnpm-workspace.yaml
       - hack/image_smoke.sh
       - hack/compose_smoke.sh
+      # The enterprise exercise runs against the enterprise bundle here (agni issue 1802).
+      - hack/exercise_enterprise.sh
+      - hack/exercise-enterprise.compose.yaml
+      - tools/fakegithub/**
       # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
       - protos/agni/v1/webapi/**
       - deploy/**
@@ -86,3 +94,22 @@ jobs:
       # The compose bundle a customer runs (agni issue 1057), brought up over the tutorial project.
       - name: Compose smoke test
         run: hack/compose_smoke.sh agni-ci/agni ci
+
+      # The enterprise mission's exercise against the enterprise bundle over this image (agni issue
+      # 1802): TLS, tokens, sign-in through a GitHub App, sealed connections and webhooks, against a
+      # fake GitHub Enterprise Server on this runner, with a trap proxy for any other host.
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+
+      - name: Enterprise exercise against the bundle
+        env:
+          EXERCISE_OUT: ${{ runner.temp }}/exercise
+        run: make exercise-enterprise-bundle IMAGE_NAME=agni-ci/agni IMAGE_TAG=ci
+
+      - name: Keep the bundle run's logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: exercise-enterprise-bundle
+          path: ${{ runner.temp }}/exercise/enterprise/*.log

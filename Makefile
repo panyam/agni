@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise exercise-enterprise-bundle binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -442,6 +442,13 @@ exercise-mounts: agni
 # of its own. A step that waits on an open ticket prints FAIL (waits on #N).
 exercise-enterprise: agni
 	AGNI=$(CURDIR)/bin/agni EXERCISE_OUT=$(EXERCISE_OUT) ./hack/exercise_enterprise.sh
+
+# The same exercise against the enterprise compose bundle (agni issue 1802), over an image rather than
+# this checkout's server: the one `make image` built, or a release's with IMAGE_NAME and IMAGE_TAG.
+# It needs docker (CONTAINER=podman for podman). The images and release workflows run it.
+#   make exercise-enterprise-bundle IMAGE_NAME=ghcr.io/panyam/agni IMAGE_TAG=v0.11.0
+exercise-enterprise-bundle: agni
+	AGNI=$(CURDIR)/bin/agni EXERCISE_OUT=$(EXERCISE_OUT) EXERCISE_SERVE=bundle AGNI_IMAGE=$(IMAGE_NAME) AGNI_VERSION=$(IMAGE_TAG) ./hack/exercise_enterprise.sh
 
 # The linked-sources mission's exercise (agni issues 1722, 1723): a design's schematic and board linked
 # to Antmicro's Jetson baseboard repo at 1.1.2, checked, moved to 1.1.3, synced, and read back after a
@@ -1191,15 +1198,21 @@ tag:
 # Tag and push in one step. This is the one that publishes: a pushed tag is immediately
 # resolvable by the Go module proxy and is not safely retractable afterwards.
 #   make tag-push V=v0.1.0
-# The compose bundle a release attaches (agni issue 1057): deploy/compose.yaml with the release's
-# version as its default, and the env example beside it, written to dist/ for `gh release create`.
+# The compose bundles a release attaches, with the release's version as their default: the trial
+# bundle (agni issue 1057), deploy/compose.yaml and its env example, and the enterprise bundle (agni
+# issue 1802), deploy/enterprise/ as dist/agni-enterprise-V.tar.gz, so its compose.yaml and
+# env.example unpack into a folder of their own.
 #   make compose-release V=v0.2.4
 compose-release:
 	@$(check_semver)
-	mkdir -p dist
+	mkdir -p dist dist/agni-enterprise
 	sed 's/$${AGNI_VERSION:-latest}/$${AGNI_VERSION:-$(V)}/' deploy/compose.yaml > dist/compose.yaml
 	sed 's/^AGNI_VERSION=latest/AGNI_VERSION=$(V)/' deploy/env.example > dist/env.example
 	@grep -q 'AGNI_VERSION:-$(V)' dist/compose.yaml || { echo "dist/compose.yaml was not pinned to $(V)"; exit 1; }
+	sed 's/$${AGNI_VERSION:-latest}/$${AGNI_VERSION:-$(V)}/' deploy/enterprise/compose.yaml > dist/agni-enterprise/compose.yaml
+	sed 's/^AGNI_VERSION=latest/AGNI_VERSION=$(V)/' deploy/enterprise/env.example > dist/agni-enterprise/env.example
+	@[ "$$(grep -c 'AGNI_VERSION:-$(V)' dist/agni-enterprise/compose.yaml)" = 2 ] || { echo "dist/agni-enterprise/compose.yaml was not pinned to $(V) for both images"; exit 1; }
+	tar -czf dist/agni-enterprise-$(V).tar.gz -C dist agni-enterprise
 
 # Run deploy/compose.yaml over the tutorial project against an image, as the images and release
 # workflows do (agni issue 1057). CONTAINER=podman uses podman compose.

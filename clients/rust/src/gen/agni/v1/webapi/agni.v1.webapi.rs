@@ -1187,6 +1187,11 @@ pub struct Connection {
     /// "file:/abs/path". Its private key is at key_source.
     #[prost(string, tag="21")]
     pub cert_source: ::prost::alloc::string::String,
+    /// sealed says a server connection keeps its secret sealed in --store under --connections-key,
+    /// as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
+    /// token_source or key_source is then empty. Output only.
+    #[prost(bool, tag="22")]
+    pub sealed: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateConnectionRequest {
@@ -1201,6 +1206,25 @@ pub struct CreateConnectionRequest {
     /// token_source, since a reference would let a caller name a secret of the server's.
     #[prost(string, tag="3")]
     pub user_token: ::prost::alloc::string::String,
+    /// server_secret is a server connection's secret itself (agni issue 1802): the token for
+    /// CONNECTION_KIND_GITHUB_TOKEN, the App's PEM private key for CONNECTION_KIND_GITHUB_APP, the
+    /// secret access key for CONNECTION_KIND_AWS, the service account key for CONNECTION_KIND_GCP, or
+    /// the client secret or certificate key for CONNECTION_KIND_ENTRA. A managed or workload identity
+    /// holds no secret to seal, and is INVALID_ARGUMENT with one. The server seals it under --connections-key and never sends it back, and the
+    /// connection's token_source or key_source stays empty. It suits a server in a container, whose
+    /// environment and files the caller can't reach. A server started without --connections-key
+    /// answers FAILED_PRECONDITION.
+    #[prost(string, tag="4")]
+    pub server_secret: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RotateConnectionRequest {
+    /// "connections/{connection}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// server_secret is the new secret, as CreateConnectionRequest.server_secret takes it.
+    #[prost(string, tag="2")]
+    pub server_secret: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetConnectionRequest {

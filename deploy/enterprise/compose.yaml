@@ -1,0 +1,122 @@
+# agni for a team, against the team's own GitHub or GitHub Enterprise Server (agni issue 1802). It
+# serves HTTPS with your certificate, asks every caller for a token, signs people in through a
+# GitHub App, keeps each person's GitHub token sealed with a key only the server holds, and follows
+# pushes through a webhook. Works with `docker compose` and `podman compose`.
+#
+#   cp env.example .env            then fill it in, and make the secret files it names
+#   docker compose up -d           then open AGNI_PUBLIC_URL and sign in with GitHub
+#   docker compose exec agni agni token create ops --store file:///var/lib/agni/meta
+#                                  a token for a script or a CI job, printed once
+#   agni connections add hw --seal --github-token env:HW_TOKEN --remote AGNI_PUBLIC_URL
+#                                  a connection the server reads repos through; the CLI reads the
+#                                  token where it runs, and the server seals it in the data volume
+#   docker compose --profile datasheets up -d
+#                                  also the datasheet workbench, on AGNI_DATASHEETS_PORT
+#
+# Each release attaches this file with AGNI_VERSION pinned to that release. Every secret is a file
+# on this machine that .env names, mounted read-only under /run/secrets, and never a value in this
+# file or in .env. The server runs as uid 10001, so each secret file must be readable by it, for
+# example `chown 10001 <file> && chmod 0400 <file>`. Designs, packs, people's sealed tokens and
+# uploaded files live in the `data` volume. `docker compose down -v` deletes it.
+#
+# "Running a shared server" in https://panyam.github.io/agni/guide/running-the-server/ says what each
+# flag does.
+name: agni-enterprise
+
+services:
+  agni:
+    image: ${AGNI_IMAGE:-ghcr.io/panyam/agni}:${AGNI_VERSION:-latest}
+    command:
+      - serve
+      - --addr=:8443
+      - --store=file:///var/lib/agni/meta
+      - --uploads=file:///var/lib/agni/files
+      - --auth=tokens
+      - --tls-cert=/run/secrets/tls_cert
+      - --tls-key=/run/secrets/tls_key
+      - --connections-key=file:/run/secrets/connections_key
+      - --public-url=${AGNI_PUBLIC_URL:?set AGNI_PUBLIC_URL in .env, the URL people open, such as https://agni.example.com}
+      - --github-api=${AGNI_GITHUB_API:-https://api.github.com}
+      - --github-client-id=${AGNI_GITHUB_CLIENT_ID:?set AGNI_GITHUB_CLIENT_ID in .env, the GitHub App's client id}
+      - --github-client-secret=file:/run/secrets/github_client_secret
+      - --github-allow=${AGNI_GITHUB_ALLOW:?set AGNI_GITHUB_ALLOW in .env, such as org:acme}
+      - --github-webhook-secret=file:/run/secrets/github_webhook_secret
+    ports:
+      - "${AGNI_PORT:-8443}:8443"
+    volumes:
+      - data:/var/lib/agni
+      # The secret files of the server's own connections, each named by `agni connections add
+      # --github-token file:/run/agni/connections/<file>` or `--key` for a GitHub App.
+      - ${AGNI_CONNECTION_SECRETS:-./secrets/connections}:/run/agni/connections:ro
+      # CA certificates to trust beside the system's, such as the one that signed your GitHub
+      # Enterprise Server's certificate. An empty folder trusts the system's alone.
+      - ${AGNI_CA_DIR:-./ca}:/etc/agni/ca:ro
+    environment:
+      SSL_CERT_DIR: /etc/ssl/certs:/etc/agni/ca
+    secrets:
+      - tls_cert
+      - tls_key
+      - connections_key
+      - github_client_secret
+      - github_webhook_secret
+    # The image's own probe speaks plain HTTP. This server ends TLS itself.
+    healthcheck:
+      test: ["CMD", "agni", "healthcheck", "--addr", "localhost:8443", "--tls"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # The datasheet workbench, off unless asked for. It checks the same tokens and people's sealed
+  # connections, read from the agni service's volume, which it never writes.
+  datasheets:
+    image: ${AGNI_DS_IMAGE:-ghcr.io/panyam/agnids}:${AGNI_VERSION:-latest}
+    command:
+      - serve
+      - --addr=:8090
+      - --corpus=/corpus
+      - --store=file:///var/lib/agni/meta
+      - --uploads=file:///var/lib/agni/files
+      - --auth=tokens
+      - --tls-cert=/run/secrets/tls_cert
+      - --tls-key=/run/secrets/tls_key
+      - --connections-key=file:/run/secrets/connections_key
+      - --github-api=${AGNI_GITHUB_API:-https://api.github.com}
+      - --viewer-url=${AGNI_PUBLIC_URL:?set AGNI_PUBLIC_URL in .env}
+    ports:
+      - "${AGNI_DATASHEETS_PORT:-8090}:8090"
+    volumes:
+      - corpus:/corpus
+      - data:/var/lib/agni:ro
+      - ${AGNI_CA_DIR:-./ca}:/etc/agni/ca:ro
+    environment:
+      SSL_CERT_DIR: /etc/ssl/certs:/etc/agni/ca
+    secrets:
+      - tls_cert
+      - tls_key
+      - connections_key
+    healthcheck:
+      test: ["CMD", "agnids", "healthcheck", "--addr", "localhost:8090", "--tls"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    profiles: ["datasheets"]
+    restart: unless-stopped
+
+secrets:
+  tls_cert:
+    file: ${AGNI_TLS_CERT:?set AGNI_TLS_CERT in .env, the PEM certificate file}
+  tls_key:
+    file: ${AGNI_TLS_KEY:?set AGNI_TLS_KEY in .env, the PEM private key file}
+  connections_key:
+    file: ${AGNI_CONNECTIONS_KEY_FILE:?set AGNI_CONNECTIONS_KEY_FILE in .env, a file holding 64 hex characters}
+  github_client_secret:
+    file: ${AGNI_GITHUB_CLIENT_SECRET_FILE:?set AGNI_GITHUB_CLIENT_SECRET_FILE in .env, a file holding the App's client secret}
+  github_webhook_secret:
+    file: ${AGNI_GITHUB_WEBHOOK_SECRET_FILE:?set AGNI_GITHUB_WEBHOOK_SECRET_FILE in .env, a file holding the webhook secret}
+
+volumes:
+  data:
+  corpus:

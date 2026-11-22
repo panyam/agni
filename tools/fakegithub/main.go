@@ -53,9 +53,12 @@ func main() {
 	flag.Var(&cs, "commit", "tag=dir: commit dir's files and tag the commit; repeat in order")
 	seed := flag.String("seed", "", "a seed file for an Enterprise Server: users, an App and repos (seed.go)")
 	hookCA := flag.String("hook-ca", "", "with --seed, a CA file the fake trusts when it delivers a webhook over TLS")
+	certFile := flag.String("tls-cert", "", "with --host, a PEM certificate the fake serves HTTPS with, naming the --host address")
+	keyFile := flag.String("tls-key", "", "the PEM key for --tls-cert")
+	host := flag.String("host", "", "with --seed, an address of this machine the fake listens on and names in every URL it hands out, such as the docker bridge's gateway, so an app in a container reaches it; empty is 127.0.0.1")
 	flag.Parse()
 	if *seed != "" {
-		log.Fatal(serveEnterprise(*seed, *addr, *hookCA))
+		log.Fatal(serveEnterprise(*seed, *addr, *hookCA, *host, *certFile, *keyFile))
 	}
 	owner, name, ok := strings.Cut(*repo, "/")
 	if !ok || len(cs) == 0 {

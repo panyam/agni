@@ -417,4 +417,16 @@ public interface ConnectionOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCertSourceBytes();
+
+  /**
+   * <pre>
+   * sealed says a server connection keeps its secret sealed in --store under --connections-key,
+   * as CreateConnectionRequest.server_secret put it there, rather than naming where it is. Its
+   * token_source or key_source is then empty. Output only.
+   * </pre>
+   *
+   * <code>bool sealed = 22 [json_name = "sealed"];</code>
+   * @return The sealed.
+   */
+  boolean getSealed();
 }
