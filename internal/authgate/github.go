@@ -172,7 +172,7 @@ func (s *githubSignIns) serve(g *Gate, w http.ResponseWriter, r *http.Request) b
 		s.deviceToken(w, r)
 	case r.URL.Path == SignInPath:
 		// Where to go after GitHub sends the browser back, kept across the round trip.
-		http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: safeNext(r.URL.Query().Get("next")), Path: SignInPath, MaxAge: 600, HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteLaxMode}) // #nosec G124 -- Secure follows TLS, as in signIn
+		http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: safeNext(r.URL.Query().Get("next")), Path: SignInPath, MaxAge: 600, HttpOnly: true, Secure: g.https(r), SameSite: http.SameSiteLaxMode}) // #nosec G124 -- Secure follows HTTPS, as in signIn
 		r2 := r.Clone(r.Context())
 		r2.URL.Path = "/"
 		s.web.Handler().ServeHTTP(w, r2)
@@ -207,8 +207,8 @@ func (s *githubSignIns) signedIn(_, _ string, tok *oauth2.Token, info map[string
 	if c, err := r.Cookie(nextCookie); err == nil {
 		next = safeNext(c.Value)
 	}
-	http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: "", Path: SignInPath, MaxAge: -1, HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteLaxMode}) // #nosec G124 -- as above
-	http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: full, Path: "/", HttpOnly: true, Secure: g.secure, SameSite: http.SameSiteLaxMode})                 // #nosec G124 -- as above
+	http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: "", Path: SignInPath, MaxAge: -1, HttpOnly: true, Secure: g.https(r), SameSite: http.SameSiteLaxMode}) // #nosec G124 -- as above
+	http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: full, Path: "/", HttpOnly: true, Secure: g.https(r), SameSite: http.SameSiteLaxMode})               // #nosec G124 -- as above
 	http.Redirect(w, r, next, http.StatusSeeOther)                                                                                                                 // #nosec G710 -- next came through safeNext
 }
 

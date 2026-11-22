@@ -114,7 +114,7 @@ func TestAgnidsWithAuthServesAPrivateMountToItsReaders(t *testing.T) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	srv := httptest.NewServer(guard(newWorkbenchMux(table, workbenchAccess{guard: service.NewAccessGuard(table, ""), hideRoots: true}, "", nil, "", "", nil), authgate.Tokens, store, false))
+	srv := httptest.NewServer(guard(newWorkbenchMux(table, workbenchAccess{guard: service.NewAccessGuard(table, ""), hideRoots: true}, "", nil, "", "", nil), authgate.Tokens, store, nil))
 	defer srv.Close()
 	before := storeSum(t, store)
 
