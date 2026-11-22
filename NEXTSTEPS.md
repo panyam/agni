@@ -9,31 +9,36 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-21, at `25866e01`.
+Last pruned 2026-11-21, at `0c1990ed`.
 
 ## At a glance
 
-**#1722** (link a design to where the team keeps it, and follow its history) is active, at 19 of 24.
-Its exercise is `make exercise-linked-sources`, which ends with a browser walk of the designs page's
-link form, so it needs `make ui`. PR #1797 merged on 2026-11-21 and closed #1795, the park-timer
-flake in web-test. The exercise passes at `25866e01`. It doesn't list the Jetson repo's tags yet, so
-#1788's change runs only against the fake GitHub. What remains is two test flakes (#1798, #1796)
-and two P3 sources (#1729, #1730).
+**#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
+Server) is active from 2026-11-21, at 0 of 11. It has no exercise yet, and its first ticket, #1800,
+writes `make exercise-enterprise` against the test suite's fake GitHub serving as a GHES host. A
+compose bundle (#1802) and a Helm chart (#1803) both deploy it.
 
-- **#1611 `mission_markup`** is filed and not active. #1612 and #1613 come first.
-- **Four missions filed on 2026-11-17, none active.** Each one's first ticket writes its exercise.
-  #1708 (#1712), #1709 (#1713), #1710 (#1714), and #1711 (#1715, which needs a datasheet PDF that
-  agni-samples may carry before anything else can run).
-- **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting`.
+- **Three tickets wait on library releases.** #1809 (Git LFS) on goapplib#203, #1810 (TLS ended at
+  a proxy) on oneauth#541, and #1811 (OIDC sign-in) on oneauth#542. agni moves to each release once
+  it ships.
+- **#1722** (linked sources) is no longer active, at 21 of 23. Its exercise passes at `0c1990ed`.
+  #1729 (SharePoint) and #1730 (S3 and GCS) stay open there at P3.
+- **Parked work lives in each mission's `## Later` list.** The 62 `waiting` issues were closed into
+  those lists on 2026-11-21. Anything that fits no mission is on #1806, and
+  `is:closed label:waiting reason:"not planned"` finds them all. A mission moves its Later lines
+  before it closes.
+- **Other missions, none active.** #1611 (markup, starts at #1612 and #1613), and four whose first
+  ticket writes the exercise: #1708 (#1712), #1709 (#1713), #1710 (#1714) and #1711 (#1715, which
+  needs a datasheet PDF agni-samples may carry). #1176 holds only Later lines.
 
 ## Open, ranked
 
-1. **#1798**, a `viewerroom.spec.ts` test that sometimes finds no agreed tab in browser-test shard
-   1/5. Then #1796 (two web test files that depend on test order), #1729 (SharePoint) and #1730
-   (S3 and GCS), all P3.
-2. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
+1. **#1800**, `make exercise-enterprise`. Each step it can't pass yet names its ticket.
+2. **Then #1802 and #1801**, the bundle and packs linked from a repo, since the exercise needs both.
+   #1808 (bootstrap) comes with the bundle. Its scope is still open: the leaning is a file beside
+   `agni.yaml`, not inside it, that also declares runtime mounts.
 
-Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
+Later work is #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
 roadmap lives on panyam/jaala. Modules (jaala#3) and aggregation inside rules (jaala#4) have both shipped, and agni tracks the latest jaala, so a
 derived question goes in `stdlib/lib` before it becomes a Go relation.
