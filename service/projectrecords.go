@@ -55,6 +55,33 @@ func (r *MemProjectRecords) Put(_ context.Context, id string, p *webapi.Project)
 	return nil
 }
 
+// Create adds a record, or answers ErrAlreadyExists for a taken id.
+func (r *MemProjectRecords) Create(_ context.Context, id string, p *webapi.Project) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.m[id]; ok {
+		return fmt.Errorf("%w: %s", ErrAlreadyExists, ProjectName(id))
+	}
+	r.m[id] = proto.CloneOf(p)
+	return nil
+}
+
+// Update changes a record under the lock, so update runs once.
+func (r *MemProjectRecords) Update(_ context.Context, id string, update func(*webapi.Project) error) (*webapi.Project, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	p, ok := r.m[id]
+	if !ok {
+		return nil, fmt.Errorf("%w: no project %s", ErrNotFound, ProjectName(id))
+	}
+	next := proto.CloneOf(p)
+	if err := update(next); err != nil {
+		return nil, err
+	}
+	r.m[id] = next
+	return proto.CloneOf(next), nil
+}
+
 // Delete removes a record, or answers ErrNotFound.
 func (r *MemProjectRecords) Delete(_ context.Context, id string) error {
 	r.mu.Lock()

@@ -332,40 +332,45 @@ func (s *DirStore) ids() ([]string, error) {
 }
 
 // CreateDesign writes a new design's record, with no artifacts.
-func (s *DirStore) CreateDesign(_ context.Context, id string, rec service.DesignRecord) (*webapi.Design, error) {
+func (s *DirStore) CreateDesign(ctx context.Context, id string, rec service.DesignRecord) (*webapi.Design, error) {
 	if !idPattern.MatchString(id) {
 		return nil, fmt.Errorf("%w: design id %q must be lowercase letters, digits, '.', '_' or '-'", service.ErrInvalidArgument, id)
 	}
+	intent, err := encodeIntent(rec.Intent)
+	if err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, err := s.load(id); err == nil {
-		return nil, fmt.Errorf("%w: %s", service.ErrAlreadyExists, service.StandaloneDesignName(id))
-	} else if !errors.Is(err, service.ErrNotFound) {
-		return nil, err
-	}
-	r := recordYAML{Title: rec.Title, Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy, Packs: rec.Packs}
-	var err error
-	if r.Intent, err = encodeIntent(rec.Intent); err != nil {
-		return nil, err
-	}
-	if err := s.commit(id, &r); err != nil {
+	_, r, err := s.change(ctx, id, true, func(r *recordYAML) error {
+		*r = recordYAML{Title: rec.Title, Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy, Packs: rec.Packs, Intent: intent}
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 	return s.designOf(id, r)
 }
 
 // UpdateDesign rewrites a design's record and keeps its artifacts.
-func (s *DirStore) UpdateDesign(_ context.Context, id string, update func(*service.DesignRecord)) (*webapi.Design, error) {
+func (s *DirStore) UpdateDesign(ctx context.Context, id string, update func(*service.DesignRecord)) (*webapi.Design, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	r, err := s.load(id)
+	_, r, err := s.change(ctx, id, false, func(r *recordYAML) error { return applyUpdate(r, update) })
 	if err != nil {
 		return nil, err
 	}
+	return s.designOf(id, r)
+}
+
+// applyUpdate hands r's caller-set fields to update as a DesignRecord, and writes back what update
+// leaves.
+func applyUpdate(r *recordYAML, update func(*service.DesignRecord)) error {
+	var err error
 	rec := service.DesignRecord{Title: r.Title, Series: r.Series, FlattenHierarchy: r.FlattenHierarchy, Packs: r.Packs,
 		OnSourceChange: webapi.SourceChange(webapi.SourceChange_value[r.OnSourceChange]), Newer: map[string]service.NewerVersion{}}
 	if rec.Intent, err = decodeIntent(r.Intent); err != nil {
-		return nil, err
+		return err
 	}
 	for _, a := range r.Artifacts {
 		if a.Source != nil && a.Source.NewerVersion != "" {
@@ -387,13 +392,8 @@ func (s *DirStore) UpdateDesign(_ context.Context, id string, update func(*servi
 		src.NewerVersion, src.NewerTime = n.Version, n.Seen.UTC()
 		r.Artifacts[i].Source = &src
 	}
-	if r.Intent, err = encodeIntent(rec.Intent); err != nil {
-		return nil, err
-	}
-	if err := s.commit(id, &r); err != nil {
-		return nil, err
-	}
-	return s.designOf(id, r)
+	r.Intent, err = encodeIntent(rec.Intent)
+	return err
 }
 
 // DeleteDesign removes a design's record. Its views and blobs stay until Sweep, so a snapshot read
@@ -448,15 +448,16 @@ func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []servi
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	rec, err := s.load(id)
+	var written map[string]artifactRecord
+	rec, next, err := s.change(ctx, id, false, func(r *recordYAML) error {
+		applied, w, err := s.apply(ctx, id, *r, writes, blobs)
+		if err != nil {
+			return err
+		}
+		*r, written = applied, w
+		return nil
+	})
 	if err != nil {
-		return nil, err
-	}
-	next, written, err := s.apply(ctx, id, rec, writes, blobs)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.commit(id, &next); err != nil {
 		return nil, err
 	}
 	// A link or a sync read a source, so the files it read are kept as a revision (agni issue 1725).
@@ -554,40 +555,66 @@ func (s *DirStore) keep(id string, files map[string][]byte, now time.Time) (arti
 }
 
 // DeleteArtifact removes one artifact, rewriting the design's record without it.
-func (s *DirStore) DeleteArtifact(_ context.Context, id, artifactID string) error {
+func (s *DirStore) DeleteArtifact(ctx context.Context, id, artifactID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	rec, err := s.load(id)
-	if err != nil {
-		return err
-	}
-	i := slices.IndexFunc(rec.Artifacts, func(a artifactRecord) bool { return a.ID == artifactID })
-	if i < 0 {
-		return fmt.Errorf("%w: no artifact %s", service.ErrNotFound, service.ArtifactName(id, artifactID))
-	}
-	rec.Artifacts = slices.Delete(slices.Clone(rec.Artifacts), i, i+1)
-	return s.commit(id, &rec)
+	_, _, err := s.change(ctx, id, false, func(rec *recordYAML) error {
+		i := slices.IndexFunc(rec.Artifacts, func(a artifactRecord) bool { return a.ID == artifactID })
+		if i < 0 {
+			return fmt.Errorf("%w: no artifact %s", service.ErrNotFound, service.ArtifactName(id, artifactID))
+		}
+		rec.Artifacts = slices.Delete(slices.Clone(rec.Artifacts), i, i+1)
+		return nil
+	})
+	return err
 }
 
-// commit builds rec's view if it has an entry, then writes rec over the design's old record. The
-// view goes first, so a reader that reads the new record finds its files.
-func (s *DirStore) commit(id string, rec *recordYAML) error {
-	_, _, raw, err := describe(id, *rec)
-	if err != nil {
-		return err
+// change reads design id's record, hands it to edit, builds the view of what edit leaves, and writes
+// it as one change of the record (records.Update, agni issue 1823). When another server wrote the
+// record in between, the record is read again and edit runs again, so neither write is lost. The
+// view goes first, so a reader that reads the new record finds its files, and a view an attempt that
+// lost built is left for Sweep. create says the record must not exist yet. It returns the record as
+// read and as written.
+func (s *DirStore) change(ctx context.Context, id string, create bool, edit func(rec *recordYAML) error) (before, after recordYAML, err error) {
+	if !idPattern.MatchString(id) {
+		return before, after, fmt.Errorf("%w: no stored design %s", service.ErrNotFound, service.StandaloneDesignName(id))
 	}
-	rec.Rev = ""
-	if raw != nil {
-		if rec.Rev, err = s.buildView(id, *rec, raw); err != nil {
-			return err
+	err = records.Update(ctx, s.recs, recordKey(id), func(old []byte, exists bool) ([]byte, error) {
+		switch {
+		case create && exists:
+			return nil, fmt.Errorf("%w: %s", service.ErrAlreadyExists, service.StandaloneDesignName(id))
+		case !create && !exists:
+			return nil, fmt.Errorf("%w: no stored design %s", service.ErrNotFound, service.StandaloneDesignName(id))
 		}
-	}
-	rec.UpdateTime = s.clock()
-	out, err := yaml.Marshal(rec)
-	if err != nil {
-		return err
-	}
-	return s.recs.Put(context.Background(), recordKey(id), out)
+		before = recordYAML{}
+		if exists {
+			if err := yaml.Unmarshal(old, &before); err != nil {
+				return nil, fmt.Errorf("%s.yaml: %w", id, err)
+			}
+		}
+		// The edit works on a copy, so a run whose write loses leaves before as it was read.
+		var rec recordYAML
+		if err := yaml.Unmarshal(old, &rec); err != nil && exists {
+			return nil, fmt.Errorf("%s.yaml: %w", id, err)
+		}
+		if err := edit(&rec); err != nil {
+			return nil, err
+		}
+		_, _, raw, err := describe(id, rec)
+		if err != nil {
+			return nil, err
+		}
+		rec.Rev = ""
+		if raw != nil {
+			if rec.Rev, err = s.buildView(id, rec, raw); err != nil {
+				return nil, err
+			}
+		}
+		rec.UpdateTime = s.clock()
+		after = rec
+		return yaml.Marshal(&rec)
+	})
+	return before, after, err
 }
 
 // revOf names a view by what it holds: its descriptor and every artifact's paths and hashes. Two

@@ -341,6 +341,71 @@ func Run(t *testing.T, newStore func(t *testing.T) records.Store) {
 			t.Fatal(err)
 		}
 	})
+	t.Run("ReadReplace", func(t *testing.T) {
+		s := newStore(t)
+		if _, _, err := s.Read(ctx, "c/x.json"); !errors.Is(err, fs.ErrNotExist) {
+			t.Fatalf("Read of a missing key: %v, want fs.ErrNotExist", err)
+		}
+		if err := s.Put(ctx, "c/x.json", []byte("one")); err != nil {
+			t.Fatal(err)
+		}
+		b, v1, err := s.Read(ctx, "c/x.json")
+		if err != nil || string(b) != "one" {
+			t.Fatalf("Read = %q, %v", b, err)
+		}
+		if err := s.Replace(ctx, "c/x.json", []byte("two"), v1); err != nil {
+			t.Fatalf("Replace at the version Read saw: %v", err)
+		}
+		if err := s.Replace(ctx, "c/x.json", []byte("three"), v1); !errors.Is(err, records.ErrConflict) {
+			t.Fatalf("Replace at a stale version: %v, want ErrConflict", err)
+		}
+		if got, _ := s.Get(ctx, "c/x.json"); string(got) != "two" {
+			t.Fatalf("a refused Replace changed the record to %q", got)
+		}
+		_, v2, _ := s.Read(ctx, "c/x.json")
+		if err := s.Put(ctx, "c/x.json", []byte("four")); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.Replace(ctx, "c/x.json", []byte("five"), v2); !errors.Is(err, records.ErrConflict) {
+			t.Fatalf("Replace after a Put moved the record: %v, want ErrConflict", err)
+		}
+		_, v3, _ := s.Read(ctx, "c/x.json")
+		if err := s.Delete(ctx, "c/x.json"); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.Replace(ctx, "c/x.json", []byte("six"), v3); !errors.Is(err, fs.ErrNotExist) {
+			t.Fatalf("Replace of a deleted record: %v, want fs.ErrNotExist", err)
+		}
+	})
+	t.Run("UpdateRace", func(t *testing.T) {
+		s := newStore(t)
+		// Each writer adds one to a counter. A lost update leaves the count short.
+		const n = 12
+		var wg sync.WaitGroup
+		errs := make([]error, n)
+		for i := range n {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				errs[i] = records.Update(ctx, s, "c/count", func(old []byte, exists bool) ([]byte, error) {
+					c := 0
+					if exists {
+						fmt.Sscan(string(old), &c)
+					}
+					return []byte(fmt.Sprint(c + 1)), nil
+				})
+			}()
+		}
+		wg.Wait()
+		for _, err := range errs {
+			if err != nil {
+				t.Fatalf("a racing Update: %v", err)
+			}
+		}
+		if got, err := s.Get(ctx, "c/count"); err != nil || string(got) != fmt.Sprint(n) {
+			t.Fatalf("count after %d racing Updates = %q, %v", n, got, err)
+		}
+	})
 	t.Run("Sub", func(t *testing.T) {
 		s := newStore(t)
 		p := records.Sub(records.Sub(s, "outer"), "inner")

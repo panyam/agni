@@ -37,8 +37,9 @@ type PackStore interface {
 	Packs(ctx context.Context) ([]*webapi.Pack, error)
 	// CreatePack keeps a new pack from p's title, config and files.
 	CreatePack(ctx context.Context, id string, p *webapi.Pack, blobs BlobSource) (*webapi.Pack, error)
-	// UpdatePack changes a pack. update edits a copy of the pack under the store's lock, and the store
-	// keeps the copy's title, config and files.
+	// UpdatePack changes a pack. update edits a copy of the pack, and the store keeps the copy's
+	// title, config and files. A store shared by several servers runs update again on the newer pack
+	// when another one wrote it in between (agni issue 1823), so update must keep no side effects.
 	UpdatePack(ctx context.Context, id string, update func(*webapi.Pack) error, blobs BlobSource) (*webapi.Pack, error)
 	// DeletePack removes a pack.
 	DeletePack(ctx context.Context, id string) error
