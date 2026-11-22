@@ -28,7 +28,12 @@ profiles, datasheet parameters and shared intent. It holds what a project.yaml h
 one. A pack's profile and params folders go to the server with it, so the server needs --uploads too.
 
   agni packs push ./jetson-project --id jetson --remote http://localhost:8080
-  agni check designs/bb-1.1.3 --pack jetson --remote http://localhost:8080`,
+  agni check designs/bb-1.1.3 --pack jetson --remote http://localhost:8080
+
+link reads a pack from a project folder in a mount instead, such as a repo the team keeps its rules
+in, and follows its branch (agni issue 1801):
+
+  agni packs link house packs@main --remote http://localhost:8080`,
 	}
 	cmd.PersistentFlags().StringVar(&remoteURL, "remote", "", "the agni serve that keeps the packs, such as http://localhost:8080 (required)")
 	client := func(cmd *cobra.Command) (*packsClient, error) {
@@ -127,7 +132,80 @@ The pack is created when the server lacks it, and replaced whole when it has it.
 		},
 	}
 
-	cmd.AddCommand(push, list, get, rm)
+	var linkTitle string
+	link := &cobra.Command{
+		Use:   "link <id> <mount>[/<path>][@<ref>]",
+		Short: "Read a pack from a project folder in a mount, and follow its branch",
+		Long: `link points a pack at a folder holding a project.yaml in a mount, such as a github mount made
+with agni mounts add, and the server reads it as push reads a local one (agni issue 1801). A ref naming
+a branch, or no ref, is followed: a push webhook, --poll or agni packs sync moves the pack to the
+branch's new commit, and the next check runs the new rules. A tag or commit is pinned. Each report
+names the commit its packs were read at. Linking again replaces the source.
+
+  agni packs link house packs@main --remote http://localhost:8080
+  agni packs link house packs/rules@v3 --remote http://localhost:8080`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			src, err := parseLinkSource(args[1])
+			if err != nil {
+				return err
+			}
+			p, err := unary(cmd.Context(), c.packs.LinkPack, &webapi.LinkPackRequest{PackId: strings.TrimPrefix(args[0], "packs/"), Source: src, Title: linkTitle})
+			if err != nil {
+				return err
+			}
+			printPack(cmd.OutOrStdout(), p)
+			printPackDetail(cmd.OutOrStdout(), p)
+			return nil
+		},
+	}
+	link.Flags().StringVar(&linkTitle, "title", "", "the pack's title; the project.yaml's title when empty")
+
+	unlink := &cobra.Command{
+		Use:   "unlink <id>",
+		Short: "Keep a linked pack as it is, and stop following its source",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			p, err := unary(cmd.Context(), c.packs.UnlinkPack, &webapi.UnlinkPackRequest{Name: packName(args[0])})
+			if err != nil {
+				return err
+			}
+			printPack(cmd.OutOrStdout(), p)
+			return nil
+		},
+	}
+
+	sync := &cobra.Command{
+		Use:   "sync <id>",
+		Short: "Move a linked pack to its branch's current commit",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			resp, err := unary(cmd.Context(), c.packs.SyncPack, &webapi.SyncPackRequest{Name: packName(args[0])})
+			if err != nil {
+				return err
+			}
+			what := "unchanged"
+			if resp.GetChanged() {
+				what = "changed"
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s -> %s\n", resp.GetPack().GetName(), what, shortVersion(resp.GetFromVersion()), shortVersion(resp.GetToVersion()))
+			return nil
+		},
+	}
+
+	cmd.AddCommand(push, link, unlink, sync, list, get, rm)
 	return cmd
 }
 
@@ -152,7 +230,19 @@ func packNames(args []string) []string {
 }
 
 func printPack(w io.Writer, p *webapi.Pack) {
-	fmt.Fprintf(w, "%s\t%s\t%d files\t%s\n", p.GetName(), p.GetTitle(), len(p.GetFiles()), p.GetHash())
+	fmt.Fprintf(w, "%s\t%s\t%d files\t%s", p.GetName(), p.GetTitle(), len(p.GetFiles()), p.GetHash())
+	if src := p.GetSource(); src.GetReadHash() != "" {
+		fmt.Fprintf(w, "\tfrom %s", service.SourceString(src))
+		if v := src.GetVersion(); v != "" && v != src.GetRef() {
+			fmt.Fprintf(w, " at %s", v)
+		}
+		if src.GetFollow() {
+			fmt.Fprint(w, ", followed")
+		} else {
+			fmt.Fprint(w, ", pinned")
+		}
+	}
+	fmt.Fprintln(w)
 }
 
 func printPackDetail(w io.Writer, p *webapi.Pack) {

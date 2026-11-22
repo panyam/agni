@@ -522,6 +522,35 @@ from before a sync says `run on earlier design files`, with the commit it ran on
 `Design.on_source_change` through `UpdateDesign`, `ArtifactSource.newer_version`, and
 `WorkspaceService.CreateMountWebhook`.
 
+### Linking a pack to a repo
+
+Say the team keeps its rules in a repo, with a `project.yaml`, its profiles and its datasheet
+parameters at the top. A pack can read them from there rather than from `agni packs push` (agni issue
+1801). Mount the repo, then link the pack to a folder in it at a ref:
+
+```bash
+agni mounts add rules github://acme/agni-packs --ref main --connection acme --remote http://localhost:8080
+agni packs link house rules@main --remote http://localhost:8080
+agni check designs/bb --pack house --remote http://localhost:8080
+```
+
+The source reads as `designs link` reads one, `<mount>[/<path>][@<ref>]`, with the path naming the
+folder that holds `project.yaml`. The server reads that folder as `packs push` reads a local one, and
+keeps the files its tiers name. A branch, or no ref, is followed. The webhook and `--poll` above move
+the pack to the branch's new commit, as they move a design, and `agni packs sync house` does the same
+by hand. The next check runs the new rules. A tag or commit pins the pack, so a team that wants a
+fixed set of rules links one.
+
+Each report names the commit its packs were read at, as `packs/house at 3f2a9c1b04de`, beside its
+design's commit. An older report says `packs/house changed since`. A pack read through a connection
+opens only for a person who can read the same repo, as a design does. Linking needs read access to
+the mount, so a person can't link a pack from a repo they can't read. A linked pack refuses `packs
+push` and changes to its config or files. `agni packs unlink house` keeps its rules as they are and
+stops following, and a pack from a private repo stays guarded after it. A mount with packs linked to
+it can't be deleted. The packs page in the viewer has a form that links a pack, and each linked
+pack's page has Sync and Unlink. The calls are `PackService.LinkPack`, `UnlinkPack` and `SyncPack`,
+and the source is `Pack.source`.
+
 ## Connections
 
 A private repo needs a sign-in, and a server with `--store` keeps one as a connection (agni issue

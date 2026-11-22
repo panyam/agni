@@ -150,3 +150,25 @@ export async function importPack(packs: PacksClient, uploads: UploadsClient, req
     }
   }
 }
+
+// packSourceWords says where a linked pack was read from, as `agni packs get` prints it:
+// "rules@main at 3f2a9c1b04de, followed". An uploaded pack has none, and gives "".
+export function packSourceWords(p: Pack): string {
+  const s = p.source;
+  if (!s?.readHash) return "";
+  let out = s.mount + (s.path ? `/${s.path}` : "") + (s.ref ? `@${s.ref}` : "");
+  if (s.version && s.version !== s.ref) out += ` at ${s.version.slice(0, 12)}`;
+  return out + (s.follow ? ", followed" : ", pinned");
+}
+
+// PackLinkClient is the part of PackService the packs page's link form calls.
+export interface PackLinkClient {
+  linkPack(req: { packId: string; title: string; source: { mount: string; path: string; ref: string } }): Promise<Pack>;
+}
+
+// linkPack points a pack at a project folder in a mount at a ref (agni issue 1801). An empty id takes
+// project.yaml's name, an empty path is the mount's root, and an empty ref follows the mount's branch.
+export function linkPack(c: PackLinkClient, req: { packId: string; mount: string; path: string; ref: string }): Promise<Pack> {
+  const path = req.path.trim().replace(/^\/+|\/+$/g, "");
+  return c.linkPack({ packId: req.packId.trim(), title: "", source: { mount: req.mount, path, ref: req.ref.trim() } });
+}

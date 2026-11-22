@@ -180,6 +180,10 @@ message Report {
   // one. The server keeps a revision while a report names it. Empty for a design with no revisions,
   // such as one only uploaded to. Output only.
   string revision = 12;
+  // pack_versions maps each linked pack the run read, "packs/{pack}", to the source version it held
+  // then, a commit SHA on a github mount (agni issue 1801). An uploaded pack, or one from a source
+  // with no history, has none. Output only.
+  map<string, string> pack_versions = 13;
 }
 
 // DesignRevision is a design's files as of one version of each linked source (agni issue 1725). Its

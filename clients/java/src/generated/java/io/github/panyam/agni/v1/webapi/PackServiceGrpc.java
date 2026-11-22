@@ -207,6 +207,99 @@ public final class PackServiceGrpc {
     return getImportPackFilesMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LinkPackRequest,
+      io.github.panyam.agni.v1.webapi.Pack> getLinkPackMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "LinkPack",
+      requestType = io.github.panyam.agni.v1.webapi.LinkPackRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Pack.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LinkPackRequest,
+      io.github.panyam.agni.v1.webapi.Pack> getLinkPackMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LinkPackRequest, io.github.panyam.agni.v1.webapi.Pack> getLinkPackMethod;
+    if ((getLinkPackMethod = PackServiceGrpc.getLinkPackMethod) == null) {
+      synchronized (PackServiceGrpc.class) {
+        if ((getLinkPackMethod = PackServiceGrpc.getLinkPackMethod) == null) {
+          PackServiceGrpc.getLinkPackMethod = getLinkPackMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.LinkPackRequest, io.github.panyam.agni.v1.webapi.Pack>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "LinkPack"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.LinkPackRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Pack.getDefaultInstance()))
+              .setSchemaDescriptor(new PackServiceMethodDescriptorSupplier("LinkPack"))
+              .build();
+        }
+      }
+    }
+    return getLinkPackMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UnlinkPackRequest,
+      io.github.panyam.agni.v1.webapi.Pack> getUnlinkPackMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "UnlinkPack",
+      requestType = io.github.panyam.agni.v1.webapi.UnlinkPackRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Pack.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UnlinkPackRequest,
+      io.github.panyam.agni.v1.webapi.Pack> getUnlinkPackMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UnlinkPackRequest, io.github.panyam.agni.v1.webapi.Pack> getUnlinkPackMethod;
+    if ((getUnlinkPackMethod = PackServiceGrpc.getUnlinkPackMethod) == null) {
+      synchronized (PackServiceGrpc.class) {
+        if ((getUnlinkPackMethod = PackServiceGrpc.getUnlinkPackMethod) == null) {
+          PackServiceGrpc.getUnlinkPackMethod = getUnlinkPackMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.UnlinkPackRequest, io.github.panyam.agni.v1.webapi.Pack>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "UnlinkPack"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.UnlinkPackRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Pack.getDefaultInstance()))
+              .setSchemaDescriptor(new PackServiceMethodDescriptorSupplier("UnlinkPack"))
+              .build();
+        }
+      }
+    }
+    return getUnlinkPackMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.SyncPackRequest,
+      io.github.panyam.agni.v1.webapi.SyncPackResponse> getSyncPackMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SyncPack",
+      requestType = io.github.panyam.agni.v1.webapi.SyncPackRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.SyncPackResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.SyncPackRequest,
+      io.github.panyam.agni.v1.webapi.SyncPackResponse> getSyncPackMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.SyncPackRequest, io.github.panyam.agni.v1.webapi.SyncPackResponse> getSyncPackMethod;
+    if ((getSyncPackMethod = PackServiceGrpc.getSyncPackMethod) == null) {
+      synchronized (PackServiceGrpc.class) {
+        if ((getSyncPackMethod = PackServiceGrpc.getSyncPackMethod) == null) {
+          PackServiceGrpc.getSyncPackMethod = getSyncPackMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.SyncPackRequest, io.github.panyam.agni.v1.webapi.SyncPackResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SyncPack"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.SyncPackRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.SyncPackResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new PackServiceMethodDescriptorSupplier("SyncPack"))
+              .build();
+        }
+      }
+    }
+    return getSyncPackMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -348,6 +441,45 @@ public final class PackServiceGrpc {
         io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getImportPackFilesMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * LinkPack points a pack at a project folder in a mount, at a ref, and reads it as ImportPackFiles
+     * reads an uploaded folder (agni issue 1801). It creates the pack, or replaces one whole. The folder
+     * must hold a project.yaml. A ref that names a branch, or none, is followed: a push webhook, a poll
+     * or SyncPack moves the pack to the branch's new commit. A tag or a commit is pinned. The caller
+     * must be able to read the mount, and a pack read through a connection then opens only for a caller
+     * whose own connection can read the same source. An unknown mount or path is NOT_FOUND, the uploads
+     * mount is INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    default void linkPack(io.github.panyam.agni.v1.webapi.LinkPackRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getLinkPackMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * UnlinkPack makes a linked pack an uploaded one. Its config and files stay as they are, and no push
+     * moves it again. A pack read from a private source stays guarded by it. An uploaded pack is
+     * returned unchanged.
+     * </pre>
+     */
+    default void unlinkPack(io.github.panyam.agni.v1.webapi.UnlinkPackRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getUnlinkPackMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * SyncPack brings a followed pack to its source's current version. A pinned pack, or one whose
+     * source hasn't moved, is left as it is. An uploaded pack is INVALID_ARGUMENT.
+     * </pre>
+     */
+    default void syncPack(io.github.panyam.agni.v1.webapi.SyncPackRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.SyncPackResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSyncPackMethod(), responseObserver);
+    }
   }
 
   /**
@@ -470,6 +602,48 @@ public final class PackServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getImportPackFilesMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * LinkPack points a pack at a project folder in a mount, at a ref, and reads it as ImportPackFiles
+     * reads an uploaded folder (agni issue 1801). It creates the pack, or replaces one whole. The folder
+     * must hold a project.yaml. A ref that names a branch, or none, is followed: a push webhook, a poll
+     * or SyncPack moves the pack to the branch's new commit. A tag or a commit is pinned. The caller
+     * must be able to read the mount, and a pack read through a connection then opens only for a caller
+     * whose own connection can read the same source. An unknown mount or path is NOT_FOUND, the uploads
+     * mount is INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    public void linkPack(io.github.panyam.agni.v1.webapi.LinkPackRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getLinkPackMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * UnlinkPack makes a linked pack an uploaded one. Its config and files stay as they are, and no push
+     * moves it again. A pack read from a private source stays guarded by it. An uploaded pack is
+     * returned unchanged.
+     * </pre>
+     */
+    public void unlinkPack(io.github.panyam.agni.v1.webapi.UnlinkPackRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getUnlinkPackMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * SyncPack brings a followed pack to its source's current version. A pinned pack, or one whose
+     * source hasn't moved, is left as it is. An uploaded pack is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public void syncPack(io.github.panyam.agni.v1.webapi.SyncPackRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.SyncPackResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSyncPackMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -566,6 +740,45 @@ public final class PackServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getImportPackFilesMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * LinkPack points a pack at a project folder in a mount, at a ref, and reads it as ImportPackFiles
+     * reads an uploaded folder (agni issue 1801). It creates the pack, or replaces one whole. The folder
+     * must hold a project.yaml. A ref that names a branch, or none, is followed: a push webhook, a poll
+     * or SyncPack moves the pack to the branch's new commit. A tag or a commit is pinned. The caller
+     * must be able to read the mount, and a pack read through a connection then opens only for a caller
+     * whose own connection can read the same source. An unknown mount or path is NOT_FOUND, the uploads
+     * mount is INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Pack linkPack(io.github.panyam.agni.v1.webapi.LinkPackRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getLinkPackMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * UnlinkPack makes a linked pack an uploaded one. Its config and files stay as they are, and no push
+     * moves it again. A pack read from a private source stays guarded by it. An uploaded pack is
+     * returned unchanged.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Pack unlinkPack(io.github.panyam.agni.v1.webapi.UnlinkPackRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getUnlinkPackMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * SyncPack brings a followed pack to its source's current version. A pinned pack, or one whose
+     * source hasn't moved, is left as it is. An uploaded pack is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.SyncPackResponse syncPack(io.github.panyam.agni.v1.webapi.SyncPackRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSyncPackMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -661,6 +874,45 @@ public final class PackServiceGrpc {
     public io.github.panyam.agni.v1.webapi.Pack importPackFiles(io.github.panyam.agni.v1.webapi.ImportPackFilesRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getImportPackFilesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * LinkPack points a pack at a project folder in a mount, at a ref, and reads it as ImportPackFiles
+     * reads an uploaded folder (agni issue 1801). It creates the pack, or replaces one whole. The folder
+     * must hold a project.yaml. A ref that names a branch, or none, is followed: a push webhook, a poll
+     * or SyncPack moves the pack to the branch's new commit. A tag or a commit is pinned. The caller
+     * must be able to read the mount, and a pack read through a connection then opens only for a caller
+     * whose own connection can read the same source. An unknown mount or path is NOT_FOUND, the uploads
+     * mount is INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Pack linkPack(io.github.panyam.agni.v1.webapi.LinkPackRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getLinkPackMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * UnlinkPack makes a linked pack an uploaded one. Its config and files stay as they are, and no push
+     * moves it again. A pack read from a private source stays guarded by it. An uploaded pack is
+     * returned unchanged.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Pack unlinkPack(io.github.panyam.agni.v1.webapi.UnlinkPackRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getUnlinkPackMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * SyncPack brings a followed pack to its source's current version. A pinned pack, or one whose
+     * source hasn't moved, is left as it is. An uploaded pack is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.SyncPackResponse syncPack(io.github.panyam.agni.v1.webapi.SyncPackRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSyncPackMethod(), getCallOptions(), request);
     }
   }
 
@@ -764,6 +1016,48 @@ public final class PackServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getImportPackFilesMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * LinkPack points a pack at a project folder in a mount, at a ref, and reads it as ImportPackFiles
+     * reads an uploaded folder (agni issue 1801). It creates the pack, or replaces one whole. The folder
+     * must hold a project.yaml. A ref that names a branch, or none, is followed: a push webhook, a poll
+     * or SyncPack moves the pack to the branch's new commit. A tag or a commit is pinned. The caller
+     * must be able to read the mount, and a pack read through a connection then opens only for a caller
+     * whose own connection can read the same source. An unknown mount or path is NOT_FOUND, the uploads
+     * mount is INVALID_ARGUMENT, and a source the server can't reach is UNAVAILABLE.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Pack> linkPack(
+        io.github.panyam.agni.v1.webapi.LinkPackRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getLinkPackMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * UnlinkPack makes a linked pack an uploaded one. Its config and files stay as they are, and no push
+     * moves it again. A pack read from a private source stays guarded by it. An uploaded pack is
+     * returned unchanged.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Pack> unlinkPack(
+        io.github.panyam.agni.v1.webapi.UnlinkPackRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getUnlinkPackMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * SyncPack brings a followed pack to its source's current version. A pinned pack, or one whose
+     * source hasn't moved, is left as it is. An uploaded pack is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.SyncPackResponse> syncPack(
+        io.github.panyam.agni.v1.webapi.SyncPackRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSyncPackMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_PACK = 0;
@@ -772,6 +1066,9 @@ public final class PackServiceGrpc {
   private static final int METHODID_UPDATE_PACK = 3;
   private static final int METHODID_DELETE_PACK = 4;
   private static final int METHODID_IMPORT_PACK_FILES = 5;
+  private static final int METHODID_LINK_PACK = 6;
+  private static final int METHODID_UNLINK_PACK = 7;
+  private static final int METHODID_SYNC_PACK = 8;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -813,6 +1110,18 @@ public final class PackServiceGrpc {
         case METHODID_IMPORT_PACK_FILES:
           serviceImpl.importPackFiles((io.github.panyam.agni.v1.webapi.ImportPackFilesRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack>) responseObserver);
+          break;
+        case METHODID_LINK_PACK:
+          serviceImpl.linkPack((io.github.panyam.agni.v1.webapi.LinkPackRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack>) responseObserver);
+          break;
+        case METHODID_UNLINK_PACK:
+          serviceImpl.unlinkPack((io.github.panyam.agni.v1.webapi.UnlinkPackRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack>) responseObserver);
+          break;
+        case METHODID_SYNC_PACK:
+          serviceImpl.syncPack((io.github.panyam.agni.v1.webapi.SyncPackRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.SyncPackResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -874,6 +1183,27 @@ public final class PackServiceGrpc {
               io.github.panyam.agni.v1.webapi.ImportPackFilesRequest,
               io.github.panyam.agni.v1.webapi.Pack>(
                 service, METHODID_IMPORT_PACK_FILES)))
+        .addMethod(
+          getLinkPackMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.LinkPackRequest,
+              io.github.panyam.agni.v1.webapi.Pack>(
+                service, METHODID_LINK_PACK)))
+        .addMethod(
+          getUnlinkPackMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.UnlinkPackRequest,
+              io.github.panyam.agni.v1.webapi.Pack>(
+                service, METHODID_UNLINK_PACK)))
+        .addMethod(
+          getSyncPackMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.SyncPackRequest,
+              io.github.panyam.agni.v1.webapi.SyncPackResponse>(
+                service, METHODID_SYNC_PACK)))
         .build();
   }
 
@@ -928,6 +1258,9 @@ public final class PackServiceGrpc {
               .addMethod(getUpdatePackMethod())
               .addMethod(getDeletePackMethod())
               .addMethod(getImportPackFilesMethod())
+              .addMethod(getLinkPackMethod())
+              .addMethod(getUnlinkPackMethod())
+              .addMethod(getSyncPackMethod())
               .build();
         }
       }

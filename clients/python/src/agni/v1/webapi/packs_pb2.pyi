@@ -1,6 +1,7 @@
 import datetime
 
 from agni.v1.webapi import config_pb2 as _config_pb2
+from agni.v1.webapi import designs_pb2 as _designs_pb2
 from agni.v1.webapi import snapshot_pb2 as _snapshot_pb2
 from google.protobuf import empty_pb2 as _empty_pb2
 from google.protobuf import field_mask_pb2 as _field_mask_pb2
@@ -13,6 +14,40 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class LinkPackRequest(_message.Message):
+    __slots__ = ("pack_id", "source", "title")
+    PACK_ID_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    pack_id: str
+    source: _designs_pb2.ArtifactSource
+    title: str
+    def __init__(self, pack_id: _Optional[str] = ..., source: _Optional[_Union[_designs_pb2.ArtifactSource, _Mapping]] = ..., title: _Optional[str] = ...) -> None: ...
+
+class UnlinkPackRequest(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class SyncPackRequest(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class SyncPackResponse(_message.Message):
+    __slots__ = ("pack", "from_version", "to_version", "changed")
+    PACK_FIELD_NUMBER: _ClassVar[int]
+    FROM_VERSION_FIELD_NUMBER: _ClassVar[int]
+    TO_VERSION_FIELD_NUMBER: _ClassVar[int]
+    CHANGED_FIELD_NUMBER: _ClassVar[int]
+    pack: Pack
+    from_version: str
+    to_version: str
+    changed: bool
+    def __init__(self, pack: _Optional[_Union[Pack, _Mapping]] = ..., from_version: _Optional[str] = ..., to_version: _Optional[str] = ..., changed: _Optional[bool] = ...) -> None: ...
+
 class ImportPackFilesRequest(_message.Message):
     __slots__ = ("pack_id", "files", "title")
     PACK_ID_FIELD_NUMBER: _ClassVar[int]
@@ -24,7 +59,7 @@ class ImportPackFilesRequest(_message.Message):
     def __init__(self, pack_id: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ..., title: _Optional[str] = ...) -> None: ...
 
 class Pack(_message.Message):
-    __slots__ = ("name", "title", "config", "files", "uri", "hash", "update_time")
+    __slots__ = ("name", "title", "config", "files", "uri", "hash", "update_time", "source")
     NAME_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     CONFIG_FIELD_NUMBER: _ClassVar[int]
@@ -32,6 +67,7 @@ class Pack(_message.Message):
     URI_FIELD_NUMBER: _ClassVar[int]
     HASH_FIELD_NUMBER: _ClassVar[int]
     UPDATE_TIME_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
     name: str
     title: str
     config: _config_pb2.AnalysisConfig
@@ -39,7 +75,8 @@ class Pack(_message.Message):
     uri: str
     hash: str
     update_time: _timestamp_pb2.Timestamp
-    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ..., uri: _Optional[str] = ..., hash: _Optional[str] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    source: _designs_pb2.ArtifactSource
+    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ..., uri: _Optional[str] = ..., hash: _Optional[str] = ..., update_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., source: _Optional[_Union[_designs_pb2.ArtifactSource, _Mapping]] = ...) -> None: ...
 
 class CreatePackRequest(_message.Message):
     __slots__ = ("pack_id", "pack")

@@ -27,6 +27,26 @@ public final class PacksProto extends com.google.protobuf.GeneratedFile {
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_LinkPackRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_LinkPackRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_UnlinkPackRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_UnlinkPackRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_SyncPackRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_SyncPackRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_SyncPackResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_SyncPackResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_agni_v1_webapi_ImportPackFilesRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -76,109 +96,151 @@ public final class PacksProto extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\032agni/v1/webapi/packs.proto\022\016agni.v1.we" +
-      "bapi\032\033agni/v1/webapi/config.proto\032\035agni/" +
-      "v1/webapi/snapshot.proto\032\033google/protobu" +
-      "f/empty.proto\032 google/protobuf/field_mas" +
-      "k.proto\032\037google/protobuf/timestamp.proto" +
-      "\"{\n\026ImportPackFilesRequest\022\027\n\007pack_id\030\001 " +
-      "\001(\tR\006packId\0222\n\005files\030\002 \003(\0132\034.agni.v1.web" +
-      "api.SnapshotFileR\005files\022\024\n\005title\030\003 \001(\tR\005" +
-      "title\"\377\001\n\004Pack\022\022\n\004name\030\001 \001(\tR\004name\022\024\n\005ti" +
-      "tle\030\002 \001(\tR\005title\0226\n\006config\030\003 \001(\0132\036.agni." +
-      "v1.webapi.AnalysisConfigR\006config\0222\n\005file" +
-      "s\030\004 \003(\0132\034.agni.v1.webapi.SnapshotFileR\005f" +
-      "iles\022\020\n\003uri\030\005 \001(\tR\003uri\022\022\n\004hash\030\006 \001(\tR\004ha" +
-      "sh\022;\n\013update_time\030\007 \001(\0132\032.google.protobu" +
-      "f.TimestampR\nupdateTime\"V\n\021CreatePackReq" +
-      "uest\022\027\n\007pack_id\030\001 \001(\tR\006packId\022(\n\004pack\030\002 " +
-      "\001(\0132\024.agni.v1.webapi.PackR\004pack\"$\n\016GetPa" +
-      "ckRequest\022\022\n\004name\030\001 \001(\tR\004name\"f\n\020ListPac" +
-      "ksRequest\022\033\n\tpage_size\030\001 \001(\005R\010pageSize\022\035" +
-      "\n\npage_token\030\002 \001(\tR\tpageToken\022\026\n\006filter\030" +
-      "\003 \001(\tR\006filter\"g\n\021ListPacksResponse\022*\n\005pa" +
-      "cks\030\001 \003(\0132\024.agni.v1.webapi.PackR\005packs\022&" +
-      "\n\017next_page_token\030\002 \001(\tR\rnextPageToken\"z" +
-      "\n\021UpdatePackRequest\022(\n\004pack\030\001 \001(\0132\024.agni" +
-      ".v1.webapi.PackR\004pack\022;\n\013update_mask\030\002 \001" +
-      "(\0132\032.google.protobuf.FieldMaskR\nupdateMa" +
-      "sk\"\'\n\021DeletePackRequest\022\022\n\004name\030\001 \001(\tR\004n" +
-      "ame2\310\003\n\013PackService\022E\n\nCreatePack\022!.agni" +
-      ".v1.webapi.CreatePackRequest\032\024.agni.v1.w" +
-      "ebapi.Pack\022?\n\007GetPack\022\036.agni.v1.webapi.G" +
-      "etPackRequest\032\024.agni.v1.webapi.Pack\022P\n\tL" +
-      "istPacks\022 .agni.v1.webapi.ListPacksReque" +
-      "st\032!.agni.v1.webapi.ListPacksResponse\022E\n" +
-      "\nUpdatePack\022!.agni.v1.webapi.UpdatePackR" +
-      "equest\032\024.agni.v1.webapi.Pack\022G\n\nDeletePa" +
-      "ck\022!.agni.v1.webapi.DeletePackRequest\032\026." +
-      "google.protobuf.Empty\022O\n\017ImportPackFiles" +
-      "\022&.agni.v1.webapi.ImportPackFilesRequest" +
-      "\032\024.agni.v1.webapi.PackB\265\001\n\037io.github.pan" +
-      "yam.agni.v1.webapiB\nPacksProtoP\001Z,github" +
-      ".com/panyam/agni/gen/go/agni/v1/webapi\242\002" +
-      "\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\V1\\Webapi\342\002" +
-      "\032Agni\\V1\\Webapi\\GPBMetadata\352\002\020Agni::V1::" +
-      "Webapib\006proto3"
+      "bapi\032\033agni/v1/webapi/config.proto\032\034agni/" +
+      "v1/webapi/designs.proto\032\035agni/v1/webapi/" +
+      "snapshot.proto\032\033google/protobuf/empty.pr" +
+      "oto\032 google/protobuf/field_mask.proto\032\037g" +
+      "oogle/protobuf/timestamp.proto\"x\n\017LinkPa" +
+      "ckRequest\022\027\n\007pack_id\030\001 \001(\tR\006packId\0226\n\006so" +
+      "urce\030\002 \001(\0132\036.agni.v1.webapi.ArtifactSour" +
+      "ceR\006source\022\024\n\005title\030\003 \001(\tR\005title\"\'\n\021Unli" +
+      "nkPackRequest\022\022\n\004name\030\001 \001(\tR\004name\"%\n\017Syn" +
+      "cPackRequest\022\022\n\004name\030\001 \001(\tR\004name\"\230\001\n\020Syn" +
+      "cPackResponse\022(\n\004pack\030\001 \001(\0132\024.agni.v1.we" +
+      "bapi.PackR\004pack\022!\n\014from_version\030\002 \001(\tR\013f" +
+      "romVersion\022\035\n\nto_version\030\003 \001(\tR\ttoVersio" +
+      "n\022\030\n\007changed\030\004 \001(\010R\007changed\"{\n\026ImportPac" +
+      "kFilesRequest\022\027\n\007pack_id\030\001 \001(\tR\006packId\0222" +
+      "\n\005files\030\002 \003(\0132\034.agni.v1.webapi.SnapshotF" +
+      "ileR\005files\022\024\n\005title\030\003 \001(\tR\005title\"\267\002\n\004Pac" +
+      "k\022\022\n\004name\030\001 \001(\tR\004name\022\024\n\005title\030\002 \001(\tR\005ti" +
+      "tle\0226\n\006config\030\003 \001(\0132\036.agni.v1.webapi.Ana" +
+      "lysisConfigR\006config\0222\n\005files\030\004 \003(\0132\034.agn" +
+      "i.v1.webapi.SnapshotFileR\005files\022\020\n\003uri\030\005" +
+      " \001(\tR\003uri\022\022\n\004hash\030\006 \001(\tR\004hash\022;\n\013update_" +
+      "time\030\007 \001(\0132\032.google.protobuf.TimestampR\n" +
+      "updateTime\0226\n\006source\030\010 \001(\0132\036.agni.v1.web" +
+      "api.ArtifactSourceR\006source\"V\n\021CreatePack" +
+      "Request\022\027\n\007pack_id\030\001 \001(\tR\006packId\022(\n\004pack" +
+      "\030\002 \001(\0132\024.agni.v1.webapi.PackR\004pack\"$\n\016Ge" +
+      "tPackRequest\022\022\n\004name\030\001 \001(\tR\004name\"f\n\020List" +
+      "PacksRequest\022\033\n\tpage_size\030\001 \001(\005R\010pageSiz" +
+      "e\022\035\n\npage_token\030\002 \001(\tR\tpageToken\022\026\n\006filt" +
+      "er\030\003 \001(\tR\006filter\"g\n\021ListPacksResponse\022*\n" +
+      "\005packs\030\001 \003(\0132\024.agni.v1.webapi.PackR\005pack" +
+      "s\022&\n\017next_page_token\030\002 \001(\tR\rnextPageToke" +
+      "n\"z\n\021UpdatePackRequest\022(\n\004pack\030\001 \001(\0132\024.a" +
+      "gni.v1.webapi.PackR\004pack\022;\n\013update_mask\030" +
+      "\002 \001(\0132\032.google.protobuf.FieldMaskR\nupdat" +
+      "eMask\"\'\n\021DeletePackRequest\022\022\n\004name\030\001 \001(\t" +
+      "R\004name2\241\005\n\013PackService\022E\n\nCreatePack\022!.a" +
+      "gni.v1.webapi.CreatePackRequest\032\024.agni.v" +
+      "1.webapi.Pack\022?\n\007GetPack\022\036.agni.v1.webap" +
+      "i.GetPackRequest\032\024.agni.v1.webapi.Pack\022P" +
+      "\n\tListPacks\022 .agni.v1.webapi.ListPacksRe" +
+      "quest\032!.agni.v1.webapi.ListPacksResponse" +
+      "\022E\n\nUpdatePack\022!.agni.v1.webapi.UpdatePa" +
+      "ckRequest\032\024.agni.v1.webapi.Pack\022G\n\nDelet" +
+      "ePack\022!.agni.v1.webapi.DeletePackRequest" +
+      "\032\026.google.protobuf.Empty\022O\n\017ImportPackFi" +
+      "les\022&.agni.v1.webapi.ImportPackFilesRequ" +
+      "est\032\024.agni.v1.webapi.Pack\022A\n\010LinkPack\022\037." +
+      "agni.v1.webapi.LinkPackRequest\032\024.agni.v1" +
+      ".webapi.Pack\022E\n\nUnlinkPack\022!.agni.v1.web" +
+      "api.UnlinkPackRequest\032\024.agni.v1.webapi.P" +
+      "ack\022M\n\010SyncPack\022\037.agni.v1.webapi.SyncPac" +
+      "kRequest\032 .agni.v1.webapi.SyncPackRespon" +
+      "seB\265\001\n\037io.github.panyam.agni.v1.webapiB\n" +
+      "PacksProtoP\001Z,github.com/panyam/agni/gen" +
+      "/go/agni/v1/webapi\242\002\003AVW\252\002\016Agni.V1.Webap" +
+      "i\312\002\016Agni\\V1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBM" +
+      "etadata\352\002\020Agni::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           io.github.panyam.agni.v1.webapi.ConfigProto.getDescriptor(),
+          io.github.panyam.agni.v1.webapi.DesignsProto.getDescriptor(),
           io.github.panyam.agni.v1.webapi.SnapshotProto.getDescriptor(),
           com.google.protobuf.EmptyProto.getDescriptor(),
           com.google.protobuf.FieldMaskProto.getDescriptor(),
           com.google.protobuf.TimestampProto.getDescriptor(),
         });
-    internal_static_agni_v1_webapi_ImportPackFilesRequest_descriptor =
+    internal_static_agni_v1_webapi_LinkPackRequest_descriptor =
       getDescriptor().getMessageType(0);
+    internal_static_agni_v1_webapi_LinkPackRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_LinkPackRequest_descriptor,
+        new java.lang.String[] { "PackId", "Source", "Title", });
+    internal_static_agni_v1_webapi_UnlinkPackRequest_descriptor =
+      getDescriptor().getMessageType(1);
+    internal_static_agni_v1_webapi_UnlinkPackRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_UnlinkPackRequest_descriptor,
+        new java.lang.String[] { "Name", });
+    internal_static_agni_v1_webapi_SyncPackRequest_descriptor =
+      getDescriptor().getMessageType(2);
+    internal_static_agni_v1_webapi_SyncPackRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_SyncPackRequest_descriptor,
+        new java.lang.String[] { "Name", });
+    internal_static_agni_v1_webapi_SyncPackResponse_descriptor =
+      getDescriptor().getMessageType(3);
+    internal_static_agni_v1_webapi_SyncPackResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_SyncPackResponse_descriptor,
+        new java.lang.String[] { "Pack", "FromVersion", "ToVersion", "Changed", });
+    internal_static_agni_v1_webapi_ImportPackFilesRequest_descriptor =
+      getDescriptor().getMessageType(4);
     internal_static_agni_v1_webapi_ImportPackFilesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ImportPackFilesRequest_descriptor,
         new java.lang.String[] { "PackId", "Files", "Title", });
     internal_static_agni_v1_webapi_Pack_descriptor =
-      getDescriptor().getMessageType(1);
+      getDescriptor().getMessageType(5);
     internal_static_agni_v1_webapi_Pack_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_Pack_descriptor,
-        new java.lang.String[] { "Name", "Title", "Config", "Files", "Uri", "Hash", "UpdateTime", });
+        new java.lang.String[] { "Name", "Title", "Config", "Files", "Uri", "Hash", "UpdateTime", "Source", });
     internal_static_agni_v1_webapi_CreatePackRequest_descriptor =
-      getDescriptor().getMessageType(2);
+      getDescriptor().getMessageType(6);
     internal_static_agni_v1_webapi_CreatePackRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_CreatePackRequest_descriptor,
         new java.lang.String[] { "PackId", "Pack", });
     internal_static_agni_v1_webapi_GetPackRequest_descriptor =
-      getDescriptor().getMessageType(3);
+      getDescriptor().getMessageType(7);
     internal_static_agni_v1_webapi_GetPackRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_GetPackRequest_descriptor,
         new java.lang.String[] { "Name", });
     internal_static_agni_v1_webapi_ListPacksRequest_descriptor =
-      getDescriptor().getMessageType(4);
+      getDescriptor().getMessageType(8);
     internal_static_agni_v1_webapi_ListPacksRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListPacksRequest_descriptor,
         new java.lang.String[] { "PageSize", "PageToken", "Filter", });
     internal_static_agni_v1_webapi_ListPacksResponse_descriptor =
-      getDescriptor().getMessageType(5);
+      getDescriptor().getMessageType(9);
     internal_static_agni_v1_webapi_ListPacksResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListPacksResponse_descriptor,
         new java.lang.String[] { "Packs", "NextPageToken", });
     internal_static_agni_v1_webapi_UpdatePackRequest_descriptor =
-      getDescriptor().getMessageType(6);
+      getDescriptor().getMessageType(10);
     internal_static_agni_v1_webapi_UpdatePackRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_UpdatePackRequest_descriptor,
         new java.lang.String[] { "Pack", "UpdateMask", });
     internal_static_agni_v1_webapi_DeletePackRequest_descriptor =
-      getDescriptor().getMessageType(7);
+      getDescriptor().getMessageType(11);
     internal_static_agni_v1_webapi_DeletePackRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_DeletePackRequest_descriptor,
         new java.lang.String[] { "Name", });
     descriptor.resolveAllFeaturesImmutable();
     io.github.panyam.agni.v1.webapi.ConfigProto.getDescriptor();
+    io.github.panyam.agni.v1.webapi.DesignsProto.getDescriptor();
     io.github.panyam.agni.v1.webapi.SnapshotProto.getDescriptor();
     com.google.protobuf.EmptyProto.getDescriptor();
     com.google.protobuf.FieldMaskProto.getDescriptor();

@@ -158,6 +158,12 @@ func printReport(w io.Writer, r *webapi.Report) {
 		}
 		note += "; " + id + " at " + v
 	}
+	// It names the commit each linked pack was read at, so a run after a push says which rules it ran
+	// (agni issue 1801).
+	packVersions := r.GetPackVersions()
+	for _, p := range slices.Sorted(maps.Keys(packVersions)) {
+		note += "; " + p + " at " + shortVersion(packVersions[p])
+	}
 	// It names the revision it read, which the server keeps while the report exists (agni issue 1774).
 	if rev := r.GetRevision(); rev != "" {
 		note += "; revision " + rev

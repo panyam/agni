@@ -106,3 +106,15 @@ Note over You: the folder's netlist changes again
 You ->> Agni: PollSources
 Agni -->> You: netlist newer_version set
 ```
+
+## Follow a pack's folder {#followpack}
+
+> A team keeps its house rules in a project folder, and a pack can read them from there instead of from an upload. `LinkPack` points `packs/house-live` at the folder the server mounts as `rules`. Someone adds a second naming rule to the folder's project.yaml, and the server's next poll reads it into the pack, so the next check runs it. On GitHub a push webhook starts the same pass, and each report names the commit its packs were read at.
+
+```mermaid
+sequenceDiagram
+You ->> Agni: LinkPack(house-live, rules)
+Note over You: a rule is added to project.yaml
+You ->> Agni: PollSources
+Agni -->> You: packs/house-live moved, two rules
+```

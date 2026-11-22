@@ -26,6 +26,8 @@ const githubHookPath = "/hooks/github"
 // one design at once.
 type follower struct {
 	designs *service.DesignService
+	// packs, when set, moves the linked packs a push or a poll names too (agni issue 1801).
+	packs *service.PackService
 	// life ends with the server. A move runs on it rather than on the request, since GitHub hangs up
 	// after ten seconds and a sync of a large board takes longer.
 	life context.Context
@@ -76,7 +78,12 @@ func (f *follower) githubHook(secret []byte) http.Handler {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		f.run(fmt.Sprintf("push to %s@%s", push.Source, push.Ref), func(ctx context.Context) ([]service.SourceMove, error) {
+		what := fmt.Sprintf("push to %s@%s", push.Source, push.Ref)
+		f.run(what, func(ctx context.Context) ([]service.SourceMove, error) {
+			if f.packs != nil {
+				moves, err := f.packs.SourceChanged(ctx, push.Change)
+				f.reportPacks(what, moves, err)
+			}
 			return f.designs.SourceChanged(ctx, push.Change)
 		})
 		w.WriteHeader(http.StatusAccepted)
@@ -94,6 +101,10 @@ func (f *follower) poll(every time.Duration) {
 				return
 			case <-t.C:
 				f.mu.Lock()
+				if f.packs != nil {
+					moves, err := f.packs.PollSources(f.life)
+					f.reportPacks("poll", moves, err)
+				}
 				moves, err := f.designs.PollSources(f.life)
 				f.mu.Unlock()
 				f.report("poll", moves, err)
@@ -125,6 +136,20 @@ func (f *follower) report(what string, moves []service.SourceMove, err error) {
 		default:
 			fmt.Fprintf(f.log, "%s: marked %s (%s) newer at the source\n", what, m.Design, strings.Join(m.Artifacts, ", "))
 		}
+	}
+	if err != nil {
+		fmt.Fprintf(f.log, "%s: %v\n", what, err)
+	}
+}
+
+// reportPacks logs one line per pack a move touched, and the error that stopped it.
+func (f *follower) reportPacks(what string, moves []service.PackMove, err error) {
+	for _, m := range moves {
+		if m.Err != nil {
+			fmt.Fprintf(f.log, "%s: could not move %s: %v\n", what, m.Pack, m.Err)
+			continue
+		}
+		fmt.Fprintf(f.log, "%s: moved %s from %s to %s\n", what, m.Pack, shortVersion(m.From), shortVersion(m.To))
 	}
 	if err != nil {
 		fmt.Fprintf(f.log, "%s: %v\n", what, err)
