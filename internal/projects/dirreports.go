@@ -78,7 +78,7 @@ func (r *DirReports) CreateReport(ctx context.Context, design, id string, in *we
 	out.Name = service.ReportName(design, id)
 	out.CreateTime = timestamppb.New(now)
 	out.DesignChanged, out.PacksChanged = false, nil
-	b, err := protojson.MarshalOptions{Multiline: true}.Marshal(out)
+	b, err := protojson.Marshal(out)
 	if err != nil {
 		return nil, err
 	}

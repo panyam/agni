@@ -15,6 +15,7 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/internal/records"
 	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // osReviewStore is the service.ReviewStore under `agni serve --store`, keeping one results document
@@ -103,7 +104,9 @@ func (s *osReviewStore) Create(ctx context.Context, parent string, doc *checkspb
 	if err != nil {
 		return "", "", err
 	}
-	b, err := results.Marshal(stamped)
+	// Compact, since a run holds every verdict and runs to megabytes (agni issue 1823). It is still
+	// a results document results.Parse reads.
+	b, err := protojson.Marshal(stamped)
 	if err != nil {
 		return "", "", err
 	}

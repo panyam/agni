@@ -219,7 +219,7 @@ func (r *DirPacks) commit(ctx context.Context, id string, in *webapi.Pack, blobs
 	if err != nil {
 		return nil, err
 	}
-	b, err := protojson.MarshalOptions{Multiline: true}.Marshal(p)
+	b, err := protojson.Marshal(p)
 	if err != nil {
 		return nil, err
 	}

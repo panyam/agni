@@ -91,7 +91,7 @@ func (r *DirProjects) Put(ctx context.Context, id string, p *webapi.Project) err
 	if err != nil {
 		return err
 	}
-	b, err := protojson.MarshalOptions{Multiline: true}.Marshal(p)
+	b, err := protojson.Marshal(p)
 	if err != nil {
 		return err
 	}

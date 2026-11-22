@@ -18,7 +18,7 @@ import (
 	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
 	"github.com/panyam/oneauth/core"
 
-	"github.com/panyam/agni/internal/authgate"
+	"github.com/panyam/agni/internal/records/recordstest"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 )
@@ -71,10 +71,9 @@ func TestAgnidsWithAuthServesAPrivateMountToItsReaders(t *testing.T) {
 
 	// agni serve's side: a server connection, a mount through it, and alice's and bob's own
 	// connections with their tokens sealed.
-	serve, err := mountset.Open(mountset.Config{
-		Uploads: uploads, Records: filepath.Join(store, mountset.RecordsDir), Connections: filepath.Join(store, mountset.ConnectionsDir),
-		UserTokens: filepath.Join(store, mountset.UserTokensDir), ConnectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", GitHubAPI: gh.URL, GitHubRaw: gh.RawURL(),
-	})
+	serve, err := mountset.Open(serveConfig(t, openStore(t, store), mountset.Config{
+		Uploads: uploads, ConnectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", GitHubAPI: gh.URL, GitHubRaw: gh.RawURL(),
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +95,7 @@ func TestAgnidsWithAuthServesAPrivateMountToItsReaders(t *testing.T) {
 	}
 	tokens := map[string]string{}
 	for _, who := range []string{"alice", "bob"} {
-		made, err := authgate.Store(store).CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: who, Name: who})
+		made, err := storeTokens(t, store).CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: who, Name: who})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -114,9 +113,13 @@ func TestAgnidsWithAuthServesAPrivateMountToItsReaders(t *testing.T) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	srv := httptest.NewServer(guard(newWorkbenchMux(table, workbenchAccess{guard: service.NewAccessGuard(table, ""), hideRoots: true}, "", nil, "", "", nil), authgate.Store(store), nil))
+	srv := httptest.NewServer(guard(newWorkbenchMux(table, workbenchAccess{guard: service.NewAccessGuard(table, ""), hideRoots: true}, "", nil, "", "", nil), storeTokens(t, store), nil))
 	defer srv.Close()
-	before := storeSum(t, store)
+	// agnids only reads the store. A folder store shows that as files left as they were.
+	var before [32]byte
+	if recordstest.Folder() {
+		before = storeSum(t, store)
+	}
 
 	do := func(who, method, path, body string) (int, string) {
 		t.Helper()
@@ -166,7 +169,7 @@ func TestAgnidsWithAuthServesAPrivateMountToItsReaders(t *testing.T) {
 
 	// The token check stamps each API key's last use under tokens/, as it did before this change, so
 	// only the folders this change reads are compared.
-	if storeSum(t, store) != before {
+	if recordstest.Folder() && storeSum(t, store) != before {
 		t.Error("agnids wrote to agni serve's connections, sealed tokens or mount records while checking its callers")
 	}
 }

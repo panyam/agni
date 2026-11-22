@@ -49,5 +49,7 @@ fail=0
 for b in "${backends[@]}"; do
   echo "== store tests on $b"
   AGNI_TEST_RECORDS=$b "$go" test -count=1 "${pkgs[@]}" || fail=1
+  # agnids reads the same store, from the datasheet module.
+  (cd datasheet && AGNI_TEST_RECORDS=$b "$go" test -count=1 ./cmd/agnids/...) || fail=1
 done
 exit $fail

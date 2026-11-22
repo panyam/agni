@@ -15,7 +15,6 @@ import (
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/datasheet/corpus"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
-	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/paramclient"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/goapplib/storage/mounts"
@@ -159,11 +158,11 @@ func TestAnAgnidsWithAuthAsksForAToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	storeDir := t.TempDir()
-	made, err := authgate.Store(storeDir).CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "agni-serve", Name: "agni-serve"})
+	made, err := storeTokens(t, storeDir).CreateAPIKey(context.Background(), &core.CreateAPIKeyRequest{Subject: "agni-serve", Name: "agni-serve"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(guard(newWorkbenchMux(nil, workbenchAccess{}, "", nil, "", dir, corpus), authgate.Store(storeDir), nil))
+	srv := httptest.NewServer(guard(newWorkbenchMux(nil, workbenchAccess{}, "", nil, "", dir, corpus), storeTokens(t, storeDir), nil))
 	defer srv.Close()
 	for _, bad := range []string{"", "oa_0_wrong"} {
 		if _, err := paramclient.New(srv.URL, bad).Generation(context.Background()); connect.CodeOf(err) != connect.CodeUnauthenticated {

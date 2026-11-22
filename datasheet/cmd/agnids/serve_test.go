@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/panyam/agni/internal/authgate"
+	"github.com/panyam/agni/internal/records/recordstest"
 	"github.com/panyam/agni/internal/storeurl"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
@@ -190,7 +192,7 @@ func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
 	// after agnids started. agnids sees the record within the registry's one-second recheck.
 	gh := githubtest.New(t)
 	gh.AddRepo("ti", "datasheets", false, map[string]string{"ti/TPS62.pdf": "%PDF-1.4"})
-	serve, err := mountset.Open(mountset.Config{Uploads: uploads, Records: filepath.Join(store, mountset.RecordsDir), GitHubAPI: gh.URL})
+	serve, err := mountset.Open(serveConfig(t, openStore(t, store), mountset.Config{Uploads: uploads, GitHubAPI: gh.URL}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,13 +216,42 @@ func TestWorkbenchServesAMountAgniServeMadeAtRuntime(t *testing.T) {
 	}
 }
 
-// openStore opens the file:// store in the folder dir, closing it when t ends.
+// openStore opens a store over the folder dir in the backend AGNI_TEST_RECORDS names: the folder
+// itself, sqlite in it, or a postgres schema or Datastore namespace named for it (agni issue 1823).
+// The test closes it when it ends.
 func openStore(t *testing.T, dir string) *storeurl.Store {
 	t.Helper()
-	st, _, err := storeurl.Open("file://"+filepath.ToSlash(dir), "")
+	st, _, err := storeurl.Open(recordstest.StoreURL(t, dir), "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
 	return st
+}
+
+// storeTokens is the --auth token store of the store openStore opens over dir.
+func storeTokens(t *testing.T, dir string) authgate.Keys {
+	t.Helper()
+	k, err := openStore(t, dir).Tokens()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return k
+}
+
+// serveConfig fills cfg the way agni serve does over st: folders under a file:// store, or the
+// store's own GORM or Datastore stores.
+func serveConfig(t *testing.T, st *storeurl.Store, cfg mountset.Config) mountset.Config {
+	t.Helper()
+	stores, err := st.TableStores()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Stores = stores
+	if st.Dir != "" {
+		cfg.Records = filepath.Join(st.Dir, mountset.RecordsDir)
+		cfg.Connections = filepath.Join(st.Dir, mountset.ConnectionsDir)
+		cfg.UserTokens = filepath.Join(st.Dir, mountset.UserTokensDir)
+	}
+	return cfg
 }

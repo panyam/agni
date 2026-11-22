@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/records"
 	"github.com/panyam/agni/internal/records/recordstest"
 	"github.com/panyam/agni/service"
 )
@@ -57,5 +59,30 @@ func TestDirReportsKeepsAndListsNewestFirst(t *testing.T) {
 	}
 	if _, err := rs.Report(ctx, "gw", "../r"); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("Report(../r) = %v; want ErrNotFound", err)
+	}
+}
+
+// A stored report, pack or project is compact JSON. A report on a real board runs to megabytes, and
+// indentation added about a third to it (agni issue 1823).
+func TestStoredRecordsAreCompactJSON(t *testing.T) {
+	ctx := context.Background()
+	recs := recordstest.New(t)
+	if _, err := NewReports(records.Sub(recs, "reports")).CreateReport(ctx, "gw", "r", &webapi.Report{Packs: []string{"packs/a", "packs/b"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := NewProjects(records.Sub(recs, "projects")).Put(ctx, "p", &webapi.Project{Name: "projects/p", Designs: []string{"designs/a", "designs/b"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewPacks(records.Sub(recs, "packs"), nil, "", "uploads").CreatePack(ctx, "k", &webapi.Pack{Title: "K"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range []string{"reports/gw/r.json", "projects/p.json", "packs/k.json"} {
+		b, err := recs.Get(ctx, k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), "\n") {
+			t.Errorf("%s is indented:\n%s", k, b)
+		}
 	}
 }
