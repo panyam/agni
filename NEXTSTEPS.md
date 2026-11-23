@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `a635df6f`.
+Last pruned 2026-11-23, at `6dcdac66`.
 
 ## At a glance
 
@@ -26,9 +26,12 @@ makes the target build it. The Helm chart (#1803) comes next and puts agni behin
   oneauth's `oauth2/oidc` and waits on panyam/oneauth#566 for a fake issuer to test against. #1826
   adopts what goapplib added past the bump: the fake GHES with App limits, the seeded fake, sealed
   server secrets, and bucket syncs that skip held files.
-- **A checklist can be a folder of item files** (`items_dir`, PR 1835), and `agni checklists
-  packs/<id> --remote` lists a pack's checklists. A server design takes its checklists from the
-  pack it is reviewed under. #1838 renames the example projects' `designs/` folders to `boards/`.
+- **A checklist can be a folder of item files** (`items_dir`), in a descriptor (PR 1835) or a
+  standalone manifest, and `--checklist checklist/` takes the folder itself (PR 1839). `agni
+  checklists packs/<id> --remote` lists a pack's checklists, and a server design takes its
+  checklists from the pack it is reviewed under. The example projects keep their boards under
+  `boards/` (PR 1840), so a checkout that copied the Jetson boards before reruns
+  `make -C examples/jetson-project board revision rev-b`.
 - **`--store` takes `file://`, `sqlite://`, `postgres://` and `datastore://`** (PRs 1822 and 1825),
   and two servers can share one store. `--uploads` takes `s3://` and `gs://` with a local
   `--uploads-cache` (PR 1834). #1803 can offer postgres and a bucket in place of volumes.
