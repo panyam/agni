@@ -386,10 +386,16 @@ func (s *PackService) keepFolder(ctx context.Context, id, title string, files []
 		byPath[f.GetPath()] = f
 		paths = append(paths, f.GetPath())
 	}
+	// lacking collects every file the importer asked for and the server lacks, so one answer names
+	// them all when the importer reads several before it fails (agni issue 1812).
+	var lacking []string
 	read := func(p string) ([]byte, error) {
 		f := byPath[p]
 		b, ok := s.blobs(ctx, f.GetSha256())
 		if !ok {
+			if !slices.Contains(lacking, f.GetSha256()) {
+				lacking = append(lacking, f.GetSha256())
+			}
 			return nil, &missingContent{hash: f.GetSha256()}
 		}
 		return b, nil
@@ -397,7 +403,7 @@ func (s *PackService) keepFolder(ctx context.Context, id, title string, files []
 	pid, pack, kept, err := s.importer(paths, read)
 	var missing *missingContent
 	if errors.As(err, &missing) {
-		return nil, &BlobsMissingError{Hashes: []string{missing.hash}}
+		return nil, &BlobsMissingError{Hashes: lacking}
 	}
 	if err != nil {
 		return nil, err

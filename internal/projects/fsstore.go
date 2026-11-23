@@ -278,6 +278,9 @@ func (s *FSStore) readProject(t Tree, dir, name string, deps *[]string) (string,
 	if err := s.attachSources(t, u, src, p.Config, deps); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
+	if err := readChecklistDirs(t, dir, src, p.Config, deps); err != nil {
+		return "", nil, fmt.Errorf("%s: %w", name, err)
+	}
 	return id, p, nil
 }
 
@@ -463,6 +466,9 @@ func (s *FSStore) readDesign(t Tree, dir, name string, deps *[]string) (string, 
 	if err := s.attachSources(t, base, src, d.Config, deps); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
+	if err := readChecklistDirs(t, dir, src, d.Config, deps); err != nil {
+		return "", nil, fmt.Errorf("%s: %w", name, err)
+	}
 	join := func(rel string) (string, error) {
 		u, err := base.Join(rel)
 		if err != nil {
@@ -517,6 +523,41 @@ func exists(fsys fs.FS, name string) bool {
 func isDir(fsys fs.FS, name string) bool {
 	fi, err := fs.Stat(fsys, walkRoot(name))
 	return err == nil && fi.IsDir()
+}
+
+// readChecklistDirs reads the folder checklists src declares from the descriptor's folder, dir, and
+// adds every file and folder it read to deps, so an edited, added or removed item file rereads the
+// descriptor (agni issue 1812).
+func readChecklistDirs(t Tree, dir string, src Sources, cfg *webapi.AnalysisConfig, deps *[]string) error {
+	if len(src.ChecklistDirs) == 0 {
+		return nil
+	}
+	base := walkRoot(dir)
+	list := func(d string) ([]string, error) {
+		var out []string
+		err := fs.WalkDir(t.FS, path.Join(base, d), func(p string, e fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !e.IsDir() {
+				if base != "." {
+					p = strings.TrimPrefix(p, base+"/")
+				}
+				out = append(out, p)
+			}
+			return nil
+		})
+		return out, err
+	}
+	read := func(f string) ([]byte, error) { return fs.ReadFile(t.FS, path.Join(base, f)) }
+	files, err := ResolveChecklistDirs(cfg, src.ChecklistDirs, list, read)
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		*deps = append(*deps, path.Join(base, f))
+	}
+	return nil
 }
 
 // walkRoot maps the empty tree-relative folder to the "." that fs.FS requires, since callers above

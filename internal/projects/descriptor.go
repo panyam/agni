@@ -85,6 +85,9 @@ type Sources struct {
 	Symbols  []string
 	Lib      []string
 	Queries  []string
+	// ChecklistDirs are the checklists written as a folder of item files (agni issue 1812). The
+	// config holds each one's name until ResolveChecklistDirs reads its folder.
+	ChecklistDirs []ChecklistDir
 }
 
 func (y descriptorYAML) sources() Sources {
@@ -188,7 +191,8 @@ func parseDescriptor(r io.Reader, file string) (descriptorYAML, *webapi.Analysis
 	if cfg.Conventions, err = parseConventions(&y.Conventions); err != nil {
 		return fail(err)
 	}
-	if cfg.Checklists, err = parseChecklists(&y.Checklists); err != nil {
+	var dirs []ChecklistDir
+	if cfg.Checklists, dirs, err = parseChecklists(&y.Checklists); err != nil {
 		return fail(err)
 	}
 	if !y.Intent.IsZero() && y.Intent.Tag != "!!null" {
@@ -197,6 +201,7 @@ func parseDescriptor(r io.Reader, file string) (descriptorYAML, *webapi.Analysis
 		}
 	}
 	src := y.sources()
+	src.ChecklistDirs = dirs
 	if src.Extends != "" {
 		if err := validSource("extends", src.Extends); err != nil {
 			return fail(err)
@@ -235,39 +240,85 @@ func parseConventions(n *yaml.Node) (*configpb.NamingConvention, error) {
 // A manifest's YAML uses the review package's authoring form. That form spells an item's binding
 // flat, and the proto nests it. So review.Load reads each manifest and the result is converted,
 // rather than bound to the proto.
-func parseChecklists(n *yaml.Node) ([]*webapi.NamedChecklist, error) {
+//
+// A checklist may name items_dir, a folder of item files, in place of areas (agni issue 1812). Its
+// entry then holds the name alone, and the ChecklistDir returned for it says where the items are.
+// ResolveChecklistDirs reads them, since only the caller can read the descriptor's folder.
+func parseChecklists(n *yaml.Node) ([]*webapi.NamedChecklist, []ChecklistDir, error) {
 	if n.IsZero() || n.Tag == "!!null" {
-		return nil, nil
+		return nil, nil, nil
 	}
 	if n.Kind != yaml.MappingNode {
-		return nil, fmt.Errorf("line %d: checklists must map a name to a checklist, as checklists: {review: {areas: [...]}}", n.Line)
+		return nil, nil, fmt.Errorf("line %d: checklists must map a name to a checklist, as checklists: {review: {areas: [...]}}", n.Line)
 	}
 	var out []*webapi.NamedChecklist
+	var dirs []ChecklistDir
 	seen := map[string]bool{}
 	for i := 0; i+1 < len(n.Content); i += 2 {
 		k, v := n.Content[i], n.Content[i+1]
 		name := strings.TrimSpace(k.Value)
 		if k.Kind != yaml.ScalarNode || name == "" {
-			return nil, fmt.Errorf("line %d: a checklist needs a name", k.Line)
+			return nil, nil, fmt.Errorf("line %d: a checklist needs a name", k.Line)
 		}
 		if seen[name] {
-			return nil, fmt.Errorf("line %d: checklist %q is declared twice", k.Line, name)
+			return nil, nil, fmt.Errorf("line %d: checklist %q is declared twice", k.Line, name)
 		}
 		seen[name] = true
 		if v.Kind != yaml.MappingNode {
-			return nil, fmt.Errorf("line %d: checklist %q must be a checklist (name, areas)", v.Line, name)
+			return nil, nil, fmt.Errorf("line %d: checklist %q must be a checklist (name, areas)", v.Line, name)
+		}
+		if dir, ok, err := itemsDir(name, v); err != nil {
+			return nil, nil, err
+		} else if ok {
+			var head struct {
+				Name string `yaml:"name"`
+			}
+			_ = v.Decode(&head)
+			dirs = append(dirs, ChecklistDir{Index: len(out), Name: name, Dir: dir})
+			out = append(out, &webapi.NamedChecklist{Name: name, Manifest: service.ManifestProto(review.Manifest{Name: head.Name})})
+			continue
 		}
 		b, err := yaml.Marshal(v)
 		if err != nil {
-			return nil, fmt.Errorf("checklist %q: %w", name, err)
+			return nil, nil, fmt.Errorf("checklist %q: %w", name, err)
 		}
 		man, err := review.Load(strings.NewReader(string(b)))
 		if err != nil {
-			return nil, fmt.Errorf("checklist %q (line %d): %w", name, v.Line, err)
+			return nil, nil, fmt.Errorf("checklist %q (line %d): %w", name, v.Line, err)
 		}
 		out = append(out, &webapi.NamedChecklist{Name: name, Manifest: service.ManifestProto(man)})
 	}
-	return out, nil
+	return out, dirs, nil
+}
+
+// itemsDir reads a checklist's items_dir, cleaned, and reports whether it has one. A checklist with
+// items_dir holds only a name beside it, and the folder must sit inside the descriptor's folder.
+func itemsDir(name string, v *yaml.Node) (string, bool, error) {
+	var dir string
+	found := false
+	other := -1
+	for j := 0; j+1 < len(v.Content); j += 2 {
+		switch v.Content[j].Value {
+		case "items_dir":
+			found, dir = true, v.Content[j+1].Value
+		case "name":
+		default:
+			if other < 0 {
+				other = j
+			}
+		}
+	}
+	if !found {
+		return "", false, nil
+	}
+	if other >= 0 {
+		k := v.Content[other]
+		return "", false, fmt.Errorf("line %d: checklist %q names items_dir, so its items come from that folder; remove %s, or drop items_dir and list the areas here", k.Line, name, k.Value)
+	}
+	if err := validRel(fmt.Sprintf("checklist %q items_dir", name), dir); err != nil {
+		return "", false, err
+	}
+	return CleanRel(dir), true, nil
 }
 
 // CleanRel normalizes a descriptor-relative file name for comparison (forward slashes, no `./`, no

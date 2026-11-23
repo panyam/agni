@@ -157,3 +157,10 @@ checklists:
           - id: "F1"
             title: every footprint matches its library copy
             external: {producer: kicad-cli pcb drc, rule: kicad-drc/lib_footprint_mismatch}
+
+  # The power questions from review, kept one file per item under checklist/ (agni issue 1812). Each
+  # file's frontmatter holds what an inline item holds, and the folder it sits in names its area.
+  # `agni review --checklist power` runs it, and `agni packs push` carries the item files.
+  power:
+    name: Jetson power review, one file per item
+    items_dir: checklist

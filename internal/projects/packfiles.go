@@ -16,7 +16,8 @@ import (
 // project.yaml at the folder's top is read.
 //
 // It returns the project's id and the pack, its config bound from project.yaml and its files the
-// paths the config's profile, param, symbol, library and query tiers name. Each tier keeps a mount://
+// paths the config's profile, param, symbol, library and query tiers name, and the item files of
+// any checklist written as items_dir (agni issue 1812). Each tier keeps a mount://
 // URI as written, and a relative path names a file or a folder among files. kept lists those paths,
 // sorted. A pack's files carry no hash here, since the caller knows its own. The folder's other
 // files, such as its designs, are no part of the pack.
@@ -68,6 +69,27 @@ func PackFromFiles(files []string, read func(string) ([]byte, error)) (id string
 		return out, nil
 	}
 	cfg := project.GetConfig()
+	under := func(dir string) ([]string, error) {
+		var out []string
+		for _, f := range files {
+			if strings.HasPrefix(f, dir+"/") {
+				out = append(out, f)
+			}
+		}
+		return out, nil
+	}
+	itemFiles, err := ResolveChecklistDirs(cfg, src.ChecklistDirs, under, read)
+	if err != nil {
+		// Both wrapped, so a server still finds a file whose contents it lacks and asks for them.
+		return "", nil, nil, fmt.Errorf("%w: %s: %w", service.ErrInvalidArgument, ProjectDescriptor, err)
+	}
+	// The item files go with the pack, so a server reading the pushed files reads the same checklist.
+	for _, f := range itemFiles {
+		if slices.Contains(files, f) && !seen[f] {
+			seen[f] = true
+			kept = append(kept, f)
+		}
+	}
 	for _, t := range []struct {
 		refs []string
 		into *[]string

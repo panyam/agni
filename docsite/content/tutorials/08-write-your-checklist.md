@@ -169,9 +169,10 @@ Start with the items your team already argues about, not with the ones that are 
 An item bound to nothing is still worth adding as a `note:`, because the checklist is then complete
 and the automation gap is measurable rather than invisible.
 
-For a checklist of this size, hand-authoring the YAML is right. Teams running a few hundred items
-usually move to one file per item with the manifest generated from them, so items can be edited in
-parallel without conflicting.
+For a checklist of this size, hand-authoring the YAML is right. A checklist of a few hundred items
+is easier to own as one file per item, so items can be edited in parallel without conflicting. Name
+the folder with `items_dir:` in place of `areas:`, and agni reads the files directly, with no
+generator to keep in step. [Projects](../../guide/projects/#projectyaml) shows the file layout.
 
 ## Next
 
