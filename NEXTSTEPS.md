@@ -9,18 +9,21 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `bab03909`.
+Last pruned 2026-11-23, at `b11a2d72`.
 
 ## At a glance
 
 **#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 13 of 15. Its exercise is `make exercise-enterprise`, against
+Server) is active from 2026-11-21, at 14 of 15. Its exercise is `make exercise-enterprise`, against
 goapplib's fake GHES (`githubtest/cmd/fakegithub`, PR 1844), and CI runs it in its own job. At
-`bab03909` all 22 steps pass. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
+`b11a2d72` all 24 steps pass. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
 (PR 1832), and `make kind-up exercise-enterprise-helm` against `deploy/helm/agni` on kind (PR 1837),
 which needs helm and kind. `guide/deploying/` (PR 1843) walks an admin through the same steps, and
 nobody has followed it by hand on a fresh VM yet. Its "Try it on a new install" section (PR 1850)
 links Antmicro's Jetson baseboard and reviews it under `examples/jetson-project` as a pack.
+`agni serve --bootstrap` (PR 1852) applies a YAML file of connections, mounts, packs, designs and
+projects on every start. `/readyz` answers 503 until every entry applies, and the chart's readiness
+probe uses it. The exercise's restart step applies one in all three modes.
 
 - **agni is on goapplib v0.7.34, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
@@ -47,11 +50,7 @@ links Antmicro's Jetson baseboard and reviews it under `examples/jetson-project`
 
 ## Open, ranked
 
-1. **#1808**, `agni serve --bootstrap`, in progress on branch `bootstrap-1808`. The file declares
-   connections (secrets by reference), mounts, packs, projects and designs. A design the file
-   drops is reported, and `prune: true` deletes it. Bootstrap makes no reports, and `/readyz`
-   answers 503 until every entry applies (decisions on the issue).
-2. **#1851**, `designs link` keeps only the root sheet when the folder holds a `design.yaml`, and
+1. **#1851**, `designs link` keeps only the root sheet when the folder holds a `design.yaml`, and
    the viewer's Review panel ignores the packs in its address.
 
 Later work is #370 then
