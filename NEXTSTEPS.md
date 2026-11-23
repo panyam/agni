@@ -9,21 +9,23 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `04f5f2b1`.
+Last pruned 2026-11-23, at `67e095f7`.
 
 ## At a glance
 
 **#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 9 of 14. Its exercise is `make exercise-enterprise`, against
-a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job. At `04f5f2b1` all 21 steps
-pass three ways: plain, `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
-(PR 1832), and `make kind-up exercise-enterprise-helm` against `deploy/helm/agni` on kind (PR 1837).
-The helm run needs helm and kind. The guide (#1804) comes next.
+Server) is active from 2026-11-21, at 11 of 14. Its exercise is `make exercise-enterprise`, against
+a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job. At `3dbe743a` all 21 steps
+pass. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
+(PR 1832), and `make kind-up exercise-enterprise-helm` against `deploy/helm/agni` on kind (PR 1837),
+which needs helm and kind. `guide/deploying/` (PR 1843) walks an admin through the same steps, and
+nobody has followed it by hand on a fresh VM yet. #1805 (the demo repo) comes next.
 
 - **agni is on goapplib v0.7.33, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
-  `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). #1811 (OIDC) wires
-  oneauth's `oauth2/oidc` and waits on panyam/oneauth#566 for a fake issuer to test against. #1841
-  moves the exercise onto goapplib's fake GHES once panyam/goapplib#240 gives it TLS.
+  `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
+  in through an OpenID Connect provider beside or instead of GitHub, and `agni login --with oidc`
+  uses its device flow (PR 1842). The exercise signs in through the App only. #1841 moves the
+  exercise onto goapplib's fake GHES once panyam/goapplib#240 gives it TLS.
 - **A checklist can be a folder of item files** (`items_dir`), in a descriptor (PR 1835) or a
   standalone manifest, and `--checklist checklist/` takes the folder itself (PR 1839). `agni
   checklists packs/<id> --remote` lists a pack's checklists, and a server design takes its
