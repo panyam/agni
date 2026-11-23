@@ -9,17 +9,18 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `9a724274`.
+Last pruned 2026-11-23, at `bab03909`.
 
 ## At a glance
 
 **#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 12 of 14. Its exercise is `make exercise-enterprise`, against
+Server) is active from 2026-11-21, at 13 of 15. Its exercise is `make exercise-enterprise`, against
 goapplib's fake GHES (`githubtest/cmd/fakegithub`, PR 1844), and CI runs it in its own job. At
-`9a724274` all 22 steps pass in all three modes. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
+`bab03909` all 22 steps pass. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
 (PR 1832), and `make kind-up exercise-enterprise-helm` against `deploy/helm/agni` on kind (PR 1837),
 which needs helm and kind. `guide/deploying/` (PR 1843) walks an admin through the same steps, and
-nobody has followed it by hand on a fresh VM yet. #1805 (the demo repo) comes next.
+nobody has followed it by hand on a fresh VM yet. Its "Try it on a new install" section (PR 1850)
+links Antmicro's Jetson baseboard and reviews it under `examples/jetson-project` as a pack.
 
 - **agni is on goapplib v0.7.34, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
@@ -46,12 +47,12 @@ nobody has followed it by hand on a fresh VM yet. #1805 (the demo repo) comes ne
 
 ## Open, ranked
 
-1. **#1805**, a demo repo of designs and packs that a team copies into their own GitHub. The guide
-   names it.
-2. **#1846**, `make secrets` fails locally on the wire fixture's old page tokens. CI passes.
-3. **#1808**, bootstrap. Linked packs (PR 1819) give it `LinkPack` to call. Its scope is still
-   open: the leaning is a file beside `agni.yaml`, not inside it, that also declares runtime
-   mounts, plus what happens to a design the file drops and whether reports are made at start.
+1. **#1808**, `agni serve --bootstrap`, in progress on branch `bootstrap-1808`. The file declares
+   connections (secrets by reference), mounts, packs, projects and designs. A design the file
+   drops is reported, and `prune: true` deletes it. Bootstrap makes no reports, and `/readyz`
+   answers 503 until every entry applies (decisions on the issue).
+2. **#1851**, `designs link` keeps only the root sheet when the folder holds a `design.yaml`, and
+   the viewer's Review panel ignores the packs in its address.
 
 Later work is #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
