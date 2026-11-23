@@ -50,6 +50,9 @@ design that checks as its folder does (PR 1863).
 ## Open, ranked
 
 Nothing is ranked until a mission is picked. `~/.claude/skills/retriage/queue.sh` lists them.
+Off-mission work in flight: PR #1865 (#1860, scriptable `designs add`) is green and waits on merge,
+and #1858 is being worked in another session and shares `service/adddesigns.go` with it. #1864
+(`designs add` ignores intent) follows #1858.
 
 Later work is #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
