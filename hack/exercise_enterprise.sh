@@ -236,6 +236,9 @@ if [ "$mode" = bundle ]; then
   cp "$out/ca.pem" "$out/ca-dir/exercise-ca.pem"
   chmod 0644 "$out/ca-dir/exercise-ca.pem"
   mkdir -p "$out/connection-secrets"
+  # The bundle mounts the bootstrap folder from its first start, so it is made here, or docker makes
+  # it owned by root and the restart step can't write the file into it.
+  mkdir -p "$out/bootstrap" && chmod 0755 "$out/bootstrap"
   chmod 0644 "$out/secrets/"*
   cat >"$out/bundle.env" <<ENV
 AGNI_IMAGE=$AGNI_IMAGE
