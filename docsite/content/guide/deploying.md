@@ -163,9 +163,42 @@ agni packs link house packs@main --remote https://agni.example.com
 agni check designs/bb --pack house --remote https://agni.example.com
 ```
 
-No repo to try this with yet? Copy Antmicro's public [Jetson AGX Thor
-baseboard](https://github.com/antmicro/jetson-agx-thor-baseboard) into your server, and a
-`project.yaml` of your house rules into a second repo.
+No repo to try this with yet? [Try it on a new install](#try-it-on-a-new-install) uses a public
+board and agni's sample house rules.
+
+## Try it on a new install
+
+Say you want to see agni review a board before anyone puts a real design in. Antmicro publishes the
+baseboard for NVIDIA's Jetson AGX Thor under Apache-2.0, and agni's repo carries house rules for it
+in `examples/jetson-project` (agni issue 1805).
+
+Make an empty repo `hw/jetson-agx-thor-baseboard` on your server and install the App on it. Then
+copy the board in. Antmicro tags no revisions, so tag the two commits agni's samples name as 1.1.2
+and 1.1.3:
+
+```bash
+git clone https://github.com/antmicro/jetson-agx-thor-baseboard && cd jetson-agx-thor-baseboard
+git tag 1.1.2 3411086e6d6ad2384d0609c53cd6b96323f97c24
+git tag 1.1.3 8e087f4f946a925041380699dcde51ae8519f621
+git push https://github.example.com/hw/jetson-agx-thor-baseboard.git main --tags
+```
+
+Mount it, link the board at 1.1.3, and push the house rules from a checkout of agni's repo:
+
+```bash
+agni mounts add jetson github://hw/jetson-agx-thor-baseboard --ref main --connection hw --remote https://agni.example.com
+agni designs create jetson --remote https://agni.example.com
+agni designs link jetson schematic jetson/jetson-agx-thor-baseboard.kicad_sch@1.1.3 --remote https://agni.example.com
+agni designs link jetson board jetson/jetson-agx-thor-baseboard.kicad_pcb@1.1.3 --remote https://agni.example.com
+agni packs push examples/jetson-project --id jetson-rules --remote https://agni.example.com
+agni review designs/jetson --pack jetson-rules --remote https://agni.example.com
+```
+
+The review is "Jetson baseboard design review", with 15 items in five areas. On 1.1.3 about half
+of them fail, and each failure names the nets behind it. "Every rail carries a bulk capacitor"
+fails on `VCC_IN`, "every I2C bus has pull-ups" lists the camera buses, and the CAN item reads
+not-applicable, since the board has no CAN. `agni diff designs/jetson@1.1.2 designs/jetson@1.1.3
+--remote https://agni.example.com` then shows what changed between the two revisions.
 
 ## Check who can open it
 
