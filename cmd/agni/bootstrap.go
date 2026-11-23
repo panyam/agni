@@ -15,7 +15,7 @@ import (
 
 // readBootstrap reads and checks the --bootstrap file, so a typo stops the server before it listens.
 func readBootstrap(path string) (*service.BootstrapPlan, error) {
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(path) // #nosec G304 -- the operator names the file in --bootstrap, as they name --tls-cert
 	if err != nil {
 		return nil, fmt.Errorf("--bootstrap: %w", err)
 	}
