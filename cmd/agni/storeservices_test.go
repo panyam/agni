@@ -200,22 +200,25 @@ func TestARunningServerSweepsAReplacedArtifactsFiles(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	// The walk ages blobs/ before designs/, so a pass can land between the two, remove the old blob
+	// and skip the old view as still fresh. A later pass removes the view. Wait for both.
 	deadline := time.Now().Add(5 * time.Second)
+	var views []os.DirEntry
 	for {
 		_, err := os.Stat(blobPath(first))
-		if errors.Is(err, os.ErrNotExist) {
+		views, _ = os.ReadDir(filepath.Join(uploads, "designs", "mem"))
+		if errors.Is(err, os.ErrNotExist) && len(views) == 1 {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("the replaced artifact's blob %s is still there after the server ran a while", first)
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("the replaced artifact's blob %s is still there after the server ran a while", first)
+			}
+			t.Fatalf("the design keeps %d views after the server ran a while; want only the current one", len(views))
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 	if _, err := os.Stat(blobPath(second)); err != nil {
 		t.Errorf("the sweep removed the current artifact's blob: %v", err)
-	}
-	views, _ := os.ReadDir(filepath.Join(uploads, "designs", "mem"))
-	if len(views) != 1 {
-		t.Errorf("the design keeps %d views after the sweep; want only the current one", len(views))
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/encoding/protojson"
 	gproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
@@ -360,8 +361,12 @@ func TestChecklistsListsAPacksChecklists(t *testing.T) {
 		t.Errorf("checklists packs/gateway =\n%s\nwant split first, marked the default, then the project's own", out)
 	}
 	js, err := runAgni(t, "checklists", "packs/gateway", "--remote", srv.URL, "--format", "json")
-	if err != nil || !strings.Contains(js, `"name": "split"`) || !strings.Contains(js, `"id": "P2"`) {
-		t.Errorf("checklists packs/gateway --format json = %v\n%s; want split with its items", err, js)
+	var resp webapi.ListChecklistsResponse
+	if err == nil {
+		err = protojson.Unmarshal([]byte(js), &resp)
+	}
+	if err != nil || len(resp.GetChecklists()) < 2 || resp.GetChecklists()[0].GetName() != "split" || len(resp.GetChecklists()[0].GetManifest().GetAreas()[0].GetItems()) != 2 {
+		t.Errorf("checklists packs/gateway --format json = %v\n%s; want split first, with its two items", err, js)
 	}
 	for args, want := range map[string]string{
 		"designs/gw --remote": "name it as packs/<id>",
