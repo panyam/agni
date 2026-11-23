@@ -9,23 +9,21 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `6dcdac66`.
+Last pruned 2026-11-23, at `04f5f2b1`.
 
 ## At a glance
 
 **#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 7 of 12. Its exercise is `make exercise-enterprise`, against
-a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job. At `a635df6f` all 20 steps
-pass with no waits. At `b99c4a81` `make exercise-enterprise-bundle` passes the same 20 against
-`deploy/enterprise/compose.yaml` (PR 1832). Run `make image` before the bundle run until #1803
-makes the target build it. The Helm chart (#1803) comes next and puts agni behind an ingress with
-`--trusted-proxy`.
+Server) is active from 2026-11-21, at 9 of 14. Its exercise is `make exercise-enterprise`, against
+a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job. At `04f5f2b1` all 21 steps
+pass three ways: plain, `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
+(PR 1832), and `make kind-up exercise-enterprise-helm` against `deploy/helm/agni` on kind (PR 1837).
+The helm run needs helm and kind. The guide (#1804) comes next.
 
-- **agni is on goapplib v0.7.32, oneauth v0.3.20, servicekit v0.2.5 and ci-actions v0.1.4.**
+- **agni is on goapplib v0.7.33, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). #1811 (OIDC) wires
-  oneauth's `oauth2/oidc` and waits on panyam/oneauth#566 for a fake issuer to test against. #1826
-  adopts what goapplib added past the bump: the fake GHES with App limits, the seeded fake, sealed
-  server secrets, and bucket syncs that skip held files.
+  oneauth's `oauth2/oidc` and waits on panyam/oneauth#566 for a fake issuer to test against. #1841
+  moves the exercise onto goapplib's fake GHES once panyam/goapplib#240 gives it TLS.
 - **A checklist can be a folder of item files** (`items_dir`), in a descriptor (PR 1835) or a
   standalone manifest, and `--checklist checklist/` takes the folder itself (PR 1839). `agni
   checklists packs/<id> --remote` lists a pack's checklists, and a server design takes its
@@ -34,7 +32,7 @@ makes the target build it. The Helm chart (#1803) comes next and puts agni behin
   `make -C examples/jetson-project board revision rev-b`.
 - **`--store` takes `file://`, `sqlite://`, `postgres://` and `datastore://`** (PRs 1822 and 1825),
   and two servers can share one store. `--uploads` takes `s3://` and `gs://` with a local
-  `--uploads-cache` (PR 1834). #1803 can offer postgres and a bucket in place of volumes.
+  `--uploads-cache` (PR 1834). The Helm chart takes either in place of its claim.
   `internal/authgate/keys.go` reads API keys through oneauth's `APIKeyAdmin`.
 - **Parked work lives in each mission's `## Later` list.** The 62 `waiting` issues were closed into
   those lists on 2026-11-21. Anything that fits no mission is on #1806, and
@@ -46,9 +44,9 @@ makes the target build it. The Helm chart (#1803) comes next and puts agni behin
 
 ## Open, ranked
 
-1. **#1803**, the Helm chart, reusing the compose bundle's flags behind an ingress. It wants
-   panyam/ci-actions#14 (kind-ingress) and #15 (helm-oci-publish). #1804 (the guide) walks an
-   admin through the bundle after it. PR 1834 moves to goapplib v0.7.30.
+1. **#1804**, the guide that takes an admin from a fresh machine to a running agni against their own
+   GitHub Enterprise Server, through the compose bundle or the Helm chart. Its "Done when" runs
+   against the exercise's fake GHES.
 2. **#1808**, bootstrap. Linked packs (PR 1819) give it `LinkPack` to call. Its scope is still
    open: the leaning is a file beside `agni.yaml`, not inside it, that also declares runtime
    mounts, plus what happens to a design the file drops and whether reports are made at start.
