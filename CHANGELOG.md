@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+### Fixed
+
+- agnids starts over a store folder it can't create (issue 1847). It only reads agni serve's
+  `--store`, so it no longer makes the folder, and a folder that isn't there yet reads as empty. The
+  agnids image starts again. The release's kind cluster pulls the published agni image instead of
+  loading a multi-platform image it can't import.
+
 ## [0.11.0] - 2026-11-23
 
 A team can run agni inside its own network, against its own GitHub Enterprise Server. Each release

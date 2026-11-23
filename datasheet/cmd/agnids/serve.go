@@ -54,7 +54,7 @@ func serveCmd() *cobra.Command {
 			if access.connectionsKey != "" && (!access.auth || storeURL == "" || uploadsURL == "") {
 				return fmt.Errorf("--connections-key checks each caller's own connections, so it needs --auth %s, --store and --uploads", authgate.Tokens)
 			}
-			st, uploadsDir, err := storeurl.Open(storeURL, uploadsURL, storeurl.WithUploadsCache(uploadsCache))
+			st, uploadsDir, err := storeurl.Open(storeURL, uploadsURL, storeurl.WithUploadsCache(uploadsCache), storeurl.ReadOnly())
 			if err != nil {
 				return err
 			}

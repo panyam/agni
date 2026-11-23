@@ -18,6 +18,10 @@ on:
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
       - datasheet/**
+      # agnids builds on the root module's store, mount and auth packages (agni issue 1847).
+      - internal/**
+      - mountset/**
+      - service/**
       - web-shared/**
       - go.mod
       - go.sum

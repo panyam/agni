@@ -33,6 +33,16 @@ func NewDir(root string) (*Dir, error) {
 	return &Dir{root: abs}, nil
 }
 
+// OpenDir returns a Dir over root without making it, for a reader of another process's store. A
+// root that isn't there yet reads as empty, and the first write makes it.
+func OpenDir(root string) (*Dir, error) {
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	return &Dir{root: abs}, nil
+}
+
 // Root is the folder d keeps its records in.
 func (d *Dir) Root() string { return d.root }
 
