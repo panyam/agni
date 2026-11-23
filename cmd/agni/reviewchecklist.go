@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -35,7 +36,7 @@ func reviewManifestFor(ctx context.Context, checklist string, stdin io.Reader, d
 		man, err := review.Load(stdin)
 		return man, "", err
 	}
-	if isChecklistFile(checklist) {
+	if isChecklistFile(checklist) || isChecklistFolder(checklist) {
 		man, err := loadManifest(checklist)
 		return man, "", err
 	}
@@ -46,6 +47,18 @@ func reviewManifestFor(ctx context.Context, checklist string, stdin io.Reader, d
 // A checklist name is a plain word, so anything spelled as a YAML file is one.
 func isChecklistFile(v string) bool {
 	return strings.HasSuffix(v, ".yaml") || strings.HasSuffix(v, ".yml")
+}
+
+// isChecklistFolder reports whether a --checklist value names a folder of item files (agni issue
+// 1836). It must be spelled as a path, ending in a slash or holding one, such as checklist/ or
+// ./checklist, so a plain word still names a project checklist when a folder of that name sits in
+// the current directory.
+func isChecklistFolder(v string) bool {
+	if !strings.ContainsAny(v, `/\`) {
+		return false
+	}
+	fi, err := os.Stat(v)
+	return err == nil && fi.IsDir()
 }
 
 // resolveChecklist returns the project checklist called name (the project's first when name is

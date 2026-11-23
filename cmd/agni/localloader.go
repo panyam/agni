@@ -200,13 +200,19 @@ func (l *localLoader) designEntry(ctx context.Context, uri mounts.URI) (mounts.U
 // and sends the checklist to the service as a VALUE (WS9-050), while the Manifest method uses it for
 // GetReviewManifest, which serves a client holding a ref. Both share this one read so they agree
 // on what a well-formed manifest is.
+// loadManifest reads the checklist at path: a manifest file, one whose items_dir names a folder of
+// item files beside it, or such a folder (agni issue 1836). It reads through review.LoadFS rooted at
+// path's own folder, so an items_dir stays under the manifest's folder.
 func loadManifest(path string) (review.Manifest, error) {
-	f, err := os.Open(path) // #nosec G304 -- reads a file the user named or one its descriptor declares
+	abs, err := filepath.Abs(path)
 	if err != nil {
 		return review.Manifest{}, err
 	}
-	defer f.Close()
-	return review.Load(f)
+	man, err := review.LoadFS(os.DirFS(filepath.Dir(abs)), filepath.Base(abs))
+	if err != nil {
+		return review.Manifest{}, fmt.Errorf("%s: %w", path, err)
+	}
+	return man, nil
 }
 
 // localPath turns an artifact URI back into a local path for the CLI's readers.
