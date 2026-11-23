@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `a394e384`.
+Last pruned 2026-11-23, at `ec677099`.
 
 ## At a glance
 
@@ -20,7 +20,9 @@ Server) closed on 2026-11-23 at 17 of 17, with `make exercise-enterprise` passin
 #1806. `guide/deploying/` walks an admin through it, and nobody has followed it by hand on a fresh
 VM yet. `agni serve --config serve.yaml` (PR 1856) holds serve's flags and the `--bootstrap`
 resources (PR 1852), and the chart passes only `--config`. A stored design's check now runs its
-`design.yaml` intent, pushed or linked (PR 1859).
+`design.yaml` intent, pushed or linked (PR 1859). Push, add and link also keep the companions a
+`design.yaml` declares and read the entry it names, so an ODB++ board and an EDIF schematic stay one
+design that checks as its folder does (PR 1863).
 
 - **agni is on goapplib v0.7.34, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
