@@ -10,12 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
-### Fixed
+## [0.11.1] - 2026-11-23
 
-- agnids starts over a store folder it can't create (issue 1847). It only reads agni serve's
-  `--store`, so it no longer makes the folder, and a folder that isn't there yet reads as empty. The
-  agnids image starts again. The release's kind cluster pulls the published agni image instead of
-  loading a multi-platform image it can't import.
+v0.11.0's release failed before it published agnids, the chart and the GitHub Release. agnids
+exited at start, trying to create its `--store` folder as a user that can't, and kind couldn't load
+the multi-platform agni image (PR 1848, issue 1847). agnids now opens the store without making the
+folder, and the release's kind pulls the image from GHCR. CI's scan reads the whole history (PR
+1849). It is a patch with no change to an existing Go API. Coming from v0.10.x, read v0.11.0's
+Breaking section first. The full write-up is [RELEASES/v0.11.1.md](RELEASES/v0.11.1.md).
 
 ## [0.11.0] - 2026-11-23
 
