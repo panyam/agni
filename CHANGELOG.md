@@ -53,6 +53,10 @@ GitHub Release body carries.
 
 ### Changed
 
+- Every module moves to goapplib v0.7.33 and oneauth v0.3.21, and CI to panyam/ci-actions v0.1.5
+  (issue 1826). A private GitHub mount now asks GitHub only through a viewer's GitHub connections,
+  so a viewer's connection of another kind never reaches api.github.com.
+
 - agni builds on goapplib v0.7.29 and oneauth v0.3.18 in every module (issue 1802). goapplib's fake
   GitHub listens on a chosen address and names it in every URL it hands out, so the enterprise
   exercise runs against agni in a container, and goapplib seals a server connection's secret. A

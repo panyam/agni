@@ -250,7 +250,7 @@ func Open(cfg Config) (*Table, error) {
 		t.users = readOnlyTokens{users}
 		copts := []connections.Option{connections.WithUserTokens(t.users, cfg.ConnectionsKey, noRefresh)}
 		if gh != nil {
-			copts = append(copts, connections.WithReadCheck(gh.CanRead))
+			copts = append(copts, connections.WithReadCheckFor("github", gh.CanRead, connections.KindGitHubUser, connections.KindGitHubToken))
 		}
 		t.svc = connections.NewService(t.conns, copts...)
 	}
@@ -258,7 +258,7 @@ func Open(cfg Config) (*Table, error) {
 		t.conns = cs
 		var copts []connections.Option
 		if gh != nil {
-			copts = append(copts, connections.WithReadCheck(gh.CanRead))
+			copts = append(copts, connections.WithReadCheckFor("github", gh.CanRead, connections.KindGitHubUser, connections.KindGitHubToken))
 		}
 		if cfg.ConnectionsKey != "" && users != nil {
 			t.users = users
