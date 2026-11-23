@@ -50,8 +50,6 @@ design that checks as its folder does (PR 1863).
 ## Open, ranked
 
 Nothing is ranked until a mission is picked. `~/.claude/skills/retriage/queue.sh` lists them.
-Off-mission and ready: #1864 (`designs add` ignores a board's `design.yaml` intent, P2). #1858
-(PR #1863) and #1860 (PR #1865) have merged.
 
 Later work is #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
