@@ -272,6 +272,9 @@ func (c *packsClient) push(ctx context.Context, w io.Writer, arg, id, title stri
 	if err != nil {
 		return err
 	}
+	if note := localUnlisted(descriptor); note != "" {
+		fmt.Fprintln(unlistedOut, note)
+	}
 	out, err := c.write(ctx, pack, files)
 	if err != nil {
 		return fmt.Errorf("%s: %w", descriptor, err)

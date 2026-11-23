@@ -43,6 +43,8 @@ type FSStore struct {
 	walks    *walkCache
 	projectC *parseCache[*webapi.Project]
 	designC  *parseCache[*webapi.Design]
+	// unlisted, when set, hears of each descriptor beside a tier folder it doesn't list (agni 1861).
+	unlisted func(Unlisted)
 }
 
 // NewFSStore returns a store over the given trees, searched in order.
@@ -278,6 +280,7 @@ func (s *FSStore) readProject(t Tree, dir, name string, deps *[]string) (string,
 	if err := s.attachSources(t, u, src, p.Config, deps); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
+	s.noteUnlisted(t, dir, name, src)
 	if err := readChecklistDirs(t, dir, src, p.Config, deps); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
@@ -466,6 +469,7 @@ func (s *FSStore) readDesign(t Tree, dir, name string, deps *[]string) (string, 
 	if err := s.attachSources(t, base, src, d.Config, deps); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
+	s.noteUnlisted(t, dir, name, src)
 	if err := readChecklistDirs(t, dir, src, d.Config, deps); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}

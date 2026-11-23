@@ -584,7 +584,10 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// Each mount becomes one tree in the filesystem-backed store. Only this line of the serve wiring
 	// knows that projects live in directories, so swapping in another service.ProjectStore changes
 	// this line alone.
-	projectStore := projects.NewFSStoreFunc(liveTrees(table))
+	// A project beside a tier folder it doesn't list is noted in the log when first read (agni 1861).
+	projectStore := projects.NewFSStoreFunc(liveTrees(table)).OnUnlisted(func(u projects.Unlisted) {
+		fmt.Fprintln(cmd.ErrOrStderr(), u.Note(u.Descriptor.String()))
+	})
 	// One resolver for every rule-running surface. Per-design config reaches a run through this,
 	// and the startup flags below are only the DEFAULT for a design with no project (agni issue 173).
 	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: table}, Guard: guard}

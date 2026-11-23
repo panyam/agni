@@ -121,7 +121,9 @@ descriptor or `mount://` URIs, and each path is a file or a directory of files:
   one.
 
 Nothing is read for its folder's name. If no descriptor names a folder called `profiles/`, that
-folder is not in the run, and to run without a tier you delete its line. A path that names nothing is
+folder is not in the run, and to run without a tier you delete its line. A project written for an
+older release may keep such a folder unlisted. Every surface that reads the project then prints a
+note naming the folder and the line to add, such as `params: [params]` (agni issue 1861). A path that names nothing is
 a load error, since reading on without it would report as though the team declared no such tier. A
 flag can name the same directory the project names. That adds nothing, and for `profiles` it is
 refused, since the profiles would load twice.

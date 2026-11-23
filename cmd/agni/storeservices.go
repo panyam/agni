@@ -132,7 +132,7 @@ func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, 
 		resolver.Designs = catalog
 	}
 	// A linked pack read from a private source opens only for who can read it (agni issue 1801).
-	packSvc := service.NewPackService(packStore, resolver.Blob).WithImporter(projects.PackFromFiles).WithGuard(guard)
+	packSvc := service.NewPackService(packStore, resolver.Blob).WithImporter(notingImporter(log)).WithGuard(guard)
 	if resolver != nil {
 		// A snapshot may name the packs it is read under, packs/{k} (agni issue 1704).
 		resolver.Packs = packSvc
