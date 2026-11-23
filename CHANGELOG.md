@@ -10,83 +10,17 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
-### Fixed
+## [0.11.0] - 2026-11-23
 
-- A sign-in refused because the GitHub App lacks the Members permission now says so (issue 1841).
-  The server asks GitHub about an `org:` entry's members through the App, and GitHub answers 403
-  without that permission. The refusal used to read "GitHub answered 403", and now names the
-  permission to add. The enterprise exercise runs on goapplib's fake GHES and checks this refusal.
-
-### Added
-
-- A Helm chart for agni and agnids (issue 1803). Each release publishes it to
-  `oci://ghcr.io/panyam/charts/agni` at its version. It runs the enterprise bundle's server behind
-  the cluster's ingress with `--trusted-proxy`, takes every secret from a Secret the team makes, and
-  keeps the store and uploads on a claim, in postgres or in a bucket. The release runs the
-  enterprise exercise against it on kind over the published image before publishing it. The
-  exercise also checks that a browser's session cookie is Secure.
-
-- A deployment bundle for a team's own GitHub or GitHub Enterprise Server (issue 1802). Each release
-  attaches `agni-enterprise-<version>.tar.gz`, a compose file and env example that run `agni serve`
-  with TLS, `--auth tokens`, sign-in through a GitHub App, a connections key and webhooks, and agnids
-  beside it on a profile. Every secret comes from a file the env names. `--github-api` is now a
-  documented flag on both servers, and `agni healthcheck --tls` probes a server that ends TLS
-  itself. The release runs the enterprise exercise against the bundle over the published image.
-
-- A server connection can keep its secret sealed (issue 1802). `agni connections add --seal` reads a
-  token, or a GitHub App's key, where the CLI runs, and the server seals it under `--connections-key`,
-  so a server in a container needs no reference into its own environment. `agni connections rotate`
-  replaces it while mounts read through the connection. The calls are
-  `CreateConnectionRequest.server_secret`, `Connection.sealed` and
-  `ConnectionService.RotateConnection`.
-
-- `agni serve` and `agnids` run `--auth tokens` behind a proxy that ends TLS, such as a Kubernetes
-  ingress or a cloud load balancer (issue 1810). `--trusted-proxy 10.0.0.0/8` names the proxy. The
-  server then serves plain HTTP on any address, and a request the proxy took over HTTPS gets Secure
-  cookies. X-Forwarded-Proto from any other peer is ignored. Signing in with GitHub behind a proxy
-  needs `--public-url`.
-
-- A pack reads from a project folder in a repo and follows its branch (issue 1801). `agni packs link
-  house rules@main` links one, and a push webhook, `--poll` or `agni packs sync` moves it to the
-  branch's new commit, so the next check runs the new rules. A tag or commit pins it. Each report
-  names the commit its packs were read at. A pack from a private repo opens only for who can read the
-  repo. The packs page links one, and a linked pack's page has Sync and Unlink. The calls are
-  `PackService.LinkPack`, `UnlinkPack` and `SyncPack`, with `Pack.source` and `Report.pack_versions`.
-
-- The CLI trusts a team's own CA from `AGNI_CA_FILE`, for every `--remote` call and for `agni login`
-  (issue 1800). The client libraries already took a CA file. `make exercise-enterprise` runs agni
-  serve with TLS, tokens and sign-in through a GitHub App against a fake GitHub Enterprise Server,
-  and CI runs it.
-
-### Changed
-
-- Every module moves to goapplib v0.7.33 and oneauth v0.3.21, and CI to panyam/ci-actions v0.1.5
-  (issue 1826). A private GitHub mount now asks GitHub only through a viewer's GitHub connections,
-  so a viewer's connection of another kind never reaches api.github.com.
-
-- agni builds on goapplib v0.7.29 and oneauth v0.3.18 in every module (issue 1802). goapplib's fake
-  GitHub listens on a chosen address and names it in every URL it hands out, so the enterprise
-  exercise runs against agni in a container, and goapplib seals a server connection's secret. A
-  GitHub sign-in callback with a bad state now answers 400.
-
-- agni builds on goapplib v0.7.27 in every module (issue 1820). A GitHub mount now reads a Git LFS
-  file whose object is smaller than its pointer, or whose repo has no `.gitattributes`, as the
-  object, where before its size didn't match its hash. The release's folder views for S3, GCS and
-  SharePoint snapshots, `blobs.Cached` and Entra workload identity wait for issues 1729 and 1730.
-
-- agni builds on goapplib v0.7.26 and oneauth v0.3.16 in every module. goapplib's mount drivers now
-  take a typed credential instead of a token source, and agni passes the connection service's
-  `Credentials`. A `github://` mount now swaps a Git LFS pointer for its object, and a folder mount
-  refuses a pointer. S3, GCS and SharePoint mounts, and oneauth's OIDC sign-in, need agni wiring in
-  issues 1729, 1730 and 1811.
-
-### Fixed
-
-- A mount, a link or a folder read that meets a Git LFS pointer it can't resolve now fails with
-  FAILED_PRECONDITION naming the file (issue 1809). Before, a missing LFS object answered NOT_FOUND,
-  as if the mount were gone, and a folder's refusal reached the caller as an internal error. The
-  enterprise exercise now keeps hw/baseboard's schematic and board in Git LFS, and
-  `tools/fakegithub --seed` takes an `lfs` list per commit.
+A team can run agni inside its own network, against its own GitHub Enterprise Server. Each release
+ships a compose bundle and a Helm chart (PRs 1832 and 1837), and both sign people in through a GitHub
+App or an OpenID Connect provider (PR 1842). The guide `guide/deploying/` walks an admin through it
+(PR 1843). The store takes sqlite, postgres or Datastore, and two servers can share one (PRs 1822 and
+1825). Uploads can sit in an S3 or Cloud Storage bucket (PR 1834), and a design can link from an S3,
+Cloud Storage or SharePoint folder (PR 1831). A pack follows a branch of a repo (PR 1819), and a
+checklist can be a folder of item files (PRs 1835 and 1839). It is a minor release. Four exported
+interfaces and methods in `service` and `mountset` change shape, and the Breaking section has a
+migration line for each. The full write-up is [RELEASES/v0.11.0.md](RELEASES/v0.11.0.md).
 
 ## [0.10.0] - 2026-11-21
 
