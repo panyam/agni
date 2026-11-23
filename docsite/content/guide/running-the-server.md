@@ -853,35 +853,8 @@ Say a team wants that shared server on one machine, against its own GitHub Enter
 release attaches `agni-enterprise-<version>.tar.gz`, which unpacks into a folder holding a
 `compose.yaml` and an `env.example` (agni issue 1802). The bundle runs `agni serve` with every flag
 this page covers: TLS from your certificate, `--auth tokens`, sign-in through a GitHub App, a
-connections key and a webhook secret.
-
-```bash
-tar -xzf agni-enterprise-v0.11.0.tar.gz && cd agni-enterprise
-cp env.example .env              # fill it in, and make the secret files it names
-docker compose up -d             # then open AGNI_PUBLIC_URL and sign in with GitHub
-```
-
-- Each secret is a file on the machine that `.env` names. Compose mounts it read-only under
-  `/run/secrets`, and no secret value sits in `compose.yaml` or `.env`. The server runs as uid
-  10001, so each file must be readable by it, for example with `chown 10001` and `chmod 0400`.
-- A connection the server reads repos through can't name a variable or file on your own machine,
-  since the server runs in a container. `agni connections add hw --seal --github-token env:HW_TOKEN`
-  reads the token where the CLI runs, and the server seals it in the store under the connections key.
-  `agni connections rotate hw --github-token env:HW_TOKEN_NEXT` replaces it while mounts read through
-  the connection. A token the server should read itself goes in `AGNI_CONNECTION_SECRETS`, a folder
-  mounted read-only at `/run/agni/connections`, named as `--github-token file:/run/agni/connections/hw`.
-- `AGNI_GITHUB_API` is your server's REST API, `https://<host>/api/v3` on GitHub Enterprise Server.
-  `agni serve` reads mounts, signs people in and checks access through it, as its `--github-api` flag.
-- `AGNI_CA_DIR` is a folder of CA certificates both servers trust beside the system's, such as the
-  CA that signed your GitHub Enterprise Server's certificate. Leave it empty when a public CA signed
-  it.
-- The `data` volume holds the store and the uploads. Back it up with the connections key file, since
-  the people's tokens in it are sealed with that key.
-- An upgrade changes `AGNI_VERSION` in `.env` and runs `docker compose up -d` again.
-- `docker compose --profile datasheets up -d` adds the datasheet workbench with the same certificate
-  and tokens.
-- `make exercise-enterprise-bundle` runs the enterprise exercise against the bundle over an image,
-  and each release runs it over the published one.
+connections key and a webhook secret. [Deploying](../deploying/) walks an admin through it, from
+registering the App to checking who can open a design.
 
 ### Behind a proxy that ends TLS
 
@@ -915,37 +888,8 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files \
 Each release publishes a Helm chart beside the images, as `oci://ghcr.io/panyam/charts/agni` at
 the release's version (agni issue 1803). It runs the same server as the enterprise bundle, behind
 your ingress controller, which ends TLS. agni trusts it through `--trusted-proxy`.
-
-```bash
-kubectl create secret generic agni \
-  --from-file=connections-key=connections.key \
-  --from-file=github-client-secret=github-client-secret \
-  --from-file=github-webhook-secret=github-webhook-secret
-kubectl create secret tls agni-tls --cert=tls.crt --key=tls.key
-helm install agni oci://ghcr.io/panyam/charts/agni --version 0.11.0 \
-  --set publicURL=https://agni.example.com --set ingress.host=agni.example.com \
-  --set github.api=https://github.example.com/api/v3 --set github.clientID=Iv1.0000000000000000 \
-  --set 'github.allow={org:acme}' --set 'trustedProxies={10.244.0.0/16}'
-```
-
-- You make every Secret with kubectl, and the chart makes none, so no secret sits in a values file
-  or in helm's release history. `secretName` names the generic Secret, and `ingress.tlsSecret` the
-  certificate.
-- `trustedProxies` is your cluster's pod range, where the ingress controller's pods run. The chart
-  refuses to render without it, since agni would refuse to start.
-- One pod runs, and an upgrade stops it before starting the next, since one server writes the store
-  and holds sign-ins in flight (agni issue 1827 covers several).
-- The store and the uploads live on a PersistentVolumeClaim, which `helm uninstall` keeps. `store`
-  takes a `postgres://` URL, with `PGPASSWORD` set through `env` from a Secret. `uploads` takes an
-  `s3://` or `gs://` bucket, with its cache on the claim.
-- `caConfigMap` names a ConfigMap of CA certificates both servers trust beside the system's.
-  `connectionSecrets` names a Secret mounted at `/run/agni/connections`, as the bundle's folder is.
-- `--set datasheets.enabled=true --set datasheets.host=...` adds the workbench on its own host. With
-  the store on the claim it runs on agni's node, since the claim mounts on one node.
-- A token for a script comes from `kubectl exec deploy/agni -- agni token create ops --store
-  file:///var/lib/agni/meta`.
-- `make kind-up exercise-enterprise-helm` runs the enterprise exercise against the chart on a kind
-  cluster, and each release runs it over the published image before publishing the chart.
+[Deploying](../deploying/#or-start-it-with-the-helm-chart) covers the Secrets, the values and the
+upgrade.
 
 ### Who can open a design linked from a private repo
 
