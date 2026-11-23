@@ -680,6 +680,12 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		// A push or a poll moves the designs and packs that follow a branch or a folder (agni
 		// issues 1726, 1801).
 		f := &follower{designs: designSvc, packs: packSvc, life: life, log: cmd.ErrOrStderr()}
+		// Ending life stops the poll loop and tells a running move to stop. The server then waits
+		// for them, so a store write never outlives it (agni issue 1867).
+		defer func() {
+			stop()
+			f.wg.Wait()
+		}()
 		if len(o.webhookSecret) > 0 {
 			mux.Handle("POST "+githubHookPath, f.githubHook(o.webhookSecret))
 		}

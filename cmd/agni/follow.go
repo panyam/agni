@@ -36,7 +36,8 @@ type follower struct {
 	life context.Context
 	log  io.Writer
 	mu   sync.Mutex
-	// wg counts the moves still running, for a test to wait on.
+	// wg counts the moves and the poll loop still running. The server waits on it after life ends,
+	// so it never exits with a sync half-written to its store (agni issue 1867).
 	wg sync.WaitGroup
 }
 
@@ -162,7 +163,9 @@ func renewSubscriptions(ctx context.Context, t *mountset.Table, clientState []by
 // poll runs PollSources every interval until the server stops.
 func (f *follower) poll(every time.Duration) {
 	t := time.NewTicker(every)
+	f.wg.Add(1)
 	go func() {
+		defer f.wg.Done()
 		defer t.Stop()
 		for {
 			select {
