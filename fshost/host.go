@@ -154,12 +154,9 @@ func (h *Host) Manifest(_ context.Context, uri mounts.URI) (review.Manifest, err
 	if err != nil {
 		return review.Manifest{}, err
 	}
-	f, err := h.root.Open(n)
-	if err != nil {
-		return review.Manifest{}, err
-	}
-	defer f.Close()
-	return review.Load(f)
+	// A manifest naming items_dir, or a folder of item files, reads as the server reads one (agni
+	// issue 1836).
+	return review.LoadFS(h.root, n)
 }
 
 // Convention parses a naming-convention config. Absent is an error once named.

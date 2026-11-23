@@ -119,7 +119,7 @@ On stderr it says which checklist it picked:
 A run's outcomes do not say which checklist scored them, so a checklist you did not type has to
 announce itself. `--checklist <name>` runs another one the project declares, and a
 value ending in `.yaml` is read as a manifest file instead, for a checklist that lives outside the
-project.
+project. A folder of item files works there too, written as a path such as `checklist/`.
 
 ## A page you can walk
 

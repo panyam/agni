@@ -133,7 +133,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 
 | flag | what it does |
 |---|---|
-| `--checklist <name-or-file>` | which checklist to run. A value ending in `.yaml` or `.yml` is a review manifest file read from outside the project, and `-` reads one from stdin; any other value names a checklist declared under `checklists:` in the design's `project.yaml`. Optional when the design belongs to a project that declares one, since the project's first checklist is its default |
+| `--checklist <name-or-file>` | which checklist to run. A value ending in `.yaml` or `.yml` is a review manifest file read from outside the project, and `-` reads one from stdin. A manifest file may name `items_dir:`, a folder of item files under its own folder, and a folder written as a path, such as `checklist/` or `./checklist`, reads as a checklist titled with the folder's name; any other value names a checklist declared under `checklists:` in the design's `project.yaml`. Optional when the design belongs to a project that declares one, since the project's first checklist is its default |
 | `--conventions <file>` | a naming-convention config, whose rules join the catalog and whose lexicon reaches the design read |
 | `--profile-path <dir>` | interface-profile declarations added to the catalog |
 | `--params <dir>` | a datasheet parameter set, enabling datasheet-backed items |

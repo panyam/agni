@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 
 	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check/naming"
@@ -117,12 +118,9 @@ func (l *osLoader) Manifest(ctx context.Context, uri mounts.URI) (review.Manifes
 	if err != nil {
 		return review.Manifest{}, err
 	}
-	f, err := os.Open(abs) // #nosec G304 -- abs comes from mountset.Resolve, which refuses a path outside its mount
-	if err != nil {
-		return review.Manifest{}, err
-	}
-	defer f.Close()
-	return review.Load(f)
+	// Rooted at the manifest's own folder, inside the mount, so an items_dir it names stays there too
+	// (agni issue 1836).
+	return review.LoadFS(os.DirFS(filepath.Dir(abs)), filepath.Base(abs))
 }
 
 // Convention resolves and parses a naming-convention config (YAML) under the mount (WS9-128). Like a
