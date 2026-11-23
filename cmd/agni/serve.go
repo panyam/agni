@@ -96,6 +96,7 @@ func serveCmd() *cobra.Command {
 	var oidcIssuer, oidcClientID, oidcSecretRef, oidcLabel string
 	var oidcAllow []string
 	var pollEvery time.Duration
+	var bootstrapPath string
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -133,6 +134,15 @@ func serveCmd() *cobra.Command {
 			}
 			if (webhookSecretRef != "" || graphStateRef != "" || pollEvery != 0) && (store == nil || uploadsDir == "") {
 				return fmt.Errorf("--github-webhook-secret and --poll move linked designs, so they need --store and --uploads")
+			}
+			var plan *service.BootstrapPlan
+			if bootstrapPath != "" {
+				if store == nil || uploadsDir == "" {
+					return fmt.Errorf("--bootstrap makes designs, packs and mounts in the store, so it needs --store and --uploads")
+				}
+				if plan, err = readBootstrap(bootstrapPath); err != nil {
+					return err
+				}
 			}
 			if pollEvery < 0 {
 				return fmt.Errorf("--poll %s: want a positive duration, such as 5m", pollEvery)
@@ -193,7 +203,7 @@ func serveCmd() *cobra.Command {
 			}
 			return runViewer(cmd, viewerOpts{
 				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey, oidcSignIn: oidcIn,
-				webhookSecret: hookSecret, graphState: graphState, s3Endpoint: s3Endpoint, gcsEndpoint: gcsEndpoint, graphAPI: graphAPI, poll: pollEvery, githubSignIn: signIn, publicURL: publicURL,
+				webhookSecret: hookSecret, graphState: graphState, s3Endpoint: s3Endpoint, gcsEndpoint: gcsEndpoint, graphAPI: graphAPI, poll: pollEvery, bootstrap: plan, githubSignIn: signIn, publicURL: publicURL,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
@@ -260,6 +270,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&s3Endpoint, "s3-endpoint", "", "the S3 API an s3:// mount reads, for an S3-compatible store such as MinIO. Empty is AWS (agni issue 1730)")
 	c.Flags().StringVar(&gcsEndpoint, "gcs-endpoint", "", "the Cloud Storage API a gs:// mount reads. Empty is Google's (agni issue 1730)")
 	c.Flags().StringVar(&graphAPI, "graph-api", "", "the Microsoft Graph API a msgraph:// mount reads, for a national cloud. Empty is https://graph.microsoft.com/v1.0 (agni issue 1729)")
+	c.Flags().StringVar(&bootstrapPath, "bootstrap", "", "a YAML file naming the connections, mounts, packs, designs and projects this server should hold (agni issue 1808). The server applies it at start and again until every entry applies, and /readyz answers 503 until then. An entry that already matches is left alone. A stored design, pack or project the file doesn't name is logged, and prune: true in the file deletes it. Needs --store and --uploads")
 	c.Flags().DurationVar(&pollEvery, "poll", 0, "ask every source a linked design follows whether it moved, this often, such as 5m (agni issue 1726). It resolves each branch or folder once per pass, one request to GitHub for a repo, and syncs or marks the designs behind it. 0 polls nothing. Needs --store and --uploads")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with, HTTP/2 included, so gRPC clients reach the server over TLS; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
@@ -381,6 +392,8 @@ type viewerOpts struct {
 	s3Endpoint, gcsEndpoint, graphAPI string
 	// poll is --poll, how often the server asks followed sources whether they moved. 0 never asks.
 	poll time.Duration
+	// bootstrap is --bootstrap read, the resources the server makes at start. Nil makes none.
+	bootstrap *service.BootstrapPlan
 	// follow, when non-nil, receives the server's follower, for a test to wait on its moves.
 	follow func(*follower)
 }
@@ -639,6 +652,8 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if err != nil {
 		return err
 	}
+	connSvc := service.NewConnectionService(table.Connections(), table.MountsUsing).WithUserTokens(table).WithBaseURL(o.githubAPI)
+	var boot *bootstrapper
 	if runtime {
 		// An artifact links to a mount, and a mount with artifacts linked to it isn't deleted under
 		// them (agni issue 1723).
@@ -672,6 +687,13 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		if o.follow != nil {
 			o.follow(f)
 		}
+		if o.bootstrap != nil {
+			boot = &bootstrapper{
+				b:    service.Bootstrap{Connections: connSvc, Workspace: workspace, Packs: packSvc, Designs: designSvc, Projects: projectSvc},
+				plan: o.bootstrap, lock: &f.mu, log: cmd.ErrOrStderr(),
+			}
+			go boot.run(life)
+		}
 	}
 	api := server.API{
 		Workspace: workspace,
@@ -679,7 +701,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Design:    designSvc,
 		Pack:      packSvc,
 		// A private source is read through a connection the server keeps (agni issue 1724).
-		Connection: service.NewConnectionService(table.Connections(), table.MountsUsing).WithUserTokens(table).WithBaseURL(o.githubAPI),
+		Connection: connSvc,
 		Snapshot:   checkSvc.Snapshots(),
 		DesignView: service.NewDesignViewService(loader, nativeR, style, projectResolver),
 		Check:      checkSvc,
@@ -757,6 +779,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// the query panel resolves a relation Detail's image refs.
 	mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
 	mux.Handle("GET /healthz", healthHandler())
+	mux.Handle("GET /readyz", boot.readyHandler())
 	// A design's files, read-only, for a page analysing it in the browser (agni issue 853). The
 	// API already serves everything in a mount through its answers, so this exposes no file a client
 	// could not reach before; ListDesignFiles says which ones a design needs.

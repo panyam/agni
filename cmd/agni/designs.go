@@ -393,7 +393,7 @@ agni designs sync moves it. A tag or commit is pinned. Linking again replaces th
 			if err != nil {
 				return err
 			}
-			src, err := parseLinkSource(args[2])
+			src, err := service.ParseLinkSource(args[2])
 			if err != nil {
 				return err
 			}
@@ -622,22 +622,6 @@ func printArtifact(w io.Writer, a *webapi.Artifact) {
 		}
 	}
 	fmt.Fprintln(w)
-}
-
-// parseLinkSource reads `<mount>[/<path>][@<ref>]`. The ref follows the last '@'.
-func parseLinkSource(s string) (*webapi.ArtifactSource, error) {
-	src := &webapi.ArtifactSource{}
-	if i := strings.LastIndex(s, "@"); i >= 0 {
-		s, src.Ref = s[:i], s[i+1:]
-		if src.Ref == "" {
-			return nil, fmt.Errorf("%q names an empty ref after '@'", s+"@")
-		}
-	}
-	src.Mount, src.Path, _ = strings.Cut(s, "/")
-	if src.Mount == "" {
-		return nil, fmt.Errorf("%q names no mount; write <mount>[/<path>][@<ref>]", s)
-	}
-	return src, nil
 }
 
 // printSync writes one artifact's line of a sync.

@@ -111,7 +111,7 @@ func (g *Gate) Wrap(next http.Handler) http.Handler {
 		case r.URL.Path == "/signout":
 			g.signOut(w, r)
 			return
-		case r.URL.Path == "/healthz", strings.HasPrefix(r.URL.Path, "/static/"), r.URL.Path == "/hooks/github", r.URL.Path == "/hooks/msgraph":
+		case r.URL.Path == "/healthz", r.URL.Path == "/readyz", strings.HasPrefix(r.URL.Path, "/static/"), r.URL.Path == "/hooks/github", r.URL.Path == "/hooks/msgraph":
 			// A load balancer checks health without a token, and the viewer's scripts and styles
 			// hold nothing a token protects. GitHub sends a webhook with no token, and its handler
 			// checks the delivery's signature instead (agni issue 1726).

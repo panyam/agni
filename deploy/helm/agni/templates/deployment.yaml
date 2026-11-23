@@ -27,6 +27,11 @@ spec:
     metadata:
       labels:
         {{- include "agni.selector" . | nindent 8 }}
+      {{- with .Values.bootstrap }}
+      annotations:
+        # A changed bootstrap restarts the pod, so the server applies the new one.
+        agni/bootstrap-sha256: {{ toYaml . | sha256sum }}
+      {{- end }}
     spec:
       securityContext:
         runAsNonRoot: true
@@ -54,6 +59,9 @@ spec:
             - --github-client-secret=file:/run/secrets/agni/github-client-secret
             - --github-allow={{ join "," $allow }}
             - --github-webhook-secret=file:/run/secrets/agni/github-webhook-secret
+            {{- if .Values.bootstrap }}
+            - --bootstrap=/etc/agni/bootstrap/bootstrap.yaml
+            {{- end }}
             {{- if $oidc.issuer }}
             - --oidc-issuer={{ $oidc.issuer }}
             - --oidc-client-id={{ $oidc.clientID }}
@@ -73,9 +81,10 @@ spec:
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          # Ready once every entry of the bootstrap applied, and at once without one (agni issue 1808).
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /readyz
               port: http
             periodSeconds: 5
           livenessProbe:
@@ -96,6 +105,11 @@ spec:
             {{- if .Values.connectionSecrets }}
             - name: connections
               mountPath: /run/agni/connections
+              readOnly: true
+            {{- end }}
+            {{- if .Values.bootstrap }}
+            - name: bootstrap
+              mountPath: /etc/agni/bootstrap
               readOnly: true
             {{- end }}
           {{- with .Values.resources }}
@@ -137,6 +151,11 @@ spec:
           secret:
             secretName: {{ .Values.connectionSecrets }}
             defaultMode: 0440
+        {{- end }}
+        {{- if .Values.bootstrap }}
+        - name: bootstrap
+          configMap:
+            name: {{ include "agni.name" . }}-bootstrap
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

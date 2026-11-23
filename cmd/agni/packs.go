@@ -150,7 +150,7 @@ names the commit its packs were read at. Linking again replaces the source.
 			if err != nil {
 				return err
 			}
-			src, err := parseLinkSource(args[1])
+			src, err := service.ParseLinkSource(args[1])
 			if err != nil {
 				return err
 			}

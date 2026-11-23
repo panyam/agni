@@ -48,6 +48,9 @@ services:
       - --oidc-client-secret=${AGNI_OIDC_CLIENT_SECRET:-}
       - --oidc-allow=${AGNI_OIDC_ALLOW:-}
       - --oidc-label=${AGNI_OIDC_LABEL:-}
+      # The connections, mounts, packs and designs the server holds, applied at every start (agni
+      # issue 1808). Empty declares nothing.
+      - --bootstrap=${AGNI_BOOTSTRAP:-}
     ports:
       - "${AGNI_PORT:-8443}:8443"
     volumes:
@@ -58,6 +61,8 @@ services:
       # CA certificates to trust beside the system's, such as the one that signed your GitHub
       # Enterprise Server's certificate. An empty folder trusts the system's alone.
       - ${AGNI_CA_DIR:-./ca}:/etc/agni/ca:ro
+      # The folder holding bootstrap.yaml, which AGNI_BOOTSTRAP names inside the container.
+      - ${AGNI_BOOTSTRAP_DIR:-./bootstrap}:/etc/agni/bootstrap:ro
     environment:
       SSL_CERT_DIR: /etc/ssl/certs:/etc/agni/ca
     secrets:

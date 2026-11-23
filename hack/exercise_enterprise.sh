@@ -236,6 +236,9 @@ if [ "$mode" = bundle ]; then
   cp "$out/ca.pem" "$out/ca-dir/exercise-ca.pem"
   chmod 0644 "$out/ca-dir/exercise-ca.pem"
   mkdir -p "$out/connection-secrets"
+  # The bundle mounts the bootstrap folder from its first start, so it is made here, or docker makes
+  # it owned by root and the restart step can't write the file into it.
+  mkdir -p "$out/bootstrap" && chmod 0755 "$out/bootstrap"
   chmod 0644 "$out/secrets/"*
   cat >"$out/bundle.env" <<ENV
 AGNI_IMAGE=$AGNI_IMAGE
@@ -254,6 +257,8 @@ EXERCISE_PROXY=http://$host:$trap_port
 EXERCISE_NO_PROXY=$host
 AGNI_CONNECTION_SECRETS=$out/connection-secrets
 AGNI_CA_DIR=$out/ca-dir
+AGNI_BOOTSTRAP_DIR=$out/bootstrap
+AGNI_BOOTSTRAP=
 ENV
 fi
 
@@ -294,6 +299,10 @@ serve() {
       helm install agni "$root/deploy/helm/agni" -n "$namespace" -f "$out/values.yaml" --wait --timeout 3m >>"$out/helm.log" 2>&1 ||
         { echo "the chart didn't install; see $out/helm.log" >&2; exit 1; }
       installed=1
+    elif [ -n "${bootstrap:-}" ]; then
+      # A changed bootstrap value changes the pod's annotation, so the upgrade restarts it.
+      { helm upgrade agni "$root/deploy/helm/agni" -n "$namespace" -f "$out/values.yaml" && kube rollout status deploy/agni --timeout 3m; } >>"$out/helm.log" 2>&1 ||
+        { echo "the chart didn't upgrade; see $out/helm.log" >&2; exit 1; }
     else
       { kube rollout restart deploy/agni && kube rollout status deploy/agni --timeout 3m; } >>"$out/helm.log" 2>&1 ||
         { echo "agni didn't restart; see $out/helm.log" >&2; exit 1; }
@@ -315,7 +324,7 @@ serve() {
     --connections-key env:AGNI_CONNECTIONS_KEY --public-url "$url" \
     --github-api "$ghes/api/v3" --github-raw "$ghes/raw" \
     --github-client-id Iv1.exercise --github-client-secret env:AGNI_GITHUB_CLIENT_SECRET --github-allow org:acme,user:alice,user:mallory \
-    --github-webhook-secret env:AGNI_WEBHOOK_SECRET) >>"$out/serve.log" 2>&1 &
+    --github-webhook-secret env:AGNI_WEBHOOK_SECRET ${bootstrap:+--bootstrap "$bootstrap"}) >>"$out/serve.log" 2>&1 &
   serve_pid=$!
   wait_for --cacert "$out/ca.pem" "$url/healthz" || { echo "agni serve didn't start; see $out/serve.log" >&2; exit 1; }
 }
@@ -518,10 +527,50 @@ else
   no "mallory's pack listing names packs/house, or alice's doesn't; see $out/mallory-packs.txt and $out/alice-packs.txt"
 fi
 
-step "restart the server over the same folders, and read everything back"
+step "restart the server over the same folders with a bootstrap file, and read everything back"
+# The file names the mount and the pack the steps above made, which it leaves alone, and a design
+# none of them made (agni issue 1808). It names no connection, since hw is sealed in two of the
+# three modes.
+mkdir -p "$out/bootstrap"
+cat >"$out/bootstrap/bootstrap.yaml" <<BOOT
+mounts:
+  - {id: board, source: github://hw/baseboard, ref: rev-b, connection: hw}
+packs:
+  - {id: house, link: packs@main}
+designs:
+  - id: boot
+    title: Baseboard from the bootstrap file
+    link:
+      schematic: board/gateway.kicad_sch@$revb
+      board: board/gateway.kicad_pcb@$revb
+BOOT
+chmod 0755 "$out/bootstrap" && chmod 0644 "$out/bootstrap/bootstrap.yaml"
+case "$mode" in
+  binary) bootstrap=$out/bootstrap/bootstrap.yaml ;;
+  bundle)
+    bootstrap=/etc/agni/bootstrap/bootstrap.yaml
+    sed -i.bak "s|^AGNI_BOOTSTRAP=.*|AGNI_BOOTSTRAP=$bootstrap|" "$out/bundle.env"
+    ;;
+  helm)
+    bootstrap=values
+    { echo "bootstrap:"; sed 's/^/  /' "$out/bootstrap/bootstrap.yaml"; } >>"$out/values.yaml"
+    ;;
+esac
 as alice designs artifacts bb >"$out/artifacts-before.txt" 2>&1
 stop_serve
 serve
+if wait_for -f --cacert "$out/ca.pem" "$url/readyz"; then
+  pass "the server applied the bootstrap file, and /readyz answers"
+else
+  curl -s --cacert "$out/ca.pem" "$url/readyz" >"$out/readyz.txt" 2>&1 || true
+  no "/readyz never answered 200 after the bootstrap; see $out/readyz.txt and $out/serve.log"
+fi
+as alice designs artifacts boot >"$out/artifacts-boot.txt" 2>&1 || true
+if grep -q "$revb" "$out/artifacts-boot.txt" && [ "$(grep -c "$revb" "$out/artifacts-boot.txt")" = 2 ]; then
+  pass "designs/boot, which only the bootstrap file names, links its schematic and board at rev-b"
+else
+  no "designs/boot isn't linked at rev-b; see $out/artifacts-boot.txt"
+fi
 as alice designs artifacts bb >"$out/artifacts-after.txt" 2>&1 || true
 if cmp -s "$out/artifacts-before.txt" "$out/artifacts-after.txt" && grep -q "$revb" "$out/artifacts-after.txt"; then
   pass "designs/bb reads back at rev-b after the restart"

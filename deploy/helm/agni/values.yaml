@@ -66,6 +66,20 @@ caConfigMap: ""
 # nothing here.
 connectionSecrets: ""
 
+# The connections, mounts, packs, designs and projects the server holds, applied at every start
+# (agni issue 1808). The pod is ready once every entry applied. A connection names where its secret
+# is, such as file:/run/agni/connections/hw from connectionSecrets, and never holds one. "Declare what
+# the server holds" in the Deploying guide has the fields. Empty declares nothing.
+#   bootstrap:
+#     connections:
+#       - {id: hw, kind: github-token, token: file:/run/agni/connections/hw}
+#     mounts:
+#       - {id: board, source: github://hw/baseboard, ref: main, connection: hw}
+#     designs:
+#       - id: bb
+#         link: {schematic: board/gateway.kicad_sch@main}
+bootstrap: {}
+
 # Where designs, packs, people's sealed tokens and accounts live. Empty keeps them on the
 # PersistentVolumeClaim below, at file:///var/lib/agni/meta. postgres://agni@db/agni keeps them in
 # your database, with the password in PGPASSWORD, set through env from a Secret.
