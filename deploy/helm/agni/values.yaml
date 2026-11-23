@@ -80,6 +80,15 @@ connectionSecrets: ""
 #         link: {schematic: board/gateway.kicad_sch@main}
 bootstrap: {}
 
+# More of agni serve's settings, written into the serve.yaml the chart hands it with --config (agni
+# issue 1853). A key is a flag's name with underscores for dashes, and sections nest, as in
+#   serve:
+#     poll: 5m
+#     slow_request: 2s
+# The chart sets the address, store, uploads, sign-in and secrets itself, and its own value wins over
+# the same key here. A secret stays a file: or env: reference, never the secret itself.
+serve: {}
+
 # Where designs, packs, people's sealed tokens and accounts live. Empty keeps them on the
 # PersistentVolumeClaim below, at file:///var/lib/agni/meta. postgres://agni@db/agni keeps them in
 # your database, with the password in PGPASSWORD, set through env from a Secret.

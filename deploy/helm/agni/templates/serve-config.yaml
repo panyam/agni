@@ -1,0 +1,10 @@
+# The settings and the bootstrap agni serve reads from --config (agni issues 1808 and 1853).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "agni.name" . }}-serve
+  labels:
+    {{- include "agni.labels" . | nindent 4 }}
+data:
+  serve.yaml: |
+    {{- include "agni.serveConfig" . | nindent 4 }}
