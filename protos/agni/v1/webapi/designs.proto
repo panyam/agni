@@ -419,6 +419,53 @@ message AddDesignsRequest {
   // no_symbol_copy leaves out the symbol folders each design's design.yaml names, for a person who
   // serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
   bool no_symbol_copy = 4;
+  // on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+  // Unspecified fails, as ON_EXISTS_FAIL does.
+  OnExists on_exists = 5;
+  // allow_partial keeps every proposal that can be kept and reports each one refused in results.
+  // Without it, one refused proposal fails the request and nothing is kept (agni issue 1860).
+  bool allow_partial = 6;
+}
+
+// OnExists is what AddDesigns does with a proposal whose design id the server already holds.
+enum OnExists {
+  ON_EXISTS_UNSPECIFIED = 0;
+  // ON_EXISTS_FAIL refuses the proposal with ALREADY_EXISTS.
+  ON_EXISTS_FAIL = 1;
+  // ON_EXISTS_SKIP leaves the existing design as it is.
+  ON_EXISTS_SKIP = 2;
+  // ON_EXISTS_UPDATE writes the proposal's artifacts over the existing design's when their files
+  // differ, and leaves a design whose files match alone. The design's title, series, packs and
+  // intent stay as they are.
+  ON_EXISTS_UPDATE = 3;
+}
+
+// AddOutcome is what AddDesigns did with one proposal.
+enum AddOutcome {
+  ADD_OUTCOME_UNSPECIFIED = 0;
+  // ADD_OUTCOME_ADDED made a new design.
+  ADD_OUTCOME_ADDED = 1;
+  // ADD_OUTCOME_UPDATED wrote new files over an existing design.
+  ADD_OUTCOME_UPDATED = 2;
+  // ADD_OUTCOME_UNCHANGED found an existing design already holding the proposal's files.
+  ADD_OUTCOME_UNCHANGED = 3;
+  // ADD_OUTCOME_SKIPPED left an existing design alone under ON_EXISTS_SKIP.
+  ADD_OUTCOME_SKIPPED = 4;
+  // ADD_OUTCOME_REFUSED kept nothing for the proposal, and reason says why.
+  ADD_OUTCOME_REFUSED = 5;
+}
+
+// AddResult is one proposal's outcome.
+message AddResult {
+  // folder and entry name the proposal, as DesignToAdd does.
+  string folder = 1;
+  string entry = 2;
+  // design is the design's resource name, "designs/{design}", empty when the proposal was refused
+  // before it had an id.
+  string design = 3;
+  AddOutcome outcome = 4;
+  // reason says why a proposal was refused, empty otherwise.
+  string reason = 5;
 }
 
 // DesignToAdd picks one proposal and names the design it becomes.
@@ -436,12 +483,14 @@ message DesignToAdd {
 }
 
 message AddDesignsResponse {
-  // designs are the designs made, in the request's order.
+  // designs are the designs made or updated, in the request's order.
   repeated Design designs = 1;
   // uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
   // "designs/{design}: mount://<mount>/<dir>". A read of that design finds those parts only through
   // a pack holding the folder.
   repeated string uncopied_symbols = 2;
+  // results holds one outcome per proposal the request named, in its order (agni issue 1860).
+  repeated AddResult results = 3;
 }
 
 // ArtifactType is what an artifact holds, found from its entry's format.

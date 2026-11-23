@@ -30,6 +30,7 @@ private static final long serialVersionUID = 0L;
   private AddDesignsRequest() {
     uri_ = "";
     designs_ = java.util.Collections.emptyList();
+    onExists_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -189,6 +190,50 @@ private static final long serialVersionUID = 0L;
     return noSymbolCopy_;
   }
 
+  public static final int ON_EXISTS_FIELD_NUMBER = 5;
+  private int onExists_ = 0;
+  /**
+   * <pre>
+   * on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+   * Unspecified fails, as ON_EXISTS_FAIL does.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.OnExists on_exists = 5 [json_name = "onExists"];</code>
+   * @return The enum numeric value on the wire for onExists.
+   */
+  @java.lang.Override public int getOnExistsValue() {
+    return onExists_;
+  }
+  /**
+   * <pre>
+   * on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+   * Unspecified fails, as ON_EXISTS_FAIL does.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.OnExists on_exists = 5 [json_name = "onExists"];</code>
+   * @return The onExists.
+   */
+  @java.lang.Override public io.github.panyam.agni.v1.webapi.OnExists getOnExists() {
+    io.github.panyam.agni.v1.webapi.OnExists result = io.github.panyam.agni.v1.webapi.OnExists.forNumber(onExists_);
+    return result == null ? io.github.panyam.agni.v1.webapi.OnExists.UNRECOGNIZED : result;
+  }
+
+  public static final int ALLOW_PARTIAL_FIELD_NUMBER = 6;
+  private boolean allowPartial_ = false;
+  /**
+   * <pre>
+   * allow_partial keeps every proposal that can be kept and reports each one refused in results.
+   * Without it, one refused proposal fails the request and nothing is kept (agni issue 1860).
+   * </pre>
+   *
+   * <code>bool allow_partial = 6 [json_name = "allowPartial"];</code>
+   * @return The allowPartial.
+   */
+  @java.lang.Override
+  public boolean getAllowPartial() {
+    return allowPartial_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -215,6 +260,12 @@ private static final long serialVersionUID = 0L;
     if (noSymbolCopy_ != false) {
       output.writeBool(4, noSymbolCopy_);
     }
+    if (onExists_ != io.github.panyam.agni.v1.webapi.OnExists.ON_EXISTS_UNSPECIFIED.getNumber()) {
+      output.writeEnum(5, onExists_);
+    }
+    if (allowPartial_ != false) {
+      output.writeBool(6, allowPartial_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -238,6 +289,14 @@ private static final long serialVersionUID = 0L;
     if (noSymbolCopy_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(4, noSymbolCopy_);
+    }
+    if (onExists_ != io.github.panyam.agni.v1.webapi.OnExists.ON_EXISTS_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(5, onExists_);
+    }
+    if (allowPartial_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(6, allowPartial_);
     }
     return size;
   }
@@ -271,6 +330,9 @@ private static final long serialVersionUID = 0L;
         != other.getValidateOnly()) return false;
     if (getNoSymbolCopy()
         != other.getNoSymbolCopy()) return false;
+    if (onExists_ != other.onExists_) return false;
+    if (getAllowPartial()
+        != other.getAllowPartial()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -294,6 +356,11 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + NO_SYMBOL_COPY_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getNoSymbolCopy());
+    hash = (37 * hash) + ON_EXISTS_FIELD_NUMBER;
+    hash = (53 * hash) + onExists_;
+    hash = (37 * hash) + ALLOW_PARTIAL_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getAllowPartial());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -435,6 +502,8 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000002);
       validateOnly_ = false;
       noSymbolCopy_ = false;
+      onExists_ = 0;
+      allowPartial_ = false;
       return this;
     }
 
@@ -490,6 +559,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000008) != 0)) {
         result.noSymbolCopy_ = noSymbolCopy_;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.onExists_ = onExists_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.allowPartial_ = allowPartial_;
+      }
     }
 
     @java.lang.Override
@@ -540,6 +615,12 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getNoSymbolCopy() != false) {
         setNoSymbolCopy(other.getNoSymbolCopy());
+      }
+      if (other.onExists_ != 0) {
+        setOnExistsValue(other.getOnExistsValue());
+      }
+      if (other.getAllowPartial() != false) {
+        setAllowPartial(other.getAllowPartial());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -593,6 +674,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 32
+            case 40: {
+              onExists_ = input.readEnum();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 40
+            case 48: {
+              allowPartial_ = input.readBool();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 48
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1095,6 +1186,130 @@ private static final long serialVersionUID = 0L;
     public Builder clearNoSymbolCopy() {
       bitField0_ = (bitField0_ & ~0x00000008);
       noSymbolCopy_ = false;
+      onChanged();
+      return this;
+    }
+
+    private int onExists_ = 0;
+    /**
+     * <pre>
+     * on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+     * Unspecified fails, as ON_EXISTS_FAIL does.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.OnExists on_exists = 5 [json_name = "onExists"];</code>
+     * @return The enum numeric value on the wire for onExists.
+     */
+    @java.lang.Override public int getOnExistsValue() {
+      return onExists_;
+    }
+    /**
+     * <pre>
+     * on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+     * Unspecified fails, as ON_EXISTS_FAIL does.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.OnExists on_exists = 5 [json_name = "onExists"];</code>
+     * @param value The enum numeric value on the wire for onExists to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOnExistsValue(int value) {
+      onExists_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+     * Unspecified fails, as ON_EXISTS_FAIL does.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.OnExists on_exists = 5 [json_name = "onExists"];</code>
+     * @return The onExists.
+     */
+    @java.lang.Override
+    public io.github.panyam.agni.v1.webapi.OnExists getOnExists() {
+      io.github.panyam.agni.v1.webapi.OnExists result = io.github.panyam.agni.v1.webapi.OnExists.forNumber(onExists_);
+      return result == null ? io.github.panyam.agni.v1.webapi.OnExists.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+     * Unspecified fails, as ON_EXISTS_FAIL does.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.OnExists on_exists = 5 [json_name = "onExists"];</code>
+     * @param value The onExists to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setOnExists(io.github.panyam.agni.v1.webapi.OnExists value) {
+      java.util.Objects.requireNonNull(value);
+      bitField0_ |= 0x00000010;
+      onExists_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+     * Unspecified fails, as ON_EXISTS_FAIL does.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.OnExists on_exists = 5 [json_name = "onExists"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOnExists() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onExists_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private boolean allowPartial_ ;
+    /**
+     * <pre>
+     * allow_partial keeps every proposal that can be kept and reports each one refused in results.
+     * Without it, one refused proposal fails the request and nothing is kept (agni issue 1860).
+     * </pre>
+     *
+     * <code>bool allow_partial = 6 [json_name = "allowPartial"];</code>
+     * @return The allowPartial.
+     */
+    @java.lang.Override
+    public boolean getAllowPartial() {
+      return allowPartial_;
+    }
+    /**
+     * <pre>
+     * allow_partial keeps every proposal that can be kept and reports each one refused in results.
+     * Without it, one refused proposal fails the request and nothing is kept (agni issue 1860).
+     * </pre>
+     *
+     * <code>bool allow_partial = 6 [json_name = "allowPartial"];</code>
+     * @param value The allowPartial to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAllowPartial(boolean value) {
+
+      allowPartial_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * allow_partial keeps every proposal that can be kept and reports each one refused in results.
+     * Without it, one refused proposal fails the request and nothing is kept (agni issue 1860).
+     * </pre>
+     *
+     * <code>bool allow_partial = 6 [json_name = "allowPartial"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAllowPartial() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      allowPartial_ = false;
       onChanged();
       return this;
     }

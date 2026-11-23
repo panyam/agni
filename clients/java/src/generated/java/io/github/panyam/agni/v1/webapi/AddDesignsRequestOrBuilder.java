@@ -94,4 +94,36 @@ public interface AddDesignsRequestOrBuilder extends
    * @return The noSymbolCopy.
    */
   boolean getNoSymbolCopy();
+
+  /**
+   * <pre>
+   * on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+   * Unspecified fails, as ON_EXISTS_FAIL does.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.OnExists on_exists = 5 [json_name = "onExists"];</code>
+   * @return The enum numeric value on the wire for onExists.
+   */
+  int getOnExistsValue();
+  /**
+   * <pre>
+   * on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+   * Unspecified fails, as ON_EXISTS_FAIL does.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.OnExists on_exists = 5 [json_name = "onExists"];</code>
+   * @return The onExists.
+   */
+  io.github.panyam.agni.v1.webapi.OnExists getOnExists();
+
+  /**
+   * <pre>
+   * allow_partial keeps every proposal that can be kept and reports each one refused in results.
+   * Without it, one refused proposal fails the request and nothing is kept (agni issue 1860).
+   * </pre>
+   *
+   * <code>bool allow_partial = 6 [json_name = "allowPartial"];</code>
+   * @return The allowPartial.
+   */
+  boolean getAllowPartial();
 }

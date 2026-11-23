@@ -27,6 +27,22 @@ class ReportView(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     REPORT_VIEW_BASIC: _ClassVar[ReportView]
     REPORT_VIEW_FULL: _ClassVar[ReportView]
 
+class OnExists(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ON_EXISTS_UNSPECIFIED: _ClassVar[OnExists]
+    ON_EXISTS_FAIL: _ClassVar[OnExists]
+    ON_EXISTS_SKIP: _ClassVar[OnExists]
+    ON_EXISTS_UPDATE: _ClassVar[OnExists]
+
+class AddOutcome(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ADD_OUTCOME_UNSPECIFIED: _ClassVar[AddOutcome]
+    ADD_OUTCOME_ADDED: _ClassVar[AddOutcome]
+    ADD_OUTCOME_UPDATED: _ClassVar[AddOutcome]
+    ADD_OUTCOME_UNCHANGED: _ClassVar[AddOutcome]
+    ADD_OUTCOME_SKIPPED: _ClassVar[AddOutcome]
+    ADD_OUTCOME_REFUSED: _ClassVar[AddOutcome]
+
 class ArtifactType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     ARTIFACT_TYPE_UNSPECIFIED: _ClassVar[ArtifactType]
@@ -41,6 +57,16 @@ DESIGN_REVISION_SOURCE_COMMITS: DesignRevisionSource
 REPORT_VIEW_UNSPECIFIED: ReportView
 REPORT_VIEW_BASIC: ReportView
 REPORT_VIEW_FULL: ReportView
+ON_EXISTS_UNSPECIFIED: OnExists
+ON_EXISTS_FAIL: OnExists
+ON_EXISTS_SKIP: OnExists
+ON_EXISTS_UPDATE: OnExists
+ADD_OUTCOME_UNSPECIFIED: AddOutcome
+ADD_OUTCOME_ADDED: AddOutcome
+ADD_OUTCOME_UPDATED: AddOutcome
+ADD_OUTCOME_UNCHANGED: AddOutcome
+ADD_OUTCOME_SKIPPED: AddOutcome
+ADD_OUTCOME_REFUSED: AddOutcome
 ARTIFACT_TYPE_UNSPECIFIED: ArtifactType
 ARTIFACT_TYPE_NETLIST: ArtifactType
 ARTIFACT_TYPE_SCHEMATIC: ArtifactType
@@ -278,16 +304,34 @@ class ArtifactSource(_message.Message):
     def __init__(self, mount: _Optional[str] = ..., path: _Optional[str] = ..., ref: _Optional[str] = ..., follow: _Optional[bool] = ..., version: _Optional[str] = ..., read_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., read_hash: _Optional[str] = ..., access_source: _Optional[str] = ..., newer_version: _Optional[str] = ..., newer_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class AddDesignsRequest(_message.Message):
-    __slots__ = ("uri", "designs", "validate_only", "no_symbol_copy")
+    __slots__ = ("uri", "designs", "validate_only", "no_symbol_copy", "on_exists", "allow_partial")
     URI_FIELD_NUMBER: _ClassVar[int]
     DESIGNS_FIELD_NUMBER: _ClassVar[int]
     VALIDATE_ONLY_FIELD_NUMBER: _ClassVar[int]
     NO_SYMBOL_COPY_FIELD_NUMBER: _ClassVar[int]
+    ON_EXISTS_FIELD_NUMBER: _ClassVar[int]
+    ALLOW_PARTIAL_FIELD_NUMBER: _ClassVar[int]
     uri: str
     designs: _containers.RepeatedCompositeFieldContainer[DesignToAdd]
     validate_only: bool
     no_symbol_copy: bool
-    def __init__(self, uri: _Optional[str] = ..., designs: _Optional[_Iterable[_Union[DesignToAdd, _Mapping]]] = ..., validate_only: _Optional[bool] = ..., no_symbol_copy: _Optional[bool] = ...) -> None: ...
+    on_exists: OnExists
+    allow_partial: bool
+    def __init__(self, uri: _Optional[str] = ..., designs: _Optional[_Iterable[_Union[DesignToAdd, _Mapping]]] = ..., validate_only: _Optional[bool] = ..., no_symbol_copy: _Optional[bool] = ..., on_exists: _Optional[_Union[OnExists, str]] = ..., allow_partial: _Optional[bool] = ...) -> None: ...
+
+class AddResult(_message.Message):
+    __slots__ = ("folder", "entry", "design", "outcome", "reason")
+    FOLDER_FIELD_NUMBER: _ClassVar[int]
+    ENTRY_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_FIELD_NUMBER: _ClassVar[int]
+    OUTCOME_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    folder: str
+    entry: str
+    design: str
+    outcome: AddOutcome
+    reason: str
+    def __init__(self, folder: _Optional[str] = ..., entry: _Optional[str] = ..., design: _Optional[str] = ..., outcome: _Optional[_Union[AddOutcome, str]] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class DesignToAdd(_message.Message):
     __slots__ = ("folder", "design_id", "title", "series", "entry")
@@ -304,12 +348,14 @@ class DesignToAdd(_message.Message):
     def __init__(self, folder: _Optional[str] = ..., design_id: _Optional[str] = ..., title: _Optional[str] = ..., series: _Optional[str] = ..., entry: _Optional[str] = ...) -> None: ...
 
 class AddDesignsResponse(_message.Message):
-    __slots__ = ("designs", "uncopied_symbols")
+    __slots__ = ("designs", "uncopied_symbols", "results")
     DESIGNS_FIELD_NUMBER: _ClassVar[int]
     UNCOPIED_SYMBOLS_FIELD_NUMBER: _ClassVar[int]
+    RESULTS_FIELD_NUMBER: _ClassVar[int]
     designs: _containers.RepeatedCompositeFieldContainer[_project_pb2.Design]
     uncopied_symbols: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, designs: _Optional[_Iterable[_Union[_project_pb2.Design, _Mapping]]] = ..., uncopied_symbols: _Optional[_Iterable[str]] = ...) -> None: ...
+    results: _containers.RepeatedCompositeFieldContainer[AddResult]
+    def __init__(self, designs: _Optional[_Iterable[_Union[_project_pb2.Design, _Mapping]]] = ..., uncopied_symbols: _Optional[_Iterable[str]] = ..., results: _Optional[_Iterable[_Union[AddResult, _Mapping]]] = ...) -> None: ...
 
 class GetArtifactRequest(_message.Message):
     __slots__ = ("name",)

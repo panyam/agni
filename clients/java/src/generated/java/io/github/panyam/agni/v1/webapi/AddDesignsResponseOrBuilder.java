@@ -12,7 +12,7 @@ public interface AddDesignsResponseOrBuilder extends
 
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -21,7 +21,7 @@ public interface AddDesignsResponseOrBuilder extends
       getDesignsList();
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -29,7 +29,7 @@ public interface AddDesignsResponseOrBuilder extends
   io.github.panyam.agni.v1.webapi.Design getDesigns(int index);
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -37,7 +37,7 @@ public interface AddDesignsResponseOrBuilder extends
   int getDesignsCount();
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -46,7 +46,7 @@ public interface AddDesignsResponseOrBuilder extends
       getDesignsOrBuilderList();
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -102,4 +102,48 @@ public interface AddDesignsResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getUncopiedSymbolsBytes(int index);
+
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  java.util.List<io.github.panyam.agni.v1.webapi.AddResult> 
+      getResultsList();
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  io.github.panyam.agni.v1.webapi.AddResult getResults(int index);
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  int getResultsCount();
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  java.util.List<? extends io.github.panyam.agni.v1.webapi.AddResultOrBuilder> 
+      getResultsOrBuilderList();
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  io.github.panyam.agni.v1.webapi.AddResultOrBuilder getResultsOrBuilder(
+      int index);
 }
