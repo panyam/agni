@@ -1687,23 +1687,27 @@ export class ViewerPresenter {
   // other schema has never heard of. Profiles appear in NEITHER, since a profile is composed into
   // the catalog rather than selected.
   //
-  // A design with no project falls back to listing the siblings for both. Nothing declared
-  // anything, and offering a file that turns out not to be a checklist costs one clear error where
-  // hiding a real one costs a user their own file.
+  // A page reading a stored design, or reading under packs, offers the packs' checklists, which
+  // ListChecklists lists ahead of any project's (agni issue 1851).
+  //
+  // A design with no project and no pack falls back to listing the siblings for both. Nothing
+  // declared anything, and offering a file that turns out not to be a checklist costs one clear error
+  // where hiding a real one costs a user their own file.
   private async pickerChoices(): Promise<{ conventions: ChecklistOption[]; checklists: ChecklistOption[] }> {
     const cfg = this.projectResolved?.project?.config;
     let declared = cfg?.checklists ?? [];
     // The descriptor's own config misses what the project inherits through extends, so the checklists
     // come from ListChecklists, which answers from the composed config the CLI's review reads (agni
     // issues 829, 859). A failure keeps the descriptor's own list rather than offering nothing.
-    if (this.projectResolved?.project && this.reviews) {
+    const packed = this.readDesign !== "" || this.readPacks.length > 0;
+    if ((this.projectResolved?.project || packed) && this.reviews) {
       try {
         declared = (await this.reviews.listChecklists({ snapshot: await this.drawn() })).checklists;
       } catch {
         // the descriptor's own checklists stand
       }
     }
-    if (cfg && (cfg.conventions || declared.length > 0)) {
+    if ((cfg && cfg.conventions) || declared.length > 0) {
       return { conventions: [], checklists: projectChecklistOptions(declared) };
     }
     const siblings = await this.yamlSiblings();

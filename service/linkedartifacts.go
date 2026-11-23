@@ -426,7 +426,16 @@ func readSource(ctx context.Context, blobs BlobSource, r MountReader, version, p
 // artifactGroup finds the design among a folder's files whose entry or companion is target, and
 // returns the files PlanArtifacts gives that artifact. It returns nil when target is neither.
 func artifactGroup(files []string, read func(string) ([]byte, error), target string) []PlannedFile {
-	resp := ProposeFromFiles("", files, read)
+	// A design.yaml makes ProposeFromFiles propose the folder as one declared design, with no entry
+	// or companions to match target against. So it proposes without the descriptors, as
+	// PlanArtifacts does (agni issue 1851).
+	var kept []string
+	for _, f := range files {
+		if b := path.Base(f); b != DesignDescriptorName && b != ProjectDescriptorName {
+			kept = append(kept, f)
+		}
+	}
+	resp := ProposeFromFiles("", kept, read)
 	for _, d := range resp.GetDesigns() {
 		named := d.GetDesign().GetEntryUri() == target || slices.Contains(d.GetDesign().GetCompanionUris(), target)
 		if !named {

@@ -136,6 +136,29 @@ func paths(a *webapi.Artifact) []string {
 	return out
 }
 
+// A team keeps a design.yaml beside its root sheet. A link of the root sheet takes its child sheet
+// and project, as it does in a folder with no descriptor (agni issue 1851).
+func TestALinkedRootSheetBesideADesignYAMLTakesItsChildSheets(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		descriptor bool
+	}{{"no design.yaml", false}, {"a design.yaml", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			b := blobs{}
+			files := kicadFolder("(kicad_sch)")
+			if tc.descriptor {
+				files["hw/design.yaml"] = "entry: bb.kicad_sch\n"
+			}
+			repo := &fakeMount{b: b, refs: map[string]string{"v1": "c1"}, files: map[string]map[string]string{"c1": files}}
+			svc, _, _ := linkedService(t, b, map[string]*fakeMount{"repo": repo})
+			sch := link(t, svc, "schematic", "repo", "hw/bb.kicad_sch", "v1")
+			if got, want := paths(sch), []string{"bb.kicad_pro", "bb.kicad_sch", "power.kicad_sch"}; !slices.Equal(got, want) {
+				t.Errorf("the schematic holds %v, want %v", got, want)
+			}
+		})
+	}
+}
+
 func TestALinkedArtifactTakesItsDesignsFilesAndRefusesAPut(t *testing.T) {
 	ctx := context.Background()
 	b := blobs{}

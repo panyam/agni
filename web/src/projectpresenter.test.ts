@@ -4,6 +4,7 @@ import { artifactUri } from "@agni/web-shared/uri.js";
 import type { OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 import { NO_PROJECT_LABEL, PLAIN_LABEL, projectLabel, type ProjectState } from "./project.js";
+import { emptyLocation } from "./router.js";
 
 // A viewer harness wired with a ProjectService. The test controls how it resolves. Everything else
 // is stubbed to the minimum the presenter touches on open.
@@ -221,6 +222,19 @@ describe("the config pickers offer one kind each", () => {
     await h.presenter.openFile("m", "d/gateway.edn");
     expect(h.listChecklists).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "d/gateway.edn")) });
     expect(refs(h.onReview, "checklists")).toEqual(["shared", "review"]);
+  });
+
+  // A stored design opened under a pack, as /designs/jetson/view?pack=house does, belongs to no
+  // project. ListChecklists answers the pack's checklists for the snapshot the page read under it,
+  // so the Review panel offers them rather than "no checklist beside this design" (agni issue 1851).
+  it("offers the checklists of the packs the page reads under", async () => {
+    const h = harness({}, [], {
+      project: "",
+      checklists: [{ name: "release", manifest: { name: "House release checklist" } }],
+    });
+    await h.presenter.restore({ ...emptyLocation(), mount: "m", path: "d/gateway.edn", design: "designs/gateway", packs: ["packs/house"] });
+    expect(h.listChecklists).toHaveBeenCalled();
+    expect(refs(h.onReview, "checklists")).toEqual(["release"]);
   });
 
   // A project checklist is already a value, so running it reads nothing.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -183,6 +184,27 @@ func (r *ProjectResolver) designConfig(ctx context.Context, uri mounts.URI) (*we
 		return nil, "", err
 	}
 	return mergeConfig(inherited, d.GetConfig()), p.GetName(), nil
+}
+
+// PackChecklists returns the checklists that packs declare, and the pack each one came from. Packs
+// layer in order, so a later pack's checklist replaces an earlier one's of the same name and keeps
+// its place (agni issue 1746). `agni review --pack` and the viewer's Review panel both list them
+// this way, so the first is the default in both.
+func PackChecklists(packs []*webapi.Pack) ([]*webapi.NamedChecklist, map[string]string) {
+	var lists []*webapi.NamedChecklist
+	from := map[string]string{}
+	for _, p := range packs {
+		for _, c := range p.GetConfig().GetChecklists() {
+			i := slices.IndexFunc(lists, func(have *webapi.NamedChecklist) bool { return have.GetName() == c.GetName() })
+			if i < 0 {
+				lists = append(lists, c)
+			} else {
+				lists[i] = c
+			}
+			from[c.GetName()] = p.GetName()
+		}
+	}
+	return lists, from
 }
 
 // PickChecklist returns the checklist called name, or the first, which is the project's default, when
