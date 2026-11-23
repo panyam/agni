@@ -1,5 +1,5 @@
-#agni-run bfb7a16f5d953a81
+#agni-run 3b532af110f19f10
 base      h          l          provenance
-CAN1_CAN  CAN1_CANH  CAN1_CANL  designs/gateway/gateway.edn:CAN1_CANH ; designs/gateway/gateway.edn:CAN1_CANL
+CAN1_CAN  CAN1_CANH  CAN1_CANL  boards/gateway/gateway.edn:CAN1_CANH ; boards/gateway/gateway.edn:CAN1_CANL
 
 1 result(s)

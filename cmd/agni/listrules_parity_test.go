@@ -25,7 +25,7 @@ func TestListRulesAvailableIsWhatARunRuns(t *testing.T) {
 	ms := []struct{ name, dir string }{
 		{"tut", filepath.Join("..", "..", "examples", "tutorial-project")},
 		{"rev", filepath.Join("testdata", "review")},
-		{"com", filepath.Join("..", "..", "examples", "common", "designs")},
+		{"com", filepath.Join("..", "..", "examples", "common", "boards")},
 	}
 	var hostMounts []mounts.Mount
 	var memMounts []fshost.Mount
@@ -53,7 +53,7 @@ func TestListRulesAvailableIsWhatARunRuns(t *testing.T) {
 	// datasheet-tier rule, and its project's params/ ungates it. Agni issue 940 hid a rule of that
 	// shape. track-width is gated on the board tier.
 	designs := []struct{ name, uri, runs, skips string }{
-		{"tutorial gateway in its project", "mount://tut/designs/gateway", "supply-exceeds-abs-max", "unconnected-pin"},
+		{"tutorial gateway in its project", "mount://tut/boards/gateway", "supply-exceeds-abs-max", "unconnected-pin"},
 		{"bare KiCad schematic", "mount://com/dangling-wire.kicad_sch", "wire-no-junction", "track-width"},
 		{"bare KiCad board", "mount://com/demo-board.kicad_pcb", "track-width", "wire-no-junction"},
 		{"EDIF netlist", "mount://rev/companion-demo.edn", "single-pin-net", "track-width"},

@@ -1,7 +1,7 @@
-#agni-run d9f6dcd9bdeaf037
+#agni-run 551a1d314d1fd93e
 r   n               provenance
-D1  GND             designs/gateway/gateway.edn ; designs/gateway/gateway.edn:GND
-D1  PMIC_MAIN_12V0  designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_MAIN_12V0
+D1  GND             boards/gateway/gateway.edn ; boards/gateway/gateway.edn:GND
+D1  PMIC_MAIN_12V0  boards/gateway/gateway.edn ; boards/gateway/gateway.edn:PMIC_MAIN_12V0
 
 2 result(s)
 #agni-step

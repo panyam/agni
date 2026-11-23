@@ -136,8 +136,8 @@ func TestEveryPageOffersAWayHome(t *testing.T) {
 		"/mounts/m/boards/b.kicad_sch/view", // a design's work page
 		"/mounts/m/boards/b.kicad_sch/load", // its Load page (agni issue 1072)
 		"/mounts/local/load/",               // where files are dropped
-		"/designs/",                        // the designs the server holds (agni issue 1719)
-		"/designs/bb-1.1.3",                // one of them
+		"/designs/",                         // the designs the server holds (agni issue 1719)
+		"/designs/bb-1.1.3",                 // one of them
 	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
@@ -308,7 +308,7 @@ func TestViewerPageCarriesItsEngine(t *testing.T) {
 		mux := http.NewServeMux()
 		registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{engine: c.engine}), mux)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/mounts/tut/designs/gateway/view", nil))
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/mounts/tut/boards/gateway/view", nil))
 		if want := `data-engine="` + c.want + `"`; !strings.Contains(rec.Body.String(), want) {
 			t.Errorf("engine %q: the shell does not carry %s", c.engine, want)
 		}
@@ -318,7 +318,7 @@ func TestViewerPageCarriesItsEngine(t *testing.T) {
 		mux := http.NewServeMux()
 		registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{wasmMaxBytes: c.max}), mux)
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/mounts/tut/designs/gateway/view", nil))
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/mounts/tut/boards/gateway/view", nil))
 		if want := fmt.Sprintf(`data-wasm-max-bytes="%d"`, c.want); !strings.Contains(rec.Body.String(), want) {
 			t.Errorf("--wasm-max-bytes %d: the shell does not carry %s", c.max, want)
 		}

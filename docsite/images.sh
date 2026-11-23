@@ -26,7 +26,7 @@ mkdir -p "$designs" "$learn"
 
 # Tutorial rung 3's netlist graph. LAYERED, matching the run on rung 3 rather than beating it, since
 # the command and the figure agreeing is worth more than the prettier force layout.
-render "$designs/gateway-netlist.svg" examples/tutorial-project/designs/gateway/gateway.edn --layout layered
+render "$designs/gateway-netlist.svg" examples/tutorial-project/boards/gateway/gateway.edn --layout layered
 # The Jetson baseboard rungs 1 and 3 teach from is fetched rather than committed (make
 # samples-oracle), so its drawing is committed instead.
 jetson=tools/samples/boards/jetson-agx-thor-baseboard
@@ -38,7 +38,7 @@ render "$designs/jetson-power.svg" "$jetson" --sheet Power
 
 # The learn course. The tutorial board is reachable as a DESIGN rather than a file because its
 # design.yaml declares the schematic companion (agni PR 433).
-render "$learn/gateway.svg" examples/tutorial-project/designs/gateway
+render "$learn/gateway.svg" examples/tutorial-project/boards/gateway
 # Chapter 2's pair, identical but for one junction dot.
 render "$learn/tjunc.svg" readers/kicad/testdata/tjunc.kicad_sch
 render "$learn/tjunc-dotted.svg" readers/kicad/testdata/tjunc_dotted.kicad_sch

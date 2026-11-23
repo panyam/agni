@@ -24,7 +24,7 @@ func TestQueryWitnessesRenderUnderEachRow(t *testing.T) {
 	}{
 		{"text", []string{
 			"\n    component.probed_one(C1, PMIC_CORE_3V3, GND)  via component.probed_one(?r, ?probed, ?unprobed) :- ",
-			"\n        component.net(TP1, PMIC_CORE_3V3)  [designs/gateway/gateway.edn:PMIC_CORE_3V3]\n",
+			"\n        component.net(TP1, PMIC_CORE_3V3)  [boards/gateway/gateway.edn:PMIC_CORE_3V3]\n",
 			"\n      not net.has_test_point(GND)  (absent)\n",
 		}},
 		{"markdown", []string{"**How each row holds**", "Row 1, C1, GND:", "  not net.has_test_point(GND)  (absent)"}},

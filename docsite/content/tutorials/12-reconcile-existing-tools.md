@@ -17,7 +17,7 @@ Run your existing check and keep the JSON. The project keeps KiCad's own report 
 `reports/kicad-drc.json`, so you can follow along without KiCad installed. It came from:
 
 ```
-kicad-cli pcb drc --format json -o kicad-drc.json designs/jetson/jetson-agx-thor-baseboard.kicad_pcb
+kicad-cli pcb drc --format json -o kicad-drc.json boards/jetson/jetson-agx-thor-baseboard.kicad_pcb
 ```
 
 KiCad 10.0.6 found 578 violations. Import them:

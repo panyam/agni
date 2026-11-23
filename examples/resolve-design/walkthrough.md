@@ -18,7 +18,7 @@ Two small YAML files remove the guess. `project.yaml` names a set of designs tha
 
 ## Pick a file to resolve {#pick}
 
-> Give a path inside the bundled project (relative to its root), or press enter for the default. The bundled project is ../common/designs/demo-project, with a `project.yaml` at the root and one design under designs/mixer, whose descriptor declares mixer.edn as the entry and mixer.kicad_pcb as a companion. The default is the BOARD, because resolving a companion sends analysis to a different file.
+> Give a path inside the bundled project (relative to its root), or press enter for the default. The bundled project is ../common/boards/demo-project, with a `project.yaml` at the root and one design under designs/mixer, whose descriptor declares mixer.edn as the entry and mixer.kicad_pcb as a companion. The default is the BOARD, because resolving a companion sends analysis to a different file.
 
 ## What the tree declares {#list}
 

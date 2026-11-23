@@ -274,12 +274,14 @@ reads the design under it:
 
 ```bash
 agni packs push ./b200 --remote http://localhost:8080
+agni checklists packs/b200 --remote http://localhost:8080
 agni check designs/memory_unit --pack b200 --remote http://localhost:8080
 agni review designs/memory_unit --pack b200 --remote http://localhost:8080
 ```
 
 `review` takes its checklist from the pack, the project's first one unless `--checklist` names
-another. When the folder's `design.yaml` extends the project, `agni designs push` keeps the project
+another. `agni checklists packs/<id>` lists them, the default first, and a design on the server has
+none of its own to list. When the folder's `design.yaml` extends the project, `agni designs push` keeps the project
 as the pack itself, under its `name:`, and says the `--pack` to use. A pack the server holds with the
 same hash is left alone, and `--no-pack` skips it.
 

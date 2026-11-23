@@ -30,7 +30,7 @@ var walkthroughMD []byte
 func main() {
 	// Default to a bundled KiCad schematic with faithful geometry AND a clear finding. Two symbols
 	// share ref-des U1, so the component finding draws a box on each real placement.
-	design := common.AskPath("design", "../common/designs/duplicate-refdes.kicad_sch")
+	design := common.AskPath("design", "../common/boards/duplicate-refdes.kicad_sch")
 
 	demo := demokit.New("render-highlight").
 		Dir("render-highlight").

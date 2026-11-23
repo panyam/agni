@@ -4,7 +4,7 @@
 //! docsite/content/build/client-contract.md names the line's fields.
 //!
 //! ```sh
-//! clients/examples/rust/run -server http://127.0.0.1:8080 -design mount://probe/designs/jetson-cut
+//! clients/examples/rust/run -server http://127.0.0.1:8080 -design mount://probe/boards/jetson-cut
 //! ```
 
 use agni_client::Client;
@@ -70,7 +70,7 @@ async fn board_geometry(client: &Client, snapshot: &str) -> Result<BoardGeometry
 async fn main() {
     let (mut server, mut design) = (
         "http://127.0.0.1:8080".to_string(),
-        "mount://probe/designs/jetson-cut".to_string(),
+        "mount://probe/boards/jetson-cut".to_string(),
     );
     let mut args = std::env::args().skip(1);
     while let Some(flag) = args.next() {

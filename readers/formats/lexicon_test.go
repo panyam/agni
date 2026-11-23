@@ -101,7 +101,7 @@ func TestNilLexiconReadsAsDefaults(t *testing.T) {
 // asked for the parse returns the design before any vocabulary reaches it. Deriving that parse then
 // gives everything ReadDesign gives. The test checks this over every reader the tutorial board uses.
 func TestParseOnlyStopsBeforeTheConfiguredPasses(t *testing.T) {
-	for _, f := range []string{"../edif/testdata/basic.edn", "../../examples/tutorial-project/designs/gateway/gateway.edn", "../kicad/testdata/hier_root.kicad_sch"} {
+	for _, f := range []string{"../edif/testdata/basic.edn", "../../examples/tutorial-project/boards/gateway/gateway.edn", "../kicad/testdata/hier_root.kicad_sch"} {
 		read, err := (&Loader{}).ReadDesign(f)
 		if err != nil {
 			t.Fatal(err)

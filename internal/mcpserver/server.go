@@ -80,7 +80,7 @@ func New(api server.API, o Options) (*mcpkit.Server, error) {
 	}
 	srv, err := mcp.NewWith(nil, s.pack, mcp.Options{
 		Base: func(context.Context) (*datalog.Base, error) {
-			return nil, errors.New("name a design: pass design, such as tut/designs/gateway (the designs tool lists them)")
+			return nil, errors.New("name a design: pass design, such as tut/boards/gateway (the designs tool lists them)")
 		},
 		Vocabulary: func(ctx context.Context) (*ns.Vocabulary, error) { return api.Query.Vocabulary(ctx, "") },
 		MaxWork:    o.Budget,
@@ -130,7 +130,7 @@ func Wire() stateless.Mode {
 
 const about = `Electronic designs (schematics, netlists and boards) that agni reads: their parts, pins, nets and what connects them. Every board fact in an answer is a row agni returned, with the file and place it was read from.`
 
-const card = `# A design is named by its mount and path, such as tut/designs/gateway: the folder, its entry file or a declared companion all name it. The designs tool lists them, and the revisions each one declares.
+const card = `# A design is named by its mount and path, such as tut/boards/gateway: the folder, its entry file or a declared companion all name it. The designs tool lists them, and the revisions each one declares.
 # A net is named as the design names it ("I2C_SDA"), a component by its reference designator ("U7"), and a pin by its number or name on that component ("3").
 # Lengths are metres and voltages volts; write a unit on a threshold (?w < 0.2mm).
 # A value the user gave, a net or a part, goes in bind rather than into the program.`
@@ -151,7 +151,7 @@ type srv struct {
 
 // designArg is the argument agni adds to every one of jaala's tools.
 type designArg struct {
-	Design string `json:"design,omitempty" jsonschema_description:"The design to ask about, as mount/path (tut/designs/gateway): its folder, entry file or a declared companion. The designs tool lists them. Omit only for schema, look and the shipped vocabulary."`
+	Design string `json:"design,omitempty" jsonschema_description:"The design to ask about, as mount/path (tut/boards/gateway): its folder, entry file or a declared companion. The designs tool lists them. Omit only for schema, look and the shipped vocabulary."`
 }
 
 // prepare sets up one of jaala's tools to run for the design it names. The tool runs over that
@@ -196,7 +196,7 @@ func designURI(design string) (mounts.URI, error) {
 	}
 	u, err := mounts.ParseURI(d)
 	if err != nil {
-		return mounts.URI{}, fmt.Errorf("design %q: %v; name one as mount/path, such as tut/designs/gateway", design, err)
+		return mounts.URI{}, fmt.Errorf("design %q: %v; name one as mount/path, such as tut/boards/gateway", design, err)
 	}
 	return u, nil
 }

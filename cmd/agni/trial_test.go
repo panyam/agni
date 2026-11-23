@@ -22,7 +22,7 @@ func TestATrialReportHoldsNothingFromTheDesign(t *testing.T) {
 	freshWorkspace(t)
 	root := filepath.Join("..", "..", "examples", "tutorial-project")
 	cliMountSpecs = []string{"tut=" + root}
-	const design = "mount://tut/designs/gateway"
+	const design = "mount://tut/boards/gateway"
 	rep, err := runTrial(context.Background(), design)
 	if err != nil {
 		t.Fatal(err)

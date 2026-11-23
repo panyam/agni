@@ -9,7 +9,7 @@ import (
 // TestRunMeasuresTheTutorialBoard checks that the bench measured something. A run that read nothing,
 // ran no rules or answered no query would print fast, plausible timings over an empty board.
 func TestRunMeasuresTheTutorialBoard(t *testing.T) {
-	r, err := Run(filepath.Join("..", "..", "examples", "tutorial-project"), "designs/gateway")
+	r, err := Run(filepath.Join("..", "..", "examples", "tutorial-project"), "boards/gateway")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +22,7 @@ func TestRunMeasuresTheTutorialBoard(t *testing.T) {
 // step must allocate, the order must match what a Run checks needs, and the restored pass must come
 // from the store rather than a read.
 func TestLayersMeasuresEachLayer(t *testing.T) {
-	r, err := Layers(filepath.Join("..", "..", "examples", "tutorial-project"), "designs/gateway")
+	r, err := Layers(filepath.Join("..", "..", "examples", "tutorial-project"), "boards/gateway")
 	if err != nil {
 		t.Fatal(err)
 	}

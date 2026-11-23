@@ -6,7 +6,7 @@
 // viewer to draw a sheet. It exits 0 when the sheet draws and 1 otherwise.
 //
 //   node browser/smoke.mjs <agni binary> <mount root> <design path in the mount>
-//   node browser/smoke.mjs ../agni.exe 'D:\a\agni\agni\examples\tutorial-project' designs/gateway
+//   node browser/smoke.mjs ../agni.exe 'D:\a\agni\agni\examples\tutorial-project' boards/gateway
 
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";

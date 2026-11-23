@@ -64,13 +64,13 @@ type wireDetail struct {
 // wireCalls are the calls, in order. Ingest names its snapshot, so the calls after it can.
 var wireCalls = []wireFixture{
 	{Name: "server-info", Service: "agni.v1.webapi.ServerService", Method: "GetServerInfo", Request: json.RawMessage(`{}`), Ignore: []string{"version", "features"}},
-	{Name: "ingest", Service: "agni.v1.webapi.SnapshotService", Method: "Ingest", Request: json.RawMessage(`{"snapshot":{"uri":"mount://probe/designs/jetson-cut"},"snapshotId":"wire"}`)},
+	{Name: "ingest", Service: "agni.v1.webapi.SnapshotService", Method: "Ingest", Request: json.RawMessage(`{"snapshot":{"uri":"mount://probe/boards/jetson-cut"},"snapshotId":"wire"}`)},
 	{Name: "get-summary", Service: "agni.v1.webapi.DesignViewService", Method: "GetSummary", Request: json.RawMessage(`{"snapshot":"snapshots/wire"}`)},
 	{Name: "check-design", Service: "agni.v1.webapi.CheckService", Method: "CheckDesign", Request: json.RawMessage(`{"snapshot":"snapshots/wire","rules":["bulk-cap"]}`)},
 	{Name: "run-query", Service: "agni.v1.webapi.QueryService", Method: "RunQuery", Request: json.RawMessage(`{"snapshot":"snapshots/wire","query":"component.class(?c, \"resistor\") => ?c"}`)},
 	// The board's second page at a one-byte budget, one placement, after a first page of the header
 	// alone. The token is the one that first page answers.
-	{Name: "board-geometry-page", Service: "agni.v1.webapi.DesignViewService", Method: "GetBoardGeometry", Request: json.RawMessage(`{"snapshot":"snapshots/wire","maxBytes":"1","pageToken":"YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA"}`)},
+	{Name: "board-geometry-page", Service: "agni.v1.webapi.DesignViewService", Method: "GetBoardGeometry", Request: json.RawMessage(`{"snapshot":"snapshots/wire","maxBytes":"1","pageToken":"YjF8ZjgwZGY3N2EyN2NhN2Q5MHwwfDA"}`)},
 	// C133 sits on the cut's back, so a board view follows it to the back with B.Cu and B.SilkS on
 	// (agni issue 1635).
 	{Name: "locate-on-board", Service: "agni.v1.webapi.DesignViewService", Method: "LocateSubjects", Request: json.RawMessage(`{"snapshot":"snapshots/wire","subjects":[{"kind":"component","ref":"C133"}],"board":true}`)},
@@ -78,7 +78,7 @@ var wireCalls = []wireFixture{
 	// A mounted folder holds no design until a person adds one (agni issue 1736). The plan for adding
 	// the cut answers without writing, so the replay needs no store, and a design by name is still
 	// not found.
-	{Name: "add-designs-validate-only", Service: "agni.v1.webapi.DesignService", Method: "AddDesigns", Request: json.RawMessage(`{"uri":"mount://probe/designs/jetson-cut","designs":[{"folder":"designs/jetson-cut","designId":"jetson-cut","series":"probe"}],"validateOnly":true}`)},
+	{Name: "add-designs-validate-only", Service: "agni.v1.webapi.DesignService", Method: "AddDesigns", Request: json.RawMessage(`{"uri":"mount://probe/boards/jetson-cut","designs":[{"folder":"boards/jetson-cut","designId":"jetson-cut","series":"probe"}],"validateOnly":true}`)},
 	{Name: "get-design-not-added", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"name":"designs/jetson-cut"}`)},
 	{Name: "snapshot-not-found", Service: "agni.v1.webapi.DesignViewService", Method: "GetSummary", Request: json.RawMessage(`{"snapshot":"snapshots/nonesuch"}`)},
 }

@@ -2,10 +2,10 @@
 # build that ran, which differs on every commit, so the capture masks it as <version>.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 steps:
-  - script: agni check designs/jetson --results-out agni.results.json > /dev/null
+  - script: agni check boards/jetson --results-out agni.results.json > /dev/null
   - script: |
-      agni import-results reports/kicad-drc.json --design designs/jetson -o kicad.results.json > /dev/null
+      agni import-results reports/kicad-drc.json --design boards/jetson -o kicad.results.json > /dev/null
       agni results agni.results.json --compare kicad.results.json | sed -E 's/agni [0-9a-f]+(\+dirty)? /agni <version> /'
     show: agni results agni.results.json --compare kicad.results.json

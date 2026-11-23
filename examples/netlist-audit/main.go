@@ -32,7 +32,7 @@ var walkthroughMD []byte
 var auditYAML []byte
 
 func main() {
-	design := common.AskPath("design", "../common/designs/netlist-audit.tel")
+	design := common.AskPath("design", "../common/boards/netlist-audit.tel")
 
 	demo := demokit.New("netlist-audit").
 		Dir("netlist-audit").

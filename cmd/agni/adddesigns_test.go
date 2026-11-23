@@ -24,11 +24,11 @@ func twoBoards(t *testing.T) string {
 	root := t.TempDir()
 	for dir, files := range map[string]map[string]string{
 		"boards/cut": {
-			"../../examples/cross-probe-project/designs/jetson-cut/jetson-cut.kicad_sch":   "jetson-cut.kicad_sch",
-			"../../examples/cross-probe-project/designs/jetson-cut/power.kicad_sch":        "power.kicad_sch",
-			"../../examples/cross-probe-project/designs/jetson-cut/usb_debug_pd.kicad_sch": "usb_debug_pd.kicad_sch",
-			"../../examples/cross-probe-project/designs/jetson-cut/jetson-cut.kicad_pcb":   "jetson-cut.kicad_pcb",
-			"../../examples/cross-probe-project/designs/jetson-cut/jetson-cut.kicad_pro":   "jetson-cut.kicad_pro",
+			"../../examples/cross-probe-project/boards/jetson-cut/jetson-cut.kicad_sch":   "jetson-cut.kicad_sch",
+			"../../examples/cross-probe-project/boards/jetson-cut/power.kicad_sch":        "power.kicad_sch",
+			"../../examples/cross-probe-project/boards/jetson-cut/usb_debug_pd.kicad_sch": "usb_debug_pd.kicad_sch",
+			"../../examples/cross-probe-project/boards/jetson-cut/jetson-cut.kicad_pcb":   "jetson-cut.kicad_pcb",
+			"../../examples/cross-probe-project/boards/jetson-cut/jetson-cut.kicad_pro":   "jetson-cut.kicad_pro",
 		},
 		"boards/gw": {
 			gatewayRevA: "gateway.edn",
@@ -130,7 +130,7 @@ func TestAServerWithNoStoreListsNoDesigns(t *testing.T) {
 	if _, err := api.Design.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/gateway"}); err == nil {
 		t.Error("GetDesign of a folder's design.yaml name answered; want NOT_FOUND")
 	}
-	if _, err := api.Design.AddDesigns(ctx, &webapi.AddDesignsRequest{Uri: "mount://tut/designs/gateway", Designs: []*webapi.DesignToAdd{{Folder: "designs/gateway"}}}); err == nil {
+	if _, err := api.Design.AddDesigns(ctx, &webapi.AddDesignsRequest{Uri: "mount://tut/boards/gateway", Designs: []*webapi.DesignToAdd{{Folder: "boards/gateway"}}}); err == nil {
 		t.Error("AddDesigns with no store succeeded; want FAILED_PRECONDITION")
 	}
 }

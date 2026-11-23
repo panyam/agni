@@ -142,7 +142,7 @@ func TestQuerySetReadsStdin(t *testing.T) {
 // gets an error that lists the sets it does keep.
 func TestQuerySetTakesAProjectSetByName(t *testing.T) {
 	freshWorkspace(t)
-	design := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
+	design := filepath.Join("..", "..", "examples", "tutorial-project", "boards", "gateway")
 	out, err := runSet(t, design, "--set", "power-review", "--format", "json")
 	if err != nil {
 		t.Fatalf("query --set power-review: %v\n%s", err, out)

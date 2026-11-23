@@ -622,10 +622,10 @@ exercise-walk: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 # for compare-revisions its rev 1.1.3. try uses it.
 define demo-design-ready
 	@if [ "$(DEMO_DESIGN)" = jetson ]; then \
-		test -f examples/jetson-project/designs/jetson/jetson-agx-thor-baseboard.kicad_pcb || \
+		test -f examples/jetson-project/boards/jetson/jetson-agx-thor-baseboard.kicad_pcb || \
 			{ $(MAKE) samples-oracle && $(MAKE) -C examples/jetson-project board; }; \
 		if [ "$(JOURNEY)" = compare-revisions ]; then \
-			test -f examples/jetson-project/designs/jetson-1.1.3/jetson-agx-thor-baseboard.kicad_sch || \
+			test -f examples/jetson-project/boards/jetson-1.1.3/jetson-agx-thor-baseboard.kicad_sch || \
 				{ $(MAKE) samples-revisions && $(MAKE) -C examples/jetson-project revision; }; \
 		fi; \
 	fi
@@ -764,7 +764,7 @@ wasm:
 # 852). Not in the gate: a real board takes minutes and lives in the samples corpus.
 #   make wasm-bench BOARD=tools/samples/boards/royalblue54L-feather DESIGN=RoyalBlue54L-Feather.kicad_sch
 BOARD ?= examples/tutorial-project
-DESIGN ?= designs/gateway
+DESIGN ?= boards/gateway
 wasm-bench: agni ui wasm
 	cd web && node browser/bench.mjs $(abspath $(BOARD)) $(DESIGN)
 

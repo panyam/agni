@@ -37,7 +37,7 @@ var walkthroughMD []byte
 // The bundled fixture and the net the walkthrough explains. They are package-level because
 // walkthrough.md states what they do and lexicon_test.go checks those claims against the fixture.
 const (
-	defaultDesign = "../common/designs/lexicon-demo"
+	defaultDesign = "../common/boards/lexicon-demo"
 	defaultNet    = "SENSOR_3V3"
 )
 

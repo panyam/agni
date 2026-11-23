@@ -248,7 +248,7 @@ synthetic Allegro `.brd` without Allegro or a writer of our own, so that reader'
 BeagleBone AI, which is public, licensed for redistribution, and fetched by checksum rather than
 committed (agni issue 1350).
 **Verify:** each capability has an `examples/<name>/` with a `walkthrough.md` and its own
-`go.mod`; examples read fixtures from `examples/common/designs/` (synthetic and
+`go.mod`; examples read fixtures from `examples/common/boards/` (synthetic and
 redistributable, never a private board, C5), or, for a vendor format with no synthetic fixture, a
 board from an artifact `hack/samples.pin` names. Such an example's test fails rather than skips
 when the artifact is absent, and its `examples-test` run fetches it first. Five directories owe no `walkthrough.md` and are not
@@ -869,7 +869,7 @@ code constructs a `checkspb.RunConfig`. A surface must not derive it from its ow
 config, or the request message. Once a design resolves to a project, none of those says what the run
 used.
 **Why:** the alternative already shipped a wrong document, and it was wrong in the reassuring
-direction. `agni check designs/gateway --results-out` inside a project declaring conventions,
+direction. `agni check boards/gateway --results-out` inside a project declaring conventions,
 `profiles/` and `params/` composed all three and recorded `"run": {}`, because no flag named any of
 them. `RunConfig` exists precisely so a reader can tell a design with no datasheet violations from a
 run that had no datasheet corpus, so recording `false` for an attached corpus makes a clean report

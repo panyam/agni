@@ -49,5 +49,5 @@ make demo        # TUI boxes
 ## How it is built
 
 `main.go` parses the embedded `audit.yaml`, builds ONE fact base over the design, and answers each
-query against it. The bundled fixture, `../common/designs/netlist-audit.tel`, is synthetic and gives
+query against it. The bundled fixture, `../common/boards/netlist-audit.tel`, is synthetic and gives
 every table at least one row.

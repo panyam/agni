@@ -262,7 +262,7 @@ viewer's shell, and a page's `?engine=` overrides it.
 
 ```
 make wasm serve EXTRA_MOUNTS="--mount tut=examples/tutorial-project"
-open http://localhost:8080/mounts/tut/designs/gateway/view?engine=wasm
+open http://localhost:8080/mounts/tut/boards/gateway/view?engine=wasm
 ```
 
 An engine can only analyse files it can reach. On the `wasm` engine the page brings a design's

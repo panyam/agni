@@ -14,7 +14,7 @@ import (
 //
 // Wire it into a walkthrough in three touches:
 //
-//	design := common.AskPath("design", "../common/designs/foo.edn")
+//	design := common.AskPath("design", "../common/boards/foo.edn")
 //	demo.Bind("pick").Input(design.Def()).Run(func(ctx demokit.StepContext) *demokit.StepResult {
 //	    design.Capture(ctx)          // record what the user typed
 //	    return nil
@@ -41,7 +41,7 @@ const DesignPathEnv = "AGNI_EXAMPLE_DESIGN"
 const ReviewPathEnv = "AGNI_EXAMPLE_REVIEW"
 
 // AskPath creates a PathInput bound to the named walkthrough input, defaulting to def (a path
-// relative to the example directory, e.g. "../common/designs/foo.edn"), or to DesignPathEnv when
+// relative to the example directory, e.g. "../common/boards/foo.edn"), or to DesignPathEnv when
 // that is set to a non-blank value.
 func AskPath(name, def string) *PathInput {
 	return askPathEnv(name, def, DesignPathEnv)

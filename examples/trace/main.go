@@ -30,10 +30,10 @@ var walkthroughMD []byte
 // because walkthrough.md states what they do and trace_test.go holds those claims against the
 // fixture. A default inside main() could move without the test noticing.
 const (
-	defaultDesign = "../common/designs/i2c-sensor/i2c-sensor.edn"
+	defaultDesign = "../common/boards/i2c-sensor/i2c-sensor.edn"
 	// The schematic the design declares as its companion. The CLI finds it through the folder's
 	// design.yaml, and this example names it directly to keep the drawing step readable.
-	defaultSchematic = "../common/designs/i2c-sensor/i2c-sensor.eds"
+	defaultSchematic = "../common/boards/i2c-sensor/i2c-sensor.eds"
 	defaultFrom      = "U1.3"
 	defaultTo        = "J1.1"
 )

@@ -160,7 +160,7 @@ func (t *tour) report(ctx context.Context) (kept, after *webapi.Report, err erro
 	if err != nil {
 		return nil, nil, err
 	}
-	b, err := os.ReadFile("../common/designs/rev-a.edn")
+	b, err := os.ReadFile("../common/boards/rev-a.edn")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -189,7 +189,7 @@ func (t *tour) follow(ctx context.Context) (linked, synced, marked *webapi.Artif
 	// version is its files' times and a filesystem may round them to the second.
 	step := 0
 	put := func(rev string) error {
-		b, err := os.ReadFile("../common/designs/" + rev + ".edn")
+		b, err := os.ReadFile("../common/boards/" + rev + ".edn")
 		if err != nil {
 			return err
 		}

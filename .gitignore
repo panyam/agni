@@ -40,7 +40,7 @@ readers/kicad/testdata/*.kicad_prl
 # Same side effect, in the example fixture tree: kicad-cli writes a .kicad_prl beside any board
 # it opens, and the bundled demo boards get opened by example runs. Scoped to this tree for the
 # same reason as above, so the deliberately-tracked conformance ones stay visible.
-examples/common/designs/**/*.kicad_prl
+examples/common/boards/**/*.kicad_prl
 
 # Session handoff notes. Working documents for whoever picks the thread up next, deliberately
 # untracked: they carry ordering judgement and where-you-will-be-misled warnings, which go stale

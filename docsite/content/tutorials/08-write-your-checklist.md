@@ -101,7 +101,7 @@ item just looks like a finding you have not got round to.
 
 Naming the design is the whole command. This project already declares every input a review needs.
 `project.yaml` carries its checklists and its naming vocabulary, `profiles/` its
-interfaces, `params/` its part limits, and `designs/jetson/design.yaml` names the schematic to read,
+interfaces, `params/` its part limits, and `boards/jetson/design.yaml` names the schematic to read,
 the board beside it and the board's intent.
 
 {{ agniRun "content/tutorials/runs/08-review.yaml" }}
@@ -119,7 +119,7 @@ On stderr it says which checklist it picked:
 A run's outcomes do not say which checklist scored them, so a checklist you did not type has to
 announce itself. `--checklist <name>` runs another one the project declares, and a
 value ending in `.yaml` is read as a manifest file instead, for a checklist that lives outside the
-project.
+project. A folder of item files works there too, written as a path such as `checklist/`.
 
 ## A page you can walk
 
@@ -127,7 +127,7 @@ The markdown above is for reading in a terminal and pasting into a review. `--fo
 same checklist as a self-contained page instead:
 
 ```
-agni review designs/jetson --format html --server self > review.html
+agni review boards/jetson --format html --server self > review.html
 ```
 
 The page differs from the markdown in two ways. Every finding is listed per item, where the Detail
@@ -169,9 +169,10 @@ Start with the items your team already argues about, not with the ones that are 
 An item bound to nothing is still worth adding as a `note:`, because the checklist is then complete
 and the automation gap is measurable rather than invisible.
 
-For a checklist of this size, hand-authoring the YAML is right. Teams running a few hundred items
-usually move to one file per item with the manifest generated from them, so items can be edited in
-parallel without conflicting.
+For a checklist of this size, hand-authoring the YAML is right. A checklist of a few hundred items
+is easier to own as one file per item, so items can be edited in parallel without conflicting. Name
+the folder with `items_dir:` in place of `areas:`, and agni reads the files directly, with no
+generator to keep in step. [Projects](../../guide/projects/#projectyaml) shows the file layout.
 
 ## Next
 

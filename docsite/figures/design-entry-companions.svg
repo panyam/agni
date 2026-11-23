@@ -1,6 +1,6 @@
 <svg viewBox="0 0 640 292" role="img" aria-labelledby="design-entry-companions-title" style="width:100%;height:auto;font-family:inherit">
   <title id="design-entry-companions-title">A design folder listed as four rows. The entry, a netlist, is the only file authoritative for which components exist and how they are connected. Two companions, a schematic export and a board, are views of that same design and supply the drawing and the copper. A bill of materials joins onto components by reference designator and can enrich one but never add or remove one.</title>
-  <text x="16" y="30" fill="var(--accent-color)" font-size="12.5" font-weight="600">designs/gateway</text>
+  <text x="16" y="30" fill="var(--accent-color)" font-size="12.5" font-weight="600">boards/gateway</text>
   <rect x="16" y="44" width="608" height="200" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
   <g fill="currentColor" font-size="10.5" font-weight="600" opacity="0.55">
     <text x="32" y="70">file</text>

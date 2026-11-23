@@ -152,7 +152,7 @@ Both numbers are rendered, and `agni review` gates on the second (`--min-answere
 `service.Overlay`, after the project's config and the request's own have been composed onto the
 deployment's. The caller's flags are a different value, and the two stopped agreeing the moment a
 project could supply config. Take a design under a project that declares a `conventions:` section,
-`profiles/` and `params/`. `agni check designs/gateway` scores it against all three with no flags
+`profiles/` and `params/`. `agni check boards/gateway` scores it against all three with no flags
 at all.
 
 `Overlay.Provenance` alone computes that value, and `RunConfigProto` alone turns it into the

@@ -28,7 +28,7 @@ make doc        # render the walkthrough to markdown
 ```
 
 At the first step, give any path inside the bundled project (relative to its root). The
-bundled project is [`../common/designs/demo-project`](../common/designs/demo-project): one
+bundled project is [`../common/boards/demo-project`](../common/boards/demo-project): one
 `project.yaml` and one design under `designs/mixer/`. Try `designs/mixer/mixer.edn` (the
 entry), `designs/mixer` (the design folder), and a path under no design at all.
 

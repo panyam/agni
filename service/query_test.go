@@ -760,7 +760,7 @@ func TestEntityQueriesEvaluate(t *testing.T) {
 	// These values come from the tutorial board. They are a part, one of its pins, and that pin's
 	// net, which has a test point. The board has no bus, so the bus presets are evaluated and answer
 	// nothing.
-	snap := snapOf(t, svc.Snapshots(), "mount://m/designs/gateway/gateway.edn")
+	snap := snapOf(t, svc.Snapshots(), "mount://m/boards/gateway/gateway.edn")
 	values := map[string]string{"ref": "U1", "pin": "2", "net": "PMIC_CORE_3V3", "bus": "DATA"}
 	for _, e := range resp.GetEntityQueries() {
 		if e.GetKind() == "area" {
@@ -915,13 +915,13 @@ func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
 // into issues and commits it into reports. No other surface leaked the path, since `review` prints
 // the design as given and a finding's source_file is relative.
 func TestPortableCites(t *testing.T) {
-	const design = "designs/gateway/gateway.edn"
+	const design = "boards/gateway/gateway.edn"
 	for name, tc := range map[string]struct{ in, want string }{
 		"an absolute host path is cut back to the design": {
-			"/Users/someone/work/agni/examples/tutorial-project/designs/gateway/gateway.edn:GND",
-			"designs/gateway/gateway.edn:GND"},
+			"/Users/someone/work/agni/examples/tutorial-project/boards/gateway/gateway.edn:GND",
+			"boards/gateway/gateway.edn:GND"},
 		"a cite already relative is untouched": {
-			"designs/gateway/gateway.edn:GND", "designs/gateway/gateway.edn:GND"},
+			"boards/gateway/gateway.edn:GND", "boards/gateway/gateway.edn:GND"},
 		// A datasheet citation names a document and a page, never a file. Truncating it on a guess
 		// would destroy provenance that was correct.
 		"a citation that is not a path is left alone": {
@@ -1073,7 +1073,7 @@ func TestACancelledQueryStopsAsCancelled(t *testing.T) {
 // three parts, and those five nets are the block's interface.
 func TestAreaQuestionsAnswerForTheWholeSet(t *testing.T) {
 	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project")}, nil, nil)
-	snap := snapOf(t, svc.Snapshots(), "mount://m/designs/gateway/gateway.edn")
+	snap := snapOf(t, svc.Snapshots(), "mount://m/boards/gateway/gateway.edn")
 	list := func(vals ...string) *webapi.QueryValue {
 		l := &webapi.QueryValueList{}
 		for _, v := range vals {

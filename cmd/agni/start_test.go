@@ -28,7 +28,7 @@ func startFixture(t *testing.T, siblings ...string) (design, root string) {
 	for _, s := range siblings {
 		from := filepath.Join("testdata/review/can-broken.edn")
 		if filepath.Ext(s) == ".kicad_pcb" {
-			from = "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb"
+			from = "../../examples/tutorial-project/boards/gateway/gateway.kicad_pcb"
 		}
 		b, err := os.ReadFile(from)
 		if err != nil {

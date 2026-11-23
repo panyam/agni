@@ -19,7 +19,7 @@ This walks a checklist and reports every item's outcome, including the ones noth
 ## Pick a design and a checklist {#pick}
 
 > The bundled checklist is `checklist.yaml` beside this file, and the bundled design is the I2C
-> sensor at `../common/designs/i2c-sensor/i2c-sensor.edn`. Point either at your own with `AGNI_EXAMPLE_DESIGN` and
+> sensor at `../common/boards/i2c-sensor/i2c-sensor.edn`. Point either at your own with `AGNI_EXAMPLE_DESIGN` and
 > `AGNI_EXAMPLE_REVIEW`, or by typing a path.
 
 ## How much of the list can be answered {#coverage}

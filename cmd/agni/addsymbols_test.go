@@ -25,7 +25,7 @@ func TestAnAddedDesignCopiesItsSymbolsAndReadsUnderItsProjectsPack(t *testing.T)
 	dir := t.TempDir()
 	srv := designServer(t, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), mountset.Folder("tut", "../../examples/tutorial-project"))
 	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
-	added, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://tut/designs", Designs: []*webapi.DesignToAdd{{Folder: "designs/gateway-rev-b", DesignId: "rev-b"}}}))
+	added, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://tut/boards", Designs: []*webapi.DesignToAdd{{Folder: "boards/gateway-rev-b", DesignId: "rev-b"}}}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,8 +46,8 @@ func TestAnAddedDesignCopiesItsSymbolsAndReadsUnderItsProjectsPack(t *testing.T)
 			symbols = a
 		}
 	}
-	if symbols == nil || symbols.GetName() != "designs/rev-b/artifacts/symbols" || symbols.GetSource().GetPath() != "designs/gateway/symbols" || len(symbols.GetFiles()) == 0 {
-		t.Fatalf("rev-b's artifacts = %v; want a symbols artifact copied from designs/gateway/symbols", arts.Msg.GetArtifacts())
+	if symbols == nil || symbols.GetName() != "designs/rev-b/artifacts/symbols" || symbols.GetSource().GetPath() != "boards/gateway/symbols" || len(symbols.GetFiles()) == 0 {
+		t.Fatalf("rev-b's artifacts = %v; want a symbols artifact copied from boards/gateway/symbols", arts.Msg.GetArtifacts())
 	}
 
 	// The view's design.yaml, which a read opens, names the symbols artifact's folder.
@@ -79,11 +79,11 @@ func TestNoSymbolCopyLeavesTheFoldersOutAndSaysSo(t *testing.T) {
 	dir := t.TempDir()
 	srv := designServer(t, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), mountset.Folder("tut", "../../examples/tutorial-project"))
 	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
-	added, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://tut/designs", NoSymbolCopy: true, Designs: []*webapi.DesignToAdd{{Folder: "designs/gateway-rev-b", DesignId: "rev-b"}}}))
+	added, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://tut/boards", NoSymbolCopy: true, Designs: []*webapi.DesignToAdd{{Folder: "boards/gateway-rev-b", DesignId: "rev-b"}}}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := added.Msg.GetUncopiedSymbols(); !slices.Equal(got, []string{"designs/rev-b: mount://tut/designs/gateway/symbols"}) {
+	if got := added.Msg.GetUncopiedSymbols(); !slices.Equal(got, []string{"designs/rev-b: mount://tut/boards/gateway/symbols"}) {
 		t.Errorf("uncopied_symbols = %v; want rev-b's one symbol folder", got)
 	}
 	arts, err := designs.ListArtifacts(ctx, connect.NewRequest(&webapi.ListArtifactsRequest{Parent: "designs/rev-b"}))

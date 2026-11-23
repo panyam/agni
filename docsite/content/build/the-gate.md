@@ -226,7 +226,7 @@ restamped five captures across `guide/` and `learn/`.
 | `demo` | 8 |
 | `readers/kicad/testdata` | 6 |
 | `cmd/agni/testdata/intent` | 4 |
-| `examples/common/designs` | 3 |
+| `examples/common/boards` | 3 |
 
 `readers/kicad/oracle_corpus.baseline` used to sit in `readers/kicad/testdata/`, so regenerating it
 churned those five captures for no reason anyone could act on. We moved it out to break that. The

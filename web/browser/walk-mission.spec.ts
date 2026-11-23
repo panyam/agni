@@ -42,8 +42,8 @@ const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const walks = {
   cut: {
     mount: "probe",
-    path: "designs/jetson-cut",
-    file: "examples/cross-probe-project/designs/jetson-cut",
+    path: "boards/jetson-cut",
+    file: "examples/cross-probe-project/boards/jetson-cut",
     about: "nineteen parts of Antmicro's Jetson AGX Thor baseboard",
     start: "R119",
     sheet: "USB Debug, PD",
@@ -56,8 +56,8 @@ const walks = {
   },
   jetson: {
     mount: "jetson",
-    path: "designs/jetson",
-    file: "examples/jetson-project/designs/jetson",
+    path: "boards/jetson",
+    file: "examples/jetson-project/boards/jetson",
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
     start: "R361",
     sheet: "SoM_IO",

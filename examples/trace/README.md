@@ -30,9 +30,9 @@ from the sensor to the connector's supply pin, which runs through the pull-up re
 `--from` and `--to` at any other pins on it, or give the first step a path to your own design.
 
 The last step writes `route.svg`, the route drawn on that schematic. From the CLI the same thing is
-`agni trace ../common/designs/i2c-sensor --from U1.3 --to J1.1 --render route.svg`, which finds the
+`agni trace ../common/boards/i2c-sensor --from U1.3 --to J1.1 --render route.svg`, which finds the
 schematic through the design's descriptor and falls back to an auto-layout for a design that has
-none. To browse the whole design instead, `agni open ../common/designs/i2c-sensor`.
+none. To browse the whole design instead, `agni open ../common/boards/i2c-sensor`.
 
 ## How it is built
 

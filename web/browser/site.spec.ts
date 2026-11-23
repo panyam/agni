@@ -165,11 +165,11 @@ describe("the static demo under /agni/demo/", () => {
       await page.click("text=Sample Board");
       await page.waitForSelector(DESIGN_SUMMARY, { timeout: 60_000 });
       const view = new URL(page.url());
-      view.searchParams.set("against", "gateway/designs/gateway/gateway-rev-c.edn");
+      view.searchParams.set("against", "gateway/boards/gateway/gateway-rev-c.edn");
       await page.goto(view.toString(), { waitUntil: "domcontentloaded" });
       await expect
         .poll(() => page.locator(".diff-file").allTextContents(), { timeout: 60_000 })
-        .toEqual(["A gateway:designs/gateway", "B gateway:designs/gateway/gateway-rev-c.edn"]);
+        .toEqual(["A gateway:boards/gateway", "B gateway:boards/gateway/gateway-rev-c.edn"]);
       expect(await page.locator(".diff-error").count()).toBe(0);
       await expectCompareTables(page, want);
       expect(log.api).toEqual([]);
@@ -196,7 +196,7 @@ describe("the static demo under /agni/demo/", () => {
       await tree.getByText("gateway-rev-c.edn").click();
       await expect
         .poll(() => page.locator(".diff-file").allTextContents(), { timeout: 60_000 })
-        .toEqual(["A gateway:designs/gateway", "B gateway:designs/gateway/gateway-rev-c.edn"]);
+        .toEqual(["A gateway:boards/gateway", "B gateway:boards/gateway/gateway-rev-c.edn"]);
       // The pair was compared, so the legend counts its changes, and nothing failed.
       await page.waitForSelector(".diff-legend .diff-chip", { timeout: 60_000 });
       expect(await page.locator(".diff-error").count()).toBe(0);
@@ -262,7 +262,7 @@ describe("the static demo under /agni/demo/", () => {
   // assembles its run rule by rule in the panel's order, so the rows are compared as a set.
   it("saves a check run as csv, the rows agni check --format csv writes", async () => {
     const home = mkdtempSync(join(tmpdir(), "agni-home-"));
-    const want = execFileSync(agniBin(), ["check", "examples/tutorial-project/designs/gateway", "--format", "csv"], {
+    const want = execFileSync(agniBin(), ["check", "examples/tutorial-project/boards/gateway", "--format", "csv"], {
       cwd: repo,
       env: { ...process.env, HOME: home, XDG_CONFIG_HOME: home },
       encoding: "utf8",

@@ -45,7 +45,7 @@ demo/showcase.passes.kicad_sch
 # corpus is addressed by `<name>.<verdict>.<ext>`, which is a naming scheme the reader tests do not
 # use. That is why these are copies rather than one file with two readers.
 cmd/agni/testdata/conformance/dangling.fires.kicad_sch
-examples/common/designs/dangling-wire.kicad_sch
+examples/common/boards/dangling-wire.kicad_sch
 readers/kicad/testdata/dangling.kicad_sch
 
 cmd/agni/testdata/conformance/ext.kicad_sym
@@ -90,30 +90,30 @@ readers/geda/testdata/vcc-1.sym
 # the example rather than reached for across the tree: an example that pointed into `cmd/agni/testdata`
 # would teach a reader to depend on a path that exists only in a checkout.
 cmd/agni/testdata/conformance/directions.fires.edn
-examples/common/designs/driver-conflict.edn
+examples/common/boards/driver-conflict.edn
 
 cmd/agni/testdata/rev-a.edn
-examples/common/designs/rev-a.edn
+examples/common/boards/rev-a.edn
 
 cmd/agni/testdata/rev-b.edn
-examples/common/designs/rev-b.edn
+examples/common/boards/rev-b.edn
 
-examples/common/designs/duplicate-refdes.kicad_sch
+examples/common/boards/duplicate-refdes.kicad_sch
 readers/kicad/testdata/dup_refdes.kicad_sch
 
 # ---------------------------------------------------------------------------------------------
 # One design, addressed two ways within examples/.
 #
-# `examples/common/designs/mixer.*` is the bare file, and the same bytes sit inside `demo-project/`
+# `examples/common/boards/mixer.*` is the bare file, and the same bytes sit inside `demo-project/`
 # under a `design.yaml`. Both are deliberate: `resolve-design` and `whole-enchilada` show a design
 # resolved THROUGH a project descriptor, and `multi-format` shows the same board read as a bare file.
 # The point of those examples is that the two paths produce the same answer, which only holds while
 # the two files are the same file.
-examples/common/designs/demo-project/designs/mixer/mixer.edn
-examples/common/designs/mixer.edn
+examples/common/boards/demo-project/designs/mixer/mixer.edn
+examples/common/boards/mixer.edn
 
-examples/common/designs/demo-project/designs/mixer/mixer.kicad_pcb
-examples/common/designs/mixer.kicad_pcb
+examples/common/boards/demo-project/designs/mixer/mixer.kicad_pcb
+examples/common/boards/mixer.kicad_pcb
 
 # ---------------------------------------------------------------------------------------------
 # A seeded datasheet parameter, in the package that parses it and in the corpus a CLI run composes.
@@ -151,12 +151,12 @@ web/vitest.config.ts
 # The gateway's schematic netlist, beside its ODB++ layouts (agni issue 1250).
 #
 # The odb-verification example checks a layout against the schematic it was drawn from, and the
-# examples read their fixtures from common/designs (examples/CONVENTIONS.md section 5). The layouts
+# examples read their fixtures from common/boards (examples/CONVENTIONS.md section 5). The layouts
 # are kicad-cli exports of the tutorial board (hack/odb_fixtures.sh), so the netlist they are held
 # to has to be that board's. A tutorial change to it that misses the copy turns the gate red rather
 # than leaving the example comparing against a schematic the layout was never drawn from.
-examples/common/designs/odb/gateway.edn
-examples/tutorial-project/designs/gateway/gateway.edn
+examples/common/boards/odb/gateway.edn
+examples/tutorial-project/boards/gateway/gateway.edn
 
 # The agni plugin's manifest, once per tool. Claude Code reads .claude-plugin/plugin.json and Cursor
 # reads .cursor-plugin/plugin.json, and the two formats happen to agree on every field the plugin

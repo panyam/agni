@@ -36,12 +36,12 @@ This is the shape a real review project takes. Two kinds of file live here.
 | `lib/` | this team's own derived relations, one Datalog module per `.dl` file, such as `house.pmic_rail`, named by `lib:` |
 | `reports/<design>/` | the outcome of a run on one design, written by `make report` |
 
-**Per-design**, one set per folder under `designs/`:
+**Per-design**, one set per folder under `boards/`:
 
 | Path | What it is |
 |---|---|
 | `design.yaml` | the design's name, the project it `extends`, which file is its entry, and which files are views of it |
-| `gateway.edn` | the netlist, `designs/gateway-rev-b` a later revision as a design of its own in the same `series`, and `gateway-rev-c.edn` one more that renames and rewires a net, for `diff --rename-approx` |
+| `gateway.edn` | the netlist, `boards/gateway-rev-b` a later revision as a design of its own in the same `series`, and `gateway-rev-c.edn` one more that renames and rewires a net, for `diff --rename-approx` |
 | `gateway.kicad_sch` | the same board as a KiCad schematic, with `symbols/` as an external library |
 | `gateway.kicad_pcb` | the same board's copper, for the board-tier checks |
 | `design.yaml` `intent:` | what this board is supposed to be: declared modules and what each rail is |
@@ -50,9 +50,9 @@ Intent is per-design because each board has its own intended architecture. Conve
 and parameters are per-project because they describe the team, not the board.
 
 The two descriptors are what let you name a **design** instead of a file. `agni check
-designs/gateway` reads the entry `design.yaml` declares and picks up the board companion for the
+boards/gateway` reads the entry `design.yaml` declares and picks up the board companion for the
 copper checks, so the connectivity rules and the board rules run from one argument. Naming a
-declared companion (`agni check designs/gateway/gateway.kicad_pcb`) reads the entry instead and says
+declared companion (`agni check boards/gateway/gateway.kicad_pcb`) reads the entry instead and says
 so on stderr, because a board export is a view of the design rather than a second source of it. Pass
 `--as-named` when reading a view as a netlist is the point, which is what `make check-views` does.
 

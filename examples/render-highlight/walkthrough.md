@@ -16,7 +16,7 @@ Findings are computed on the netlist and located on the geometry by name (a net)
 
 ## Pick a design {#pick}
 
-> Give a path to a schematic (relative to this example folder), or your own file. The default is a small KiCad schematic bundled in ../common/designs where two symbols share ref-des U1, so the run has one clear component finding whose subject draws on the faithful geometry.
+> Give a path to a schematic (relative to this example folder), or your own file. The default is a small KiCad schematic bundled in ../common/boards where two symbols share ref-des U1, so the run has one clear component finding whose subject draws on the faithful geometry.
 
 ## Run the rule catalog {#check}
 
@@ -42,6 +42,6 @@ Agni -->> You: one SVG, findings baked in
 
 The render step is the narrated form of the `--highlight` flag, which bakes a named subject into the SVG.
 
-    agni render ../common/designs/duplicate-refdes.kicad_sch --highlight ref=U1,shape=rect -o render.svg
+    agni render ../common/boards/duplicate-refdes.kicad_sch --highlight ref=U1,shape=rect -o render.svg
 
 `--highlight` is repeatable, one subject per flag: `net=<name>`, `ref=<refdes>`, or `pin=<refdes>:<pin>`, with optional `shape=outline|rect|circle|path`, `color=#rrggbb`, and `alpha=0..1`. A net defaults to the PATH marker; a component or pin to an outline. This example builds the same specs from real findings instead of by hand, so the picture always matches what the checks found.

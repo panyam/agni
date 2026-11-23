@@ -20,7 +20,7 @@ var walkthroughMD []byte
 
 func main() {
 	// The shared path input. It defaults to the bundled fixture and accepts any path the user enters.
-	design := common.AskPath("design", "../common/designs/two-resistors.edn")
+	design := common.AskPath("design", "../common/boards/two-resistors.edn")
 
 	demo := demokit.New("read-and-stats").
 		Dir("read-and-stats").

@@ -2,7 +2,7 @@
 #
 # `entry` is the file analysis reads. It is the netlist the design team produces, because that is the
 # design's system of record; everything else here is a view of it. Declaring it is what lets you point
-# agni at the DESIGN (`agni stats designs/gateway`) rather than at a file, and what lets the tool stop
+# agni at the DESIGN (`agni stats boards/gateway`) rather than at a file, and what lets the tool stop
 # guessing when a folder holds several files that all look openable.
 #
 # `companions` are those other views: the same board drawn as a KiCad schematic, and its copper. They

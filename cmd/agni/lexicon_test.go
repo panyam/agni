@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const lexiconGateway = "../../examples/tutorial-project/designs/gateway"
+const lexiconGateway = "../../examples/tutorial-project/boards/gateway"
 
 // The gateway's project adds one rail pattern to the built-ins, so the listing has to tell the two
 // apart. A pattern that a run no longer matches must be marked if the listing shows it.

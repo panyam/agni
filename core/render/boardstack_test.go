@@ -13,7 +13,7 @@ import (
 
 func jetsonCutBoard(t *testing.T) *geom.BoardGeometry {
 	t.Helper()
-	f, err := os.Open(filepath.Join("..", "..", "examples", "cross-probe-project", "designs", "jetson-cut", "jetson-cut.kicad_pcb"))
+	f, err := os.Open(filepath.Join("..", "..", "examples", "cross-probe-project", "boards", "jetson-cut", "jetson-cut.kicad_pcb"))
 	if err != nil {
 		t.Fatal(err)
 	}

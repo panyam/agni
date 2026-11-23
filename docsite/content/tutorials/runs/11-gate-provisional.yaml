@@ -2,9 +2,9 @@
 # finding provisional, and the gate still trips, because --fail-on reads severity.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 script: |
   cp drafts/nts0102gt.first-pass.textproto params/nts0102gt.textproto
-  agni check designs/jetson --rule supply-exceeds-abs-max --fail-on error
+  agni check boards/jetson --rule supply-exceeds-abs-max --fail-on error
 capture: none
 exit: true

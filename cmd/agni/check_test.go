@@ -174,7 +174,7 @@ func TestCheckStrapGroupUndecidableCLI(t *testing.T) {
 // a connector declared internal leaves the exposure rules (agni issue 831). The gateway's J1 carries
 // the CAN bus. esd-protection reports J1 until the declaration says J1 joins another board.
 func TestCheckIntentPathDeclaresAConnectorInternal(t *testing.T) {
-	const gateway = "../../examples/tutorial-project/designs/gateway"
+	const gateway = "../../examples/tutorial-project/boards/gateway"
 	run := func(extra ...string) string {
 		t.Helper()
 		cmd := checkCmd()

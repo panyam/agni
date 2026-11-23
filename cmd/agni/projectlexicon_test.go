@@ -18,7 +18,7 @@ import (
 // a REQUEST. None asserted that a design belonging to a project is read under that project's
 // vocabulary. That half decides what a rail is.
 func TestProjectLexiconReachesTheRead(t *testing.T) {
-	const design = "../../examples/tutorial-project/designs/gateway/gateway.edn"
+	const design = "../../examples/tutorial-project/boards/gateway/gateway.edn"
 	out := runCLI(t, queryCmd(), design, "net.rail(?n) => ?n")
 	for _, want := range []string{"PMIC_MAIN_12V0", "PMIC_CORE_3V3", "PMIC_IO_1V8"} {
 		if !strings.Contains(out, want) {
@@ -36,7 +36,7 @@ func TestProjectLexiconReachesTheRead(t *testing.T) {
 // roles, and every one of those commands then derives from them. A command-level assertion would
 // test one derivation and leave the other five uncovered.
 func TestReadDesignResolvesProjectConfig(t *testing.T) {
-	d, err := readDesign("../../examples/tutorial-project/designs/gateway/gateway.edn")
+	d, err := readDesign("../../examples/tutorial-project/boards/gateway/gateway.edn")
 	if err != nil {
 		t.Fatalf("readDesign: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestReadDesignResolvesSymbolPaths(t *testing.T) {
 	readAsNamed = true
 	defer func() { readAsNamed = saved }()
 
-	d, err := readDesign("../../examples/tutorial-project/designs/gateway/gateway.kicad_sch")
+	d, err := readDesign("../../examples/tutorial-project/boards/gateway/gateway.kicad_sch")
 	if err != nil {
 		t.Fatalf("readDesign: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestStatsOutputIsCapturable(t *testing.T) {
 	readAsNamed = true
 	defer func() { readAsNamed = saved }()
 
-	out := runCLI(t, statsCmd(), "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch")
+	out := runCLI(t, statsCmd(), "../../examples/tutorial-project/boards/gateway/gateway.kicad_sch")
 	if out == "" {
 		t.Fatal("stats wrote nothing to the command's writer; it is printing to the process stdout again")
 	}
@@ -116,7 +116,7 @@ func TestStatsOutputIsCapturable(t *testing.T) {
 // Counting elements would call that "a smaller drawing"; counting keys calls it a sheet where nothing
 // can be clicked.
 func TestRenderResolvesProjectSymbolLibrary(t *testing.T) {
-	const design = "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch"
+	const design = "../../examples/tutorial-project/boards/gateway/gateway.kicad_sch"
 	out := filepath.Join(t.TempDir(), "sheet.svg")
 	runCLI(t, renderCmd(), design, "--format", "svg", "--symbols", "faithful", "-o", out)
 	b, err := os.ReadFile(out)
@@ -149,7 +149,7 @@ func TestRenderNotesWhatItCouldNotDraw(t *testing.T) {
 	// The same schematic, away from the symbol library its project declares. A checkout without the
 	// library looks like this, and so does a design opened outside its project.
 	dir := t.TempDir()
-	src, err := os.ReadFile("../../examples/tutorial-project/designs/gateway/gateway.kicad_sch")
+	src, err := os.ReadFile("../../examples/tutorial-project/boards/gateway/gateway.kicad_sch")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestRenderIsSilentWhenEverythingDraws(t *testing.T) {
 	var errOut bytes.Buffer
 	cmd := renderCmd()
 	cmd.SetErr(&errOut)
-	runCLI(t, cmd, "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch",
+	runCLI(t, cmd, "../../examples/tutorial-project/boards/gateway/gateway.kicad_sch",
 		"--format", "svg", "--symbols", "faithful", "-o", filepath.Join(t.TempDir(), "out.svg"))
 	if strings.Contains(errOut.String(), "not drawn") {
 		t.Errorf("a complete render must say nothing about undrawn placements, got:\n%s", errOut.String())

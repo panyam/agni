@@ -195,7 +195,7 @@ jobs:
         run: |
           go build -tags embedweb -o agni.exe ./cmd/agni
           cd web && pnpm exec playwright-core install chromium
-          node browser/smoke.mjs ../agni.exe "$(cygpath -w "$GITHUB_WORKSPACE/examples/tutorial-project")" designs/gateway
+          node browser/smoke.mjs ../agni.exe "$(cygpath -w "$GITHUB_WORKSPACE/examples/tutorial-project")" boards/gateway
 
   # The browser suite runs its spec files one at a time, so one runner took about eight minutes and set
   # the gate's wall time. Five shards run on five runners. Each shard starts its own server and

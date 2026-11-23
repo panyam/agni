@@ -26,9 +26,9 @@ AGNI = os.environ.get("AGNI_BIN", str(REPO / "bin" / "agni"))
 # hier is the EDIF reader's hierarchical fixture, for the reads --flatten-hierarchy changes.
 MOUNTS = {"tut": str(FIXTURE), "hier": str(REPO / "readers" / "edif" / "testdata")}
 
-DESIGN = "mount://tut/designs/gateway"
+DESIGN = "mount://tut/boards/gateway"
 # REV_B is rev B of the tutorial board, a design of its own beside the gateway (agni 1692).
-REV_B = "mount://tut/designs/gateway-rev-b/gateway-rev-b.edn"
+REV_B = "mount://tut/boards/gateway-rev-b/gateway-rev-b.edn"
 
 _HELD: dict = {}
 

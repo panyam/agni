@@ -57,7 +57,7 @@ thickness the file states and what the layers sum to. When the two differ by mor
 line says so. KiCad, ODB++ and IPC-2581 boards carry a stack.
 
 ```bash
-agni stackup examples/cross-probe-project/designs/jetson-cut
+agni stackup examples/cross-probe-project/boards/jetson-cut
 ```
 
 ```text
@@ -86,7 +86,7 @@ board.pb` writes it as protobuf bytes. [Drawing a board from agni](../../build/b
 what it means.
 
 ```bash
-agni board examples/cross-probe-project/designs/jetson-cut
+agni board examples/cross-probe-project/boards/jetson-cut
 ```
 
 ```text
@@ -133,7 +133,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 
 | flag | what it does |
 |---|---|
-| `--checklist <name-or-file>` | which checklist to run. A value ending in `.yaml` or `.yml` is a review manifest file read from outside the project, and `-` reads one from stdin; any other value names a checklist declared under `checklists:` in the design's `project.yaml`. Optional when the design belongs to a project that declares one, since the project's first checklist is its default |
+| `--checklist <name-or-file>` | which checklist to run. A value ending in `.yaml` or `.yml` is a review manifest file read from outside the project, and `-` reads one from stdin. A manifest file may name `items_dir:`, a folder of item files under its own folder, and a folder written as a path, such as `checklist/` or `./checklist`, reads as a checklist titled with the folder's name; any other value names a checklist declared under `checklists:` in the design's `project.yaml`. Optional when the design belongs to a project that declares one, since the project's first checklist is its default |
 | `--conventions <file>` | a naming-convention config, whose rules join the catalog and whose lexicon reaches the design read |
 | `--profile-path <dir>` | interface-profile declarations added to the catalog |
 | `--params <dir>` | a datasheet parameter set, enabling datasheet-backed items |
@@ -454,7 +454,7 @@ re-confirm. A pair of content hashes would not.
 
 ```
 agni params LM1117 --params seed/
-agni params LM1117 --design designs/gateway/gateway.kicad_sch
+agni params LM1117 --design boards/gateway/gateway.kicad_sch
 agni params LM1117 --params seed/ --format json
 ```
 
@@ -639,7 +639,7 @@ board reads `Not compared`. `--format json` is the `DiffDesignsResponse`, with t
 rules (agni issue 1590).
 
 ```
-agni diff examples/cross-probe-project/designs/jetson-cut
+agni diff examples/cross-probe-project/boards/jetson-cut
 ```
 
 | flag | what it does |

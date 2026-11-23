@@ -134,11 +134,11 @@ func (f *uploadFixture) findings(t *testing.T, snap string) map[string]bool {
 func TestAnUploadedDesignIsReadFromItsFilesAlone(t *testing.T) {
 	f := newUploadFixture(t, 0)
 	files := tutorialFiles(t)
-	up, missing := f.send(t, "mount://m/designs/gateway", files)
+	up, missing := f.send(t, "mount://m/boards/gateway", files)
 	if len(missing) != len(manifestOf(files)) {
 		t.Errorf("the first ingest asked for %d contents, want every one of %d", len(missing), len(files))
 	}
-	served := f.ingest(t, "mount://m/designs/gateway")
+	served := f.ingest(t, "mount://m/boards/gateway")
 	if len(f.findings(t, up.GetName())) == 0 {
 		t.Fatal("the uploaded gateway has no findings, so agreeing with the served one proves nothing")
 	}
@@ -156,12 +156,12 @@ func TestAnUploadedDesignIsReadFromItsFilesAlone(t *testing.T) {
 	for p, b := range files {
 		edited[p] = b
 	}
-	netlist := "designs/gateway/gateway.edn"
+	netlist := "boards/gateway/gateway.edn"
 	edited[netlist] = bytes.Replace(files[netlist], []byte(`(designator "U1")`), []byte(`(designator "U91")`), 1)
 	if bytes.Equal(edited[netlist], files[netlist]) {
 		t.Fatal("the edit changed nothing in the netlist, so the comparison below proves nothing")
 	}
-	changed, missing := f.send(t, "mount://m/designs/gateway", edited)
+	changed, missing := f.send(t, "mount://m/boards/gateway", edited)
 	if len(missing) != 1 {
 		t.Errorf("the edited upload asked for %d contents, want only the edited netlist", len(missing))
 	}
@@ -214,8 +214,8 @@ func equalSets(a, b map[string]bool) bool {
 func TestOneManifestIsReadThroughOneHost(t *testing.T) {
 	f := newUploadFixture(t, 0)
 	files := tutorialFiles(t)
-	a, _ := f.send(t, "mount://m/designs/gateway", files)
-	b, missing := f.send(t, "mount://m/designs/gateway", files)
+	a, _ := f.send(t, "mount://m/boards/gateway", files)
+	b, missing := f.send(t, "mount://m/boards/gateway", files)
 	if len(missing) != 0 {
 		t.Errorf("a second ingest of the same files asked for %d contents again", len(missing))
 	}
@@ -294,12 +294,12 @@ func TestAnUploadKeptOnDiskOutlivesEvictionAndARestart(t *testing.T) {
 func TestASnapshotKeepsItsUploadPastLaterOnes(t *testing.T) {
 	f := newUploadFixture(t, 0)
 	files := tutorialFiles(t)
-	first, _ := f.send(t, "mount://m/designs/gateway", files)
+	first, _ := f.send(t, "mount://m/boards/gateway", files)
 	want := f.findings(t, first.GetName())
 	// More manifests than the host keeps, each one byte apart in a file nothing reads.
 	for i := 0; i < 20; i++ {
-		other := map[string][]byte{"designs/gateway/gateway.edn": files["designs/gateway/gateway.edn"], "pad.txt": []byte{byte(i)}}
-		f.send(t, "mount://m/designs/gateway/gateway.edn", other)
+		other := map[string][]byte{"boards/gateway/gateway.edn": files["boards/gateway/gateway.edn"], "pad.txt": []byte{byte(i)}}
+		f.send(t, "mount://m/boards/gateway/gateway.edn", other)
 	}
 	if got := f.findings(t, first.GetName()); !equalSets(got, want) {
 		t.Error("the first snapshot answers differently once its upload was evicted from the host's list")
@@ -309,11 +309,11 @@ func TestASnapshotKeepsItsUploadPastLaterOnes(t *testing.T) {
 func TestAnUpdateReplacesTheFilesASnapshotReads(t *testing.T) {
 	f := newUploadFixture(t, 0)
 	files := tutorialFiles(t)
-	s, _ := f.send(t, "mount://m/designs/gateway", files)
+	s, _ := f.send(t, "mount://m/boards/gateway", files)
 	if !f.parts(t, s.GetName())["U1"] {
 		t.Fatal("control: the uploaded gateway has no U1")
 	}
-	netlist := "designs/gateway/gateway.edn"
+	netlist := "boards/gateway/gateway.edn"
 	edited := map[string][]byte{}
 	for p, b := range files {
 		edited[p] = b

@@ -120,7 +120,7 @@ describe("picking the board", () => {
   // (agni issue 1325), so a reader can open the schematic from the copper.
   it("lists the schematic sheet and the board for a part picked on the board", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/mounts/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/boards/gateway/view?mode=svg`, { waitUntil: "networkidle" });
       // Exactly "Board", since gateway's schematic sheet is called "Sample Board".
       await showPanel(page, "overview");
       await page.locator(".sheet-tile", { hasText: /^\s*Board\s*$/ }).first().click();

@@ -34,7 +34,7 @@ func TestRawFileHandlerServesFilesInsideAMountOnly(t *testing.T) {
 	if code, body := get("/raw/tut/project.yaml"); code != http.StatusOK || len(body) == 0 {
 		t.Errorf("project.yaml: %d, %d bytes", code, len(body))
 	}
-	for _, p := range []string{"/raw/tut/designs", "/raw/nope/project.yaml", "/raw/tut/../tutorial-project/project.yaml", "/raw/tut/%2e%2e/tutorial-project/project.yaml", "/raw/tut/"} {
+	for _, p := range []string{"/raw/tut/boards", "/raw/nope/project.yaml", "/raw/tut/../tutorial-project/project.yaml", "/raw/tut/%2e%2e/tutorial-project/project.yaml", "/raw/tut/"} {
 		if code, _ := get(p); code != http.StatusNotFound {
 			t.Errorf("%s: %d, want 404", p, code)
 		}

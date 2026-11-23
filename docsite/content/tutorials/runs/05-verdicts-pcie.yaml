@@ -2,9 +2,9 @@
 # passes per rule and says how many it folded, so the block shows the first link's rows and the tail.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 show: |
-  agni check --verdicts --rule jetson-profiles/pcie-signal-missing designs/jetson
+  agni check --verdicts --rule jetson-profiles/pcie-signal-missing boards/jetson
 script: |
-  agni check --verdicts --rule jetson-profiles/pcie-signal-missing designs/jetson 2>/dev/null | sed -n '1,15p'
-  agni check --verdicts --rule jetson-profiles/pcie-signal-missing designs/jetson 2>/dev/null | tail -3
+  agni check --verdicts --rule jetson-profiles/pcie-signal-missing boards/jetson 2>/dev/null | sed -n '1,15p'
+  agni check --verdicts --rule jetson-profiles/pcie-signal-missing boards/jetson 2>/dev/null | tail -3

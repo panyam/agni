@@ -52,7 +52,7 @@ const base = (): string => inject("baseUrl");
 const walks = {
   cut: {
     mount: "probe",
-    path: "designs/jetson-cut",
+    path: "boards/jetson-cut",
     about: "the cross-probe cut of Jetson, nineteen parts and their copper",
     sheet: "Power",
     // busSheet is a sheet that draws a bus, for the bus click. The cut's Power sheet draws none.
@@ -64,13 +64,13 @@ const walks = {
   },
   jetson: {
     mount: "jetson",
-    path: "designs/jetson",
+    path: "boards/jetson",
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
     sheet: "Expansion connector",
     busSheet: "Expansion connector",
     // revB is the second revision the walk compares against, which `make -C examples/jetson-project
     // rev-b` builds (agni issue 1335). The cut has none.
-    revB: "designs/jetson-rev-b",
+    revB: "boards/jetson-rev-b",
     ground: "GND",
     verdict: { id: "bulk-cap:(net:/Power/USBPD1_HV)", rule: "bulk-cap", subject: "net:/Power/USBPD1_HV" },
     trace: "R119.1,R119.2",

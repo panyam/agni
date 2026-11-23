@@ -3,4 +3,4 @@
 fixture: examples/tutorial-project
 from_root: true
 script: |
-  agni check --verdicts --rule supply-exceeds-abs-max examples/tutorial-project/designs/gateway/gateway.edn
+  agni check --verdicts --rule supply-exceeds-abs-max examples/tutorial-project/boards/gateway/gateway.edn

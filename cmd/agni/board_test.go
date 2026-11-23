@@ -13,7 +13,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-const jetsonCutPCB = "../../examples/cross-probe-project/designs/jetson-cut/jetson-cut.kicad_pcb"
+const jetsonCutPCB = "../../examples/cross-probe-project/boards/jetson-cut/jetson-cut.kicad_pcb"
 
 func runBoard(t *testing.T, args ...string) (string, error) {
 	t.Helper()

@@ -23,7 +23,7 @@ func TestRunAllMatchesRunAndRunVerdicts(t *testing.T) {
 	}
 	rules := e.Catalog().Rules()
 	for name, path := range map[string]string{
-		"gateway": "../../examples/tutorial-project/designs/gateway/gateway.edn",
+		"gateway": "../../examples/tutorial-project/boards/gateway/gateway.edn",
 		"jetson":  "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_sch",
 	} {
 		t.Run(name, func(t *testing.T) {

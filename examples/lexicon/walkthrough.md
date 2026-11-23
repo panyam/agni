@@ -16,7 +16,7 @@ The vocabulary is built-in patterns with at most one convention laid over them. 
 
 ## Pick a design {#design}
 
-> A path to a design folder or file, relative to this folder. The default is ../common/designs/lexicon-demo, a sensor that runs from its own regulator, whose output is named SENSOR_3V3. Its design.yaml carries a convention adding one rail pattern.
+> A path to a design folder or file, relative to this folder. The default is ../common/boards/lexicon-demo, a sensor that runs from its own regulator, whose output is named SENSOR_3V3. Its design.yaml carries a convention adding one rail pattern.
 
 ## The vocabulary, and where each pattern came from {#lexicon}
 

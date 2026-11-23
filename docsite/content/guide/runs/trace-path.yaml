@@ -10,6 +10,6 @@
 # the walk does and does not cross, so a reader can judge it rather than take it on trust.
 fixture: examples/tutorial-project
 steps:
-  - script: agni trace designs/gateway/gateway.edn --from U3.10 --to U1.5
-  - script: agni trace designs/gateway/gateway.edn --from U1.2 --to U3.2
-  - script: agni trace designs/gateway/gateway.edn --from U3.10 --to U1.1
+  - script: agni trace boards/gateway/gateway.edn --from U3.10 --to U1.5
+  - script: agni trace boards/gateway/gateway.edn --from U1.2 --to U3.2
+  - script: agni trace boards/gateway/gateway.edn --from U3.10 --to U1.1

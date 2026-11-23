@@ -1,4 +1,4 @@
-#agni-run c41d7821a140eec6
-note: reading gateway.edn with sheets from gateway.kicad_sch and gateway.kicad_pcb as its board where the command reads one (declared by designs/gateway/design.yaml). Pass --as-named for the file alone.
+#agni-run f6753287c8cc707e
+note: reading gateway.edn with sheets from gateway.kicad_sch and gateway.kicad_pcb as its board where the command reads one (declared by boards/gateway/design.yaml). Pass --as-named for the file alone.
 layout "layered": 19 nodes, 15 nets, 56 segments, 95 crossings, edge length 20826
 wrote gateway.svg (sheet "netlist graph", 19 placements, 15 wires)

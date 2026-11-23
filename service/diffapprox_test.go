@@ -16,7 +16,7 @@ import (
 // client asking with near_renames gets the pairing and its evidence. Without it, which is the
 // default, the net reads as one deleted and one new, as it always has.
 func TestDiffDesignsPairsANearRenameWhenAsked(t *testing.T) {
-	svc := NewDiffService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project", "designs")}, nil)
+	svc := NewDiffService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project", "boards")}, nil)
 	ask := func(near *webapi.NearRenameOptions) []*webapi.DiffReport_NetChange {
 		t.Helper()
 		resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
@@ -61,7 +61,7 @@ func TestDiffDesignsPairsANearRenameWhenAsked(t *testing.T) {
 // are two thirds old ones, so requiring nine tenths refuses the pairing the defaults make, and the
 // nets read as deleted and new again.
 func TestANearRenameThresholdOverridesTheDefault(t *testing.T) {
-	svc := NewDiffService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project", "designs")}, nil)
+	svc := NewDiffService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project", "boards")}, nil)
 	strict := 0.9
 	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
 		ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway-rev-b/gateway-rev-b.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway/gateway-rev-c.edn"),

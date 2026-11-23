@@ -16,7 +16,7 @@ were building.
 ## Write a declaration
 
 ```yaml
-# designs/gateway/design.yaml
+# boards/gateway/design.yaml
 name: gateway
 extends: ../../project.yaml
 entry: gateway.edn
@@ -230,7 +230,7 @@ maps straight onto a map row. The ball is `pin`, the function is `function`, the
 A board with a module connector has hundreds of pins to declare, and a map goes wrong first when
 someone writes each row by hand. `agni pinmap` drafts one for a device from the netlist:
 
-    agni pinmap designs/jetson --device J1 -o j1-pins.yaml
+    agni pinmap boards/jetson --device J1 -o j1-pins.yaml
 
 Each pin on a net becomes a row. The far end is filled in when a walk from the pin, crossing series
 parts as `agni trace` does, reaches exactly one pin on another IC or connector. On the Jetson AGX Thor
@@ -242,10 +242,10 @@ in a comment, and the rest sit on ground or a supply and are not walked. The CAN
 - {device: J1, pin: G38, net: /Expansion connector/CAN0.DOUT, to: {device: J18, pin: H08}}  # FSI_GPIO07
 ```
 
-`agni trace designs/jetson --from J1.G38 --to J18.H08` prints the same route, and the row passes
+`agni trace boards/jetson --from J1.G38 --to J18.H08` prints the same route, and the row passes
 when the draft is checked:
 
-    agni check designs/jetson --intent-path j1-pins.yaml --verdicts --format csv --table pin_map
+    agni check boards/jetson --intent-path j1-pins.yaml --verdicts --format csv --table pin_map
 
 The draft was read off the same netlist, so every row passes by construction, and that run proves
 nothing yet about the board. The draft is useful as an inventory. Review each row against the

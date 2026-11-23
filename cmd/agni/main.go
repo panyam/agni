@@ -1354,7 +1354,7 @@ func reviewCmd() *cobra.Command {
 			return gateReview(cmd, gate, reports)
 		},
 	}
-	cmd.Flags().StringVar(&checklist, "checklist", "", "review manifest (YAML, or - for stdin) declaring review areas and their checklist items")
+	cmd.Flags().StringVar(&checklist, "checklist", "", "which checklist to run: a name the project declares, a review manifest file (.yaml, or - for stdin), or a folder of item files written as a path, such as checklist/ (agni issue 1836)")
 	cmd.Flags().StringArrayVar(&reviewLibs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the run, beside any the design's project carries, so a checklist's inline query can call them. Repeatable")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations added to the catalog")

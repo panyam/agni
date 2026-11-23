@@ -181,7 +181,7 @@ func TestWasmEngineAnswersAsTheServerDoes(t *testing.T) {
 		// report is clean, where the drawing is what is being compared.
 		ruleFrom string
 	}{
-		{"descriptor companions and project config", "mount://tut/designs/gateway", "net.has_test_point(?n) => ?n", "gateway-profiles/"},
+		{"descriptor companions and project config", "mount://tut/boards/gateway", "net.has_test_point(?n) => ?n", "gateway-profiles/"},
 		{"undeclared sibling .eds", "mount://rev/companion-demo.edn", "component.net(?r, ?n) => ?r, ?n", ""},
 	}
 	for _, c := range cases {
@@ -531,7 +531,7 @@ func firstDifference(a, b proto.Message) string {
 // design is an EDIF netlist beside its ODB++ job, which no design.yaml pairs, so the board reaches
 // the engine through Snapshot.board_uri alone.
 func TestWasmEngineAnswersAsTheServerDoesForAnAttachedBoard(t *testing.T) {
-	root, err := filepath.Abs(filepath.Join("..", "..", "examples", "common", "designs", "odb"))
+	root, err := filepath.Abs(filepath.Join("..", "..", "examples", "common", "boards", "odb"))
 	if err != nil {
 		t.Fatal(err)
 	}

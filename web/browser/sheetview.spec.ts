@@ -32,7 +32,7 @@ afterAll(async () => {
 describe("a sheet view beside the canvas", () => {
   it("finds a schematic part on the board, and a board footprint on the schematic", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut/designs/gateway");
+      await openViewer(page, "tut/boards/gateway");
       expect(await page.locator(PANE).count()).toBe(0);
       await openBeside(page, "Board");
       await page.waitForSelector(`${PANE} .picks-front`, { timeout: 30_000 });
@@ -118,7 +118,7 @@ describe("a sheet view beside the canvas", () => {
 
   it("keeps following once it floats, and stays put when its link is off", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut/designs/gateway");
+      await openViewer(page, "tut/boards/gateway");
       await openBeside(page, "Board");
       await page.locator(`${PANE} .sheetview-float`).click();
       await page.waitForFunction((pane) => document.querySelector(pane)?.closest(".dv-render-overlay-float") !== null, PANE, { timeout: 30_000 });
@@ -153,7 +153,7 @@ describe("a sheet view beside the canvas", () => {
 
   it("stays on the board when the board does not place the part, and says so", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut/designs/gateway");
+      await openViewer(page, "tut/boards/gateway");
       await openBeside(page, "Board");
       const absent = await firstClear(page, "#svg-view");
       await withoutBoard(page, absent.ref);
@@ -179,7 +179,7 @@ describe("a sheet view beside the canvas", () => {
 
   it("keeps the board on the canvas when a part picked beside it is not on the board", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut/designs/gateway");
+      await openViewer(page, "tut/boards/gateway");
       const schematic = (await page.locator(".sheet-tile.active .sheet-tile-name").textContent()) ?? "";
       await openBeside(page, schematic);
       await showPanel(page, "overview");
@@ -204,7 +204,7 @@ describe("a sheet view beside the canvas", () => {
         if (body.includes('"sheet":"board"')) boardSpecs.push(body);
         return route.continue();
       });
-      await page.goto(`${base()}/mounts/tut/designs/gateway/view?mode=svg&walk=R1&walk_kind=small-parts&walk_hops=2`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/boards/gateway/view?mode=svg&walk=R1&walk_kind=small-parts&walk_hops=2`, { waitUntil: "networkidle" });
       await page.waitForSelector(".walk-net-name", { timeout: 30_000 });
       const net = (await page.locator(".walk-net").first().getAttribute("data-walk-net"))!;
       await openBeside(page, "Board");
@@ -257,7 +257,7 @@ describe("a sheet view beside the canvas", () => {
           PANE,
           { timeout: 30_000 },
         );
-      await openViewer(page, "tut/designs/gateway");
+      await openViewer(page, "tut/boards/gateway");
       await openBeside(page, "Board");
       await away();
       await parks();
@@ -307,7 +307,7 @@ describe("a sheet view in WebGL", () => {
 
   it("lights and centres a part picked on the canvas, and a click there picks it, from above and below", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut/designs/gateway");
+      await openViewer(page, "tut/boards/gateway");
       await openBeside(page, "Board");
       await page.check(`${PANE} .sheetview-webgl`);
       await page.waitForSelector(`${PANE}[data-renderer="webgl"]`, { timeout: 30_000 });
@@ -354,7 +354,7 @@ describe("the renderer a sheet view opens in", () => {
   it("draws the board in WebGL beside an SVG canvas on a hardware GPU, and a schematic in SVG", async () => {
     await withPage(browser, async (page) => {
       await page.addInitScript(hardwareGpu);
-      await page.goto(`${base()}/mounts/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/boards/gateway/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       await showPanel(page, "overview");
       await besideTile(page, /^Board$/).click();
@@ -371,7 +371,7 @@ describe("the renderer a sheet view opens in", () => {
 
   it("keeps the board in SVG on a software GPU", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/mounts/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/boards/gateway/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       await showPanel(page, "overview");
       await besideTile(page, /^Board$/).click();

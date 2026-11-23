@@ -29,7 +29,7 @@ url=http://127.0.0.1:$port
 
 for r in 1.1.2 1.1.3; do
   [ -d "$revs/jetson-agx-thor-baseboard-$r" ] || { echo "missing $revs/jetson-agx-thor-baseboard-$r; run make samples-revisions" >&2; exit 1; }
-  [ -f "$proj/designs/jetson-$r/jetson-agx-thor-baseboard.kicad_sch" ] || { echo "missing $proj/designs/jetson-$r's files; run make -C $proj revision" >&2; exit 1; }
+  [ -f "$proj/boards/jetson-$r/jetson-agx-thor-baseboard.kicad_sch" ] || { echo "missing $proj/boards/jetson-$r's files; run make -C $proj revision" >&2; exit 1; }
 done
 rm -rf "$out"
 mkdir -p "$out"
@@ -61,8 +61,8 @@ step() { printf '\n== %s\n' "$*"; }
 
 serve
 step "push 1.1.2 and 1.1.3 as two designs of the series jetson, and their project as the pack jetson"
-"$agni" designs push "$proj/designs/jetson-1.1.2" --id bb-1.1.2 --series jetson --remote "$url" | tee "$out/push-1.1.2.txt"
-"$agni" designs push "$proj/designs/jetson-1.1.3" --id bb-1.1.3 --series jetson --remote "$url" | tee "$out/push-1.1.3.txt"
+"$agni" designs push "$proj/boards/jetson-1.1.2" --id bb-1.1.2 --series jetson --remote "$url" | tee "$out/push-1.1.2.txt"
+"$agni" designs push "$proj/boards/jetson-1.1.3" --id bb-1.1.3 --series jetson --remote "$url" | tee "$out/push-1.1.3.txt"
 
 step "list the series"
 "$agni" designs list --series jetson --remote "$url" | tee "$out/series-before.txt"
@@ -80,7 +80,7 @@ for k in ("componentStatus","netStatus"):
 step "check bb-1.1.3 by name under the pack, against agni check on the folder in its project"
 f3=$revs/jetson-agx-thor-baseboard-1.1.3
 stored=$("$agni" check designs/bb-1.1.3 --pack jetson --remote "$url" --format json | findings)
-folder=$("$agni" check "$proj/designs/jetson-1.1.3" --format json | findings)
+folder=$("$agni" check "$proj/boards/jetson-1.1.3" --format json | findings)
 echo "stored: $stored findings; folder: $folder findings"
 
 step "make the project bench, holding both designs, with the pack jetson as its default"

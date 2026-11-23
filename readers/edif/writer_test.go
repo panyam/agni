@@ -24,7 +24,7 @@ func corpus(t *testing.T) []string {
 	for _, dir := range []string{
 		"testdata",
 		filepath.Join("..", "..", "cmd", "agni", "testdata", "conformance"),
-		filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway"),
+		filepath.Join("..", "..", "examples", "tutorial-project", "boards", "gateway"),
 	} {
 		if _, err := os.Stat(dir); err != nil {
 			t.Logf("skipping %s: %v", dir, err)

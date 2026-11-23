@@ -30,7 +30,7 @@ make -C examples/jetson-project board
 Rungs 1 to 3 read the fetched board directly, and from rung 4 on everything runs inside the project.
 The project is checked in complete, so you can start at any rung and it will run. If you would rather
 build it up yourself, delete the `conventions:` and `checklists:` sections of `project.yaml`,
-`profiles/`, `params/`, and the `intent:` section of `designs/jetson/design.yaml` and add them back as
+`profiles/`, `params/`, and the `intent:` section of `boards/jetson/design.yaml` and add them back as
 you go.
 
 The board is a real, shipped design, and it is not a test fixture with flaws planted in it. The
@@ -90,7 +90,7 @@ same step on your own design by changing which files it points at.
 | 4 | `conventions:` in `project.yaml` | your team's rail names and naming rules |
 | 5 | the project's `profiles/pcie.yaml` | one file per bus in your team's designs |
 | 6 | the project's `params/` | a seeded PartSpec per part worth checking |
-| 7 | `intent:` in `designs/jetson/design.yaml` | one per design, since each board has its own architecture |
+| 7 | `intent:` in `boards/jetson/design.yaml` | one per design, since each board has its own architecture |
 | 8 | `checklists:` in `project.yaml` | your team's checklists, by name |
 
 Conventions, profiles, and parameters describe the *team*, so they

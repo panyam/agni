@@ -512,7 +512,7 @@ func TestSpecStampCoversItsFetchedBoard(t *testing.T) {
 	t.Cleanup(func() { samplesPin = orig })
 
 	plain := runSpec{Fixture: "examples/tutorial-project"}
-	withBoard := runSpec{Fixture: "examples/tutorial-project", Fetched: "tools/samples/boards/not-fetched-here", FetchedInto: "designs/x"}
+	withBoard := runSpec{Fixture: "examples/tutorial-project", Fetched: "tools/samples/boards/not-fetched-here", FetchedInto: "boards/x"}
 	a, err := specStamp([]byte("spec"), plain)
 	if err != nil {
 		t.Fatal(err)
@@ -544,7 +544,7 @@ func TestCopyFetchedKeepsTheProjectsOwnFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	into := filepath.Join(dst, "designs", "x")
+	into := filepath.Join(dst, "boards", "x")
 	if err := os.MkdirAll(into, 0o755); err != nil {
 		t.Fatal(err)
 	}

@@ -7,7 +7,7 @@
 # folder or moving it to another mount does not rename either.
 #
 # "Project" is an overloaded word around here. KiCad's own `.kicad_pro` is DESIGN-scoped, one board's
-# file, and it lives under designs/gateway/ if a design has one. This is the other scope: the team's.
+# file, and it lives under boards/gateway/ if a design has one. This is the other scope: the team's.
 name: gateway
 title: Sample Board review project
 
@@ -145,7 +145,7 @@ checklists:
   # second checklist rather than part of review so the tutorial's checklist keeps the counts its
   # pages teach with. Run it with
   #
-  #   agni review designs/gateway --checklist house
+  #   agni review boards/gateway --checklist house
   #
   # An inline query here compiles against the vocabulary the review runs with: the shipped library,
   # this project's lib/, and anything sent with --lib.

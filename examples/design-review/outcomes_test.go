@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 // rather than teaching the wrong lesson quietly.
 func TestBundledChecklistShowsEveryOutcomeItNarrates(t *testing.T) {
 	rep, err := run(
-		common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn"),
+		common.AskPath("design", "../common/boards/i2c-sensor/i2c-sensor.edn"),
 		common.AskReviewPath("checklist", "checklist.yaml"),
 	)
 	if err != nil {
@@ -52,7 +52,7 @@ func TestBundledChecklistShowsEveryOutcomeItNarrates(t *testing.T) {
 // test.
 func TestOneItemIsDeliberatelyUnbound(t *testing.T) {
 	rep, err := run(
-		common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn"),
+		common.AskPath("design", "../common/boards/i2c-sensor/i2c-sensor.edn"),
 		common.AskReviewPath("checklist", "checklist.yaml"),
 	)
 	if err != nil {

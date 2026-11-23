@@ -23,7 +23,7 @@ import io.github.panyam.agni.v1.webapi.*;
 try (AgniClient client = AgniClient.create("http://127.0.0.1:8080", token)) {
   ServerInfo info = client.connect();
   Snapshot snap = client.snapshots().ingest(IngestRequest.newBuilder()
-      .setSnapshot(Snapshot.newBuilder().setUri("mount://probe/designs/jetson-cut"))
+      .setSnapshot(Snapshot.newBuilder().setUri("mount://probe/boards/jetson-cut"))
       .build());
   try {
     RunQueryResponse rows = client.queries().runQuery(RunQueryRequest.newBuilder()

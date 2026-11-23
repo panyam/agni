@@ -21,7 +21,7 @@ holds only the questions. `agni query --set` answers all of them from a single r
 
 ## Pick a design {#pick}
 
-> The bundled fixture is `../common/designs/netlist-audit.tel`, a small synthetic board where every
+> The bundled fixture is `../common/boards/netlist-audit.tel`, a small synthetic board where every
 > table has something in it: a test point on ground, two-terminal parts probed on both nets, and some probed
 > on only one. Setting `AGNI_EXAMPLE_DESIGN` points this at a board this repo cannot carry.
 

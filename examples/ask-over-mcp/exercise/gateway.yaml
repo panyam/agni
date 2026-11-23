@@ -2,8 +2,8 @@
 # rows each pins are what the design holds, so a question asked wrong fails even when the MCP answer
 # and the CLI's agree.
 folder: ../../tutorial-project
-design: designs/gateway
-revision: designs/gateway-rev-b/gateway-rev-b.edn
+design: boards/gateway
+revision: boards/gateway-rev-b/gateway-rev-b.edn
 questions:
   - ask: Which I2C nets have no pull-up, and which rail would one go to?
     calls:

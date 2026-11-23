@@ -16,7 +16,7 @@ This example is EDIF-only because `common.LoadSchematic` reads `.eds` alone. The
 
 ## Pick a schematic {#pick}
 
-> Give a path to a schematic .eds (relative to this example folder), or your own file. The default is a synthetic .eds bundled in ../common/designs, a small connector chain of a few parts, wires, and pins, so no real board ships here. This example reads .eds only.
+> Give a path to a schematic .eds (relative to this example folder), or your own file. The default is a synthetic .eds bundled in ../common/boards, a small connector chain of a few parts, wires, and pins, so no real board ships here. This example reads .eds only.
 
 ## Read it into the geometry sidecar {#read}
 
@@ -40,7 +40,7 @@ Agni -->> You: *geom.SchematicGeometry
 
 The two steps above are the narrated form of two commands:
 
-    agni render      ../common/designs/demo-schematic.eds -o render.svg                        # faithful, SVG (both defaults)
-    agni render --format=pack ../common/designs/demo-schematic.eds -o ../../web/demo-schematic.local.pb  # the pack the web/ viewer loads
+    agni render      ../common/boards/demo-schematic.eds -o render.svg                        # faithful, SVG (both defaults)
+    agni render --format=pack ../common/boards/demo-schematic.eds -o ../../web/demo-schematic.local.pb  # the pack the web/ viewer loads
 
 Both backends read the one geometry sidecar, so the render logic lives in Go and the browser is a thin view (C1). The SVG path needs no browser; the WebGL path is the interactive one.

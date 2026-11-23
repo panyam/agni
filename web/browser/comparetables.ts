@@ -24,8 +24,8 @@ export function gatewayDiffRows(): string[] {
     agniBin(),
     [
       "diff",
-      "examples/tutorial-project/designs/gateway/gateway.edn",
-      "examples/tutorial-project/designs/gateway/gateway-rev-c.edn",
+      "examples/tutorial-project/boards/gateway/gateway.edn",
+      "examples/tutorial-project/boards/gateway/gateway-rev-c.edn",
       "--rename-approx", "--format", "csv",
     ],
     { cwd: repo, env: { ...process.env, HOME: home, XDG_CONFIG_HOME: home }, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },

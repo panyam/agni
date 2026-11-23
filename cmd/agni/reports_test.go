@@ -49,7 +49,7 @@ func TestReportsKeepEachRunAndSayWhatChanged(t *testing.T) {
 	if _, err := packs.CreatePack(ctx, connect.NewRequest(&webapi.CreatePackRequest{PackId: "strict", Pack: strict("^CAN")})); err != nil {
 		t.Fatal(err)
 	}
-	design := filepath.Join(project, "designs", "gw")
+	design := filepath.Join(project, "boards", "gw")
 	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
 		t.Fatalf("designs push: %v\n%s", err, out)
 	}
@@ -132,7 +132,7 @@ func TestAReportAppliesItsProjectsDefaultPacks(t *testing.T) {
 	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
 		t.Fatalf("packs push: %v\n%s", err, out)
 	}
-	if out, err := runDesigns(t, srv.URL, "push", filepath.Join(project, "designs", "gw"), "--id", "gw"); err != nil {
+	if out, err := runDesigns(t, srv.URL, "push", filepath.Join(project, "boards", "gw"), "--id", "gw"); err != nil {
 		t.Fatalf("designs push: %v\n%s", err, out)
 	}
 	projects := webapiconnect.NewProjectServiceClient(http.DefaultClient, srv.URL)
@@ -178,7 +178,7 @@ func TestAReportAppliesItsProjectsDefaultPacks(t *testing.T) {
 func TestAReportListingLeavesTheRunOut(t *testing.T) {
 	ctx := context.Background()
 	srv := designServer(t, t.TempDir(), t.TempDir())
-	if out, err := runDesigns(t, srv.URL, "push", filepath.Join(tutorialProject(t), "designs", "gw"), "--id", "gw", "--no-pack"); err != nil {
+	if out, err := runDesigns(t, srv.URL, "push", filepath.Join(tutorialProject(t), "boards", "gw"), "--id", "gw", "--no-pack"); err != nil {
 		t.Fatalf("designs push: %v\n%s", err, out)
 	}
 	if out, err := runReports(t, srv.URL, "create", "designs/gw", "--id", "r"); err != nil {

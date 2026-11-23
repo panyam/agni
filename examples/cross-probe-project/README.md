@@ -12,14 +12,14 @@ That net runs on In5.Cu, so the board view turns In5.Cu back on. With the board 
 box cleared, the same clicks change neither. Then Back steps to C133 and Forward to `Net-(Q2-G)` again
 (agni issue 1588). Last, a click on GND puts "1 of 2" in the canvas bar, and the next-sheet control
 opens the other sheet that draws GND, lit and centred (agni issue 1589). To see it by hand, run `agni
-open examples/cross-probe-project/designs/jetson-cut` from the repo root, open the Board tile beside
+open examples/cross-probe-project/boards/jetson-cut` from the repo root, open the Board tile beside
 the canvas, and click C133. Press `[` and `]` to step through what you clicked, and `,` and `.` to
 step through the sheets.
 
-`designs/jetson-cut` is a cut of the Antmicro baseboard for Jetson AGX Thor, Copyright (c)
+`boards/jetson-cut` is a cut of the Antmicro baseboard for Jetson AGX Thor, Copyright (c)
 2025-2026 Antmicro, licensed under the Apache License, Version 2.0. `make cut` regenerates it from
 the fetched samples corpus with `tools/kicadcut`. It keeps two sheets and the board's copper around
-the parts on them, so it is small enough to commit. `designs/jetson-cut-odb` holds the same board as
+the parts on them, so it is small enough to commit. `boards/jetson-cut-odb` holds the same board as
 an ODB++ job that kicad-cli exported and 7-Zip packed, and `make odb` regenerates it. The walk's last
 step opens it, since an archive reads as the folder it was made from (agni issue 1591).
 

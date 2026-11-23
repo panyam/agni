@@ -78,7 +78,7 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       "--mount", "probe=examples/cross-probe-project",
       // The shared example designs, for an EDIF netlist whose ODB++ board it does not declare (agni
       // issue 1367): odb/gateway.edn beside odb/gateway-layout.
-      "--mount", "common=examples/common/designs",
+      "--mount", "common=examples/common/boards",
       // The fetched boards, for the naming walk on the MNT Reform motherboard (agni issue 1267).
       "--mount", "boards=tools/samples/boards",
       // The 3D models the sample boards name, so a KiCad part stands at its model's height and the

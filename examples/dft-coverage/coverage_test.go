@@ -12,7 +12,7 @@ import (
 // README.md, "The design"). A change to a bucket's query, or to a library member it calls, then
 // shows up as a changed answer rather than a quietly different walkthrough.
 func TestTheFixtureAnswersAreTheDesignedOnes(t *testing.T) {
-	d, err := common.Load("../common/designs/probe-coverage.edn")
+	d, err := common.Load("../common/boards/probe-coverage.edn")
 	if err != nil {
 		t.Fatalf("load fixture: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestTheFixtureAnswersAreTheDesignedOnes(t *testing.T) {
 // first one-end row (agni issue 794). It prints the walk's own passive rule, then the library
 // member with its body facts, and ends in the `not` that held on the unprobed net.
 func TestTheWhyStepExplainsARowThroughTheLibrary(t *testing.T) {
-	d, err := common.Load("../common/designs/probe-coverage.edn")
+	d, err := common.Load("../common/boards/probe-coverage.edn")
 	if err != nil {
 		t.Fatalf("load fixture: %v", err)
 	}

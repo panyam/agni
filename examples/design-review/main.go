@@ -41,7 +41,7 @@ var walkthroughMD []byte
 var checklistYAML []byte
 
 func main() {
-	design := common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn")
+	design := common.AskPath("design", "../common/boards/i2c-sensor/i2c-sensor.edn")
 	checklist := common.AskReviewPath("checklist", "checklist.yaml")
 
 	demo := demokit.New("design-review").

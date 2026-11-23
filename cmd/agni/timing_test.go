@@ -20,7 +20,7 @@ func runRootSplit(t *testing.T, args ...string) (string, string) {
 	return out.String(), errOut.String()
 }
 
-const timedGateway = "../../examples/tutorial-project/designs/gateway/gateway.edn"
+const timedGateway = "../../examples/tutorial-project/boards/gateway/gateway.edn"
 
 // TestTimingGoesToStderrAndLeavesTheAnswerAlone holds --timing to reporting on stderr where a run's
 // time went (agni issue 914). So a timed run pipes the same answer as an untimed one.

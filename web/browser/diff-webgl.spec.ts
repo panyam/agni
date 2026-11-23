@@ -27,8 +27,8 @@ const litOn = (page: Page, side: "a" | "b") =>
 describe("the visual diff in WebGL", () => {
   it("draws both revisions in WebGL, lights each side's changes, and lights the union", async () => {
     await withPage(browser, async (page) => {
-      const against = encodeURIComponent("tut/designs/gateway-rev-b/gateway-rev-b.edn");
-      await page.goto(`${base()}/mounts/tut/designs/gateway/gateway.edn/view?mode=webgl&against=${against}`, { waitUntil: "networkidle" });
+      const against = encodeURIComponent("tut/boards/gateway-rev-b/gateway-rev-b.edn");
+      await page.goto(`${base()}/mounts/tut/boards/gateway/gateway.edn/view?mode=webgl&against=${against}`, { waitUntil: "networkidle" });
       await expect.poll(() => litOn(page, "a"), { timeout: 60_000 }).not.toBeNull();
       await expect.poll(() => litOn(page, "b"), { timeout: 60_000 }).not.toBeNull();
       const a = (await litOn(page, "a"))!;

@@ -2,4 +2,4 @@
 # carries, whichever block named it.
 fixture: examples/tutorial-project
 script: |
-  agni query designs/gateway/gateway.edn 'entity(?name, "net"), str.glob(?name, "*_1V8") => ?name'
+  agni query boards/gateway/gateway.edn 'entity(?name, "net"), str.glob(?name, "*_1V8") => ?name'

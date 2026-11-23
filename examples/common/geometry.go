@@ -38,7 +38,7 @@ func ReadSchematicFixture(name string) (*geom.SchematicGeometry, error) {
 	if err != nil {
 		return nil, err
 	}
-	f, err := designsFS.Open(p)
+	f, err := boardsFS.Open(p)
 	if err != nil {
 		return nil, err
 	}

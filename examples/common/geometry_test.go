@@ -13,7 +13,7 @@ func TestReadSchematicFixture(t *testing.T) {
 }
 
 func TestLoadSchematicDiskPath(t *testing.T) {
-	g, err := LoadSchematic("designs/demo-schematic.eds")
+	g, err := LoadSchematic("boards/demo-schematic.eds")
 	if err != nil {
 		t.Fatalf("LoadSchematic(path): %v", err)
 	}

@@ -1,8 +1,8 @@
-#agni-run a813f8237a2faef6
+#agni-run 06230bc7fe9d8e76
 name       kind  provenance
-CAN1_CANH  net   designs/gateway/gateway.edn:CAN1_CANH
-CAN1_CANL  net   designs/gateway/gateway.edn:CAN1_CANL
-CAN1_RXD   net   designs/gateway/gateway.edn:CAN1_RXD
-CAN1_TXD   net   designs/gateway/gateway.edn:CAN1_TXD
+CAN1_CANH  net   boards/gateway/gateway.edn:CAN1_CANH
+CAN1_CANL  net   boards/gateway/gateway.edn:CAN1_CANL
+CAN1_RXD   net   boards/gateway/gateway.edn:CAN1_RXD
+CAN1_TXD   net   boards/gateway/gateway.edn:CAN1_TXD
 
 4 result(s)

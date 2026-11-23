@@ -181,7 +181,7 @@ def test_cli_only_commands_parse_as_their_message(cli: Client):
     """`validate` and `params` have a wire form and no rpc; strict parsing is the check."""
     t = cli.transport
     assert CLI_ONLY == {"validate": validate_pb2.ValidateReport, "params": param_pb2.PartSpec}
-    rep = t.run(["validate", str(FIXTURE / "designs" / "gateway" / "gateway.edn"), "--format", "json"], validate_pb2.ValidateReport)
+    rep = t.run(["validate", str(FIXTURE / "boards" / "gateway" / "gateway.edn"), "--format", "json"], validate_pb2.ValidateReport)
     assert len(rep.ListFields()) > 0
     spec = t.run(["params", "ACME-LDO-1V8", "--params", str(FIXTURE / "params"), "--format", "json"], param_pb2.PartSpec)
     assert spec.mpn == "ACME-LDO-1V8"

@@ -166,7 +166,7 @@ in `project.yaml`. Its item P6 calls the library:
     message: 'PMIC rail {n} has no test point'
 ```
 
-`agni review designs/gateway --checklist house` and a served `CreateReview` agree on it, and both
+`agni review boards/gateway --checklist house` and a served `CreateReview` agree on it, and both
 fail on `PMIC_MAIN_12V0`. For a design that belongs to no project, `agni review --lib <dir>` sends a
 library. A manifest's
 queries are checked when a review is created rather than when the file is read, since that is the

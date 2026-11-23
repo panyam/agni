@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const bindDesign = "../../examples/tutorial-project/designs/gateway/gateway.edn"
+const bindDesign = "../../examples/tutorial-project/boards/gateway/gateway.edn"
 
 // TestQueryBindAnswersAsTheWrittenConstant checks that `--bind r=U1` answers what `"U1"` written into
 // the query does, and the markdown view states the binding under the query (agni issue 793).

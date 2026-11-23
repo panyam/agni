@@ -9,7 +9,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-const jetsonCut = "../../examples/cross-probe-project/designs/jetson-cut"
+const jetsonCut = "../../examples/cross-probe-project/boards/jetson-cut"
 
 func TestDiffOfOneDesignComparesItsViews(t *testing.T) {
 	freshWorkspace(t)

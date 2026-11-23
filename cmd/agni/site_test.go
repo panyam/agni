@@ -61,12 +61,12 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 		}
 	}
 	// Each seed and the drop page open through the Load page (agni issue 1072).
-	for _, want := range []string{`href="/agni/demo/mounts/gateway/designs/gateway/load/"`, "Sample Board", `href="/agni/demo/mounts/local/load/"`} {
+	for _, want := range []string{`href="/agni/demo/mounts/gateway/boards/gateway/load/"`, "Sample Board", `href="/agni/demo/mounts/local/load/"`} {
 		if !strings.Contains(landing, want) {
 			t.Errorf("landing page lacks %s", want)
 		}
 	}
-	for _, page := range []string{"mounts/gateway/designs/gateway/view/index.html", "mounts/local/view/index.html"} {
+	for _, page := range []string{"mounts/gateway/boards/gateway/view/index.html", "mounts/local/view/index.html"} {
 		shell := read(page)
 		for _, want := range []string{`href="/agni/demo/static/app.css"`, `src="/agni/demo/static/app.js"`, `data-base="/agni/demo/"`, `data-host="static"`, `data-engine="wasm"`} {
 			if !strings.Contains(shell, want) {
@@ -77,7 +77,7 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 			t.Errorf("%s loads an asset from the site root", page)
 		}
 	}
-	for _, page := range []string{"mounts/gateway/designs/gateway/load/index.html", "mounts/local/load/index.html"} {
+	for _, page := range []string{"mounts/gateway/boards/gateway/load/index.html", "mounts/local/load/index.html"} {
 		shell := read(page)
 		for _, want := range []string{`src="/agni/demo/static/load.js"`, `data-base="/agni/demo/"`, `data-host="static"`, `data-engine="wasm"`, `data-build="`} {
 			if !strings.Contains(shell, want) {
@@ -97,7 +97,7 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 			t.Errorf("listed %s is not under raw/: %v", f.GetPath(), err)
 		}
 	}
-	wantBoards(t, &listing, "designs/gateway-rev-b/gateway-rev-b.kicad_pcb", "designs/gateway/gateway.kicad_pcb")
+	wantBoards(t, &listing, "boards/gateway-rev-b/gateway-rev-b.kicad_pcb", "boards/gateway/gateway.kicad_pcb")
 }
 
 // wantBoards fails unless the listing flags exactly want as board files, as ListDesignFiles would
@@ -120,7 +120,7 @@ func wantBoards(t *testing.T, listing *webapi.ListDesignFilesResponse, want ...s
 // not hold.
 func gatewayInNoProject(t *testing.T) string {
 	t.Helper()
-	src := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
+	src := filepath.Join("..", "..", "examples", "tutorial-project", "boards", "gateway")
 	dst := filepath.Join(t.TempDir(), "gateway")
 	if err := copyTree(src, dst); err != nil {
 		t.Fatal(err)
@@ -226,12 +226,12 @@ func TestSiteWritesTheListingsTheFileTreesRead(t *testing.T) {
 		return byURI
 	}
 	gateway := entries("gateway")
-	for _, uri := range []string{"mount://gateway/designs", "mount://gateway/designs/gateway"} {
+	for _, uri := range []string{"mount://gateway/boards", "mount://gateway/boards/gateway"} {
 		if e := gateway[uri]; e == nil || !e.GetIsDir() {
 			t.Errorf("gateway lists %s as %v, want a folder", uri, e)
 		}
 	}
-	rev := gateway["mount://gateway/designs/gateway/gateway-rev-c.edn"]
+	rev := gateway["mount://gateway/boards/gateway/gateway-rev-c.edn"]
 	if rev == nil || rev.GetName() != "gateway-rev-c.edn" || rev.GetFormat() != "edif" || rev.GetKind() != webapi.FileKind_FILE_KIND_DESIGN {
 		t.Errorf("gateway lists rev C as %v, want an edif design", rev)
 	}

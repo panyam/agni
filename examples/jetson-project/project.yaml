@@ -1,6 +1,6 @@
 # The review project the tutorial ladder teaches on, wrapped around Antmicro's open-source baseboard
 # for the Jetson AGX Thor module. The board itself is fetched rather than committed, because it is
-# someone else's design: `make board` copies it into designs/jetson/ from tools/samples (see the
+# someone else's design: `make board` copies it into boards/jetson/ from tools/samples (see the
 # Makefile). Everything in this folder that is not that copy is ours, and is what the rungs teach.
 name: jetson
 title: Jetson AGX Thor baseboard review project
@@ -157,3 +157,10 @@ checklists:
           - id: "F1"
             title: every footprint matches its library copy
             external: {producer: kicad-cli pcb drc, rule: kicad-drc/lib_footprint_mismatch}
+
+  # The power questions from review, kept one file per item under checklist/ (agni issue 1812). Each
+  # file's frontmatter holds what an inline item holds, and the folder it sits in names its area.
+  # `agni review --checklist power` runs it, and `agni packs push` carries the item files.
+  power:
+    name: Jetson power review, one file per item
+    items_dir: checklist

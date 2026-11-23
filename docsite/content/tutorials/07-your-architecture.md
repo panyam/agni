@@ -16,7 +16,7 @@ root.
 
 ## The declaration
 
-The `intent:` section of `designs/jetson/design.yaml` says two things about this board.
+The `intent:` section of `boards/jetson/design.yaml` says two things about this board.
 
 ```yaml
 intent:

@@ -8,7 +8,7 @@ formats, the physical tier. It is the walkthrough form of `agni stats <file>`.
 
 - `common.Load` picking a reader by extension, as `agni`'s CLI dispatches at its I/O
   edge. File paths go no further than the edge; the core readers only see an `io.Reader`
-  (CONSTRAINTS C1). The design input is a path (default `../common/designs/two-resistors.edn`),
+  (CONSTRAINTS C1). The design input is a path (default `../common/boards/two-resistors.edn`),
   so you can point it at your own file.
 - The neutral IR, which is one shape for every source format, so diff and checks downstream
   never care which format you started from.

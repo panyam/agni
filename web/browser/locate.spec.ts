@@ -10,7 +10,7 @@ import { launch, withPage } from "./browser.js";
 import { hideDrawers, showPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
-const DESIGN = "probe/designs/jetson-cut";
+const DESIGN = "probe/boards/jetson-cut";
 const SMALL_NET = "unconnected-(R123-Pad2)";
 
 let browser: Browser;

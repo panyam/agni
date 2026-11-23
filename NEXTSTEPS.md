@@ -9,22 +9,26 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-22, at `dd30166a`.
+Last pruned 2026-11-23, at `a635df6f`.
 
 ## At a glance
 
 **#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 6 of 12. Its exercise is `make exercise-enterprise`, against
-a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job. At `b99c4a81` all 20 steps
-pass with no waits, and `make exercise-enterprise-bundle` passes the same 20 against
+Server) is active from 2026-11-21, at 7 of 12. Its exercise is `make exercise-enterprise`, against
+a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job. At `a635df6f` all 20 steps
+pass with no waits. At `b99c4a81` `make exercise-enterprise-bundle` passes the same 20 against
 `deploy/enterprise/compose.yaml` (PR 1832). Run `make image` before the bundle run until #1803
 makes the target build it. The Helm chart (#1803) comes next and puts agni behind an ingress with
 `--trusted-proxy`.
 
-- **agni is on goapplib v0.7.30, oneauth v0.3.19, servicekit v0.2.5 and ci-actions v0.1.4.**
-  `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). #1811 (OIDC) needs only
-  agni wiring. #1826 adopts what v0.7.30 adds past the bump: the fake GHES with App limits, the
-  seeded fake, sealed server secrets, and bucket syncs that skip held files.
+- **agni is on goapplib v0.7.32, oneauth v0.3.20, servicekit v0.2.5 and ci-actions v0.1.4.**
+  `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). #1811 (OIDC) wires
+  oneauth's `oauth2/oidc` and waits on panyam/oneauth#566 for a fake issuer to test against. #1826
+  adopts what goapplib added past the bump: the fake GHES with App limits, the seeded fake, sealed
+  server secrets, and bucket syncs that skip held files.
+- **A checklist can be a folder of item files** (`items_dir`, PR 1835), and `agni checklists
+  packs/<id> --remote` lists a pack's checklists. A server design takes its checklists from the
+  pack it is reviewed under. #1838 renames the example projects' `designs/` folders to `boards/`.
 - **`--store` takes `file://`, `sqlite://`, `postgres://` and `datastore://`** (PRs 1822 and 1825),
   and two servers can share one store. `--uploads` takes `s3://` and `gs://` with a local
   `--uploads-cache` (PR 1834). #1803 can offer postgres and a bucket in place of volumes.

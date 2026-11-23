@@ -49,7 +49,7 @@ func TestReadCarriesTheIngestionPasses(t *testing.T) {
 		read func() (*ir.Design, error)
 	}{
 		{"embedded", func() (*ir.Design, error) { return ReadFixture(fixture) }},
-		{"on disk", func() (*ir.Design, error) { return ReadDesign(filepath.Join("designs", fixture)) }},
+		{"on disk", func() (*ir.Design, error) { return ReadDesign(filepath.Join("boards", fixture)) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d, err := tc.read()
@@ -71,9 +71,9 @@ func TestReadCarriesTheIngestionPasses(t *testing.T) {
 }
 
 func TestReadDesignFromDisk(t *testing.T) {
-	// ReadDesign exercises the os.Open edge; the bundled fixtures sit under designs/ relative
+	// ReadDesign exercises the os.Open edge; the bundled fixtures sit under boards/ relative
 	// to this package during tests.
-	d, err := ReadDesign("designs/two-resistors.edn")
+	d, err := ReadDesign("boards/two-resistors.edn")
 	if err != nil {
 		t.Fatalf("ReadDesign: %v", err)
 	}
@@ -83,14 +83,14 @@ func TestReadDesignFromDisk(t *testing.T) {
 }
 
 func TestReadDesignMissing(t *testing.T) {
-	if _, err := ReadDesign("designs/nope.edn"); err == nil {
+	if _, err := ReadDesign("boards/nope.edn"); err == nil {
 		t.Error("ReadDesign of a missing file should error")
 	}
 }
 
 func TestLoadDiskPath(t *testing.T) {
 	// A path on disk (relative to the working directory) is read directly.
-	d, err := Load("designs/two-resistors.edn")
+	d, err := Load("boards/two-resistors.edn")
 	if err != nil {
 		t.Fatalf("Load(path): %v", err)
 	}
