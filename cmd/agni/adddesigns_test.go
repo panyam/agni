@@ -318,3 +318,73 @@ func TestPushAndAddKeepTheCompanionsADescriptorDeclares(t *testing.T) {
 		t.Errorf("push with no design.yaml = %v\n%s; want two designs refused, as nothing pairs them", err, out)
 	}
 }
+
+// Adding a folder from a mount keeps the intent its design.yaml declares, as push and link do, so
+// the stored design checks as its folder does. An update follows a changed intent though no file the
+// design holds changed, and an intent that doesn't parse refuses the add (agni issue 1864).
+func TestAddKeepsTheIntentItsDesignYAMLDeclares(t *testing.T) {
+	ctx := context.Background()
+	lab := t.TempDir()
+	hw := filepath.Join(lab, "hw")
+	if err := os.MkdirAll(hw, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"gateway.kicad_sch", "gateway.kicad_pcb", "gateway.kicad_pro"} {
+		b, err := os.ReadFile(filepath.Join("..", "..", "examples", "tutorial-project", "boards", "gateway", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(hw, f), b, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	describe := func(body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(hw, "design.yaml"), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	describe(gatewayDescriptor)
+	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Folder("lab", lab))
+	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	add := func(on webapi.OnExists) (map[string]string, error) {
+		t.Helper()
+		resp, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{
+			Uri: "mount://lab/hw", Designs: []*webapi.DesignToAdd{{Folder: "hw", DesignId: "gw"}}, OnExists: on,
+		}))
+		if err != nil {
+			return nil, err
+		}
+		return outcomes(resp.Msg), nil
+	}
+	checksAsTheFolder := func(when string) {
+		t.Helper()
+		local := findingKeys(t, "check", hw)
+		if !slices.ContainsFunc(local, func(k string) bool { return strings.HasPrefix(k, "intent/") }) {
+			t.Fatalf("%s: a check of the folder finds nothing from an intent/ rule, so the comparison proves nothing: %v", when, local)
+		}
+		if stored := findingKeys(t, "check", "designs/gw", "--remote", srv.URL); !slices.Equal(stored, local) {
+			t.Errorf("%s: check designs/gw = %d findings, check of its folder = %d; want the same set\nonly stored: %v\nonly on disk: %v", when, len(stored), len(local), minus(stored, local), minus(local, stored))
+		}
+	}
+
+	if got, err := add(webapi.OnExists_ON_EXISTS_UNSPECIFIED); err != nil || got["hw"] != "ADDED" {
+		t.Fatalf("the first add = %v, %v; want gw added", got, err)
+	}
+	checksAsTheFolder("after the add")
+
+	before := findingKeys(t, "check", hw)
+	describe(strings.Replace(gatewayDescriptor, "    PMIC_IO_1V8: {nominal: 3.3, domain: core}\n", "", 1))
+	if slices.Equal(findingKeys(t, "check", hw), before) {
+		t.Fatalf("the changed intent gives the folder the same findings, so the update below proves nothing")
+	}
+	if got, err := add(webapi.OnExists_ON_EXISTS_UPDATE); err != nil || got["hw"] != "UPDATED" {
+		t.Errorf("ON_EXISTS_UPDATE over a changed intent = %v, %v; want gw updated", got, err)
+	}
+	checksAsTheFolder("after the update")
+
+	describe(gatewayDescriptor + "  io_map: 7\n")
+	if _, err := add(webapi.OnExists_ON_EXISTS_UPDATE); connect.CodeOf(err) != connect.CodeInvalidArgument || !strings.Contains(err.Error(), "design.yaml") {
+		t.Errorf("an add whose design.yaml intent doesn't parse = %v; want INVALID_ARGUMENT naming design.yaml", err)
+	}
+}

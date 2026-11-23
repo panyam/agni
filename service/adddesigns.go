@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/goapplib/storage/mounts"
 	"gopkg.in/yaml.v3"
@@ -107,7 +109,7 @@ func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRe
 				result.Outcome = webapi.AddOutcome_ADD_OUTCOME_SKIPPED
 				continue
 			case webapi.OnExists_ON_EXISTS_UPDATE:
-				same, err := s.holdsFiles(ctx, add)
+				same, err := s.holds(ctx, add)
 				if err != nil {
 					return nil, err
 				}
@@ -224,11 +226,23 @@ func (s *DesignService) planOne(ctx context.Context, mount string, req *webapi.A
 	return add, false, nil
 }
 
-// holdsFiles reports whether the stored design a's id names already holds each artifact a would
-// write, with the same files, so an update can leave it alone. An artifact a doesn't write is not
-// compared, as an update leaves it.
-func (s *DesignService) holdsFiles(ctx context.Context, a addedDesign) (bool, error) {
-	arts, err := s.catalog.Artifacts(ctx, StandaloneDesignName(a.id))
+// holds reports whether the stored design a's id names already holds each artifact a would write,
+// with the same files, and what a's design.yaml declares, so an update can leave it alone. An
+// artifact a doesn't write is not compared, as an update leaves it. Nor is an intent a declares
+// none of, as an update keeps the stored one (agni issue 1864).
+func (s *DesignService) holds(ctx context.Context, a addedDesign) (bool, error) {
+	name := StandaloneDesignName(a.id)
+	d, err := s.catalog.Design(ctx, name)
+	if err != nil {
+		return false, err
+	}
+	if a.record.Intent != nil && !proto.Equal(a.record.Intent, d.GetConfig().GetIntent()) {
+		return false, nil
+	}
+	if a.record.Entry != "" && !strings.HasPrefix(d.GetEntryUri(), d.GetUri()+"/"+a.record.Entry+"/") {
+		return false, nil
+	}
+	arts, err := s.catalog.Artifacts(ctx, name)
 	if err != nil {
 		return false, err
 	}
@@ -324,17 +338,24 @@ func (s *DesignService) planAdd(ctx context.Context, mount string, p *webapi.Pro
 		rels = append(rels, rel)
 	}
 	slices.Sort(rels)
-	plan, err := PlanArtifacts(rels, func(r string) ([]byte, error) {
+	read := func(r string) ([]byte, error) {
 		b, ok := contents[r]
 		if !ok {
 			return nil, fmt.Errorf("%w: %s", ErrNotFound, r)
 		}
 		return b, nil
-	})
+	}
+	plan, err := PlanArtifacts(rels, read)
 	if err != nil {
 		return addedDesign{}, err
 	}
-	add := addedDesign{id: id, record: DesignRecord{Title: title, Series: want.GetSeries()}, contents: map[string][]byte{}}
+	// The folder's design.yaml declares the design's intent, which a stored design keeps as its own,
+	// as push and link keep it (agni issues 1697, 1854, 1864).
+	intent, err := declaredIntent(rels, read)
+	if err != nil {
+		return addedDesign{}, fmt.Errorf("%s: %w", path.Join(folder, DesignDescriptorName), err)
+	}
+	add := addedDesign{id: id, record: DesignRecord{Title: title, Series: want.GetSeries(), Intent: intent}, contents: map[string][]byte{}}
 	if plan.Declared {
 		add.record.Entry = plan.IDs[0]
 	}
@@ -364,7 +385,18 @@ func (s *DesignService) writeUpdated(ctx context.Context, a addedDesign) error {
 		b, ok := a.contents[h]
 		return b, ok
 	}
-	_, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(a.id), a.writes, read)
+	if _, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(a.id), a.writes, read); err != nil {
+		return err
+	}
+	// What the design.yaml declares now replaces what the record kept, as a push does. An intent it
+	// declares none of leaves the stored one, and an entry it names none of reads by type
+	// (agni issues 1858, 1864).
+	_, err := s.catalog.UpdateDesign(ctx, StandaloneDesignName(a.id), func(r *DesignRecord) {
+		if a.record.Intent != nil {
+			r.Intent = a.record.Intent
+		}
+		r.Entry = a.record.Entry
+	})
 	return err
 }
 

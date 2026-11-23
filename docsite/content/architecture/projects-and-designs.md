@@ -404,12 +404,13 @@ design. `AddDesigns`, and `agni designs add <mount>/<path>`, propose the folder'
 two boards, such as a root schematic and a sheet the root never reaches, and then the request also
 names the board's entry. The server keeps the ones named, copies their files by hash,
 and records each artifact's `source`, the mount and folder its files came from. It writes nothing
-into the mount. A design's title, series and intent come from the proposal and the request, never
-from a `design.yaml`. `ListDesigns` with `source = "mount://<mount>/<path>"` lists the designs read
+into the mount. A design's title and series come from the proposal and the request. `ListDesigns` with `source = "mount://<mount>/<path>"` lists the designs read
 from a folder.
 
 A folder's `design.yaml` decides how its files group, by its `entry:` and `companions:`, as the next
-section says (agni issue 1858). Two more things carry over, and both are about symbols (agni issue
+section says (agni issue 1858). Its `intent:` becomes the design's own, as a push or a link keeps it
+(agni issue 1864). An add with `on_exists` set to update stores a changed intent, though no file the
+design holds changed. A descriptor with no `intent:` leaves the stored one alone. Two more things carry over, and both are about symbols (agni issue
 1756). A symbol folder it names under `symbols:` is copied in as an artifact of type
 `ARTIFACT_TYPE_SYMBOLS`, which the view's `design.yaml` names, so the stored design reads its parts'
 pins alone. The project it `extends` is kept as a pack, and the design's `packs` name it. A read
