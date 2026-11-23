@@ -116,7 +116,7 @@ describe("the designs page", () => {
       // The Jetson project's rules go up as a pack from a copy of its folder holding a design too.
       // The server keeps the files project.yaml names and never asks for the design's.
       const project = mkdtempSync(join(tmpdir(), "agni-library-project-"));
-      for (const f of ["project.yaml", "profiles", "params"]) cpSync(join(repoRoot, "examples", "jetson-project", f), join(project, f), { recursive: true });
+      for (const f of ["project.yaml", "profiles", "params", "checklist"]) cpSync(join(repoRoot, "examples", "jetson-project", f), join(project, f), { recursive: true });
       mkdirSync(join(project, "designs", "big"), { recursive: true });
       cpSync(join(newer, "jetson-agx-thor-baseboard.kicad_pcb"), join(project, "designs", "big", "jetson-agx-thor-baseboard.kicad_pcb"));
       await page.goto(`${server.base}/packs/`);
@@ -126,6 +126,9 @@ describe("the designs page", () => {
       await page.waitForURL(`${server.base}/packs/jetson`, { timeout: 60_000 });
       await expect.poll(() => page.locator("[data-testid=pack-tiers] tr").allTextContents()).toContain("Profilesprofiles");
       expect(await page.locator(".lb-files li").allTextContents()).not.toContain("designs/big/jetson-agx-thor-baseboard.kicad_pcb");
+      // The power checklist is a folder of item files (agni issue 1812), and they go up with the pack.
+      expect(await page.locator("[data-testid=pack-tiers] tr").allTextContents()).toContain("Checklistsreview, drc, power");
+      expect(await page.locator(".lb-files li").allTextContents()).toEqual(expect.arrayContaining(["checklist/01-power/p1-bulk.md", "checklist/01-power/p2-decoupling.md"]));
       await shot(page, "pack.png");
 
       // Validate 1.1.3 against the pack, which keeps a report as a tab.

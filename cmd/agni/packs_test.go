@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/encoding/protojson"
 	gproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
@@ -290,6 +291,143 @@ func TestAReviewUnderAPackMatchesTheFolder(t *testing.T) {
 	}
 	if out, err := runAgni(t, "review", design, "--pack", "gateway", "--remote", srv.URL); err == nil || !strings.Contains(err.Error(), "designs/<id>") {
 		t.Errorf("review <folder> --pack = %v\n%s; want it refused, naming designs/<id>", err, out)
+	}
+}
+
+// splitChecklistProject is tutorialProject with a second checklist, split, kept as a folder of two
+// item files under checklist/ (agni issue 1812).
+func splitChecklistProject(t *testing.T) string {
+	t.Helper()
+	project := tutorialProject(t)
+	descriptor := filepath.Join(project, "project.yaml")
+	b, err := os.ReadFile(descriptor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	split := "checklists:\n  split:\n    name: Power, one file per item\n    items_dir: checklist\n"
+	if err := os.WriteFile(descriptor, []byte(strings.Replace(string(b), "checklists:\n", split, 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range map[string]string{
+		"01-power/p1.md": "---\nid: P1\ntitle: every rail carries a bulk capacitor\nrule: bulk-cap\n---\n",
+		"01-power/p2.md": "---\nid: P2\ntitle: every rail carries decoupling\nrule: decoupling-present\n---\n",
+	} {
+		full := filepath.Join(project, "checklist", filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return project
+}
+
+// A checklist written as a folder of item files reviews the same under a pushed pack as on the
+// folder, so the push carries the item files with the pack (agni issue 1812).
+func TestAFolderChecklistReviewsTheSameUnderAPack(t *testing.T) {
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := splitChecklistProject(t)
+	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
+		t.Fatalf("packs push: %v\n%s", err, out)
+	}
+	design := filepath.Join(project, "designs", "gw")
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
+		t.Fatalf("designs push: %v\n%s", err, out)
+	}
+	folder := reviewOutcomes(t, "review", design, "--checklist", "split")
+	if len(folder) != 2 || !slices.ContainsFunc(folder, func(k string) bool { return strings.HasSuffix(k, "|pass") || strings.HasSuffix(k, "|fail") }) {
+		t.Fatalf("review --checklist split on the folder = %v; want P1 and P2 decided", folder)
+	}
+	if underPack := reviewOutcomes(t, "review", "designs/gw", "--pack", "gateway", "--checklist", "split", "--remote", srv.URL); !slices.Equal(underPack, folder) {
+		t.Errorf("review --checklist split under the pack = %v; want the folder's %v", underPack, folder)
+	}
+}
+
+// agni checklists packs/<id> --remote lists a pack's checklists in order, the default first, and
+// refuses a design with --remote or a pack without it, saying which form to use (agni issue 1812).
+func TestChecklistsListsAPacksChecklists(t *testing.T) {
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := splitChecklistProject(t)
+	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
+		t.Fatalf("packs push: %v\n%s", err, out)
+	}
+	out, err := runAgni(t, "checklists", "packs/gateway", "--remote", srv.URL)
+	if err != nil {
+		t.Fatalf("checklists packs/gateway: %v\n%s", err, out)
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 2 || lines[0] != "split  Power, one file per item  (default)" {
+		t.Errorf("checklists packs/gateway =\n%s\nwant split first, marked the default, then the project's own", out)
+	}
+	js, err := runAgni(t, "checklists", "packs/gateway", "--remote", srv.URL, "--format", "json")
+	var resp webapi.ListChecklistsResponse
+	if err == nil {
+		err = protojson.Unmarshal([]byte(js), &resp)
+	}
+	if err != nil || len(resp.GetChecklists()) < 2 || resp.GetChecklists()[0].GetName() != "split" || len(resp.GetChecklists()[0].GetManifest().GetAreas()[0].GetItems()) != 2 {
+		t.Errorf("checklists packs/gateway --format json = %v\n%s; want split first, with its two items", err, js)
+	}
+	for args, want := range map[string]string{
+		"designs/gw --remote": "name it as packs/<id>",
+		"packs/gateway":       "add --remote <url>",
+	} {
+		a := strings.Fields(args)
+		if strings.HasSuffix(args, "--remote") {
+			a = append(a, srv.URL)
+		}
+		if out, err := runAgni(t, append([]string{"checklists"}, a...)...); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("checklists %s = %v\n%s; want an error saying %q", args, err, out, want)
+		}
+	}
+}
+
+// Importing a pack whose checklist is a folder asks for every item file's contents in one round, not
+// one round per file, so a checklist of hundreds of items pushes in three rounds (agni issue 1812).
+func TestImportPackFilesAsksForEveryItemFileAtOnce(t *testing.T) {
+	ctx := context.Background()
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	local, files, _, err := localPack(splitChecklistProject(t), "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	packs := webapiconnect.NewPackServiceClient(http.DefaultClient, srv.URL)
+	snaps := webapiconnect.NewSnapshotServiceClient(http.DefaultClient, srv.URL)
+	var rounds [][]string
+	for range 5 {
+		_, err := packs.ImportPackFiles(ctx, connect.NewRequest(&webapi.ImportPackFilesRequest{Files: files.files}))
+		if err == nil {
+			break
+		}
+		var ce *connect.Error
+		if !errors.As(err, &ce) {
+			t.Fatal(err)
+		}
+		var missing []string
+		for _, d := range ce.Details() {
+			if v, derr := d.Value(); derr == nil {
+				if bm, ok := v.(*webapi.BlobsMissing); ok {
+					missing = append(missing, bm.GetSha256()...)
+				}
+			}
+		}
+		if len(missing) == 0 {
+			t.Fatalf("ImportPackFiles = %v; want BlobsMissing or success", err)
+		}
+		rounds = append(rounds, missing)
+		var contents [][]byte
+		for _, h := range missing {
+			contents = append(contents, files.byHash[h])
+		}
+		if _, err := snaps.UploadBlobs(ctx, connect.NewRequest(&webapi.UploadBlobsRequest{Contents: contents})); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rounds) != 3 || len(rounds[1]) != 2 {
+		t.Fatalf("ImportPackFiles asked for contents in rounds %v; want project.yaml, then both item files together, then the tiers' files", rounds)
+	}
+	if n := len(local.GetConfig().GetChecklists()); n < 2 {
+		t.Errorf("the pack holds %d checklists; want split beside the project's own", n)
 	}
 }
 

@@ -89,7 +89,10 @@ companions:
 
 A naming vocabulary, checklists and intent are sections of a descriptor. `conventions` binds to the
 `config.NamingConvention` proto, and a standalone `--conventions` file uses the same schema.
-`checklists` maps a name to a review manifest. The descriptor NAMES the files for interface
+`checklists` maps a name to a review manifest. A manifest written as `items_dir`, a folder of item
+files, comes back from the parse holding only its name. The store fills its areas, since only the
+store can read the descriptor's folder, and every item file joins the descriptor's cache
+dependencies (agni issue 1812). The descriptor NAMES the files for interface
 profiles, seeded parameters, symbol libraries, derived relations and query sets, under `profiles`,
 `params`, `symbols`, `lib` and `queries`. Each is a list of paths relative to the descriptor or
 `mount://` URIs, and each path is a file or a directory of them.

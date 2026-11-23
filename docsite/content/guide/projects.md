@@ -67,7 +67,37 @@ file takes. [Naming conventions](../naming-conventions/) covers what goes in it.
 
 `checklists:` maps a name to a review checklist. The first one written is the default, and
 `agni review <design>` runs it. `--checklist <name>` picks another. `agni checklists <design>`
-lists them.
+lists them. On a server the checklists go up with the project's pack, and `agni checklists
+packs/<id> --remote <url>` lists those.
+
+A large checklist can live in a folder, one file per item, with `items_dir:` in place of `areas:`.
+Then each item has its own history, and two reviewers can edit different items without a merge
+conflict.
+
+```yaml
+checklists:
+  review:
+    name: Schematic review
+    items_dir: checklist/
+```
+
+```
+checklist/
+  01-system-architecture/
+    001-block-diagram.md
+  02-power/
+    016-rail-naming.md
+```
+
+Each `.md` file under the folder is one item, except a `README.md`. Its YAML frontmatter, between two
+`---` lines, holds what an inline item holds: `id`, `title`, `description`, `note` and one binding
+(`rule`, `tag`, `profile`, `query`, `present` or `external`). The body below it is free notes, and
+the review ignores it. An item's area is the folder it sits in, without an ordering number such as
+`01-`, and an `area:` field overrides that. Areas run in folder order and items in id order. A file
+with no frontmatter, a misspelled field or two bindings fails the load and names the file. `agni packs
+push` carries the item files with the pack, so the server reads the same checklist.
+[`examples/jetson-project`](https://github.com/panyam/agni/tree/main/examples/jetson-project) keeps
+its `power` checklist this way.
 
 `extends: ../house/project.yaml` layers this project over another one's config. Several projects
 share one set of conventions or checklists this way. The shared one is an ordinary project with no
