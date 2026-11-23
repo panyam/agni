@@ -123,6 +123,19 @@ mkdir -p "$out/repos/rev-b" "$out/repos/rev-c" "$out/repos/pack"
 for f in gateway.kicad_sch gateway.kicad_pcb gateway.kicad_pro; do
   cp "$tutorial/boards/gateway/$f" "$out/repos/rev-b/"
 done
+# The board declares its intent in a design.yaml, as the tutorial's does, so a link of its root sheet
+# has to keep that intent for the stored check to match the files' (agni issue 1854). The tutorial's
+# own descriptor names its netlist as the entry, so this one names the schematic.
+cat >"$out/repos/rev-b/design.yaml" <<'YAML'
+name: gateway
+entry: gateway.kicad_sch
+companions: [gateway.kicad_pcb]
+intent:
+  nets:
+    PMIC_MAIN_12V0: {nominal: 12.0, domain: main}
+    PMIC_CORE_3V3: {nominal: 3.3, domain: io}
+    PMIC_IO_1V8: {nominal: 3.3, domain: core}
+YAML
 cp "$out/repos/rev-b/"* "$out/repos/rev-c/"
 sed -i.bak 's/(property "Value" "120"/(property "Value" "60"/' "$out/repos/rev-c/gateway.kicad_sch" && rm "$out/repos/rev-c/gateway.kicad_sch.bak"
 cmp -s "$out/repos/rev-b/gateway.kicad_sch" "$out/repos/rev-c/gateway.kicad_sch" && { echo "rev-c changed nothing" >&2; exit 1; }
@@ -443,7 +456,7 @@ stored=$(as alice check designs/bb --format json 2>"$out/check-bb.err" | finding
 local_=$("$agni" check "$out/repos/rev-b" --format json 2>/dev/null | findings)
 echo "designs/bb: ${stored:-none} findings; the rev-b files: $local_ findings"
 if [ -n "$stored" ] && [ "$stored" -gt 0 ] && [ "$stored" = "$local_" ]; then
-  pass "alice's check on designs/bb at rev-b gives the files' $local_ findings, read from Git LFS"
+  pass "alice's check on designs/bb at rev-b gives the files' $local_ findings, read from Git LFS, under the intent its design.yaml declares"
 else
   no "alice's check on designs/bb; see $out/check-bb.err"
 fi
