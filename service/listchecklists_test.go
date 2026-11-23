@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/check"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -94,5 +96,55 @@ func TestListChecklistsReportsABrokenDescriptor(t *testing.T) {
 	}
 	if err := ingest("not a uri"); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("a malformed uri = %v, want an invalid argument", err)
+	}
+}
+
+// fixedPacks is a PackLookup over packs held by name.
+type fixedPacks map[string]*webapi.Pack
+
+func (p fixedPacks) GetPack(_ context.Context, req *webapi.GetPackRequest) (*webapi.Pack, error) {
+	if pk, ok := p[req.GetName()]; ok {
+		return pk, nil
+	}
+	return nil, ErrNotFound
+}
+
+// A page reads a design under packs, as /designs/jetson/view?pack=house does. Its Review panel lists
+// the packs' checklists first, with a later pack replacing an earlier one's checklist of the same
+// name, as `agni review --pack` picks them. The project's own follow, less any a pack replaces
+// (agni issue 1851).
+func TestListChecklistsOffersThePacksTheSnapshotReadUnder(t *testing.T) {
+	store := extendingStore{projects: map[string]*webapi.Project{
+		"projects/team": {Name: "projects/team", Config: &webapi.AnalysisConfig{
+			Checklists: []*webapi.NamedChecklist{{Name: "bringup"}, {Name: "own"}},
+		}},
+	}}
+	packs := fixedPacks{
+		"packs/house": {Name: "packs/house", Config: &webapi.AnalysisConfig{Checklists: []*webapi.NamedChecklist{
+			{Name: "release", Manifest: &checkspb.ReviewManifest{Name: "house release"}}, {Name: "bringup"},
+		}}},
+		"packs/extra": {Name: "packs/extra", Config: &webapi.AnalysisConfig{Checklists: []*webapi.NamedChecklist{
+			{Name: "release", Manifest: &checkspb.ReviewManifest{Name: "extra release"}}, {Name: "emc"},
+		}}},
+	}
+	svc := NewReviewService(dirReviewLoader{}, NewMemReviewStore(), check.DefaultCatalog(), nil, nil, testReviewEnv, "", &ProjectResolver{Store: store, Packs: packs})
+	snap := ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/d/board.edn", Packs: []string{"packs/house", "packs/extra"}})
+	got, err := svc.ListChecklists(context.Background(), &webapi.ListChecklistsRequest{Snapshot: snap})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names, want := checklistNames(got), []string{"release", "bringup", "emc", "own"}; !slices.Equal(names, want) {
+		t.Errorf("checklists = %v, want %v", names, want)
+	}
+	if m := got.GetChecklists()[0].GetManifest().GetName(); m != "extra release" {
+		t.Errorf("the default checklist is %q, want the later pack's release", m)
+	}
+
+	plain, err := svc.ListChecklists(context.Background(), &webapi.ListChecklistsRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d/board.edn")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names, want := checklistNames(plain), []string{"bringup", "own"}; !slices.Equal(names, want) {
+		t.Errorf("with no packs, checklists = %v, want the project's own %v", names, want)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/num"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -237,6 +238,10 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 // issue 859). It reads the project through the same resolver as CreateReview's overlay, and it opens
 // no file. So it serves a host with no filesystem, as CreateReview does. See
 // ProjectResolver.Checklists for what an absent project and an empty one each answer.
+//
+// A snapshot read under packs lists the packs' checklists first, as PackChecklists orders them, so
+// its default is the one `agni review --pack` runs. The project's checklists follow, less any a pack
+// replaces by name (agni issue 1851).
 func (s *ReviewService) ListChecklists(ctx context.Context, req *webapi.ListChecklistsRequest) (*webapi.ListChecklistsResponse, error) {
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
@@ -245,6 +250,14 @@ func (s *ReviewService) ListChecklists(ctx context.Context, req *webapi.ListChec
 	lists, project, err := snap.ProjectsOr(s.projects).Checklists(ctx, snap.Design)
 	if err != nil {
 		return nil, err
+	}
+	if packed, _ := PackChecklists(snap.Packs); len(packed) > 0 {
+		for _, c := range lists {
+			if !slices.ContainsFunc(packed, func(p *webapi.NamedChecklist) bool { return p.GetName() == c.GetName() }) {
+				packed = append(packed, c)
+			}
+		}
+		lists = packed
 	}
 	return &webapi.ListChecklistsResponse{Project: project, Checklists: lists}, nil
 }

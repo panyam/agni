@@ -82,7 +82,10 @@ type Snap struct {
 	AsNamed                  bool
 	Overlay                  Overlay
 	// Config is the overlay config the definition carried, before it was composed with the project's.
-	Config   *webapi.OverlayConfig
+	Config *webapi.OverlayConfig
+	// Packs are the packs the design was read under, in order, as they were read. ListChecklists
+	// offers their checklists (agni issue 1851).
+	Packs    []*webapi.Pack
 	Revision string
 	// Imagine a client sends a design's files. A snapshot of those files reads through Loader and
 	// Projects. A snapshot of files the host serves has both nil, and it reads through the service's
@@ -625,7 +628,7 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 		gu = geometry
 	}
 	e := &snapshotEntry{
-		snap:       Snap{Name: name, Design: u, Netlist: nu, Board: bu, Geometry: gu, AsNamed: def.GetAsNamed(), Overlay: ov, Config: def.GetOverlay()},
+		snap:       Snap{Name: name, Design: u, Netlist: nu, Board: bu, Geometry: gu, AsNamed: def.GetAsNamed(), Overlay: ov, Config: def.GetOverlay(), Packs: packs},
 		upload:     up,
 		touched:    formats.NewTouched(),
 		packHashes: packHashes,

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 
@@ -162,26 +161,18 @@ func noteChecklist(w io.Writer, note string) {
 }
 
 // packChecklist returns the checklist name picks among the packs' checklists, the first one when
-// name is empty, and a note naming it (agni issue 1746). Packs layer in order, so a later pack's
-// checklist replaces an earlier one's of the same name, and keeps the earlier one's place.
+// name is empty, and a note naming it (agni issue 1746). service.PackChecklists layers the packs,
+// as the viewer's Review panel does.
 func packChecklist(ctx context.Context, get func(context.Context, string) (*webapi.Pack, error), packs []string, name string) (review.Manifest, string, error) {
-	var lists []*webapi.NamedChecklist
-	from := map[string]string{}
+	var read []*webapi.Pack
 	for _, n := range packs {
 		p, err := get(ctx, n)
 		if err != nil {
 			return review.Manifest{}, "", err
 		}
-		for _, c := range p.GetConfig().GetChecklists() {
-			i := slices.IndexFunc(lists, func(have *webapi.NamedChecklist) bool { return have.GetName() == c.GetName() })
-			if i < 0 {
-				lists = append(lists, c)
-			} else {
-				lists[i] = c
-			}
-			from[c.GetName()] = n
-		}
+		read = append(read, p)
 	}
+	lists, from := service.PackChecklists(read)
 	c := service.PickChecklist(lists, name)
 	if c == nil {
 		if name == "" {
