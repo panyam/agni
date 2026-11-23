@@ -343,6 +343,40 @@ func TestAFolderChecklistReviewsTheSameUnderAPack(t *testing.T) {
 	}
 }
 
+// agni checklists packs/<id> --remote lists a pack's checklists in order, the default first, and
+// refuses a design with --remote or a pack without it, saying which form to use (agni issue 1812).
+func TestChecklistsListsAPacksChecklists(t *testing.T) {
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := splitChecklistProject(t)
+	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
+		t.Fatalf("packs push: %v\n%s", err, out)
+	}
+	out, err := runAgni(t, "checklists", "packs/gateway", "--remote", srv.URL)
+	if err != nil {
+		t.Fatalf("checklists packs/gateway: %v\n%s", err, out)
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 2 || lines[0] != "split  Power, one file per item  (default)" {
+		t.Errorf("checklists packs/gateway =\n%s\nwant split first, marked the default, then the project's own", out)
+	}
+	js, err := runAgni(t, "checklists", "packs/gateway", "--remote", srv.URL, "--format", "json")
+	if err != nil || !strings.Contains(js, `"name": "split"`) || !strings.Contains(js, `"id": "P2"`) {
+		t.Errorf("checklists packs/gateway --format json = %v\n%s; want split with its items", err, js)
+	}
+	for args, want := range map[string]string{
+		"designs/gw --remote": "name it as packs/<id>",
+		"packs/gateway":       "add --remote <url>",
+	} {
+		a := strings.Fields(args)
+		if strings.HasSuffix(args, "--remote") {
+			a = append(a, srv.URL)
+		}
+		if out, err := runAgni(t, append([]string{"checklists"}, a...)...); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("checklists %s = %v\n%s; want an error saying %q", args, err, out, want)
+		}
+	}
+}
+
 // Importing a pack whose checklist is a folder asks for every item file's contents in one round, not
 // one round per file, so a checklist of hundreds of items pushes in three rounds (agni issue 1812).
 func TestImportPackFilesAsksForEveryItemFileAtOnce(t *testing.T) {

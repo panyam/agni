@@ -67,7 +67,8 @@ file takes. [Naming conventions](../naming-conventions/) covers what goes in it.
 
 `checklists:` maps a name to a review checklist. The first one written is the default, and
 `agni review <design>` runs it. `--checklist <name>` picks another. `agni checklists <design>`
-lists them.
+lists them. On a server the checklists go up with the project's pack, and `agni checklists
+packs/<id> --remote <url>` lists those.
 
 A large checklist can live in a folder, one file per item, with `items_dir:` in place of `areas:`.
 Then each item has its own history, and two reviewers can edit different items without a merge
