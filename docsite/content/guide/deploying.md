@@ -185,7 +185,7 @@ server reached one.
 ## Upgrade and back up
 
 - To upgrade, set `AGNI_VERSION` in `.env` and run `docker compose up -d` again. With the chart, run
-  `helm upgrade agni oci://ghcr.io/panyam/charts/agni --version <next> --reuse-values`.
+  `helm upgrade` with the next `--version` and the values you installed with.
 - Back up the `data` volume, or the PersistentVolumeClaim, with `connections.key`. The volume holds
   the store and the uploads. With `store` on postgres or `uploads` in a bucket, back those up as you
   do the rest of your database and buckets.
