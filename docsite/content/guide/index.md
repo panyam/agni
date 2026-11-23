@@ -25,4 +25,5 @@ from first read through to a house checklist gating CI, adding one capability at
 - **[Cross-probing a schematic and its board](cross-probing/)** opens the board beside the schematic, and the board turns to each part's side.
 - **[Seeing the board's layer stack](board-stack/)** draws the board's layers apart, so you can see which inner layer carries a net and which layers a via joins.
 - **[Running the server](running-the-server/)** brings the viewer up with Docker over your mounted designs.
+- **[Deploying in an enterprise](deploying-in-an-enterprise/)** takes an admin from a fresh machine or cluster to agni against their own GitHub Enterprise Server.
 - **[CLI reference](cli-reference/)** lists every command and flag.
