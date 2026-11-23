@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const guide = "../docsite/content/guide/deploying-in-an-enterprise.md"
+const guide = "../docsite/content/guide/deploying.md"
 
 // The enterprise guide names the bundle's .env lines and the chart's values an admin sets. Each must
 // still exist, so a renamed variable or value fails here rather than in an admin's install (agni

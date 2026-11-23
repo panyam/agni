@@ -853,8 +853,8 @@ Say a team wants that shared server on one machine, against its own GitHub Enter
 release attaches `agni-enterprise-<version>.tar.gz`, which unpacks into a folder holding a
 `compose.yaml` and an `env.example` (agni issue 1802). The bundle runs `agni serve` with every flag
 this page covers: TLS from your certificate, `--auth tokens`, sign-in through a GitHub App, a
-connections key and a webhook secret. [Deploying in an enterprise](../deploying-in-an-enterprise/)
-walks an admin through it, from registering the App to checking who can open a design.
+connections key and a webhook secret. [Deploying](../deploying/) walks an admin through it, from
+registering the App to checking who can open a design.
 
 ### Behind a proxy that ends TLS
 
@@ -887,9 +887,9 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files \
 
 Each release publishes a Helm chart beside the images, as `oci://ghcr.io/panyam/charts/agni` at
 the release's version (agni issue 1803). It runs the same server as the enterprise bundle, behind
-your ingress controller, which ends TLS. agni trusts it through `--trusted-proxy`. [Deploying in an
-enterprise](../deploying-in-an-enterprise/#or-start-it-with-the-helm-chart) covers the Secrets, the
-values and the upgrade.
+your ingress controller, which ends TLS. agni trusts it through `--trusted-proxy`.
+[Deploying](../deploying/#or-start-it-with-the-helm-chart) covers the Secrets, the values and the
+upgrade.
 
 ### Who can open a design linked from a private repo
 

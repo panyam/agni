@@ -1,5 +1,5 @@
 ---
-title: "Deploying in an enterprise"
+title: "Deploying"
 description: "Take a fresh machine or cluster to a running agni against your own GitHub Enterprise Server, signed in through your GitHub App or your identity provider."
 ---
 
