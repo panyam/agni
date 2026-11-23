@@ -9,14 +9,14 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `753ee4d6`.
+Last pruned 2026-11-23, at `028c2c01`.
 
 ## At a glance
 
 **#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 15 of 17. Its exercise is `make exercise-enterprise`, against
+Server) is active from 2026-11-21, at 16 of 17. Its exercise is `make exercise-enterprise`, against
 goapplib's fake GHES (`githubtest/cmd/fakegithub`, PR 1844), and CI runs it in its own job. At
-`753ee4d6` all 24 steps pass. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
+`028c2c01` all 24 steps pass. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
 (PR 1832), and `make kind-up exercise-enterprise-helm` against `deploy/helm/agni` on kind (PR 1837),
 which needs helm and kind. `guide/deploying/` (PR 1843) walks an admin through the same steps, and
 nobody has followed it by hand on a fresh VM yet. Its "Try it on a new install" section (PR 1850)
@@ -24,7 +24,8 @@ links Antmicro's Jetson baseboard and reviews it under `examples/jetson-project`
 `agni serve --bootstrap` (PR 1852) applies a YAML file of connections, mounts, packs, designs and
 projects on every start. `/readyz` answers 503 until every entry applies, and the chart's readiness
 probe uses it. `agni serve --config serve.yaml` (PR 1856) sets serve's flags from a file, with
-sections that nest by flag prefix, and `bootstrap:` inline. The chart passes only `--config`.
+sections that nest by flag prefix, and `bootstrap:` inline. The chart passes only `--config`. A linked root sheet takes its whole
+declared design, and the Review panel offers the packs' checklists under `?pack=` (PR 1855).
 
 - **agni is on goapplib v0.7.34, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
@@ -51,9 +52,7 @@ sections that nest by flag prefix, and `bootstrap:` inline. The chart passes onl
 
 ## Open, ranked
 
-1. **#1851**, linked root sheet and the Review panel under `?pack=`. PR #1855 is green and waits
-   on merge.
-2. **#1854**, a linked design ignores the `intent:` in its `design.yaml`. It needs a decision on
+1. **#1854**, a linked design ignores the `intent:` in its `design.yaml`. It needs a decision on
    whether each sync of a followed link rewrites the intent.
 
 Later work is #370 then
