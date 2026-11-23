@@ -238,7 +238,8 @@ func (s *githubSignIns) admit(ctx context.Context, login string, tok *oauth2.Tok
 }
 
 // allowed says whether Allow lets login in. An org entry asks GitHub, with the person's own token,
-// whether login is a member.
+// whether login is a member. A 403 there means the App lacks the members permission, and the error
+// says so.
 func (s *githubSignIns) allowed(ctx context.Context, login string, tok *oauth2.Token) (bool, error) {
 	var orgs []string
 	for _, a := range s.cfg.Allow {
@@ -266,6 +267,10 @@ func (s *githubSignIns) allowed(ctx context.Context, login string, tok *oauth2.T
 		case http.StatusNoContent:
 			return true, nil
 		case http.StatusNotFound, http.StatusFound:
+		case http.StatusForbidden:
+			// A GitHub App's user token reads an org's members only when the App holds the members
+			// permission (agni issue 1841).
+			return false, fmt.Errorf("the GitHub App can't read %s's members, so --github-allow org:%s can't be checked; give the App the Organization permission \"Members: Read-only\", and accept the change on %s's installation", org, org, org)
 		default:
 			return false, fmt.Errorf("GitHub answered %d about %s's membership of %s", resp.StatusCode, login, org)
 		}

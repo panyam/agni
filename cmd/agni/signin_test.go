@@ -188,3 +188,17 @@ func TestAgniLoginSignsInFromATerminal(t *testing.T) {
 		t.Errorf("connections ls with no AGNI_TOKEN after agni login = %q, %v; want alice's kept token sent, and her connection listed", ls, err)
 	}
 }
+
+// A GitHub App that can't read the org's members can't check --github-allow org:<org>. The person
+// is refused with a page naming the permission the operator gives the App, rather than the status
+// GitHub answered (agni issue 1841).
+func TestSignInThroughAnAppWithoutMembersNamesThePermission(t *testing.T) {
+	gh := githubtest.New(t)
+	gh.AddUser("alice", "acme")
+	server, _ := signInServer(t, gh)
+	gh.AddApp(appClientID, appSecret).SetPermissions(map[string]string{"contents": "read"})
+	_, code, body, session := browserSignIn(t, gh, server, "alice", "/designs")
+	if code != http.StatusForbidden || session != "" || !strings.Contains(body, "Members") || !strings.Contains(body, "acme") {
+		t.Errorf("alice's sign-in through an App without members got %d and session %q:\n%s\nwant 403, no session, naming the Members permission and acme", code, session, body)
+	}
+}

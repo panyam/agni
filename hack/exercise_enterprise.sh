@@ -132,7 +132,8 @@ server_token=$(openssl rand -hex 20)
 client_secret=$(openssl rand -hex 20)
 cat >"$out/repos/seed.json" <<EOF
 {
-  "app": {"client_id": "Iv1.exercise", "client_secret": "$client_secret"},
+  "app": {"client_id": "Iv1.exercise", "client_secret": "$client_secret",
+          "permissions": {"contents": "read", "members": "read"}, "installations": [{"account": "hw"}]},
   "users": [{"login": "alice", "orgs": ["acme"]}, {"login": "mallory", "orgs": ["acme"]}],
   "tokens": ["$server_token"],
   "repos": [
@@ -166,11 +167,13 @@ fi
 echo "made $out/ca.pem and a server certificate it signed"
 
 step "start the fake GitHub Enterprise Server"
-(cd "$root" && go build -o "$out/fakegithub" ./tools/fakegithub)
+# goapplib's fake GitHub Enterprise Server, which models the App's permissions and installations
+# (agni issue 1841).
+(cd "$root" && go build -o "$out/fakegithub" github.com/panyam/goapplib/storage/mounts/github/githubtest/cmd/fakegithub)
 ctl_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
 ctl=http://127.0.0.1:$ctl_port
 fake_host=()
-[ "$mode" != binary ] && fake_host=(--host "$host" --tls-cert "$out/fake.pem" --tls-key "$out/fake.key")
+[ "$mode" != binary ] && fake_host=(--listen "$host:0" --tls-cert "$out/fake.pem" --tls-key "$out/fake.key")
 "$out/fakegithub" --seed "$out/repos/seed.json" --addr "127.0.0.1:$ctl_port" ${fake_host[@]+"${fake_host[@]}"} --hook-ca "$out/ca.pem" >>"$out/fakegithub.log" 2>&1 &
 pids+=($!)
 wait_for "$ctl/" || { echo "the fake didn't start; see $out/fakegithub.log" >&2; exit 1; }
@@ -348,10 +351,12 @@ admin() { AGNI_TOKEN=$(cat "$out/admin.token") "$agni" "$@" --remote "$url"; }
 # agni login minted for them.
 as() { local who=$1; shift; HOME="$out/people/$who" XDG_CONFIG_HOME="$out/people/$who/.config" "$agni" "$@" --remote "$url"; }
 
+# login signs who in from a terminal and approves the code at the fake. A second and third argument
+# name another server and its fake's control address, and a fourth the log.
 login() {
-  local who=$1 log=$out/login-$1.log code
+  local who=$1 u=${2:-$url} c=${3:-$ctl} log=${4:-$out/login-$1.log} code
   mkdir -p "$out/people/$who"
-  HOME="$out/people/$who" XDG_CONFIG_HOME="$out/people/$who/.config" "$agni" login --remote "$url" >"$log" 2>&1 &
+  HOME="$out/people/$who" XDG_CONFIG_HOME="$out/people/$who/.config" "$agni" login --remote "$u" >"$log" 2>&1 &
   local lpid=$!
   for _ in $(seq 1 100); do
     code=$(sed -n 's/.*enter the code \([A-Z0-9-]*\).*/\1/p' "$log")
@@ -362,7 +367,7 @@ login() {
     kill "$lpid" 2>/dev/null
     return 1
   fi
-  curl -s -f -o /dev/null -X POST "$ctl/approve" --data-urlencode "login=$who" --data-urlencode "code=$code" || { kill "$lpid" 2>/dev/null; return 1; }
+  curl -s -f -o /dev/null -X POST "$c/approve" --data-urlencode "login=$who" --data-urlencode "code=$code" || { kill "$lpid" 2>/dev/null; return 1; }
   wait "$lpid"
 }
 
@@ -374,6 +379,39 @@ for who in alice mallory; do
     no "$who's sign-in; see $out/login-$who.log and $out/serve.log"
   fi
 done
+
+step "an App without the org's members permission refuses a sign-in, naming the permission"
+# A second, smaller fake whose App reads contents but not members, and this checkout's agni serve
+# over it on loopback. The server can't check --github-allow org:acme, and says what to give the App.
+cat >"$out/repos/seed-nomembers.json" <<EOF
+{
+  "app": {"client_id": "Iv1.nomembers", "client_secret": "$client_secret",
+          "permissions": {"contents": "read"}, "installations": [{"account": "acme"}]},
+  "users": [{"login": "alice", "orgs": ["acme"]}]
+}
+EOF
+ctl2_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
+ctl2=http://127.0.0.1:$ctl2_port
+"$out/fakegithub" --seed "$out/repos/seed-nomembers.json" --addr "127.0.0.1:$ctl2_port" >>"$out/fakegithub-nomembers.log" 2>&1 &
+pids+=($!)
+nm_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
+nm_url=http://127.0.0.1:$nm_port
+if wait_for "$ctl2/"; then
+  nm_api=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["api"])' "$(curl -s "$ctl2/")")
+  (cd "$out" && HTTPS_PROXY="http://127.0.0.1:$trap_port" HTTP_PROXY="http://127.0.0.1:$trap_port" NO_PROXY=127.0.0.1,localhost \
+    AGNI_NM_SECRET=$client_secret AGNI_NM_KEY=$(openssl rand -hex 32) \
+    exec "$agni" serve --addr "127.0.0.1:$nm_port" \
+    --store "file://$out/nomembers/meta" --uploads "file://$out/nomembers/files" --auth tokens \
+    --connections-key env:AGNI_NM_KEY --github-api "$nm_api" --github-client-id Iv1.nomembers \
+    --github-client-secret env:AGNI_NM_SECRET --github-allow org:acme) >>"$out/serve-nomembers.log" 2>&1 &
+  pids+=($!)
+fi
+if wait_for "$nm_url/healthz" && ! login alice "$nm_url" "$ctl2" "$out/login-nomembers.log" &&
+  grep -q 'Members: Read-only' "$out/login-nomembers.log"; then
+  pass "alice's sign-in is refused, naming the Members permission the App needs"
+else
+  no "the sign-in through an App without members; see $out/login-nomembers.log and $out/serve-nomembers.log"
+fi
 
 step "the admin adds a server connection and mounts hw/baseboard through it"
 # The local server reads the connection's token from its own environment. A server in a container
