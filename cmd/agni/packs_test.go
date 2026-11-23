@@ -54,14 +54,14 @@ func tutorialProject(t *testing.T) string {
 	if err := os.CopyFS(root, os.DirFS(src)); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.RemoveAll(filepath.Join(root, "designs")); err != nil {
+	if err := os.RemoveAll(filepath.Join(root, "boards")); err != nil {
 		t.Fatal(err)
 	}
-	gw := filepath.Join(root, "designs", "gw")
+	gw := filepath.Join(root, "boards", "gw")
 	if err := os.MkdirAll(gw, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	for from, to := range map[string]string{gatewayRevA: "gateway.edn", "../../examples/tutorial-project/designs/gateway-rev-b/gateway-rev-b.kicad_pcb": "gateway.kicad_pcb"} {
+	for from, to := range map[string]string{gatewayRevA: "gateway.edn", "../../examples/tutorial-project/boards/gateway-rev-b/gateway-rev-b.kicad_pcb": "gateway.kicad_pcb"} {
 		b, err := os.ReadFile(from)
 		if err != nil {
 			t.Fatal(err)
@@ -122,7 +122,7 @@ func TestACheckUnderAPackMatchesTheFolder(t *testing.T) {
 	} else if !strings.Contains(out, "profiles: profiles") || !strings.Contains(out, "params: params") {
 		t.Fatalf("packs push printed %q; want its profiles and params tiers", out)
 	}
-	design := filepath.Join(project, "designs", "gw")
+	design := filepath.Join(project, "boards", "gw")
 	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
 		t.Fatalf("designs push: %v\n%s", err, out)
 	}
@@ -158,7 +158,7 @@ func minus(a, b []string) []string {
 func TestDesignsPushKeepsTheIntent(t *testing.T) {
 	ctx := context.Background()
 	srv := designServer(t, t.TempDir(), t.TempDir())
-	design := filepath.Join(tutorialProject(t), "designs", "gw")
+	design := filepath.Join(tutorialProject(t), "boards", "gw")
 	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
 		t.Fatalf("push: %v\n%s", err, out)
 	}
@@ -245,7 +245,7 @@ func TestVerdictsUnderAPackMatchTheFolder(t *testing.T) {
 	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
 		t.Fatalf("packs push: %v\n%s", err, out)
 	}
-	design := filepath.Join(project, "designs", "gw")
+	design := filepath.Join(project, "boards", "gw")
 	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
 		t.Fatalf("designs push: %v\n%s", err, out)
 	}
@@ -275,7 +275,7 @@ func TestAReviewUnderAPackMatchesTheFolder(t *testing.T) {
 	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
 		t.Fatalf("packs push: %v\n%s", err, out)
 	}
-	design := filepath.Join(project, "designs", "gw")
+	design := filepath.Join(project, "boards", "gw")
 	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
 		t.Fatalf("designs push: %v\n%s", err, out)
 	}
@@ -331,7 +331,7 @@ func TestAFolderChecklistReviewsTheSameUnderAPack(t *testing.T) {
 	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
 		t.Fatalf("packs push: %v\n%s", err, out)
 	}
-	design := filepath.Join(project, "designs", "gw")
+	design := filepath.Join(project, "boards", "gw")
 	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
 		t.Fatalf("designs push: %v\n%s", err, out)
 	}
@@ -467,7 +467,7 @@ func TestDesignsPushKeepsTheProjectItExtends(t *testing.T) {
 	ctx := context.Background()
 	srv := designServer(t, t.TempDir(), t.TempDir())
 	project := tutorialProject(t)
-	design := filepath.Join(project, "designs", "gw")
+	design := filepath.Join(project, "boards", "gw")
 	packs := webapiconnect.NewPackServiceClient(http.DefaultClient, srv.URL)
 	hash := func() string {
 		t.Helper()
@@ -530,7 +530,7 @@ func TestImportPackFilesAsksOnlyForWhatThePackHolds(t *testing.T) {
 	for _, f := range all.files {
 		hashOf[f.GetPath()] = f.GetSha256()
 	}
-	if hashOf["designs/gw/gateway.edn"] == "" || hashOf["project.yaml"] == "" {
+	if hashOf["boards/gw/gateway.edn"] == "" || hashOf["project.yaml"] == "" {
 		t.Fatalf("the folder lacks the files this test reads: %v", hashOf)
 	}
 	packs := webapiconnect.NewPackServiceClient(http.DefaultClient, srv.URL)
@@ -574,7 +574,7 @@ func TestImportPackFilesAsksOnlyForWhatThePackHolds(t *testing.T) {
 		t.Errorf("the first round asked for %v; want project.yaml's contents alone", rounds[0])
 	}
 	for _, h := range rounds[1] {
-		if h == hashOf["designs/gw/gateway.edn"] || h == hashOf["designs/gw/gateway.kicad_pcb"] {
+		if h == hashOf["boards/gw/gateway.edn"] || h == hashOf["boards/gw/gateway.kicad_pcb"] {
 			t.Errorf("the second round asked for a design's file (%s); want the pack's files alone", h)
 		}
 	}
@@ -582,7 +582,7 @@ func TestImportPackFilesAsksOnlyForWhatThePackHolds(t *testing.T) {
 		t.Errorf("pack = %s %q with %d files; want packs/gateway titled from project.yaml, with its tiers' files", made.GetName(), made.GetTitle(), len(made.GetFiles()))
 	}
 	for _, f := range made.GetFiles() {
-		if strings.HasPrefix(f.GetPath(), "designs/") || f.GetPath() == "project.yaml" {
+		if strings.HasPrefix(f.GetPath(), "boards/") || f.GetPath() == "project.yaml" {
 			t.Errorf("the pack keeps %s; want only the files its tiers name", f.GetPath())
 		}
 	}
@@ -600,7 +600,7 @@ func TestImportPackFilesAsksOnlyForWhatThePackHolds(t *testing.T) {
 func TestImportDesignFilesKeepsTheDeclaredIntent(t *testing.T) {
 	ctx := context.Background()
 	srv := designServer(t, t.TempDir(), t.TempDir())
-	folder, err := localFiles(filepath.Join(tutorialProject(t), "designs", "gw"))
+	folder, err := localFiles(filepath.Join(tutorialProject(t), "boards", "gw"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -26,7 +26,7 @@ var walkthroughMD []byte
 
 func main() {
 	// The shared path input. It defaults to the bundled schematic and accepts any .eds path.
-	design := common.AskPath("design", "../common/designs/demo-schematic.eds")
+	design := common.AskPath("design", "../common/boards/demo-schematic.eds")
 
 	demo := demokit.New("render-schematic").
 		Dir("render-schematic").

@@ -16,7 +16,7 @@ So "is this pin connected to that one" is usually a question about a path. The p
 
 ## Pick a design {#design}
 
-> A path to the design, relative to this folder. The default is ../common/designs/i2c-sensor/i2c-sensor.edn. It is the entry of a declared design, and it carries an I2C bus with a pull-up resistor onto the supply rail. The other bundled fixtures live alongside it in ../common/designs/.
+> A path to the design, relative to this folder. The default is ../common/boards/i2c-sensor/i2c-sensor.edn. It is the entry of a declared design, and it carries an I2C bus with a pull-up resistor onto the supply rail. The other bundled fixtures live alongside it in ../common/boards/.
 
 ## Pick the two pins {#pins}
 
@@ -75,17 +75,17 @@ Agni -->> You: Trace (outcome, crossings, nets, stubs)
 
 This walkthrough is the narrated form of one command:
 
-    agni trace ../common/designs/i2c-sensor --from U1.3 --to J1.1 --render route.svg
+    agni trace ../common/boards/i2c-sensor --from U1.3 --to J1.1 --render route.svg
 
 Add `--hops` to widen the search, and `--format json` for the machine-readable form. The reach step
 is the same command with `--reachable` in place of `--to`:
 
-    agni trace ../common/designs/i2c-sensor --from U1.3 --reachable
+    agni trace ../common/boards/i2c-sensor --from U1.3 --reachable
 
 The every-pin
 step is this command. It writes its answer as a draft io_map for `agni check --intent-path`:
 
-    agni pinmap ../common/designs/i2c-sensor --device U1
+    agni pinmap ../common/boards/i2c-sensor --device U1
 
 To look at the whole design interactively rather than one route, `agni open
-../common/designs/i2c-sensor` serves it and prints a URL.
+../common/boards/i2c-sensor` serves it and prints a URL.

@@ -16,7 +16,7 @@ from agni import Client, CliTransport, ConnectTransport
 
 c = Client(CliTransport("agni", mounts={"tut": "examples/tutorial-project"}))
 # or: c = Client(ConnectTransport("http://127.0.0.1:8080"))
-snap = c.ingest("mount://tut/designs/gateway")
+snap = c.ingest("mount://tut/boards/gateway")
 resp = c.run_query(snapshot=snap, query='component.class(?c, "resistor") => ?c')
 c.delete_snapshot(snap)
 ```

@@ -33,10 +33,10 @@ func TestADriveLetterMountReadsItsDesigns(t *testing.T) {
 	}
 	freshWorkspace(t)
 	var got webapi.GetSummaryResponse
-	if err := protojson.Unmarshal([]byte(runRoot(t, "stats", "--mount", "tut="+root, "mount://tut/designs/gateway", "--format", "json")), &got); err != nil {
+	if err := protojson.Unmarshal([]byte(runRoot(t, "stats", "--mount", "tut="+root, "mount://tut/boards/gateway", "--format", "json")), &got); err != nil {
 		t.Fatal(err)
 	}
 	if got.GetComponentCount() == 0 || got.GetNetCount() == 0 {
-		t.Errorf("mount tut=%s reads %d components and %d nets from designs/gateway", root, got.GetComponentCount(), got.GetNetCount())
+		t.Errorf("mount tut=%s reads %d components and %d nets from boards/gateway", root, got.GetComponentCount(), got.GetNetCount())
 	}
 }

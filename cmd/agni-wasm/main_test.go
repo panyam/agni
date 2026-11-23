@@ -85,7 +85,7 @@ func TestEngineAnswersThroughTheJSExports(t *testing.T) {
 	}
 	// A question names a snapshot, so the design is ingested first, under the id a page would mint
 	// (agni issue 1061).
-	if status, out := post("/agni.v1.webapi.SnapshotService/Ingest", `{"snapshot":{"uri":"mount://tut/designs/gateway"},"snapshotId":"js"}`); status != 200 {
+	if status, out := post("/agni.v1.webapi.SnapshotService/Ingest", `{"snapshot":{"uri":"mount://tut/boards/gateway"},"snapshotId":"js"}`); status != 200 {
 		t.Fatalf("Ingest: status %d, body %.300s", status, out)
 	}
 	status, out := post("/agni.v1.webapi.CheckService/GetCheckReport", `{"snapshot":"snapshots/js"}`)
@@ -95,7 +95,7 @@ func TestEngineAnswersThroughTheJSExports(t *testing.T) {
 	if !strings.Contains(string(out), "gateway-profiles/") {
 		t.Errorf("GetCheckReport carries no rule from the project's own profiles, so the project config did not reach the engine:\n%.500s", out)
 	}
-	if !strings.Contains(string(out), `"sourceFile":"designs/gateway/gateway.edn"`) {
-		t.Errorf("GetCheckReport has no finding located in designs/gateway/gateway.edn:\n%.500s", out)
+	if !strings.Contains(string(out), `"sourceFile":"boards/gateway/gateway.edn"`) {
+		t.Errorf("GetCheckReport has no finding located in boards/gateway/gateway.edn:\n%.500s", out)
 	}
 }

@@ -30,6 +30,6 @@ make doc        # render the walkthrough to markdown
 
 The narration lives in [`walkthrough.md`](walkthrough.md). [`tour.go`](tour.go) builds the services
 the way `agni serve --store --uploads` does (`cmd/agni/storeservices.go`), over a temporary folder and the
-bundled [`../common/designs/demo-project`](../common/designs/demo-project) mounted read-only.
+bundled [`../common/boards/demo-project`](../common/boards/demo-project) mounted read-only.
 [`main.go`](main.go) binds the ten steps. [`tour_test.go`](tour_test.go) runs the same calls and
 checks their answers.

@@ -26,7 +26,7 @@ import java.util.function.Supplier;
  * the server, ingests a design, asks it three questions, and prints one line of JSON summing up the
  * answers. docsite/content/build/client-contract.md names the line's fields.
  *
- * <pre>clients/examples/java/run -server http://127.0.0.1:8080 -design mount://probe/designs/jetson-cut</pre>
+ * <pre>clients/examples/java/run -server http://127.0.0.1:8080 -design mount://probe/boards/jetson-cut</pre>
  */
 public final class Main {
   /** The query every example asks, so their answers compare. The check runs every rule. */
@@ -64,7 +64,7 @@ public final class Main {
 
   public static void main(String[] args) {
     String server = "http://127.0.0.1:8080";
-    String design = "mount://probe/designs/jetson-cut";
+    String design = "mount://probe/boards/jetson-cut";
     for (int i = 0; i < args.length; i++) {
       String flag = args[i];
       String a = flag.replaceFirst("^--?", "");

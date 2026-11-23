@@ -39,7 +39,7 @@ func TestAnAbsentAggregateSaysWhy(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewQueryService(fsQueryLoader{base: project}, specs, nil)
-	uri := "mount://m/designs/gateway/gateway.edn"
+	uri := "mount://m/boards/gateway/gateway.edn"
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), uri), Query: `param.max(?m, ?s, ?v) => ?m, sum(?v)`})
 	if err != nil {
 		t.Fatal(err)

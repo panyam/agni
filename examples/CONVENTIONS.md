@@ -19,13 +19,13 @@ examples/
 ├── common/               # shared reuse package (its own module)
 │   ├── go.mod            # module .../examples/common; replace agni => ../..
 │   ├── designs.go        # Load / ReadDesign: reads through formats.Loader
-│   ├── fixtures.go       # go:embed designs/*; Designs(), ReadFixture()
+│   ├── fixtures.go       # go:embed boards; Designs(), ReadFixture()
 │   ├── geometry.go       # LoadSchematic: schematic geometry (.eds) at the I/O edge
 │   ├── input.go          # AskPath / AskReviewPath: the shared path prompt (§4)
 │   ├── present.go        # narration pretty-printers (StatsLines, NetLines, ...)
 │   ├── walkthrough.go    # SetupRenderer: --mode dispatch (plain/tui/notebook)
 │   ├── walkthrough.mk    # shared Makefile fragment
-│   └── designs/          # bundled synthetic fixtures (see rule in §5)
+│   └── boards/           # bundled synthetic fixtures (see rule in §5)
 └── <name>/               # one directory per example
     ├── main.go           # thin: embed the sidecar, Bind the steps that run code
     ├── walkthrough.md     # authored narration (demokit FromMarkdown sidecar)
@@ -74,7 +74,7 @@ way, through the shared **`common.AskPath(name, default)`** helper, so the promp
 load semantics never diverge:
 
 ```go
-design := common.AskPath("design", "../common/designs/foo.edn")
+design := common.AskPath("design", "../common/boards/foo.edn")
 demo.Bind("pick").Input(design.Def()).Run(func(ctx demokit.StepContext) *demokit.StepResult {
     design.Capture(ctx)            // record what the user typed
     return nil
@@ -113,12 +113,12 @@ fixture fallback, EDIF `.eds` only) instead of `design.Load()`. See `render-sche
 
 ## 5. Fixtures
 
-Examples read bundled synthetic fixtures from `common/designs/`, and may also load any path
+Examples read bundled synthetic fixtures from `common/boards/`, and may also load any path
 the user supplies (see §4). The bundled fixtures are hand-authored, not real customer boards,
 so every example runs hermetically and the repo can be shared. **Never bundle a
 company-specific or otherwise protected netlist.** Bundle only hand-authored synthetic
 fixtures or a design that is redistributable under a license that permits it. New fixtures go
-in `common/designs/` and are reached through `common.Load` / `common.ReadFixture(name)` /
+in `common/boards/` and are reached through `common.Load` / `common.ReadFixture(name)` /
 `common.Designs()`.
 
 One exception follows from CONSTRAINTS C10. A reader of a vendor format whose files only the

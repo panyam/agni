@@ -62,7 +62,7 @@ func snapFixtureOver(dir string, limit int, store service.SnapshotStore) *snapFi
 	return &snapFixture{dir: dir, host: host, res: res, snaps: chk.Snapshots(), check: chk}
 }
 
-const gateway = "mount://m/designs/gateway"
+const gateway = "mount://m/boards/gateway"
 
 func (f *snapFixture) ingest(t *testing.T, req *webapi.IngestRequest) *webapi.Snapshot {
 	t.Helper()
@@ -109,7 +109,7 @@ func TestAStaleSnapshotNamesTheFileAndAnUpdateRefreshesIt(t *testing.T) {
 	if err := f.checkDesign(s.GetName()); err != nil {
 		t.Fatalf("control: the fresh snapshot did not answer: %v", err)
 	}
-	netlist := filepath.Join(f.dir, "designs", "gateway", "gateway.edn")
+	netlist := filepath.Join(f.dir, "boards", "gateway", "gateway.edn")
 	b, err := os.ReadFile(netlist)
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +126,7 @@ func TestAStaleSnapshotNamesTheFileAndAnUpdateRefreshesIt(t *testing.T) {
 		t.Fatalf("a check after the netlist changed answered %v; want a stale snapshot", err)
 	}
 	// The netlist tier alone moved, and it is named as an artifact, never as the host's path.
-	if !slices.Equal(se.Changed, []string{"mount://m/designs/gateway/gateway.edn"}) {
+	if !slices.Equal(se.Changed, []string{"mount://m/boards/gateway/gateway.edn"}) {
 		t.Errorf("the stale snapshot names %v, want the netlist tier that changed", se.Changed)
 	}
 	u, err := f.snaps.UpdateSnapshot(context.Background(), &webapi.UpdateSnapshotRequest{Snapshot: &webapi.Snapshot{Name: s.GetName(), Uri: gateway}})
@@ -144,11 +144,11 @@ func TestAStaleSnapshotNamesTheFileAndAnUpdateRefreshesIt(t *testing.T) {
 func TestABoardOnlyUpdateKeepsTheNetlistItRead(t *testing.T) {
 	f := newSnapFixture(t, 0)
 	s := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}, ReadBoard: true})
-	if s.GetTiers().GetBoardUri() != "mount://m/designs/gateway/gateway.kicad_pcb" || !s.GetTiers().GetBoardRead() {
+	if s.GetTiers().GetBoardUri() != "mount://m/boards/gateway/gateway.kicad_pcb" || !s.GetTiers().GetBoardRead() {
 		t.Fatalf("the ingest's board is %q, read %v; want the declared board, read", s.GetTiers().GetBoardUri(), s.GetTiers().GetBoardRead())
 	}
 	reads := f.host.reads.Load()
-	other := "mount://m/designs/gateway-rev-b/gateway-rev-b.kicad_pcb"
+	other := "mount://m/boards/gateway-rev-b/gateway-rev-b.kicad_pcb"
 	u, err := f.snaps.UpdateSnapshot(context.Background(), &webapi.UpdateSnapshotRequest{
 		Snapshot:   &webapi.Snapshot{Name: s.GetName(), BoardUri: other},
 		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"board_uri"}},
@@ -211,7 +211,7 @@ func TestConsistencyComparesTheBoardWithTheNetlist(t *testing.T) {
 	}
 	// The second revision's netlist against the first revision's board. A board updated on its own
 	// takes this shape.
-	mixed := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/designs/gateway/gateway-rev-c.edn", BoardUri: "mount://m/designs/gateway/gateway.kicad_pcb", AsNamed: true}, ReadBoard: true})
+	mixed := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/boards/gateway/gateway-rev-c.edn", BoardUri: "mount://m/boards/gateway/gateway.kicad_pcb", AsNamed: true}, ReadBoard: true})
 	m := mixed.GetConsistency()
 	if m.GetBoardOnlyCount()+m.GetNetlistOnlyCount() == 0 {
 		t.Errorf("a later revision's netlist against the first board reports no difference")
@@ -231,7 +231,7 @@ func TestConsistencyComparesTheBoardWithTheNetlist(t *testing.T) {
 func TestAnEvictedSnapshotIsIngestedAgain(t *testing.T) {
 	f := newSnapFixture(t, 1)
 	a := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}})
-	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/designs/gateway-rev-b/gateway-rev-b.edn"}})
+	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/boards/gateway-rev-b/gateway-rev-b.edn"}})
 	if err := f.checkDesign(a.GetName()); err != nil {
 		t.Fatalf("a check of an evicted snapshot answered %v; want it ingested again and answered", err)
 	}
@@ -291,7 +291,7 @@ func TestARefreshingSnapshotAnswersAfterAChangeAndSaysSo(t *testing.T) {
 	if err := f.checkDesign(s.GetName()); err != nil {
 		t.Fatalf("control: the fresh snapshot did not answer: %v", err)
 	}
-	netlist := filepath.Join(f.dir, "designs", "gateway", "gateway.edn")
+	netlist := filepath.Join(f.dir, "boards", "gateway", "gateway.edn")
 	b, err := os.ReadFile(netlist)
 	if err != nil {
 		t.Fatal(err)
@@ -306,7 +306,7 @@ func TestARefreshingSnapshotAnswersAfterAChangeAndSaysSo(t *testing.T) {
 	if _, err := f.check.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: s.GetName(), Rules: []string{"floating-input"}}); err != nil {
 		t.Fatalf("a check of a refreshing snapshot after its netlist changed answered %v", err)
 	}
-	if got := rs.Changed(); !slices.Equal(got, []string{"mount://m/designs/gateway/gateway.edn"}) {
+	if got := rs.Changed(); !slices.Equal(got, []string{"mount://m/boards/gateway/gateway.edn"}) {
 		t.Errorf("the refresh names %v, want the netlist tier that changed", got)
 	}
 	got, err := f.snaps.GetSnapshot(context.Background(), &webapi.GetSnapshotRequest{Name: s.GetName()})
@@ -318,7 +318,7 @@ func TestARefreshingSnapshotAnswersAfterAChangeAndSaysSo(t *testing.T) {
 func TestListSnapshotsFiltersByURI(t *testing.T) {
 	f := newSnapFixture(t, 0)
 	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}})
-	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/designs/gateway-rev-b/gateway-rev-b.edn"}})
+	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/boards/gateway-rev-b/gateway-rev-b.edn"}})
 	all, err := f.snaps.ListSnapshots(context.Background(), &webapi.ListSnapshotsRequest{})
 	if err != nil || len(all.GetSnapshots()) != 2 {
 		t.Fatalf("listed %d snapshots (%v), want both", len(all.GetSnapshots()), err)

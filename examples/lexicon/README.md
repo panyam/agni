@@ -20,5 +20,5 @@ make run          # plain text, prompts for the design and the net
 make runquiet     # non-interactive, the defaults throughout
 ```
 
-The default design is `../common/designs/lexicon-demo`, a sensor on its own regulator whose output is
+The default design is `../common/boards/lexicon-demo`, a sensor on its own regulator whose output is
 named `SENSOR_3V3`. Its `design.yaml` carries the one rail pattern that makes that name a rail.

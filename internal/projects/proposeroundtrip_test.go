@@ -68,7 +68,7 @@ func TestProposingTheTutorialGatewayRecoversItsDeclaredDesign(t *testing.T) {
 	// The whole project is mounted, since the gateway names its project by a path that climbs to it.
 	fsys := os.DirFS(filepath.Join("..", "..", "examples", "tutorial-project"))
 	var paths []string
-	err := fs.WalkDir(fsys, "designs/gateway", func(p string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(fsys, "boards/gateway", func(p string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() && path.Base(p) != DesignDescriptor {
 			paths = append(paths, p)
 		}
@@ -84,7 +84,7 @@ func TestProposingTheTutorialGatewayRecoversItsDeclaredDesign(t *testing.T) {
 	got := resp.GetDesigns()[0].GetDesign()
 
 	store := NewFSStore(Tree{Mount: "m", FS: fsys})
-	declared, _, err := store.ResolveDesign(context.Background(), mounts.URI{Mount: "m", Path: "designs/gateway/gateway.edn"})
+	declared, _, err := store.ResolveDesign(context.Background(), mounts.URI{Mount: "m", Path: "boards/gateway/gateway.edn"})
 	if err != nil || declared == nil {
 		t.Fatalf("the declared design does not resolve: %v", err)
 	}

@@ -2,6 +2,6 @@
 # show what each one was compared against.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 script: |
-  agni check --verdicts designs/jetson --rule supply-exceeds-abs-max --rule pin-exceeds-abs-max
+  agni check --verdicts boards/jetson --rule supply-exceeds-abs-max --rule pin-exceeds-abs-max

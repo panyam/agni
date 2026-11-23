@@ -9,7 +9,7 @@ import (
 // things from it. Every part on the schematic has its footprint, every pad sits on the net the
 // schematic gives that pin, and both sides of the board and a turned part are there to show.
 func TestTheCrossProbeCutJoinsItsSchematicToItsBoard(t *testing.T) {
-	dir := filepath.Join("..", "..", "examples", "cross-probe-project", "designs", "jetson-cut")
+	dir := filepath.Join("..", "..", "examples", "cross-probe-project", "boards", "jetson-cut")
 	l := &Loader{}
 	d, err := l.ReadDesign(filepath.Join(dir, "jetson-cut.kicad_sch"))
 	if err != nil {

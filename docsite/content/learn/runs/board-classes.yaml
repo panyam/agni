@@ -3,4 +3,4 @@
 fixture: examples/tutorial-project
 from_root: true
 script: |
-  agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, ?c) => ?r, ?c'
+  agni query examples/tutorial-project/boards/gateway/gateway.edn 'component.class(?r, ?c) => ?r, ?c'

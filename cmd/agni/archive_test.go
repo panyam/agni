@@ -76,15 +76,15 @@ func TestAZippedKiCadProjectReadsAsItsFolder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := statsOf(t, filepath.Join(src, "designs", "jetson-cut"))
+	want := statsOf(t, filepath.Join(src, "boards", "jetson-cut"))
 	if want.GetComponentCount() != 19 || want.GetNetCount() == 0 {
 		t.Fatalf("the cut reads %d components and %d nets from its folder", want.GetComponentCount(), want.GetNetCount())
 	}
 	dir := isolated(t)
 	// The project with the cut alone, so the archive holds one design.
 	tree := filepath.Join(dir, "cross-probe-project")
-	for _, rel := range []string{"project.yaml", "designs/jetson-cut/design.yaml", "designs/jetson-cut/jetson-cut.kicad_sch",
-		"designs/jetson-cut/jetson-cut.kicad_pcb", "designs/jetson-cut/jetson-cut.kicad_pro", "designs/jetson-cut/usb_debug_pd.kicad_sch", "designs/jetson-cut/power.kicad_sch"} {
+	for _, rel := range []string{"project.yaml", "boards/jetson-cut/design.yaml", "boards/jetson-cut/jetson-cut.kicad_sch",
+		"boards/jetson-cut/jetson-cut.kicad_pcb", "boards/jetson-cut/jetson-cut.kicad_pro", "boards/jetson-cut/usb_debug_pd.kicad_sch", "boards/jetson-cut/power.kicad_sch"} {
 		b, err := os.ReadFile(filepath.Join(src, filepath.FromSlash(rel)))
 		if err != nil {
 			t.Fatal(err)
@@ -98,7 +98,7 @@ func TestAZippedKiCadProjectReadsAsItsFolder(t *testing.T) {
 		}
 	}
 	zipTree(t, tree, filepath.Join(dir, "probe.zip"))
-	for _, named := range []string{"probe.zip", "probe.zip/cross-probe-project/designs/jetson-cut"} {
+	for _, named := range []string{"probe.zip", "probe.zip/cross-probe-project/boards/jetson-cut"} {
 		got := statsOf(t, named)
 		if got.GetComponentCount() != want.GetComponentCount() || got.GetNetCount() != want.GetNetCount() || got.GetSourceFormat() != want.GetSourceFormat() {
 			t.Errorf("%s reads %d components and %d nets as %s, want the folder's %d and %d as %s", named,
@@ -116,7 +116,7 @@ func TestAZippedKiCadProjectReadsAsItsFolder(t *testing.T) {
 
 // An archive holding two designs undeclared names both rather than choosing one.
 func TestAnArchiveOfTwoDesignsNamesBoth(t *testing.T) {
-	src, err := filepath.Abs(filepath.Join("..", "..", "examples", "common", "designs"))
+	src, err := filepath.Abs(filepath.Join("..", "..", "examples", "common", "boards"))
 	if err != nil {
 		t.Fatal(err)
 	}

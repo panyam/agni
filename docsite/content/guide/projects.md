@@ -5,7 +5,7 @@ description: "Lay out a project.yaml and a design.yaml so every command finds yo
 
 A **project** is the configuration a team shares across its boards. A **design** is one board, with a
 statement of which file is which and the project it belongs to. Two small YAML files declare them,
-with one schema between them, and once they exist `agni check designs/gateway` picks up your naming
+with one schema between them, and once they exist `agni check boards/gateway` picks up your naming
 conventions, profiles, parameters and checklists with no flags at all.
 
 This page is the layout. [Projects and designs](../../architecture/projects-and-designs/) in the
@@ -22,13 +22,13 @@ tutorial-project/
 ├── params/                   published part specs, one per MPN
 ├── lib/house.dl              the project's own derived relations
 ├── queries/power-review.yaml query sets
-├── designs/gateway/
+├── boards/gateway/
 │   ├── design.yaml           extends:, series:, entry, companions, intent:
 │   ├── gateway.edn           the entry, the netlist analysis reads
 │   ├── gateway.kicad_sch     companion views of the same design
 │   ├── gateway.kicad_pcb
 │   └── symbols/              this design's own symbol library
-└── designs/gateway-rev-b/    a later version of the board, a design of its own
+└── boards/gateway-rev-b/    a later version of the board, a design of its own
     ├── design.yaml           the same series:, its own entry and board
     ├── gateway-rev-b.edn
     └── gateway-rev-b.kicad_pcb

@@ -1,4 +1,4 @@
-# Rev 1.1.2 of Antmicro's Jetson baseboard, the revision after rev 1.1.0 in designs/jetson (agni
+# Rev 1.1.2 of Antmicro's Jetson baseboard, the revision after rev 1.1.0 in boards/jetson (agni
 # issue 1559). The KiCad files beside it are Antmicro's, copied in by `make revision` from the
 # samples corpus's `revisions` tarball. This descriptor matches rev 1.1.0's, so the two revisions are
 # read the same way and a diff shows only what Antmicro changed.

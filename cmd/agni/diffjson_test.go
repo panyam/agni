@@ -8,13 +8,13 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const tutorialGateway = "../../examples/tutorial-project/designs/gateway/"
+const tutorialGateway = "../../examples/tutorial-project/boards/gateway/"
 
-// tutorialDesigns is the tutorial project's designs folder, holding one folder per design.
-const tutorialDesigns = "../../examples/tutorial-project/designs/"
+// tutorialDesigns is the tutorial project's boards folder, holding one folder per design.
+const tutorialDesigns = "../../examples/tutorial-project/boards/"
 
 // tutorialRevB is rev B of the tutorial board, a design of its own (agni 1692).
-const tutorialRevB = "../../examples/tutorial-project/designs/gateway-rev-b/gateway-rev-b.edn"
+const tutorialRevB = "../../examples/tutorial-project/boards/gateway-rev-b/gateway-rev-b.edn"
 
 func diffJSON(t *testing.T, args ...string) *webapi.DiffDesignsResponse {
 	t.Helper()

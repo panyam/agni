@@ -1,7 +1,7 @@
 # Revision audit
 
-- base: `mount://audit/designs/gateway/gateway.edn`
-- head: `mount://audit/designs/gateway-rev-b/gateway-rev-b.edn`
+- base: `mount://audit/boards/gateway/gateway.edn`
+- head: `mount://audit/boards/gateway-rev-b/gateway-rev-b.edn`
 
 ## Diff
 
@@ -11,9 +11,9 @@
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | component-added | R4 |  |  |  |  |  |  |  |  |  |  |  |
 | component-added | R5 |  |  |  |  |  |  |  |  |  |  |  |
-| net-hard | I2C_SCL |  |  |  |  | R4.2 |  | designs/gateway/gateway.edn | designs/gateway-rev-b/gateway-rev-b.edn |  |  |  |
-| net-hard | I2C_SDA |  |  |  |  | R5.2 |  | designs/gateway/gateway.edn | designs/gateway-rev-b/gateway-rev-b.edn |  |  |  |
-| net-hard | PMIC_CORE_3V3 |  |  |  |  | R4.1\|R5.1 |  | designs/gateway/gateway.edn | designs/gateway-rev-b/gateway-rev-b.edn |  |  |  |
+| net-hard | I2C_SCL |  |  |  |  | R4.2 |  | boards/gateway/gateway.edn | boards/gateway-rev-b/gateway-rev-b.edn |  |  |  |
+| net-hard | I2C_SDA |  |  |  |  | R5.2 |  | boards/gateway/gateway.edn | boards/gateway-rev-b/gateway-rev-b.edn |  |  |  |
+| net-hard | PMIC_CORE_3V3 |  |  |  |  | R4.1\|R5.1 |  | boards/gateway/gateway.edn | boards/gateway-rev-b/gateway-rev-b.edn |  |  |  |
 
 ## Pin to net
 
@@ -21,11 +21,11 @@
 
 | part | pin | net | provenance |
 |---|---|---|---|
-| C1 | 1 | PMIC_CORE_3V3 | designs/gateway-rev-b/gateway-rev-b.edn |
-| C1 | 2 | GND | designs/gateway-rev-b/gateway-rev-b.edn |
-| C2 | 1 | PMIC_CORE_3V3 | designs/gateway-rev-b/gateway-rev-b.edn |
-| C2 | 2 | GND | designs/gateway-rev-b/gateway-rev-b.edn |
-| C3 | 1 | PMIC_IO_1V8 | designs/gateway-rev-b/gateway-rev-b.edn |
+| C1 | 1 | PMIC_CORE_3V3 | boards/gateway-rev-b/gateway-rev-b.edn |
+| C1 | 2 | GND | boards/gateway-rev-b/gateway-rev-b.edn |
+| C2 | 1 | PMIC_CORE_3V3 | boards/gateway-rev-b/gateway-rev-b.edn |
+| C2 | 2 | GND | boards/gateway-rev-b/gateway-rev-b.edn |
+| C3 | 1 | PMIC_IO_1V8 | boards/gateway-rev-b/gateway-rev-b.edn |
 
 ## Part numbers
 
@@ -33,11 +33,11 @@
 
 | part | mpn | provenance |
 |---|---|---|
-| C1 | ACME-CAP-22U | designs/gateway-rev-b/gateway-rev-b.edn |
-| C2 | ACME-CAP-100N | designs/gateway-rev-b/gateway-rev-b.edn |
-| C3 | ACME-CAP-10U | designs/gateway-rev-b/gateway-rev-b.edn |
-| C4 | ACME-CAP-100N | designs/gateway-rev-b/gateway-rev-b.edn |
-| C5 | ACME-CAP-18P | designs/gateway-rev-b/gateway-rev-b.edn |
+| C1 | ACME-CAP-22U | boards/gateway-rev-b/gateway-rev-b.edn |
+| C2 | ACME-CAP-100N | boards/gateway-rev-b/gateway-rev-b.edn |
+| C3 | ACME-CAP-10U | boards/gateway-rev-b/gateway-rev-b.edn |
+| C4 | ACME-CAP-100N | boards/gateway-rev-b/gateway-rev-b.edn |
+| C5 | ACME-CAP-18P | boards/gateway-rev-b/gateway-rev-b.edn |
 
 ## Test points per net
 
@@ -45,11 +45,11 @@
 
 | net | tps | provenance |
 |---|---|---|
-| CAN1_CANH | 0 | designs/gateway-rev-b/gateway-rev-b.edn:CAN1_CANH |
-| CAN1_CANL | 0 | designs/gateway-rev-b/gateway-rev-b.edn:CAN1_CANL |
-| CAN1_RXD | 0 | designs/gateway-rev-b/gateway-rev-b.edn:CAN1_RXD |
-| CAN1_TXD | 0 | designs/gateway-rev-b/gateway-rev-b.edn:CAN1_TXD |
-| CLK_IN | 0 | designs/gateway-rev-b/gateway-rev-b.edn:CLK_IN |
+| CAN1_CANH | 0 | boards/gateway-rev-b/gateway-rev-b.edn:CAN1_CANH |
+| CAN1_CANL | 0 | boards/gateway-rev-b/gateway-rev-b.edn:CAN1_CANL |
+| CAN1_RXD | 0 | boards/gateway-rev-b/gateway-rev-b.edn:CAN1_RXD |
+| CAN1_TXD | 0 | boards/gateway-rev-b/gateway-rev-b.edn:CAN1_TXD |
+| CLK_IN | 0 | boards/gateway-rev-b/gateway-rev-b.edn:CLK_IN |
 
 ## One test point away
 
@@ -57,11 +57,11 @@
 
 | mpn | part | probed | unprobed | provenance |
 |---|---|---|---|---|
-| ACME-CAP-22U | C1 | PMIC_CORE_3V3 | GND | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:GND ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
-| ACME-CAP-100N | C2 | PMIC_CORE_3V3 | GND | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:GND ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
-| ACME-CAP-10U | C3 | PMIC_IO_1V8 | GND | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:GND ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
-| ACME-CAP-100N | C4 | PMIC_IO_1V8 | GND | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:GND ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
-| ACME-RES-4K7 | R4 | PMIC_CORE_3V3 | I2C_SCL | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:I2C_SCL ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
+| ACME-CAP-22U | C1 | PMIC_CORE_3V3 | GND | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:GND ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
+| ACME-CAP-100N | C2 | PMIC_CORE_3V3 | GND | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:GND ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
+| ACME-CAP-10U | C3 | PMIC_IO_1V8 | GND | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:GND ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
+| ACME-CAP-100N | C4 | PMIC_IO_1V8 | GND | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:GND ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
+| ACME-RES-4K7 | R4 | PMIC_CORE_3V3 | I2C_SCL | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:I2C_SCL ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
 
 ## Part numbers never probed
 
@@ -69,11 +69,11 @@
 
 | mpn | list(distinct part) | provenance |
 |---|---|---|
-| ACME-CAP-100N | ["C2","C4"] | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:GND ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
-| ACME-CAP-10U | ["C3"] | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:GND ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
-| ACME-CAP-18P | ["C5","C6"] | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:CLK_IN ; designs/gateway-rev-b/gateway-rev-b.edn:CLK_OUT ; designs/gateway-rev-b/gateway-rev-b.edn:GND |
-| ACME-CAP-22U | ["C1"] | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:GND ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
-| ACME-RES-10K | ["R2","R3"] | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:MCU_NRST ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_EN ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_MAIN_12V0 ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_PG |
+| ACME-CAP-100N | ["C2","C4"] | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:GND ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
+| ACME-CAP-10U | ["C3"] | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:GND ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
+| ACME-CAP-18P | ["C5","C6"] | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:CLK_IN ; boards/gateway-rev-b/gateway-rev-b.edn:CLK_OUT ; boards/gateway-rev-b/gateway-rev-b.edn:GND |
+| ACME-CAP-22U | ["C1"] | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:GND ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
+| ACME-RES-10K | ["R2","R3"] | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:MCU_NRST ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_EN ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_MAIN_12V0 ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_PG |
 
 ## PMIC rails
 
@@ -81,9 +81,9 @@
 
 | net | tps | provenance |
 |---|---|---|
-| PMIC_CORE_3V3 | 1 | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
-| PMIC_IO_1V8 | 1 | designs/gateway-rev-b/gateway-rev-b.edn ; designs/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
-| PMIC_MAIN_12V0 | 0 | designs/gateway-rev-b/gateway-rev-b.edn:PMIC_MAIN_12V0 |
+| PMIC_CORE_3V3 | 1 | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_CORE_3V3 |
+| PMIC_IO_1V8 | 1 | boards/gateway-rev-b/gateway-rev-b.edn ; boards/gateway-rev-b/gateway-rev-b.edn:PMIC_IO_1V8 |
+| PMIC_MAIN_12V0 | 0 | boards/gateway-rev-b/gateway-rev-b.edn:PMIC_MAIN_12V0 |
 
 ## Review
 

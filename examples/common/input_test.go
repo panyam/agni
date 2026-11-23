@@ -25,18 +25,18 @@ func TestMain(m *testing.M) {
 }
 
 func TestPathInputCapture(t *testing.T) {
-	p := AskPath("design", "designs/two-resistors.edn")
-	if p.Path() != "designs/two-resistors.edn" {
+	p := AskPath("design", "boards/two-resistors.edn")
+	if p.Path() != "boards/two-resistors.edn" {
 		t.Fatalf("default Path() = %q", p.Path())
 	}
 	// A blank entry keeps the default.
 	p.Capture(demokit.StepContext{Inputs: map[string]any{"design": "   "}})
-	if p.Path() != "designs/two-resistors.edn" {
+	if p.Path() != "boards/two-resistors.edn" {
 		t.Errorf("blank entry changed Path() to %q, want the default", p.Path())
 	}
 	// A non-blank entry overrides.
-	p.Capture(demokit.StepContext{Inputs: map[string]any{"design": "designs/i2c-sensor.edn"}})
-	if p.Path() != "designs/i2c-sensor.edn" {
+	p.Capture(demokit.StepContext{Inputs: map[string]any{"design": "boards/i2c-sensor.edn"}})
+	if p.Path() != "boards/i2c-sensor.edn" {
 		t.Errorf("Path() = %q, want the entered path", p.Path())
 	}
 }
@@ -52,7 +52,7 @@ func TestPathInputDef(t *testing.T) {
 }
 
 func TestPathInputLoad(t *testing.T) {
-	d, err := AskPath("design", "designs/two-resistors.edn").Load()
+	d, err := AskPath("design", "boards/two-resistors.edn").Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestPathInputLoad(t *testing.T) {
 // committed.
 func TestAskPathEnvDefault(t *testing.T) {
 	t.Setenv(DesignPathEnv, "/somewhere/else/board.edn")
-	p := AskPath("design", "../common/designs/two-resistors.edn")
+	p := AskPath("design", "../common/boards/two-resistors.edn")
 	if p.Path() != "/somewhere/else/board.edn" {
 		t.Errorf("Path() = %q, want the environment's value", p.Path())
 	}
@@ -80,7 +80,7 @@ func TestAskPathEnvDefault(t *testing.T) {
 func TestAskPathEnvBlankKeepsTheBundledDefault(t *testing.T) {
 	for _, v := range []string{"", "   "} {
 		t.Setenv(DesignPathEnv, v)
-		if p := AskPath("design", "designs/two-resistors.edn"); p.Path() != "designs/two-resistors.edn" {
+		if p := AskPath("design", "boards/two-resistors.edn"); p.Path() != "boards/two-resistors.edn" {
 			t.Errorf("with %q set, Path() = %q, want the bundled default", v, p.Path())
 		}
 	}
@@ -90,9 +90,9 @@ func TestAskPathEnvBlankKeepsTheBundledDefault(t *testing.T) {
 // value, so the prompt still shows it and typing a path still wins.
 func TestAskPathEnvIsStillOverridableByTheUser(t *testing.T) {
 	t.Setenv(DesignPathEnv, "/somewhere/else/board.edn")
-	p := AskPath("design", "designs/two-resistors.edn")
-	p.Capture(demokit.StepContext{Inputs: map[string]any{"design": "designs/i2c-sensor.edn"}})
-	if p.Path() != "designs/i2c-sensor.edn" {
+	p := AskPath("design", "boards/two-resistors.edn")
+	p.Capture(demokit.StepContext{Inputs: map[string]any{"design": "boards/i2c-sensor.edn"}})
+	if p.Path() != "boards/i2c-sensor.edn" {
 		t.Errorf("Path() = %q, want what the user typed", p.Path())
 	}
 }

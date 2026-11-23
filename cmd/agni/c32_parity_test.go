@@ -23,7 +23,7 @@ import (
 // the served path, so the CLI attached a design's declared companions and the server did not. The
 // same file, mount and spelling gave a computed layout on one side against 82 real sheets on the
 // other, with no error either way (agni issues 656 and 658).
-const c32Design = "../../examples/tutorial-project/designs/gateway"
+const c32Design = "../../examples/tutorial-project/boards/gateway"
 
 // tiersFromCLI resolves through the path cmd/agni takes: a typed path, a mount table, the CLI's own
 // resolver.

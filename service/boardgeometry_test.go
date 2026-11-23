@@ -15,7 +15,7 @@ import (
 // jetsonCutBoard serves the Jetson cut's real board behind a schematic snapshot.
 func jetsonCutBoard(t *testing.T) (*DesignViewService, string) {
 	t.Helper()
-	b, err := (&formats.Loader{}).BoardGeometry("../examples/cross-probe-project/designs/jetson-cut/jetson-cut.kicad_pcb")
+	b, err := (&formats.Loader{}).BoardGeometry("../examples/cross-probe-project/boards/jetson-cut/jetson-cut.kicad_pcb")
 	if err != nil {
 		t.Fatal(err)
 	}

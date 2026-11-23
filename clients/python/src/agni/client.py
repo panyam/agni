@@ -24,7 +24,7 @@ class Client:
 
         c = Client(CliTransport(mounts={"tut": "examples/tutorial-project"}))
         c = Client(ConnectTransport("http://127.0.0.1:8080"))
-        snap = c.ingest("mount://tut/designs/gateway")
+        snap = c.ingest("mount://tut/boards/gateway")
         rows = c.run_query(snapshot=snap, query='component.class(?c,"resistor") => ?c')
         c.delete_snapshot(snap)
 

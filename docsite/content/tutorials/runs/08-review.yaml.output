@@ -1,7 +1,7 @@
-#agni-run 18b78afc48cb836b
+#agni-run 2f6bf6629d416bd7
 # Review: Jetson baseboard design review
 
-Design: `designs/jetson`
+Design: `boards/jetson`
 
 **6 pass, 7 fail, 1 n/a, 1 not-automated (of 15)**
 

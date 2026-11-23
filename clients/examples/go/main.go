@@ -4,7 +4,7 @@
 // answers. The exercise compares every language's line with this one and with the CLI's answers.
 // docsite/content/build/client-contract.md names the line's fields.
 //
-//	go run ./clients/examples/go -server http://127.0.0.1:8080 -design mount://probe/designs/jetson-cut
+//	go run ./clients/examples/go -server http://127.0.0.1:8080 -design mount://probe/boards/jetson-cut
 package main
 
 import (
@@ -49,7 +49,7 @@ const boardPageBytes = 16 << 10
 
 func main() {
 	server := flag.String("server", "http://127.0.0.1:8080", "the agni serve to call")
-	design := flag.String("design", "mount://probe/designs/jetson-cut", "the design to ingest")
+	design := flag.String("design", "mount://probe/boards/jetson-cut", "the design to ingest")
 	flag.Parse()
 	s, err := run(context.Background(), *server, *design)
 	if err != nil {

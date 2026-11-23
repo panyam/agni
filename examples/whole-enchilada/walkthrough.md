@@ -12,7 +12,7 @@ actors:
 
 Agni reads many source formats into one neutral IR, and every tool runs over that IR, so it never matters which format you started from. This walkthrough runs the engine end to end on bundled synthetic designs: convergence across formats, structural checks, semantic diff, cross-format emit, and both renderers.
 
-Under each step, a copy/paste block does the same thing at the CLI. The blocks assume `agni` is on your PATH (`make install` from the repo root) and that you run them **from the repo root**, where `examples/common/designs/` holds the bundled fixtures. The `render` commands write their SVG into the current directory.
+Under each step, a copy/paste block does the same thing at the CLI. The blocks assume `agni` is on your PATH (`make install` from the repo root) and that you run them **from the repo root**, where `examples/common/boards/` holds the bundled fixtures. The `render` commands write their SVG into the current directory.
 
 ## Three formats, one netlist {#converge}
 
@@ -25,8 +25,8 @@ Agni -->> You: one IR each; the diffs are empty
 ```
 
 ```bash
-agni stats examples/common/designs/mixer.kicad_pcb
-agni diff  examples/common/designs/mixer.edn examples/common/designs/mixer.ipc2581.xml
+agni stats examples/common/boards/mixer.kicad_pcb
+agni diff  examples/common/boards/mixer.edn examples/common/boards/mixer.ipc2581.xml
 ```
 
 ## Structural checks {#check}
@@ -34,7 +34,7 @@ agni diff  examples/common/designs/mixer.edn examples/common/designs/mixer.ipc25
 > `check.RunDesign` applies structural rules to the netlist: single-pin nets, unconnected components, I2C pull-ups. The bundled i2c-sensor trips a few, and each finding carries provenance back to its source.
 
 ```bash
-agni check examples/common/designs/i2c-sensor
+agni check examples/common/boards/i2c-sensor
 ```
 
 ## Semantic diff of two revisions {#diff}
@@ -48,7 +48,7 @@ Agni -->> You: added / renamed / hard / new / deleted
 ```
 
 ```bash
-agni diff examples/common/designs/rev-a.edn examples/common/designs/rev-b.edn
+agni diff examples/common/boards/rev-a.edn examples/common/boards/rev-b.edn
 ```
 
 ## Emit: convert through the IR {#emit}
@@ -56,8 +56,8 @@ agni diff examples/common/designs/rev-a.edn examples/common/designs/rev-b.edn
 > Any format in, IPC-2581 out. We emit the mixer's EDIF netlist as IPC-2581 and read it straight back. The component and net counts survive, so the netlist round-trips. Geometry is a separate tier and is deferred.
 
 ```bash
-agni emit examples/common/designs/mixer.edn                      # IPC-2581 to stdout
-agni emit examples/common/designs/mixer.edn mixer.ipc2581.xml    # ... or to a file
+agni emit examples/common/boards/mixer.edn                      # IPC-2581 to stdout
+agni emit examples/common/boards/mixer.edn mixer.ipc2581.xml    # ... or to a file
 ```
 
 ## Render the schematic {#schematic}
@@ -71,7 +71,7 @@ Agni -->> You: schematic.svg
 ```
 
 ```bash
-agni render examples/common/designs/demo-schematic.eds -o schematic.svg
+agni render examples/common/boards/demo-schematic.eds -o schematic.svg
 ```
 
 ## Render the connectivity graph {#graph}
@@ -81,8 +81,8 @@ agni render examples/common/designs/demo-schematic.eds -o schematic.svg
 > Run `--compare` on a real board and `layered` cuts crossings sharply against `grid`. The `force` and `orthogonal` layouts are scored by the same crossings metric.
 
 ```bash
-agni render --layout layered examples/common/designs/i2c-sensor -o graph.svg
-agni render --compare examples/common/designs/i2c-sensor
+agni render --layout layered examples/common/boards/i2c-sensor -o graph.svg
+agni render --compare examples/common/boards/i2c-sensor
 agni render --compare path/to/your-board.edn   # the payoff at scale
 ```
 

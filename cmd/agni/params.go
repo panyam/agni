@@ -44,7 +44,7 @@ design belongs to supplies its own params/. With both, the project's spec answer
 seeds and --params for any other, and a note on stderr says which answered.
 
   agni params LM1117 --params seed/
-  agni params LM1117 --design designs/gateway/gateway.kicad_sch
+  agni params LM1117 --design boards/gateway/gateway.kicad_sch
   agni params LM1117 --params seed/ --format json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

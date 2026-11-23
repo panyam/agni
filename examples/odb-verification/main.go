@@ -26,8 +26,8 @@ var walkthroughMD []byte
 const diffLimit = 40
 
 func main() {
-	schematic := common.AskPath("schematic", "../common/designs/odb/gateway.edn")
-	layout := common.AskPath("layout", "../common/designs/odb/gateway-rev-b-layout")
+	schematic := common.AskPath("schematic", "../common/boards/odb/gateway.edn")
+	layout := common.AskPath("layout", "../common/boards/odb/gateway-rev-b-layout")
 
 	demo := demokit.New("odb-verification").
 		Dir("odb-verification").

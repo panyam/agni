@@ -1,5 +1,5 @@
-#agni-run 3118347e0cb77fd6
-kicad-cli pcb drc 10.0.6 — 957 finding(s) from designs/jetson
+#agni-run a58b567ebae79883
+kicad-cli pcb drc 10.0.6 — 957 finding(s) from boards/jetson
 attached to an entity: 946 of 957
      1 not attached — an entity the description names but the loaded design does not contain
          e.g. Footprint REF**

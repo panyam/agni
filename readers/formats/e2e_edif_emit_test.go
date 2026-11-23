@@ -27,11 +27,11 @@ var emitCases = []struct {
 	// physical. EDIF has no instance for one, so only those come back as no-ref connections.
 	unanchored int
 }{
-	{name: "kicad-sch", path: "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch", wantComps: 19, wantConns: 56},
-	{name: "kicad-pcb", path: "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb", wantComps: 19, wantConns: 56},
+	{name: "kicad-sch", path: "../../examples/tutorial-project/boards/gateway/gateway.kicad_sch", wantComps: 19, wantConns: 56},
+	{name: "kicad-pcb", path: "../../examples/tutorial-project/boards/gateway/gateway.kicad_pcb", wantComps: 19, wantConns: 56},
 	{name: "kicad-hier", path: "../kicad/testdata/hier_root.kicad_sch", wantComps: 6, wantConns: 13, unanchored: 3},
 	{name: "kicad-multisection", path: "../kicad/testdata/dup_refdes.kicad_sch", wantComps: 2, wantConns: 2},
-	{name: "edif", path: "../../examples/tutorial-project/designs/gateway/gateway.edn", wantComps: 19, wantConns: 56},
+	{name: "edif", path: "../../examples/tutorial-project/boards/gateway/gateway.edn", wantComps: 19, wantConns: 56},
 	{name: "ipc2581", path: "../ipc2581/testdata/board.xml", wantComps: 3, wantConns: 8},
 	{name: "telesis", path: "../telesis/testdata/basic.tel", wantComps: 13, wantConns: 19},
 	{name: "geda", path: "../geda/testdata/dup_refdes.sch", wantComps: 7, wantConns: 18},

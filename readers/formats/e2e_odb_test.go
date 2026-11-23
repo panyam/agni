@@ -40,10 +40,10 @@ type odbPair struct {
 // board, AGNI_ODB_PAIRS holds that board's export to its source.
 func odbPairs(t *testing.T) []odbPair {
 	pairs := []odbPair{
-		{"../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb", "../../examples/common/designs/odb/gateway-layout", false, false},
-		{"../../examples/tutorial-project/designs/gateway-rev-b/gateway-rev-b.kicad_pcb", "../../examples/common/designs/odb/gateway-rev-b-layout", false, false},
-		{"../../examples/common/designs/demo-board.kicad_pcb", "../odb/testdata/demo-board", true, false},
-		{"../../examples/common/designs/mixer.kicad_pcb", "../odb/testdata/mixer", false, false},
+		{"../../examples/tutorial-project/boards/gateway/gateway.kicad_pcb", "../../examples/common/boards/odb/gateway-layout", false, false},
+		{"../../examples/tutorial-project/boards/gateway-rev-b/gateway-rev-b.kicad_pcb", "../../examples/common/boards/odb/gateway-rev-b-layout", false, false},
+		{"../../examples/common/boards/demo-board.kicad_pcb", "../odb/testdata/demo-board", true, false},
+		{"../../examples/common/boards/mixer.kicad_pcb", "../odb/testdata/mixer", false, false},
 		{"../../cmd/agni/testdata/conformance/drc.fires.kicad_pcb", "../odb/testdata/drc.fires", false, false},
 		{"../kicad/testdata/board.kicad_pcb", "../odb/testdata/board", false, false},
 		{"../kicad/testdata/board_stackup.kicad_pcb", "../odb/testdata/board_stackup", false, true},

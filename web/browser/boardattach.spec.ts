@@ -1,5 +1,5 @@
 // A reader attaches a board the design does not declare, and the page reads it as the design's
-// board (agni issue 1367). The design is examples/common/designs/odb/gateway.edn, an EDIF netlist,
+// board (agni issue 1367). The design is examples/common/boards/odb/gateway.edn, an EDIF netlist,
 // beside gateway-layout, its ODB++ job, with no design.yaml naming the pair. Only a browser shows the
 // picker, the reload with ?board=, and the browser engine bringing in files from outside the design.
 
@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
 import { showPanel } from "./panels.js";
 
-const odbFolder = join(resolve(fileURLToPath(new URL("../..", import.meta.url))), "examples", "common", "designs", "odb");
+const odbFolder = join(resolve(fileURLToPath(new URL("../..", import.meta.url))), "examples", "common", "boards", "odb");
 
 const base = (): string => inject("baseUrl");
 

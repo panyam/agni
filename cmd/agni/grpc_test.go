@@ -54,7 +54,7 @@ func TestAGRPCClientCallsTheServer(t *testing.T) {
 	defer cancel()
 
 	snap := &webapi.Snapshot{}
-	ingest := &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://" + parityMounts[0].name + "/designs/gateway"}}
+	ingest := &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://" + parityMounts[0].name + "/boards/gateway"}}
 	if err := conn.Invoke(ctx, "/agni.v1.webapi.SnapshotService/Ingest", ingest, snap); err != nil {
 		t.Fatalf("Ingest over gRPC: %v", err)
 	}

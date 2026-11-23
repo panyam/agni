@@ -11,4 +11,4 @@ regexes = ['''^key = `stroke-width="$''']
 [[allowlists]]
 description = "GetBoardGeometry page tokens in the wire fixture, base64 of b1|<the wire snapshot's revision>|0|0 and |0|1"
 regexTarget = "secret"
-regexes = ['''^YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA$''', '''^YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDE$''']
+regexes = ['''^YjF8ZjgwZGY3N2EyN2NhN2Q5MHwwfDA$''', '''^YjF8ZjgwZGY3N2EyN2NhN2Q5MHwwfDE$''']

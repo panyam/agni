@@ -15,7 +15,7 @@ agni::Client client("http://127.0.0.1:8080", token);  // token may be empty
 grpc::Status st = client.Connect();                    // refuses a server that is not agni.v1
 
 webapi::IngestRequest ingest;
-ingest.mutable_snapshot()->set_uri("mount://probe/designs/jetson-cut");
+ingest.mutable_snapshot()->set_uri("mount://probe/boards/jetson-cut");
 webapi::Snapshot snap;
 grpc::ClientContext ctx;
 st = client.Stub<webapi::SnapshotService>()->Ingest(&ctx, ingest, &snap);

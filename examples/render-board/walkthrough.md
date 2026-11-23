@@ -23,7 +23,7 @@ KiCad and IPC-2581 both produce the board sidecar, and this example reads the Ki
 ## Pick a board {#pick}
 
 > Give a path to a .kicad_pcb (relative to this example folder), or your own board. The
-> default is a small synthetic board bundled in ../common/designs (two parts, two routed
+> default is a small synthetic board bundled in ../common/boards (two parts, two routed
 > nets, a via, and a ground zone), so no real board ships here.
 
 ## Read the sidecar {#read}
@@ -50,13 +50,13 @@ KiCad and IPC-2581 both produce the board sidecar, and this example reads the Ki
 > A board view's stack view stands each part on its side of the board. The engine gives each
 > part a footprint, the hull of its courtyard, fab outline or pads, and the height its file
 > states. IPC-2581 states a height on each package. This step reads parts-board.ipc2581.xml
-> from ../common/designs, where R1's package gives no height.
+> from ../common/boards, where R1's package gives no height.
 
 ## Read KiCad heights from the 3D models {#model-heights}
 
 > A KiCad board states no part heights. Each footprint names a 3D model instead, and the reader
 > measures how far the STEP model reaches above the pads. It applies the footprint's own scale and
-> offset first. This step reads model-heights.kicad_pcb from ../common/designs. U1 and U2 name a
+> offset first. This step reads model-heights.kicad_pcb from ../common/boards. U1 and U2 name a
 > 0.9 mm block beside the board, and U2 lifts it 0.5 mm and doubles its height. R1 names KiCad's
 > library, and this read passes no `--model-path`, so R1 has no height. The board's
 > `unread_models` says why. U3 names `${DEMOLIB}/block.step`, a variable only its author's KiCad
@@ -76,6 +76,6 @@ KiCad and IPC-2581 both produce the board sidecar, and this example reads the Ki
 
 > An ODB++ job states each part's height as a `.comp_height` attribute on its CMP record. ODB++ 8
 > lets the record end with `;ID=<n>` after its attributes, and the reader drops it. This step reads
-> record-ids-layout from ../common/designs/odb. U1's height is 0.05 in, so it reads 1.27 mm. U2's
+> record-ids-layout from ../common/boards/odb. U1's height is 0.05 in, so it reads 1.27 mm. U2's
 > height reads `tall`. The board still reads, U2 has no height, and the board's `read_notes` names
 > the file, the line and the value.

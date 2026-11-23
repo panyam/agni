@@ -59,7 +59,7 @@ func TestBoardTextAgainstKiCad(t *testing.T) {
 		atLeast     int
 	}{
 		{"board", "testdata/board.kicad_pcb", 3},
-		{"gateway", "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb", 30},
+		{"gateway", "../../examples/tutorial-project/boards/gateway/gateway.kicad_pcb", 30},
 		{"jetson-agx-thor-baseboard", "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb", 1000},
 	} {
 		t.Run(c.name, func(t *testing.T) {

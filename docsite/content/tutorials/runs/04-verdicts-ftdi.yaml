@@ -2,7 +2,7 @@
 # text view folds passes past twenty per rule, and these sort late, so the block is the csv's rows.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 script: |
-  agni check --verdicts --rule i2c-pull-up --format csv designs/jetson
+  agni check --verdicts --rule i2c-pull-up --format csv boards/jetson
 match: '^verdict_id|FTDI_CBUS'

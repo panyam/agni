@@ -28,7 +28,7 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
-const mcpGateway = "tut/designs/gateway"
+const mcpGateway = "tut/boards/gateway"
 
 // mcpServed is `agni serve --mcp` over the tutorial project. It runs the Connect API and the MCP
 // endpoint on one server, sharing its services, with a client for each.
@@ -231,7 +231,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 				t.Fatal(err)
 			}
 			sameTables(t, "query", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Query{Query: resp.Msg}}))
-			if !strings.Contains(a.Link, "/mounts/tut/designs/gateway/gateway.edn/view?") || !strings.Contains(a.Link, "query=") {
+			if !strings.Contains(a.Link, "/mounts/tut/boards/gateway/gateway.edn/view?") || !strings.Contains(a.Link, "query=") {
 				t.Errorf("the link opens %q, want the design's entry with the query", a.Link)
 			}
 			appliesLink(t, "query", a.Page, a.Link)
@@ -282,7 +282,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 				"how each row holds:\nrow 1: C1, GND\n",
 				"  component.probed_one(C1, PMIC_CORE_3V3, GND)  via component.probed_one(?r, ?probed, ?unprobed) :- ",
 				"    component.two_terminal(C1, GND, PMIC_CORE_3V3)  via ",
-				"      component.net_count(C1, 2)  [designs/gateway/gateway.edn]\n",
+				"      component.net_count(C1, 2)  [boards/gateway/gateway.edn]\n",
 				"  … 1 more fact\n",
 			} {
 				if !strings.Contains(text, want) {
@@ -426,7 +426,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 		})
 
 		t.Run("diff", func(t *testing.T) {
-			const a1, b1 = mcpGateway + "/gateway.edn", "tut/designs/gateway-rev-b/gateway-rev-b.edn"
+			const a1, b1 = mcpGateway + "/gateway.edn", "tut/boards/gateway-rev-b/gateway-rev-b.edn"
 			res, a := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1})
 			resp, err := s.api.diff.DiffDesigns(ctx, connect.NewRequest(&webapi.DiffDesignsRequest{ASnapshot: ingestConnect(t, s, a1), BSnapshot: ingestConnect(t, s, b1)}))
 			if err != nil {

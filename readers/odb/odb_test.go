@@ -23,7 +23,7 @@ import (
 )
 
 // gatewayJob is the gateway board's ODB++ export, which the odb-verification example reads too.
-const gatewayJob = "../../examples/common/designs/odb/gateway-layout"
+const gatewayJob = "../../examples/common/boards/odb/gateway-layout"
 
 func readJob(t *testing.T, fsys fs.FS) (*ir.Design, *geom.BoardGeometry) {
 	t.Helper()

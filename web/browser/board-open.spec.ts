@@ -31,9 +31,9 @@ const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 const designs = {
   // The cross-probe walk's nineteen-part cut of Jetson, with its copper.
-  cut: { mount: "probe", path: "designs/jetson-cut", about: "the nineteen-part cut of Jetson" },
+  cut: { mount: "probe", path: "boards/jetson-cut", about: "the nineteen-part cut of Jetson" },
   // Jetson itself. `make -C examples/jetson-project board` copies it in.
-  jetson: { mount: "jetson", path: "designs/jetson", about: "Antmicro's Jetson AGX Thor baseboard" },
+  jetson: { mount: "jetson", path: "boards/jetson", about: "Antmicro's Jetson AGX Thor baseboard" },
 };
 const chosen = (process.env.WALK_DESIGN ?? "cut") as keyof typeof designs;
 if (!(chosen in designs)) throw new Error(`WALK_DESIGN=${chosen} names no design; use one of ${Object.keys(designs).join(", ")}`);

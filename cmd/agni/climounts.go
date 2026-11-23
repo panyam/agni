@@ -147,7 +147,7 @@ const browserMount = "local"
 // when one resolves and at the file's own directory otherwise, then addresses the path through it.
 //
 // Rooting at the PROJECT makes the URI mean something off this machine.
-// `mount://gateway/designs/gateway/gateway.edn` says which design of which project, and reads the
+// `mount://gateway/boards/gateway/gateway.edn` says which design of which project, and reads the
 // same as the URI a server with that project mounted would produce.
 func (w *cliWorkspace) mint(abs string) (mounts.URI, error) {
 	root, name, err := projectRootAbove(abs)

@@ -17,9 +17,9 @@ import (
 func TestXMLChoosesItsReaderByRoot(t *testing.T) {
 	l := &Loader{}
 	for path, want := range map[string]string{
-		"../ipc2581/testdata/board.xml":                   "ipc-2581",
-		"../odb/testdata/odx/two-sided.xml":               "odb++",
-		"../../examples/common/designs/mixer.ipc2581.xml": "ipc-2581",
+		"../ipc2581/testdata/board.xml":                  "ipc-2581",
+		"../odb/testdata/odx/two-sided.xml":              "odb++",
+		"../../examples/common/boards/mixer.ipc2581.xml": "ipc-2581",
 	} {
 		d, err := l.ReadDesign(path)
 		if err != nil {

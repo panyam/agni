@@ -1,9 +1,9 @@
-#agni-run dd8b4c3f2c3b996a
+#agni-run 475b37b36af58418
 name  provenance
-U1    designs/gateway/gateway.edn
-U2    designs/gateway/gateway.edn
-U3    designs/gateway/gateway.edn
-U4    designs/gateway/gateway.edn
-U5    designs/gateway/gateway.edn
+U1    boards/gateway/gateway.edn
+U2    boards/gateway/gateway.edn
+U3    boards/gateway/gateway.edn
+U4    boards/gateway/gateway.edn
+U5    boards/gateway/gateway.edn
 
 5 result(s)

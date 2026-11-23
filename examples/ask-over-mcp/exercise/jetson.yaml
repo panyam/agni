@@ -3,8 +3,8 @@
 # transceiver or MCU of its own, so the CAN question follows a CAN line from the module connector J1
 # to the expansion connector J18, and the trace runs the same way.
 folder: ../../jetson-project
-design: designs/jetson
-revision: designs/jetson-rev-b
+design: boards/jetson
+revision: boards/jetson-rev-b
 questions:
   - ask: Which I2C nets have no pull-up, and which rail would one go to?
     calls:

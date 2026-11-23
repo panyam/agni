@@ -71,7 +71,7 @@ A later revision usually comes with a board of its own. Give it its own folder a
 `design.yaml`, and name the same `series` as the first (agni issue 1692):
 
 ```yaml
-# designs/gateway-rev-b/design.yaml
+# boards/gateway-rev-b/design.yaml
 name: gateway-rev-b
 series: gateway
 extends: ../../project.yaml
@@ -90,8 +90,8 @@ when its copper was never read. The tutorial project keeps `gateway-rev-c.edn` u
 the difference:
 
 ```
-agni check examples/tutorial-project/designs/gateway-rev-b
-agni check examples/tutorial-project/designs/gateway/gateway-rev-c.edn
+agni check examples/tutorial-project/boards/gateway-rev-b
+agni check examples/tutorial-project/boards/gateway/gateway-rev-c.edn
 ```
 
 [Projects and designs](../projects/) covers the rest of `design.yaml`, and
@@ -124,7 +124,7 @@ make -C examples/jetson-project board revision
 make -C examples/jetson-project diff-revision
 ```
 
-Then open `designs/jetson` in the viewer and pick `designs/jetson-1.1.3` from Compare.
+Then open `boards/jetson` in the viewer and pick `boards/jetson-1.1.3` from Compare.
 `make try JOURNEY=compare-revisions HEADED=0` records a walk through one change of each kind as a
 video, which plays here:
 

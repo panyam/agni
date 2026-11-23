@@ -1,4 +1,4 @@
-# kicad-cli 10.0.6, examples/tutorial-project/designs/gateway/gateway.kicad_pcb. layer, text, glyph box x0 y0 x1 y1 in mm, Y down.
+# kicad-cli 10.0.6, examples/tutorial-project/boards/gateway/gateway.kicad_pcb. layer, text, glyph box x0 y0 x1 y1 in mm, Y down.
 F.SilkS	C1	53.002	27.309	54.998	28.579
 F.SilkS	C2	75.002	27.309	76.998	28.579
 F.SilkS	C3	97.002	27.309	98.998	28.579

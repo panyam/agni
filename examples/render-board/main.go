@@ -39,7 +39,7 @@ func loadBoard(path string) (*geom.BoardGeometry, error) {
 }
 
 func main() {
-	board := common.AskPath("board", "../common/designs/demo-board.kicad_pcb")
+	board := common.AskPath("board", "../common/boards/demo-board.kicad_pcb")
 
 	demo := demokit.New("render-board").
 		Dir("render-board").
@@ -100,7 +100,7 @@ func main() {
 	})
 
 	demo.Bind("bodies").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		const path = "../common/designs/parts-board.ipc2581.xml"
+		const path = "../common/boards/parts-board.ipc2581.xml"
 		f, err := os.Open(path)
 		if err != nil {
 			return demokit.Errf("open %s: %v", path, err)
@@ -122,10 +122,10 @@ func main() {
 	})
 
 	demo.Bind("model-heights").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		const path = "../common/designs/model-heights/model-heights.kicad_pcb"
+		const path = "../common/boards/model-heights/model-heights.kicad_pcb"
 		// No ModelPaths, so KiCad's library does not resolve. A host passes --model-path. DEMOLIB maps
 		// the variable U3's footprint names to the folder beside the board, as --model-var does.
-		l := &formats.Loader{ModelVars: map[string]string{"DEMOLIB": "../common/designs/model-heights/demolib"}}
+		l := &formats.Loader{ModelVars: map[string]string{"DEMOLIB": "../common/boards/model-heights/demolib"}}
 		b, err := l.BoardGeometry(path)
 		if err != nil {
 			return demokit.Errf("read %s: %v", path, err)
@@ -144,8 +144,8 @@ func main() {
 	})
 
 	demo.Bind("model-meshes").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		const path = "../common/designs/model-heights/model-heights.kicad_pcb"
-		l := &formats.Loader{ModelVars: map[string]string{"DEMOLIB": "../common/designs/model-heights/demolib"}}
+		const path = "../common/boards/model-heights/model-heights.kicad_pcb"
+		l := &formats.Loader{ModelVars: map[string]string{"DEMOLIB": "../common/boards/model-heights/demolib"}}
 		b, err := l.BoardGeometry(path)
 		if err != nil {
 			return demokit.Errf("read %s: %v", path, err)
@@ -181,7 +181,7 @@ func main() {
 	})
 
 	demo.Bind("read-notes").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		const path = "../common/designs/odb/record-ids-layout/matrix/matrix"
+		const path = "../common/boards/odb/record-ids-layout/matrix/matrix"
 		b, err := (&formats.Loader{}).BoardGeometry(path)
 		if err != nil {
 			return demokit.Errf("read %s: %v", path, err)

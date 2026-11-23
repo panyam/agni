@@ -25,8 +25,8 @@ deployment mounting a mixed set applied one team's config to every design it rea
 
 ```
 projects/gateway                      a set of designs that share configuration
-├── designs/gateway                   one design: an entry, and companion views of it
-└── designs/gateway-rev-b             a later version of the same board, a design of its own
+├── boards/gateway                   one design: an entry, and companion views of it
+└── boards/gateway-rev-b             a later version of the same board, a design of its own
 ```
 
 A **project** owns what is shared across designs: the team's naming vocabulary, its interface
@@ -76,7 +76,7 @@ checklists:
 ```
 
 ```yaml
-# designs/gateway/design.yaml
+# boards/gateway/design.yaml
 name: gateway
 title: Sample Board
 extends: ../../project.yaml
@@ -139,12 +139,12 @@ netlist that sits in the same folder is a legitimate analysis source in its own 
 rule would turn a diff of two netlists into a diff of one against itself.
 
 **A later version of a board is a design of its own, in its own folder** (agni issue 1692). Rev B of
-the gateway has its own netlist and its own board, so it lives in `designs/gateway-rev-b` with its
+the gateway has its own netlist and its own board, so it lives in `boards/gateway-rev-b` with its
 own `design.yaml`. Both descriptors name the same `series`, and the series is how a listing knows
 the two are versions of one board:
 
 ```yaml
-# designs/gateway-rev-b/design.yaml
+# boards/gateway-rev-b/design.yaml
 name: gateway-rev-b
 series: gateway
 extends: ../../project.yaml
@@ -163,11 +163,11 @@ and a check of it says on stderr which board-tier rules did not run, since "no c
 At the CLI it looks like this.
 
 ```
-agni check designs/gateway                    # names the DESIGN: the entry's netlist, the companion's copper
-agni check designs/gateway/gateway.kicad_pcb  # names a companion: reads the entry, and says so
-agni check designs/gateway/gateway.edn        # names the ENTRY: the same design, so the same tiers
-agni check designs/gateway-rev-b              # names ANOTHER design: rev B's netlist, rev B's copper
-agni check designs/gateway/gateway-rev-c.edn  # names an undeclared sibling: exactly that file, no board
+agni check boards/gateway                    # names the DESIGN: the entry's netlist, the companion's copper
+agni check boards/gateway/gateway.kicad_pcb  # names a companion: reads the entry, and says so
+agni check boards/gateway/gateway.edn        # names the ENTRY: the same design, so the same tiers
+agni check boards/gateway-rev-b              # names ANOTHER design: rev B's netlist, rev B's copper
+agni check boards/gateway/gateway-rev-c.edn  # names an undeclared sibling: exactly that file, no board
 ```
 
 Reach for the first form. A netlist carries no copper and a board carries no reliable component

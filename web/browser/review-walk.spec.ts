@@ -37,13 +37,13 @@ const walks = {
   gateway: {
     mount: "tut",
     project: "examples/tutorial-project",
-    path: "designs/gateway",
+    path: "boards/gateway",
     about: "the tutorial project's Sample Board, a small synthetic gateway with two checklists and a project query set",
   },
   jetson: {
     mount: "jetson",
     project: "examples/jetson-project",
-    path: "designs/jetson",
+    path: "boards/jetson",
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module, sixteen schematic sheets and about 1,100 parts, under the Jetson review project's checklist and conventions",
   },
 };

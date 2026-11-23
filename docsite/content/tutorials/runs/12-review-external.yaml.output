@@ -1,8 +1,8 @@
-#agni-run fc2dbc3b71491c25
+#agni-run 3ed164de9bdd9741
 #agni-step
 # Review: Jetson board checks answered by KiCad's DRC
 
-Design: `designs/jetson`
+Design: `boards/jetson`
 
 **1 pass, 1 fail, 0 n/a, 1 not-automated, 2 covered-externally (of 5)**
 

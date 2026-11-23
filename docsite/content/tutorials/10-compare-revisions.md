@@ -19,7 +19,7 @@ documented edit. `tools/make_rev_b.py` copies rev A and changes two things. It f
 two I2C pull-ups that the schematic marked do-not-populate. It also renames the two interrupt nets
 spelled with a trailing `n` to KiCad's overbar. A reviewer would plausibly ask for both after the
 first review.
-Rev B is a design folder of its own, `designs/jetson-rev-b`, with a descriptor matching rev A's, so the
+Rev B is a design folder of its own, `boards/jetson-rev-b`, with a descriptor matching rev A's, so the
 two read the same way and differ only by the edit.
 
 ```

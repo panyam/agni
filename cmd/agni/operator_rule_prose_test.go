@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const tutorialDesign = "../../examples/tutorial-project/designs/gateway/gateway.edn"
+const tutorialDesign = "../../examples/tutorial-project/boards/gateway/gateway.edn"
 
 // sectionSummaries pairs every rule section in the report with the summary rendered beside it.
 var sectionSummaries = regexp.MustCompile(`<span class="rule">([^<]+)</span>\s*<span class="rule-summary">([^<]*)</span>`)

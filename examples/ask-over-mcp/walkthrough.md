@@ -14,7 +14,7 @@ An LLM connected to agni never states a fact about the board on its own. It writ
 
 ## Start the server {#connect}
 
-> A path to the folder to serve. The default is ../tutorial-project, the project the docsite's tutorial runs on, and the walkthrough asks about its designs/gateway design. Give a file instead of a folder, and agni serves the file's own folder and asks the questions of that file. This starts agni mcp as a subprocess (AGNI_BIN, then this repo's bin/agni, then the agni on PATH) and lists the tools it offers.
+> A path to the folder to serve. The default is ../tutorial-project, the project the docsite's tutorial runs on, and the walkthrough asks about its boards/gateway design. Give a file instead of a folder, and agni serves the file's own folder and asks the questions of that file. This starts agni mcp as a subprocess (AGNI_BIN, then this repo's bin/agni, then the agni on PATH) and lists the tools it offers.
 
 ```mermaid
 You ->> Agni: initialize, tools/list

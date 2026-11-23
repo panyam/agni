@@ -2,5 +2,5 @@
 # one new net; with it the two are paired, with the evidence behind the pairing.
 fixture: examples/tutorial-project
 steps:
-  - script: agni diff designs/gateway-rev-b/gateway-rev-b.edn designs/gateway/gateway-rev-c.edn
-  - script: agni diff --rename-approx designs/gateway-rev-b/gateway-rev-b.edn designs/gateway/gateway-rev-c.edn
+  - script: agni diff boards/gateway-rev-b/gateway-rev-b.edn boards/gateway/gateway-rev-c.edn
+  - script: agni diff --rename-approx boards/gateway-rev-b/gateway-rev-b.edn boards/gateway/gateway-rev-c.edn

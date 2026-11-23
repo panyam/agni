@@ -4,7 +4,7 @@
 another tool's report into agni without needing KiCad installed. It is the unmodified output of
 
 ```
-kicad-cli pcb drc --format json -o kicad-drc.json designs/jetson/jetson-agx-thor-baseboard.kicad_pcb
+kicad-cli pcb drc --format json -o kicad-drc.json boards/jetson/jetson-agx-thor-baseboard.kicad_pcb
 ```
 
 run with KiCad 10.0.6 on macOS, on the board from agni-samples v0.1.2 (`hack/samples.pin`). It lists

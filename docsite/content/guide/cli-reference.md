@@ -57,7 +57,7 @@ thickness the file states and what the layers sum to. When the two differ by mor
 line says so. KiCad, ODB++ and IPC-2581 boards carry a stack.
 
 ```bash
-agni stackup examples/cross-probe-project/designs/jetson-cut
+agni stackup examples/cross-probe-project/boards/jetson-cut
 ```
 
 ```text
@@ -86,7 +86,7 @@ board.pb` writes it as protobuf bytes. [Drawing a board from agni](../../build/b
 what it means.
 
 ```bash
-agni board examples/cross-probe-project/designs/jetson-cut
+agni board examples/cross-probe-project/boards/jetson-cut
 ```
 
 ```text
@@ -454,7 +454,7 @@ re-confirm. A pair of content hashes would not.
 
 ```
 agni params LM1117 --params seed/
-agni params LM1117 --design designs/gateway/gateway.kicad_sch
+agni params LM1117 --design boards/gateway/gateway.kicad_sch
 agni params LM1117 --params seed/ --format json
 ```
 
@@ -639,7 +639,7 @@ board reads `Not compared`. `--format json` is the `DiffDesignsResponse`, with t
 rules (agni issue 1590).
 
 ```
-agni diff examples/cross-probe-project/designs/jetson-cut
+agni diff examples/cross-probe-project/boards/jetson-cut
 ```
 
 | flag | what it does |

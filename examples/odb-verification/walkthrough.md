@@ -16,11 +16,11 @@ We check the layout in two ways here. The first runs the rules over the layout i
 
 ## The schematic {#schematic}
 
-> The design was signed off as this netlist. The default is the tutorial gateway's EDIF netlist, ../common/designs/odb/gateway.edn. Any netlist agni reads works here, a KiCad schematic or a Telesis netlist included.
+> The design was signed off as this netlist. The default is the tutorial gateway's EDIF netlist, ../common/boards/odb/gateway.edn. Any netlist agni reads works here, a KiCad schematic or a Telesis netlist included.
 
 ## The layout {#layout}
 
-> The ODB++ job that came back. A job is a folder (with matrix/matrix inside it), or a .tgz or .zip of one, and agni takes any of the three. The default is the gateway's rev B layout, exported from its KiCad board with `kicad-cli pcb export odb`. ../common/designs/odb/gateway-layout is rev A, which matches its schematic exactly.
+> The ODB++ job that came back. A job is a folder (with matrix/matrix inside it), or a .tgz or .zip of one, and agni takes any of the three. The default is the gateway's rev B layout, exported from its KiCad board with `kicad-cli pcb export odb`. ../common/boards/odb/gateway-layout is rev A, which matches its schematic exactly.
 
 ## Read the job {#read}
 

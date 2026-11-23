@@ -1,4 +1,4 @@
-# KiCad's own ERC and DRC over the gateway-rev-b seed (agni issue 967), from examples/tutorial-project/designs/gateway-rev-b.
+# KiCad's own ERC and DRC over the gateway-rev-b seed (agni issue 967), from examples/tutorial-project/boards/gateway-rev-b.
 # Do not hand-edit: hack/kicad_oracle.sh writes this file, and the point of it is that we did not
 # choose the answer. TestSeedTriageAgainstKiCad compares the seed's triage record with it.
 #

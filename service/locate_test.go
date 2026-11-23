@@ -205,7 +205,7 @@ func TestCheckDesignBadgesTheBoard(t *testing.T) {
 // An EDIF netlist and an ODB++ job of the same board share no net id, so the board answers by
 // ref-des and net name. Both mixer files are exports of one KiCad project.
 func TestLocateSubjectsJoinsAnEDIFNetlistToAnODBJob(t *testing.T) {
-	f, err := os.Open("../examples/common/designs/mixer.edn")
+	f, err := os.Open("../examples/common/boards/mixer.edn")
 	if err != nil {
 		t.Fatal(err)
 	}

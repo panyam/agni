@@ -126,7 +126,7 @@ func TestAMountedProjectListsTheDesignsAddedFromItsFolder(t *testing.T) {
 	srv := storeServer(t, t.TempDir())
 	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
 	projectsClient := webapiconnect.NewProjectServiceClient(http.DefaultClient, srv.URL)
-	if _, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://tut/designs", Designs: []*webapi.DesignToAdd{{Folder: "designs/gateway", DesignId: "gw"}}})); err != nil {
+	if _, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://tut/boards", Designs: []*webapi.DesignToAdd{{Folder: "boards/gateway", DesignId: "gw"}}})); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := designs.CreateDesign(ctx, connect.NewRequest(&webapi.CreateDesignRequest{DesignId: "elsewhere"})); err != nil {

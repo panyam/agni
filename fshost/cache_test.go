@@ -193,7 +193,7 @@ func TestAModelIsKeptWhenTheCorpusIsLocal(t *testing.T) {
 	res := &service.ProjectResolver{Store: projects.NewFSStore(trees...), Config: &ConfigResolver{Mounts: ms}}
 	loader := service.NewCachingLoader(New(ms...), service.NewDesignCache(8))
 	ctx := context.Background()
-	u := mounts.URI{Mount: "m", Path: "designs/gateway"}
+	u := mounts.URI{Mount: "m", Path: "boards/gateway"}
 	ov, err := res.Overlay(ctx, u, nil, "")
 	if err != nil {
 		t.Fatal(err)

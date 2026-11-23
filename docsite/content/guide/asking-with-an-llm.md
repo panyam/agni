@@ -67,7 +67,7 @@ Datalog engine underneath agni, and each takes a `design` beside its own argumen
 agni adds the rest:
 
 - `designs` lists the designs a server answers about, by the name the other tools take
-  (`tut/designs/gateway`), with the series each one belongs to.
+  (`tut/boards/gateway`), with the series each one belongs to.
 - `check` runs the [rule catalog](../checks-and-reports/), or the rules you name, and answers the
   findings, a count per rule and outcome, and a link per failing verdict. A rule name that doesn't
   exist is refused with the closest ones it does have, rather than answered as an empty, clean run.

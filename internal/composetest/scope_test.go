@@ -29,7 +29,7 @@ func TestScopedRunMatchesFilteredFullRun(t *testing.T) {
 	// here. The feather's board does not parse, and the public demo walk reports that as "board
 	// absent".
 	for name, files := range map[string]struct{ design, board string }{
-		"gateway": {"../../examples/tutorial-project/designs/gateway/gateway.edn", "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb"},
+		"gateway": {"../../examples/tutorial-project/boards/gateway/gateway.edn", "../../examples/tutorial-project/boards/gateway/gateway.kicad_pcb"},
 		"jetson":  {"../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_sch", "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"},
 		"feather": {"../../tools/samples/boards/royalblue54L-feather/RoyalBlue54L-Feather.kicad_sch", ""},
 	} {

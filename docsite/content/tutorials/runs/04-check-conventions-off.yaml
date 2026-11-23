@@ -2,13 +2,13 @@
 # too, since rung 6 introduces it and its datasheets also say which nets are rails (agni issue 1160).
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 show: |
   sed -i.orig '/^conventions:/,/^$/d' project.yaml
   sed -i.orig '/^params:/d' project.yaml
-  agni check designs/jetson
+  agni check boards/jetson
 script: |
   sed -i.orig '/^conventions:/,/^$/d' project.yaml
   sed -i.orig '/^params:/d' project.yaml
-  agni check designs/jetson 2>/dev/null | sed -n '/^findings by rule/,/^$/p'
-  agni check designs/jetson 2>/dev/null | tail -2
+  agni check boards/jetson 2>/dev/null | sed -n '/^findings by rule/,/^$/p'
+  agni check boards/jetson 2>/dev/null | tail -2

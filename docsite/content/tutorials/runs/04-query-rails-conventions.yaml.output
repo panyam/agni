@@ -1,5 +1,5 @@
-#agni-run 4b97ed8ba1403304
+#agni-run fc1994c77982701c
 count(n)  provenance
-57        designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+57        boards/jetson/jetson-agx-thor-baseboard.kicad_sch
 
 1 result(s)

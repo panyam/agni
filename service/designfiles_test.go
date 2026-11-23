@@ -53,7 +53,7 @@ func filePaths(resp *webapi.ListDesignFilesResponse) []string {
 // than failing. So each tier is named rather than counted.
 func TestListDesignFilesIsWhatTheAnalysisReads(t *testing.T) {
 	svc := designFilesSvc(t)
-	resp := listDesignFiles(t, svc, "mount://tut/designs/gateway")
+	resp := listDesignFiles(t, svc, "mount://tut/boards/gateway")
 	got := map[string]bool{}
 	var total int64
 	for _, f := range resp.GetFiles() {
@@ -64,16 +64,16 @@ func TestListDesignFilesIsWhatTheAnalysisReads(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		"designs/gateway/gateway.edn",               // the entry
-		"designs/gateway/gateway.kicad_sch",         // the schematic companion
-		"designs/gateway/gateway.kicad_pcb",         // the board companion
-		"designs/gateway/gateway-rev-c.edn",         // a later netlist, for a diff
-		"designs/gateway/design.yaml",               // the design's descriptor
-		"designs/gateway/symbols/gateway.kicad_sym", // the design's own symbol library
-		"project.yaml",                              // the project's descriptor
-		"profiles/can.yaml",                         // a project profile
-		"params/acme-buck-3v3.textproto",            // a project datasheet spec
-		"lib/house.dl",                              // a project library module
+		"boards/gateway/gateway.edn",               // the entry
+		"boards/gateway/gateway.kicad_sch",         // the schematic companion
+		"boards/gateway/gateway.kicad_pcb",         // the board companion
+		"boards/gateway/gateway-rev-c.edn",         // a later netlist, for a diff
+		"boards/gateway/design.yaml",               // the design's descriptor
+		"boards/gateway/symbols/gateway.kicad_sym", // the design's own symbol library
+		"project.yaml",                             // the project's descriptor
+		"profiles/can.yaml",                        // a project profile
+		"params/acme-buck-3v3.textproto",           // a project datasheet spec
+		"lib/house.dl",                             // a project library module
 	} {
 		if !got[want] {
 			t.Errorf("missing %s; got %v", want, filePaths(resp))
@@ -89,7 +89,7 @@ func TestListDesignFilesIsWhatTheAnalysisReads(t *testing.T) {
 	}
 
 	// Naming the entry or a companion names the same design (C32), so it lists the same files.
-	for _, other := range []string{"mount://tut/designs/gateway/gateway.edn", "mount://tut/designs/gateway/gateway.kicad_sch"} {
+	for _, other := range []string{"mount://tut/boards/gateway/gateway.edn", "mount://tut/boards/gateway/gateway.kicad_sch"} {
 		if a, b := strings.Join(filePaths(resp), ","), strings.Join(filePaths(listDesignFiles(t, svc, other)), ","); a != b {
 			t.Errorf("%s lists a different set from the design folder:\n%s\n%s", other, b, a)
 		}
@@ -98,7 +98,7 @@ func TestListDesignFilesIsWhatTheAnalysisReads(t *testing.T) {
 
 func TestListDesignFilesRefusesWhatItCannotList(t *testing.T) {
 	svc := designFilesSvc(t)
-	for _, uri := range []string{"mount://nope/x.edn", "mount://tut/designs/gateway/missing.edn"} {
+	for _, uri := range []string{"mount://nope/x.edn", "mount://tut/boards/gateway/missing.edn"} {
 		if _, err := svc.ListDesignFiles(context.Background(), &webapi.ListDesignFilesRequest{Uri: uri}); !errors.Is(err, service.ErrNotFound) {
 			t.Errorf("%s: err %v, want not found", uri, err)
 		}
@@ -125,12 +125,12 @@ func TestListDesignFilesMarksTheBoard(t *testing.T) {
 		}
 		return out
 	}
-	for _, uri := range []string{"mount://tut/designs/gateway", "mount://tut/designs/gateway/gateway.edn", "mount://tut/designs/gateway/gateway.kicad_sch"} {
-		if got := strings.Join(boards(uri), ","); got != "designs/gateway/gateway.kicad_pcb" {
-			t.Errorf("%s marks %q as the board, want designs/gateway/gateway.kicad_pcb", uri, got)
+	for _, uri := range []string{"mount://tut/boards/gateway", "mount://tut/boards/gateway/gateway.edn", "mount://tut/boards/gateway/gateway.kicad_sch"} {
+		if got := strings.Join(boards(uri), ","); got != "boards/gateway/gateway.kicad_pcb" {
+			t.Errorf("%s marks %q as the board, want boards/gateway/gateway.kicad_pcb", uri, got)
 		}
 	}
-	if got := boards("mount://tut/designs/gateway/gateway-rev-c.edn"); len(got) != 0 {
+	if got := boards("mount://tut/boards/gateway/gateway-rev-c.edn"); len(got) != 0 {
 		t.Errorf("rev C declares no board, and %v were marked", got)
 	}
 }

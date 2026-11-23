@@ -16,7 +16,7 @@ Each finding carries a severity (info, warning, error), the rule that fired, a s
 
 ## Pick a design {#pick}
 
-> Give a path to any design (relative to this example folder), or your own file. The bundled designs live in ../common/designs: i2c-sensor/i2c-sensor.edn (built to trip one finding at each severity), two-resistors.edn (clean, no findings), demo-board.kicad_pcb, and demo-board.ipc2581.xml (each trips one rule). Three more exist for the sections below: dangling-wire.kicad_sch (wires drawn to empty space), driver-conflict.edn (pins that fight or float), and duplicate-refdes.kicad_sch (two symbols claiming one designator).
+> Give a path to any design (relative to this example folder), or your own file. The bundled designs live in ../common/boards: i2c-sensor/i2c-sensor.edn (built to trip one finding at each severity), two-resistors.edn (clean, no findings), demo-board.kicad_pcb, and demo-board.ipc2581.xml (each trips one rule). Three more exist for the sections below: dangling-wire.kicad_sch (wires drawn to empty space), driver-conflict.edn (pins that fight or float), and duplicate-refdes.kicad_sch (two symbols claiming one designator).
 
 ## Run the checks {#run}
 

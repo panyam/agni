@@ -81,7 +81,7 @@ Several things in this tool looked fussy earlier, and they all come from the sam
 Try it on the interface as a whole, and note that a house requirement and a protocol one are answered in the same voice:
 
 ```
-agni check --verdicts --rule gateway-profiles/can-host-incomplete designs/gateway/gateway.edn
+agni check --verdicts --rule gateway-profiles/can-host-incomplete boards/gateway/gateway.edn
 ```
 
 `U4` gets one verdict per required signal rather than one verdict as a part, because a host wired to four of its five lines is four right answers and one wrong one. Each is addressable on its own, and `gateway-profiles/can-host-incomplete:(component:U4,signal:STB)` is a question you can type before running anything. [Chapter 9](../09-sequencing-and-straps/) used the same pair-shaped subject for strap collisions, for the same reason. The answer belongs to a relation rather than to either thing in it.

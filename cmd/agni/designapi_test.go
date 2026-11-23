@@ -565,7 +565,7 @@ func tutorialMounts(t *testing.T) []mounts.Mount {
 func TestServedSheetResolvesProjectSymbolLibrary(t *testing.T) {
 	svc := newDesignSvc(tutorialMounts(t))
 	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
-		Snapshot: snapOf(t, svc.Snapshots(), uriStr("t", "designs/gateway/gateway.kicad_sch")),
+		Snapshot: snapOf(t, svc.Snapshots(), uriStr("t", "boards/gateway/gateway.kicad_sch")),
 		Format:   webapi.SheetFormat_SHEET_FORMAT_SVG,
 		Symbols:  webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL,
 	})

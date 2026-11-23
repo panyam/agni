@@ -25,9 +25,9 @@ func findingLines(out string) []string {
 // 1250).
 func TestODBChecksAsItsKiCadSource(t *testing.T) {
 	freshWorkspace(t)
-	kicad := isolatedDesign(t, "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb")
+	kicad := isolatedDesign(t, "../../examples/tutorial-project/boards/gateway/gateway.kicad_pcb")
 	want := findingLines(runCLI(t, rootCmd(), "check", kicad))
-	got := findingLines(runCLI(t, rootCmd(), "check", "../../examples/common/designs/odb/gateway-layout"))
+	got := findingLines(runCLI(t, rootCmd(), "check", "../../examples/common/boards/odb/gateway-layout"))
 	board := 0
 	for _, l := range want {
 		if strings.Contains(l, "copper-clearance") || strings.Contains(l, "track-width") {
@@ -47,12 +47,12 @@ func TestODBChecksAsItsKiCadSource(t *testing.T) {
 // nets, and a check of a layout against its schematic has to show exactly those changes.
 func TestDiffSchematicAgainstODBLayout(t *testing.T) {
 	freshWorkspace(t)
-	edn := "../../examples/common/designs/odb/gateway.edn"
-	same := runCLI(t, rootCmd(), "diff", edn, "../../examples/common/designs/odb/gateway-layout")
+	edn := "../../examples/common/boards/odb/gateway.edn"
+	same := runCLI(t, rootCmd(), "diff", edn, "../../examples/common/boards/odb/gateway-layout")
 	if !strings.Contains(same, "Components: +0  -0  ~0") || !strings.Contains(same, "new 0  deleted 0  renamed 0  hard 0  soft 0") {
 		t.Errorf("rev A's layout should match its schematic:\n%s", same)
 	}
-	revB := runCLI(t, rootCmd(), "diff", edn, "../../examples/common/designs/odb/gateway-rev-b-layout")
+	revB := runCLI(t, rootCmd(), "diff", edn, "../../examples/common/boards/odb/gateway-rev-b-layout")
 	for _, want := range []string{
 		"Components: +2  -0  ~0",
 		"[hard]    I2C_SCL: +[R4.2] -[]",

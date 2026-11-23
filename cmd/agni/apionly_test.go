@@ -102,7 +102,7 @@ func TestServeStillRefusesAnIncompleteCheckout(t *testing.T) {
 func TestOpenStillRequiresTheViewer(t *testing.T) {
 	clearNamedWebDir(t)
 	t.Setenv(envWebDir, "")
-	design, err := filepath.Abs("../../examples/tutorial-project/designs/gateway/gateway.edn")
+	design, err := filepath.Abs("../../examples/tutorial-project/boards/gateway/gateway.edn")
 	if err != nil {
 		t.Fatal(err)
 	}

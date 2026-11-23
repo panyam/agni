@@ -5,4 +5,4 @@
 fixture: examples/tutorial-project
 script: |
   sed -i.orig '/^params:/d' project.yaml
-  agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n'
+  agni query boards/gateway/gateway.edn 'net.rail(?n) => ?n'

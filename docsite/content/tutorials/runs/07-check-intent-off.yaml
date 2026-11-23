@@ -1,11 +1,11 @@
 # Rung 7: the catalog with the design's intent: section deleted from the scratch copy.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 show: |
-  sed -i.orig '/^intent:/,$d' designs/jetson/design.yaml
-  agni check designs/jetson
+  sed -i.orig '/^intent:/,$d' boards/jetson/design.yaml
+  agni check boards/jetson
 script: |
-  sed -i.orig '/^intent:/,$d' designs/jetson/design.yaml
-  agni check designs/jetson 2>/dev/null | sed -n '/^findings by rule/,/^$/p'
-  agni check designs/jetson 2>/dev/null | tail -2
+  sed -i.orig '/^intent:/,$d' boards/jetson/design.yaml
+  agni check boards/jetson 2>/dev/null | sed -n '/^findings by rule/,/^$/p'
+  agni check boards/jetson 2>/dev/null | tail -2

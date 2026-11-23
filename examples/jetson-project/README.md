@@ -12,11 +12,11 @@ make -C examples/jetson-project board
 make -C examples/jetson-project stats
 ```
 
-`board` copies the KiCad files into `designs/jetson/` beside `design.yaml`, the one file in that
+`board` copies the KiCad files into `boards/jetson/` beside `design.yaml`, the one file in that
 folder that is ours, and never overwrites it. The copies are gitignored.
 
 Antmicro's later revisions, rev 1.1.2 and its current rev 1.1.3, come the same way, into
-`designs/jetson-1.1.2/` and `designs/jetson-1.1.3/`, for comparing real revisions (agni issues 1559
+`boards/jetson-1.1.2/` and `boards/jetson-1.1.3/`, for comparing real revisions (agni issues 1559
 and 1560). `diff-revision` compares rev 1.1.0 with rev 1.1.3:
 
 ```
@@ -25,7 +25,7 @@ make -C examples/jetson-project revision
 make -C examples/jetson-project diff-revision
 ```
 
-`designs/jetson-rev-b/` is a different thing, a small documented edit of rev 1.1.0 that the
+`boards/jetson-rev-b/` is a different thing, a small documented edit of rev 1.1.0 that the
 tutorial builds with `make rev-b`.
 
 The tutorial's command captures run against this folder with the board copied in the same way (the

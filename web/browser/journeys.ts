@@ -73,7 +73,7 @@ export const designs: Record<string, Design> = {
   // The gate's cut of Jetson, committed in examples/cross-probe-project.
   cut: {
     mount: "probe",
-    path: "designs/jetson-cut",
+    path: "boards/jetson-cut",
     label: "a cut of Jetson's baseboard",
     find: "R119",
     findPitch: "0.960",
@@ -93,7 +93,7 @@ export const designs: Record<string, Design> = {
   // revision.
   gateway: {
     mount: "tut",
-    path: "designs/gateway",
+    path: "boards/gateway",
     label: "the tutorial's gateway board",
     find: "R1",
     findPitch: "1.000",
@@ -116,7 +116,7 @@ export const designs: Record<string, Design> = {
   // `make samples-oracle` and copied in by `make -C examples/jetson-project board`.
   jetson: {
     mount: "jetson",
-    path: "designs/jetson",
+    path: "boards/jetson",
     label: "Antmicro's Jetson AGX Thor baseboard",
     find: "R361",
     findPitch: "0.960",

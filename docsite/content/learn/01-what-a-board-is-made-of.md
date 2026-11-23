@@ -17,7 +17,7 @@ Here is the board the rest of this chapter asks questions about. You are not mea
 
 ![The tutorial gateway board, drawn from its declared schematic companion]({{.Site.PathPrefix}}/static/images/learn/gateway.svg)
 
-That drawing came from `agni render examples/tutorial-project/designs/gateway`. When you point the tool at a design rather than at a file, it can use whichever artifact answers the question. For a picture, it uses the schematic the design declares.
+That drawing came from `agni render examples/tutorial-project/boards/gateway`. When you point the tool at a design rather than at a file, it can use whichever artifact answers the question. For a picture, it uses the schematic the design declares.
 
 Now ask what is actually on it:
 

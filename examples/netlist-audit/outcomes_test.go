@@ -10,7 +10,7 @@ import (
 // TestEveryTableAnswersOnTheFixture relies on a fixture built so each table has something in it. A
 // table that quietly stops matching then shows up as a failure rather than as an empty section.
 func TestEveryTableAnswersOnTheFixture(t *testing.T) {
-	d, err := common.Load("../common/designs/netlist-audit.tel")
+	d, err := common.Load("../common/boards/netlist-audit.tel")
 	if err != nil {
 		t.Fatalf("load fixture: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestEveryTableAnswersOnTheFixture(t *testing.T) {
 // TestTheFixtureAnswersAreTheDesignedOnes pins the fixture's designed cases. A relation change that
 // moves one of them then shows up here rather than in someone's review.
 func TestTheFixtureAnswersAreTheDesignedOnes(t *testing.T) {
-	d, err := common.Load("../common/designs/netlist-audit.tel")
+	d, err := common.Load("../common/boards/netlist-audit.tel")
 	if err != nil {
 		t.Fatal(err)
 	}

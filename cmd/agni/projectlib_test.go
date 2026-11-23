@@ -15,7 +15,7 @@ import (
 	"github.com/panyam/goapplib/storage/mounts"
 )
 
-const gatewayDesign = "../../examples/tutorial-project/designs/gateway"
+const gatewayDesign = "../../examples/tutorial-project/boards/gateway"
 
 // TestProjectLibraryAnswersInsideItsProject covers agni issue 773 end to end. The tutorial project's
 // lib/house.dl defines house.pmic_rail and house.pmic_probe_point, and a query on a design in that
@@ -34,7 +34,7 @@ func TestProjectLibraryIsUnknownOutsideItsProject(t *testing.T) {
 	cmd := queryCmd()
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
-	cmd.SetArgs([]string{"../../examples/common/designs/probe-coverage.edn", "house.pmic_rail(?n) => ?n"})
+	cmd.SetArgs([]string{"../../examples/common/boards/probe-coverage.edn", "house.pmic_rail(?n) => ?n"})
 	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), `unknown module "house"`) {
 		t.Errorf("err = %v, want house unknown outside the project that defines it", err)
 	}
@@ -86,7 +86,7 @@ func TestAProjectMemberCannotReplaceAShippedOne(t *testing.T) {
 func projectWithLib(t *testing.T, files map[string]string) string {
 	t.Helper()
 	dir := t.TempDir()
-	board, err := os.ReadFile("../../examples/common/designs/probe-coverage.edn")
+	board, err := os.ReadFile("../../examples/common/boards/probe-coverage.edn")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func runQueryErr(t *testing.T, args ...string) error {
 func TestLibFlagAnswersAsTheInlineRequestDoes(t *testing.T) {
 	const (
 		lib    = "../../examples/tutorial-project/lib"
-		design = "../../examples/common/designs/probe-coverage.edn"
+		design = "../../examples/common/boards/probe-coverage.edn"
 		q      = "net.has_test_point(?n), not house.pmic_probe_point(?n) => ?n"
 	)
 	if err := runQueryErr(t, design, q); err == nil || !strings.Contains(err.Error(), `unknown module "house"`) {
@@ -174,7 +174,7 @@ func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
 	loader := &osLoader{mounts: tableOf(ms), loader: newLoader()}
 	svc := service.NewReviewService(loader, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{}, "", testProjectResolver(ms))
 	// The served side takes the checklist off the project's config, as a viewer does, with no read.
-	u, err := mounts.ParseURI("mount://tut/designs/gateway")
+	u, err := mounts.ParseURI("mount://tut/boards/gateway")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +192,7 @@ func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
 		t.Fatal("the tutorial project declares no house checklist")
 	}
 	rv, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
-		Snapshot: snapOf(t, svc.Snapshots(), "mount://tut/designs/gateway"),
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://tut/boards/gateway"),
 		Manifest: house.GetManifest(),
 	})
 	if err != nil {
@@ -235,7 +235,7 @@ areas:
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	const design = "../../examples/common/designs/probe-coverage.edn"
+	const design = "../../examples/common/boards/probe-coverage.edn"
 	if _, errOut, err := runReviewCapturing(t, design, "--checklist", checklist); err == nil || !strings.Contains(err.Error()+errOut, `"house"`) {
 		t.Errorf("without --lib: err = %v, want the checklist refused naming house", err)
 	}

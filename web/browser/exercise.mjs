@@ -52,7 +52,7 @@ if (!siteDir === !url) {
 // SYNTHETIC names the seeds that are this repo's own fixtures, so a real EDIF seed is told apart
 // from the tutorial's 19-component one.
 const SYNTHETIC = new Set(["gateway"]);
-const gateway = join(repo, "examples", "tutorial-project", "designs", "gateway");
+const gateway = join(repo, "examples", "tutorial-project", "boards", "gateway");
 const companionPair = ["companion-demo.edn", "companion-demo.eds"].map((f) => join(repo, "cmd", "agni", "testdata", "review", f));
 
 const rows = [];

@@ -12,13 +12,13 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// designsFS holds the synthetic sample designs the examples read. They are hand-authored, never a
+// boardsFS holds the synthetic sample designs the examples read. They are hand-authored, never a
 // real board, so every example runs with no external files and no proprietary netlist ships here.
 //
-//go:embed designs
-var designsFS embed.FS
+//go:embed boards
+var boardsFS embed.FS
 
-// Designs lists the bundled fixtures as paths relative to the designs root, sorted. A loose file
+// Designs lists the bundled fixtures as paths relative to the boards root, sorted. A loose file
 // appears as "two-resistors.edn", and a file inside a declared design as
 // "i2c-sensor/i2c-sensor.edn".
 //
@@ -26,12 +26,12 @@ var designsFS embed.FS
 // lives in its own folder beside the companions it declares (#609).
 func Designs() []string {
 	var names []string
-	err := fs.WalkDir(designsFS, "designs", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(boardsFS, "boards", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if !d.IsDir() && isDesignFile(path) {
-			names = append(names, strings.TrimPrefix(path, "designs/"))
+			names = append(names, strings.TrimPrefix(path, "boards/"))
 		}
 		return nil
 	})
@@ -58,13 +58,13 @@ func isDesignFile(p string) bool {
 // reports it, or a bare base name. Walkthrough defaults and sidecar prose use the base name, so a
 // fixture can move into a declared design folder without every example changing.
 func fixturePath(name string) (string, error) {
-	if _, err := fs.Stat(designsFS, "designs/"+name); err == nil {
-		return "designs/" + name, nil
+	if _, err := fs.Stat(boardsFS, "boards/"+name); err == nil {
+		return "boards/" + name, nil
 	}
 	if !strings.Contains(name, "/") {
 		for _, p := range Designs() {
 			if path.Base(p) == name {
-				return "designs/" + p, nil
+				return "boards/" + p, nil
 			}
 		}
 	}
@@ -79,5 +79,5 @@ func ReadFixture(name string) (*ir.Design, error) {
 	if err != nil {
 		return nil, err
 	}
-	return (&formats.Loader{FS: designsFS}).ReadDesign(p)
+	return (&formats.Loader{FS: boardsFS}).ReadDesign(p)
 }

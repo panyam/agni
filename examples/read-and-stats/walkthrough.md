@@ -16,7 +16,7 @@ Diff and checks run on that IR, so they never care which format you started from
 
 ## Pick a design {#pick}
 
-> Give a path to any design (relative to this example folder), or your own file. The bundled designs live in ../common/designs: two-resistors.edn (a bare netlist), demo-board.kicad_pcb, and demo-board.ipc2581.xml. The last two carry a physical tier, so their stats gain footprint and layer rows. No real boards ship in this repo.
+> Give a path to any design (relative to this example folder), or your own file. The bundled designs live in ../common/boards: two-resistors.edn (a bare netlist), demo-board.kicad_pcb, and demo-board.ipc2581.xml. The last two carry a physical tier, so their stats gain footprint and layer rows. No real boards ship in this repo.
 
 ## Read it into the IR {#read}
 

@@ -27,7 +27,7 @@ import (
 var walkthroughMD []byte
 
 // mounted is the bundled demo project, mounted read-only as "fixtures". Its one design is mixer.
-const mounted = "../common/designs/demo-project"
+const mounted = "../common/boards/demo-project"
 
 func main() {
 	root, err := os.MkdirTemp("", "agni-keep-a-design-")
@@ -45,7 +45,7 @@ func main() {
 	demo := demokit.New("keep-a-design").Dir("keep-a-design").FromMarkdownBytes(walkthroughMD)
 
 	demo.Bind("keep").Run(func(demokit.StepContext) *demokit.StepResult {
-		d, asked, err := t.keep(ctx, "mixer-rev-a", "Mixer rev A", "../common/designs/rev-a.edn")
+		d, asked, err := t.keep(ctx, "mixer-rev-a", "Mixer rev A", "../common/boards/rev-a.edn")
 		if err != nil {
 			return demokit.Errf("keep rev A: %v", err)
 		}
@@ -55,7 +55,7 @@ func main() {
 	})
 
 	demo.Bind("again").Run(func(demokit.StepContext) *demokit.StepResult {
-		d, _, err := t.keep(ctx, "mixer-rev-b", "Mixer rev B", "../common/designs/rev-b.edn")
+		d, _, err := t.keep(ctx, "mixer-rev-b", "Mixer rev B", "../common/boards/rev-b.edn")
 		if err != nil {
 			return demokit.Errf("keep rev B: %v", err)
 		}
@@ -155,8 +155,8 @@ func main() {
 		}
 		defer closeDB()
 		for _, rev := range []struct{ id, title, netlist string }{
-			{"mixer-rev-a", "Mixer rev A", "../common/designs/rev-a.edn"},
-			{"mixer-rev-b", "Mixer rev B", "../common/designs/rev-b.edn"},
+			{"mixer-rev-a", "Mixer rev A", "../common/boards/rev-a.edn"},
+			{"mixer-rev-b", "Mixer rev B", "../common/boards/rev-b.edn"},
 		} {
 			if _, _, err := lite.keep(ctx, rev.id, rev.title, rev.netlist); err != nil {
 				return demokit.Errf("keep %s in sqlite: %v", rev.id, err)

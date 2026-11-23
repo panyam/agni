@@ -61,7 +61,7 @@ dot. KiCad puts a sheet path in front of a name drawn on a sub-sheet, and `(^|/)
 carry that path. `anchor: true` marks the signal whose presence means the bus exists.
 
 There is no flag. The project names its own `profiles/` directory, so agni composes it for every
-design under `designs/`, the same way it composes `params/` and the `conventions:` section of
+design under `boards/`, the same way it composes `params/` and the `conventions:` section of
 `project.yaml`. Putting the file in place is the whole step:
 
 {{ agniRun "content/tutorials/runs/05-check-profiles.yaml" }}

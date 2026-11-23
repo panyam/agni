@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regenerates the ODB++ fixtures from the synthetic KiCad boards they are exported from: the
-# gateway's two layouts under examples/common/designs/odb, which the odb-verification example reads,
+# gateway's two layouts under examples/common/boards/odb, which the odb-verification example reads,
 # and the rest under readers/odb/testdata, with KiCad's own exporter (agni issue 1250). Needs kicad-cli 9 or later.
 # Precision 6 writes coordinates to the nanometre, where the default rounds them to 10 microns.
 # The exporter stamps the time it ran into two files of each job, so the script rewrites those
@@ -9,12 +9,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 command -v kicad-cli >/dev/null || { echo "kicad-cli not found; install KiCad 9 or later" >&2; exit 1; }
 out=readers/odb/testdata
-examples=examples/common/designs/odb
+examples=examples/common/boards/odb
 boards=(
-  examples/tutorial-project/designs/gateway/gateway.kicad_pcb
-  examples/tutorial-project/designs/gateway-rev-b/gateway-rev-b.kicad_pcb
-  examples/common/designs/demo-board.kicad_pcb
-  examples/common/designs/mixer.kicad_pcb
+  examples/tutorial-project/boards/gateway/gateway.kicad_pcb
+  examples/tutorial-project/boards/gateway-rev-b/gateway-rev-b.kicad_pcb
+  examples/common/boards/demo-board.kicad_pcb
+  examples/common/boards/mixer.kicad_pcb
   cmd/agni/testdata/conformance/drc.fires.kicad_pcb
   readers/kicad/testdata/board.kicad_pcb
   readers/kicad/testdata/board_stackup.kicad_pcb
