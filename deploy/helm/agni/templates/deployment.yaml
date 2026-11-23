@@ -1,0 +1,128 @@
+{{- $publicURL := required "set publicURL, the URL people open, such as https://agni.example.com" .Values.publicURL -}}
+{{- $clientID := required "set github.clientID, the GitHub App's client id" .Values.github.clientID -}}
+{{- $allow := .Values.github.allow | default list -}}
+{{- if not $allow }}{{ fail "set github.allow, such as [org:acme]" }}{{ end -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agni.name" . }}
+  labels:
+    {{- include "agni.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  # One pod writes the store and keeps sign-ins in flight in memory, so an upgrade stops the old pod
+  # before it starts the new one (agni issue 1827 covers several replicas).
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "agni.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agni.selector" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: agni
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - serve
+            - --addr=:8080
+            - --store={{ include "agni.store" . }}
+            - --uploads={{ include "agni.uploads" . }}
+            {{- if regexMatch "^(s3|gs)://" (include "agni.uploads" .) }}
+            - --uploads-cache=/var/lib/agni/uploads-cache
+            {{- end }}
+            - --auth=tokens
+            - --trusted-proxy={{ include "agni.proxies" . }}
+            - --connections-key=file:/run/secrets/agni/connections-key
+            - --public-url={{ $publicURL }}
+            - --github-api={{ .Values.github.api }}
+            - --github-client-id={{ $clientID }}
+            - --github-client-secret=file:/run/secrets/agni/github-client-secret
+            - --github-allow={{ join "," $allow }}
+            - --github-webhook-secret=file:/run/secrets/agni/github-webhook-secret
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            {{- include "agni.caEnv" . | nindent 12 }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/agni
+            - name: secrets
+              mountPath: /run/secrets/agni
+              readOnly: true
+            - name: ca
+              mountPath: /etc/agni/ca
+              readOnly: true
+            {{- if .Values.connectionSecrets }}
+            - name: connections
+              mountPath: /run/agni/connections
+              readOnly: true
+            {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "agni.claim" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: secrets
+          secret:
+            secretName: {{ .Values.secretName }}
+            defaultMode: 0440
+            items:
+              - key: connections-key
+                path: connections-key
+              - key: github-client-secret
+                path: github-client-secret
+              - key: github-webhook-secret
+                path: github-webhook-secret
+        - name: ca
+          {{- if .Values.caConfigMap }}
+          configMap:
+            name: {{ .Values.caConfigMap }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.connectionSecrets }}
+        - name: connections
+          secret:
+            secretName: {{ .Values.connectionSecrets }}
+            defaultMode: 0440
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

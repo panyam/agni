@@ -6,7 +6,7 @@ welcome, especially readers for new formats and check rules.
 ## Getting set up
 
 `make build` requires Go 1.27.4 and pnpm (for the web viewer bundle). `make testall` also needs
-`buf` 1.61 on your PATH, `python3` for the Python client tests, a Chromium for the browser tests
+`buf` 1.61 and `helm` on your PATH (the Helm chart's tests render it), `python3` for the Python client tests, a Chromium for the browser tests
 (`cd web && pnpm exec playwright-core install chromium`), and network access to fetch the pinned
 sample corpus.
 

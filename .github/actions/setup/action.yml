@@ -10,7 +10,7 @@ runs:
     # its one lockfile at the root. pnpm's version is the project's, not this workflow's: it comes
     # from `packageManager` in the root package.json, the pnpm workspace's (web/, web-shared/,
     # datasheet/web/; agni issue 744), so a developer's pnpm and CI's cannot drift apart silently.
-    - uses: panyam/ci-actions/setup-go-pnpm@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
+    - uses: panyam/ci-actions/setup-go-pnpm@06676ee1a59ebad76f679e595168fc74f4626281 # v0.1.5
 
     # The board corpus `make samples` fetches, keyed on the pin file rather than on anything about
     # this repo. agni gets far more PRs than agni-samples gets releases, so keying on the pin means

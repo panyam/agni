@@ -12,6 +12,13 @@ GitHub Release body carries.
 
 ### Added
 
+- A Helm chart for agni and agnids (issue 1803). Each release publishes it to
+  `oci://ghcr.io/panyam/charts/agni` at its version. It runs the enterprise bundle's server behind
+  the cluster's ingress with `--trusted-proxy`, takes every secret from a Secret the team makes, and
+  keeps the store and uploads on a claim, in postgres or in a bucket. The release runs the
+  enterprise exercise against it on kind over the published image before publishing it. The
+  exercise also checks that a browser's session cookie is Secure.
+
 - A deployment bundle for a team's own GitHub or GitHub Enterprise Server (issue 1802). Each release
   attaches `agni-enterprise-<version>.tar.gz`, a compose file and env example that run `agni serve`
   with TLS, `--auth tokens`, sign-in through a GitHub App, a connections key and webhooks, and agnids
@@ -45,6 +52,10 @@ GitHub Release body carries.
   and CI runs it.
 
 ### Changed
+
+- Every module moves to goapplib v0.7.33 and oneauth v0.3.21, and CI to panyam/ci-actions v0.1.5
+  (issue 1826). A private GitHub mount now asks GitHub only through a viewer's GitHub connections,
+  so a viewer's connection of another kind never reaches api.github.com.
 
 - agni builds on goapplib v0.7.29 and oneauth v0.3.18 in every module (issue 1802). goapplib's fake
   GitHub listens on a chosen address and names it in every URL it hands out, so the enterprise

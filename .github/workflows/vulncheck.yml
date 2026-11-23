@@ -24,6 +24,6 @@ jobs:
       # The Makefile pins govulncheck's version and covers every shipped module. A red run on a
       # schedule is easy to miss, so a failure files an issue titled "vulncheck: ...", labelled P1 and
       # bug, or comments on the one already open. The action finds that issue by its title.
-      - uses: panyam/ci-actions/vulncheck@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
+      - uses: panyam/ci-actions/vulncheck@06676ee1a59ebad76f679e595168fc74f4626281 # v0.1.5
         with:
           command: make vulncheck

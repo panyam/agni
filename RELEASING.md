@@ -80,7 +80,9 @@ From a green `main`:
    The tarball is the enterprise bundle (agni issue 1802), `deploy/enterprise/` pinned the same way.
    A team runs it against their own GitHub or GitHub Enterprise Server. The release workflow has
    already run the enterprise exercise against it over the published images
-   (`make exercise-enterprise-bundle`).
+   (`make exercise-enterprise-bundle`). The same job ran it against the Helm chart on kind
+   (`make exercise-enterprise-helm`) and published the chart to `oci://ghcr.io/panyam/charts/agni`
+   at the release's version (agni issue 1803), so the chart needs no step here.
 
    The workflow's `binaries` job attaches the CLI's archives, the viewer bundle and `checksums.txt`
    (`make dist`, WS16-003) through the same script.  macOS and Linux get tarballs, and Windows gets

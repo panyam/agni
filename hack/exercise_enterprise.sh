@@ -17,6 +17,12 @@
 # listen on EXERCISE_HOST, an address of this machine that both its own CLI and the container reach:
 # the docker bridge's gateway on Linux, and this Mac's own address under Docker Desktop.
 #
+# EXERCISE_SERVE=helm runs them against deploy/helm/agni, installed into the cluster kubectl points
+# at (agni issue 1803). That cluster needs an ingress-nginx controller on this machine's port 443
+# and AGNI_IMAGE:AGNI_VERSION loaded, as `make kind-up` or ci-actions' kind-ingress leave it. The
+# ingress ends TLS for https://localhost, and agni trusts it through --trusted-proxy. The fake and
+# the trap listen on the kind network's gateway on Linux, or this Mac's own address.
+#
 # Each step prints PASS, FAIL with its reason, or FAIL (waits on #N) when an open ticket is what's
 # missing. The script exits 1 on any FAIL. With EXERCISE_ALLOW_WAITS=1 it exits 0 when every FAIL
 # waits on a ticket. CI runs it that way, and a step that used to pass still fails the job. Once
@@ -28,25 +34,29 @@ agni=${AGNI:-bin/agni}
 out=${EXERCISE_OUT:-/tmp/agni-exercise}/enterprise
 port=${EXERCISE_PORT:-18799}
 url=https://127.0.0.1:$port
+namespace=agni-exercise-$$
 root=$(cd "$(dirname "$0")/.." && pwd)
 tutorial=$root/examples/tutorial-project
 mode=${EXERCISE_SERVE:-binary}
 container=${CONTAINER:-docker}
 case "$mode" in
   binary) host=127.0.0.1 ;;
-  bundle)
-    : "${AGNI_IMAGE:?EXERCISE_SERVE=bundle needs AGNI_IMAGE, such as ghcr.io/panyam/agni}"
-    : "${AGNI_VERSION:?EXERCISE_SERVE=bundle needs AGNI_VERSION, the image tag}"
+  bundle | helm)
+    : "${AGNI_IMAGE:?EXERCISE_SERVE=$mode needs AGNI_IMAGE, such as ghcr.io/panyam/agni}"
+    : "${AGNI_VERSION:?EXERCISE_SERVE=$mode needs AGNI_VERSION, the image tag}"
+    [ "$mode" = helm ] && url=https://localhost
+    network=bridge
+    [ "$mode" = helm ] && network=kind
     host=${EXERCISE_HOST:-}
     if [ -z "$host" ]; then
       case "$(uname -s)" in
-        Linux) host=$("$container" network inspect bridge --format '{{(index .IPAM.Config 0).Gateway}}') ;;
+        Linux) host=$("$container" network inspect "$network" --format '{{range .IPAM.Config}}{{.Gateway}} {{end}}' | tr ' ' '\n' | grep -m1 '\.') ;;
         Darwin) host=$(ipconfig getifaddr en0 || ipconfig getifaddr en1) ;;
       esac
     fi
-    [ -n "$host" ] || { echo "EXERCISE_SERVE=bundle found no address the container reaches; set EXERCISE_HOST" >&2; exit 1; }
+    [ -n "$host" ] || { echo "EXERCISE_SERVE=$mode found no address the server reaches; set EXERCISE_HOST" >&2; exit 1; }
     ;;
-  *) echo "EXERCISE_SERVE=$mode: want binary or bundle" >&2; exit 1 ;;
+  *) echo "EXERCISE_SERVE=$mode: want binary, bundle or helm" >&2; exit 1 ;;
 esac
 
 rm -rf "$out"
@@ -63,7 +73,13 @@ bundle() {
   "$container" compose -f "$root/deploy/enterprise/compose.yaml" -f "$root/hack/exercise-enterprise.compose.yaml" \
     --env-file "$out/bundle.env" -p "$project" "$@"
 }
+# kube runs kubectl in this run's own namespace.
+kube() { kubectl -n "$namespace" "$@"; }
 stop_serve() {
+  if [ "$mode" = helm ]; then
+    serve_pid=
+    return
+  fi
   if [ "$mode" = bundle ]; then
     [ -n "$serve_pid" ] && bundle stop agni >/dev/null 2>&1
   else
@@ -72,7 +88,12 @@ stop_serve() {
   serve_pid=
 }
 cleanup() {
-  if [ "$mode" = bundle ] && [ -f "$out/bundle.env" ]; then
+  if [ "$mode" = helm ] && [ -f "$out/values.yaml" ]; then
+    kube logs deploy/agni --all-containers >"$out/serve.log" 2>&1 || true
+    kube get pods,events >"$out/kube.log" 2>&1 || true
+    helm uninstall agni -n "$namespace" >/dev/null 2>&1 || true
+    kubectl delete namespace "$namespace" --wait=false >/dev/null 2>&1 || true
+  elif [ "$mode" = bundle ] && [ -f "$out/bundle.env" ]; then
     bundle logs agni >"$out/serve.log" 2>&1 || true
     bundle down -v >/dev/null 2>&1 || true
   else
@@ -135,7 +156,7 @@ openssl x509 -req -in "$out/server.csr" -CA "$out/ca.pem" -CAkey "$out/ca.key" -
 export AGNI_CA_FILE=$out/ca.pem
 # Off loopback the fake serves HTTPS, since oneauth refuses a plain-HTTP GitHub Enterprise host
 # there, so the bundle's run gives the fake a certificate of its own for its address.
-if [ "$mode" = bundle ]; then
+if [ "$mode" != binary ]; then
   case "$host" in *[!0-9.]*) fake_san=DNS:$host ;; *) fake_san=IP:$host ;; esac
   openssl req -newkey rsa:2048 -nodes -subj "/CN=$host" -keyout "$out/fake.key" -out "$out/fake.csr" 2>/dev/null
   printf 'subjectAltName=%s\n' "$fake_san" >"$out/fake-san.ext"
@@ -149,7 +170,7 @@ step "start the fake GitHub Enterprise Server"
 ctl_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
 ctl=http://127.0.0.1:$ctl_port
 fake_host=()
-[ "$mode" = bundle ] && fake_host=(--host "$host" --tls-cert "$out/fake.pem" --tls-key "$out/fake.key")
+[ "$mode" != binary ] && fake_host=(--host "$host" --tls-cert "$out/fake.pem" --tls-key "$out/fake.key")
 "$out/fakegithub" --seed "$out/repos/seed.json" --addr "127.0.0.1:$ctl_port" ${fake_host[@]+"${fake_host[@]}"} --hook-ca "$out/ca.pem" >>"$out/fakegithub.log" 2>&1 &
 pids+=($!)
 wait_for "$ctl/" || { echo "the fake didn't start; see $out/fakegithub.log" >&2; exit 1; }
@@ -228,7 +249,52 @@ AGNI_CA_DIR=$out/ca-dir
 ENV
 fi
 
+# The chart reads each secret from a Secret, and the CA from a ConfigMap, made here as a team makes
+# them with kubectl. Its values send agni's outbound requests through the trap.
+if [ "$mode" = helm ]; then
+  kubectl create namespace "$namespace" >/dev/null
+  printf '%s' "$AGNI_CONNECTIONS_KEY" >"$out/connections.key"
+  printf '%s' "$AGNI_GITHUB_CLIENT_SECRET" >"$out/github-client-secret"
+  printf '%s' "$AGNI_WEBHOOK_SECRET" >"$out/github-webhook-secret"
+  kube create secret generic agni --from-file=connections-key="$out/connections.key" \
+    --from-file=github-client-secret="$out/github-client-secret" --from-file=github-webhook-secret="$out/github-webhook-secret" >/dev/null
+  kube create secret tls agni-tls --cert="$out/server.pem" --key="$out/server.key" >/dev/null
+  kube create configmap agni-ca --from-file=exercise-ca.pem="$out/ca.pem" >/dev/null
+  cat >"$out/values.yaml" <<VALUES
+image:
+  repository: $AGNI_IMAGE
+  tag: "$AGNI_VERSION"
+publicURL: $url
+trustedProxies: [${EXERCISE_POD_CIDR:-10.244.0.0/16}]
+github:
+  api: $ghes/api/v3
+  clientID: Iv1.exercise
+  allow: [org:acme]
+caConfigMap: agni-ca
+ingress:
+  host: localhost
+env:
+  - {name: HTTPS_PROXY, value: "http://$host:$trap_port"}
+  - {name: HTTP_PROXY, value: "http://$host:$trap_port"}
+  - {name: NO_PROXY, value: "$host"}
+VALUES
+fi
+
 serve() {
+  if [ "$mode" = helm ]; then
+    if [ -z "${installed:-}" ]; then
+      helm install agni "$root/deploy/helm/agni" -n "$namespace" -f "$out/values.yaml" --wait --timeout 3m >>"$out/helm.log" 2>&1 ||
+        { echo "the chart didn't install; see $out/helm.log" >&2; exit 1; }
+      installed=1
+    else
+      { kube rollout restart deploy/agni && kube rollout status deploy/agni --timeout 3m; } >>"$out/helm.log" 2>&1 ||
+        { echo "agni didn't restart; see $out/helm.log" >&2; exit 1; }
+    fi
+    serve_pid=helm
+    # The ingress answers 503 until it routes to the new pod, so this waits for a 200.
+    wait_for -f --cacert "$out/ca.pem" "$url/healthz" || { echo "the chart's agni serve didn't answer through the ingress; see $out/helm.log" >&2; exit 1; }
+    return
+  fi
   if [ "$mode" = bundle ]; then
     bundle up -d agni >>"$out/bundle.log" 2>&1 || { echo "the bundle didn't start; see $out/bundle.log" >&2; exit 1; }
     serve_pid=bundle
@@ -249,10 +315,13 @@ serve() {
 step "start agni serve with TLS, tokens, sign-in through the App, a connections key and webhooks"
 if [ "$mode" = bundle ]; then
   bundle run --rm --no-deps -T agni token create admin --store file:///var/lib/agni/meta >"$out/admin.token" 2>>"$out/bundle.log"
-else
+elif [ "$mode" = binary ]; then
   "$agni" token create admin --store "file://$store" >"$out/admin.token" 2>/dev/null
 fi
 serve
+# A chart's server is running before anyone can reach its claim, so the token is made beside it, as
+# the chart's notes say.
+[ "$mode" = helm ] && kube exec deploy/agni -- agni token create admin --store file:///var/lib/agni/meta >"$out/admin.token" 2>>"$out/helm.log"
 if curl -s -o /dev/null --cacert "$out/ca.pem" "$url/healthz" && ! curl -s -o /dev/null "$url/healthz" 2>/dev/null; then
   pass "agni serve answers over TLS with the throwaway CA, and a client without it is refused"
 else
@@ -263,6 +332,14 @@ if [ "$code" = 401 ]; then
   pass "a call with no token is refused"
 else
   no "a call with no token answered $code, want 401"
+fi
+# A browser that signs in gets its session cookie marked Secure only when agni sees HTTPS. Behind the
+# chart's ingress, agni sees it only when --trusted-proxy names the ingress's pods.
+curl -s -o /dev/null -D "$out/signin.headers" --cacert "$out/ca.pem" -X POST "$url/signin" --data-urlencode "token=$(cat "$out/admin.token")"
+if grep -i '^set-cookie:' "$out/signin.headers" | grep -qi '; *secure'; then
+  pass "a browser signing in with a token gets a Secure session cookie"
+else
+  no "the sign-in's session cookie isn't Secure; see $out/signin.headers"
 fi
 
 # admin runs as the operator, with the token made on the server's machine.
@@ -299,23 +376,27 @@ for who in alice mallory; do
 done
 
 step "the admin adds a server connection and mounts hw/baseboard through it"
-# The local server reads the connection's token from its own environment. The bundle's server can't
-# reach this machine's environment, so the admin's CLI reads the token here and the server seals it.
-if [ "$mode" = bundle ]; then
+# The local server reads the connection's token from its own environment. A server in a container
+# can't reach this machine's environment, so the admin's CLI reads the token here and the server
+# seals it.
+if [ "$mode" != binary ]; then
   admin connections add hw --seal --github-token env:HW_TOKEN >"$out/connection.txt"
 else
   admin connections add hw --github-token env:HW_TOKEN >"$out/connection.txt"
 fi
 sealed_ok=1
-[ "$mode" = bundle ] && ! grep -q "^hw$(printf '\t')github-token$(printf '\t')sealed" "$out/connection.txt" && sealed_ok=
+[ "$mode" != binary ] && ! grep -q "^hw$(printf '\t')github-token$(printf '\t')sealed" "$out/connection.txt" && sealed_ok=
 if [ -n "$sealed_ok" ] && admin mounts add board github://hw/baseboard --ref rev-b --connection hw | tee "$out/mount.txt" | grep -q "via hw"; then
-  pass "hw/baseboard mounted at rev-b through the server connection$([ "$mode" = bundle ] && echo ", its token sealed")"
+  pass "hw/baseboard mounted at rev-b through the server connection$([ "$mode" != binary ] && echo ", its token sealed")"
 else
   no "mounting hw/baseboard; see $out/connection.txt, $out/mount.txt and $out/serve.log"
 fi
 if [ "$mode" = bundle ]; then
   store=$out/store-copy
   rm -rf "$store" && bundle cp agni:/var/lib/agni/meta "$store" >/dev/null
+elif [ "$mode" = helm ]; then
+  store=$out/store-copy
+  rm -rf "$store" && kube cp "$(kube get pod -l app.kubernetes.io/component=server -o name | head -1 | cut -d/ -f2):/var/lib/agni/meta" "$store" >/dev/null
 fi
 if grep -rqF "$HW_TOKEN" "$store"; then
   no "the store holds the server connection's token in the clear"
