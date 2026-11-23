@@ -10,18 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
-### Fixed
+## [0.11.2] - 2026-11-23
 
-- `agni designs push` and `agni designs add` keep the companions a folder's `design.yaml` declares,
-  and read the entry it names (issue 1858). An ODB++ board and an EDIF schematic export declared
-  together used to lose the schematic on push, and add refused the folder as two designs. The stored
-  design now holds both artifacts and checks as its folder does. Linking the declared entry with
-  `agni designs link` records it too, so a board and a schematic linked one at a time read the board.
-- `agni designs add` keeps the intent a board's `design.yaml` declares, as push and link do (issue
-  1864). A design added from a mount used to check as if it declared nothing. `--update` stores a
-  changed intent though no file the design holds changed, and an intent that doesn't parse refuses
-  the add. A refused board's reason names a missing file by its mount URI, where it used to show
-  the folder the mount serves from on the server.
+`agni serve --bootstrap` declares the connections, mounts, packs, designs and projects a server
+holds, and makes them at every start (PR 1852). `agni serve --config` reads serve's flags from YAML,
+and the chart passes that file alone (PR 1856). A stored design keeps the companions, entry and intent its
+folder's `design.yaml` declares, whether it was pushed, added or linked, as `agni check <folder>`
+reads them (PRs 1855, 1859, 1863 and 1866). `agni designs add` keeps every board it can, and a second run can skip
+or update (PR 1865). It is a patch with no change to an existing Go API, and the protos only gain
+fields. The full write-up is [RELEASES/v0.11.2.md](RELEASES/v0.11.2.md).
 
 ## [0.11.1] - 2026-11-23
 
