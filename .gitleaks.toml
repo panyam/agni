@@ -9,6 +9,9 @@ regexTarget = "match"
 regexes = ['''^key = `stroke-width="$''']
 
 [[allowlists]]
-description = "GetBoardGeometry page tokens in the wire fixture, base64 of b1|<the wire snapshot's revision>|0|0 and |0|1"
+description = "GetBoardGeometry page tokens in the wire fixture, base64 of b1|<the wire snapshot's revision>|0|0 and |0|1, for today's revision f80df77a27ca7d90 and for e0c54201071944e2, which history still holds (agni issue 1846)"
 regexTarget = "secret"
-regexes = ['''^YjF8ZjgwZGY3N2EyN2NhN2Q5MHwwfDA$''', '''^YjF8ZjgwZGY3N2EyN2NhN2Q5MHwwfDE$''']
+regexes = [
+  '''^YjF8ZjgwZGY3N2EyN2NhN2Q5MHwwfDA$''', '''^YjF8ZjgwZGY3N2EyN2NhN2Q5MHwwfDE$''',
+  '''^YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA$''', '''^YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDE$''',
+]

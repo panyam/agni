@@ -130,7 +130,11 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
+      # The whole history, since make secrets scans every commit, as it does on a laptop. A shallow
+      # checkout let a token that history still held pass here and fail locally (agni issue 1846).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - uses: ./.github/actions/setup
 
