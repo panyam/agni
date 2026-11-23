@@ -116,7 +116,7 @@ describe("the designs page", () => {
       // The Jetson project's rules go up as a pack from a copy of its folder holding a design too.
       // The server keeps the files project.yaml names and never asks for the design's.
       const project = mkdtempSync(join(tmpdir(), "agni-library-project-"));
-      for (const f of ["project.yaml", "profiles", "params"]) cpSync(join(repoRoot, "examples", "jetson-project", f), join(project, f), { recursive: true });
+      for (const f of ["project.yaml", "profiles", "params", "checklist"]) cpSync(join(repoRoot, "examples", "jetson-project", f), join(project, f), { recursive: true });
       mkdirSync(join(project, "designs", "big"), { recursive: true });
       cpSync(join(newer, "jetson-agx-thor-baseboard.kicad_pcb"), join(project, "designs", "big", "jetson-agx-thor-baseboard.kicad_pcb"));
       await page.goto(`${server.base}/packs/`);
