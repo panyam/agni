@@ -9,23 +9,18 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `028c2c01`.
+Last pruned 2026-11-23, at `a394e384`.
 
 ## At a glance
 
-**#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 16 of 17. Its exercise is `make exercise-enterprise`, against
-goapplib's fake GHES (`githubtest/cmd/fakegithub`, PR 1844), and CI runs it in its own job. At
-`028c2c01` all 24 steps pass. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
-(PR 1832), and `make kind-up exercise-enterprise-helm` against `deploy/helm/agni` on kind (PR 1837),
-which needs helm and kind. `guide/deploying/` (PR 1843) walks an admin through the same steps, and
-nobody has followed it by hand on a fresh VM yet. Its "Try it on a new install" section (PR 1850)
-links Antmicro's Jetson baseboard and reviews it under `examples/jetson-project` as a pack.
-`agni serve --bootstrap` (PR 1852) applies a YAML file of connections, mounts, packs, designs and
-projects on every start. `/readyz` answers 503 until every entry applies, and the chart's readiness
-probe uses it. `agni serve --config serve.yaml` (PR 1856) sets serve's flags from a file, with
-sections that nest by flag prefix, and `bootstrap:` inline. The chart passes only `--config`. A linked root sheet takes its whole
-declared design, and the Review panel offers the packs' checklists under `?pack=` (PR 1855).
+**No mission is active.** #1799 (run agni inside an enterprise against its own GitHub Enterprise
+Server) closed on 2026-11-23 at 17 of 17, with `make exercise-enterprise` passing 24 of 24 at
+`a394e384`. CI keeps running it, plus `make exercise-enterprise-bundle` (compose) and
+`make kind-up exercise-enterprise-helm` (Helm on kind). Its Later lines moved to #1708 (#1227) and
+#1806. `guide/deploying/` walks an admin through it, and nobody has followed it by hand on a fresh
+VM yet. `agni serve --config serve.yaml` (PR 1856) holds serve's flags and the `--bootstrap`
+resources (PR 1852), and the chart passes only `--config`. A stored design's check now runs its
+`design.yaml` intent, pushed or linked (PR 1859).
 
 - **agni is on goapplib v0.7.34, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
@@ -46,14 +41,13 @@ declared design, and the Review panel offers the packs' checklists under `?pack=
   those lists on 2026-11-21. Anything that fits no mission is on #1806, and
   `is:closed label:waiting reason:"not planned"` finds them all. A mission moves its Later lines
   before it closes.
-- **Other missions, none active.** #1611 (markup, starts at #1612 and #1613), and four whose first
+- **Missions to pick from.** #1611 (markup, starts at #1612 and #1613), and four whose first
   ticket writes the exercise: #1708 (#1712), #1709 (#1713), #1710 (#1714) and #1711 (#1715, which
   needs a datasheet PDF agni-samples may carry). #1176 holds only Later lines.
 
 ## Open, ranked
 
-1. **#1854**, a linked design ignores the `intent:` in its `design.yaml`. It needs a decision on
-   whether each sync of a followed link rewrites the intent.
+Nothing is ranked until a mission is picked. `~/.claude/skills/retriage/queue.sh` lists them.
 
 Later work is #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
