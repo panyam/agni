@@ -200,6 +200,12 @@ fails on `VCC_IN`, "every I2C bus has pull-ups" lists the camera buses, and the 
 not-applicable, since the board has no CAN. `agni diff designs/jetson@1.1.2 designs/jetson@1.1.3
 --remote https://agni.example.com` then shows what changed between the two revisions.
 
+To check it from a browser, open `https://agni.example.com/designs/jetson` and expand **Validate
+against...** under Reports. Tick the pack, then press **Run and keep the report**. The server keeps
+the report, and each rule's row opens to the nets it names.
+
+![The Jetson design's page after Validate against the jetson-rules pack, with the bulk-cap row open on VCC_IN]({{.Site.PathPrefix}}/static/images/guide/deploying-try-report.png)
+
 ## Check who can open it
 
 Ask someone who can't read `hw/baseboard` on GitHub to sign in and open `designs/bb`. agni refuses
