@@ -3136,6 +3136,32 @@ pub struct AddDesignsRequest {
     /// serves them from a pack. Each one left out is listed in uncopied_symbols (agni issue 1756).
     #[prost(bool, tag="4")]
     pub no_symbol_copy: bool,
+    /// on_exists says what a proposal whose design id the server already holds does (agni issue 1860).
+    /// Unspecified fails, as ON_EXISTS_FAIL does.
+    #[prost(enumeration="OnExists", tag="5")]
+    pub on_exists: i32,
+    /// allow_partial keeps every proposal that can be kept and reports each one refused in results.
+    /// Without it, one refused proposal fails the request and nothing is kept (agni issue 1860).
+    #[prost(bool, tag="6")]
+    pub allow_partial: bool,
+}
+/// AddResult is one proposal's outcome.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AddResult {
+    /// folder and entry name the proposal, as DesignToAdd does.
+    #[prost(string, tag="1")]
+    pub folder: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub entry: ::prost::alloc::string::String,
+    /// design is the design's resource name, "designs/{design}", empty when the proposal was refused
+    /// before it had an id.
+    #[prost(string, tag="3")]
+    pub design: ::prost::alloc::string::String,
+    #[prost(enumeration="AddOutcome", tag="4")]
+    pub outcome: i32,
+    /// reason says why a proposal was refused, empty otherwise.
+    #[prost(string, tag="5")]
+    pub reason: ::prost::alloc::string::String,
 }
 /// DesignToAdd picks one proposal and names the design it becomes.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -3158,7 +3184,7 @@ pub struct DesignToAdd {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AddDesignsResponse {
-    /// designs are the designs made, in the request's order.
+    /// designs are the designs made or updated, in the request's order.
     #[prost(message, repeated, tag="1")]
     pub designs: ::prost::alloc::vec::Vec<Design>,
     /// uncopied_symbols names each symbol folder a design.yaml named that no_symbol_copy left out, as
@@ -3166,6 +3192,9 @@ pub struct AddDesignsResponse {
     /// a pack holding the folder.
     #[prost(string, repeated, tag="2")]
     pub uncopied_symbols: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// results holds one outcome per proposal the request named, in its order (agni issue 1860).
+    #[prost(message, repeated, tag="3")]
+    pub results: ::prost::alloc::vec::Vec<AddResult>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetArtifactRequest {
@@ -3368,6 +3397,88 @@ impl ReportView {
             "REPORT_VIEW_UNSPECIFIED" => Some(Self::Unspecified),
             "REPORT_VIEW_BASIC" => Some(Self::Basic),
             "REPORT_VIEW_FULL" => Some(Self::Full),
+            _ => None,
+        }
+    }
+}
+/// OnExists is what AddDesigns does with a proposal whose design id the server already holds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum OnExists {
+    Unspecified = 0,
+    /// ON_EXISTS_FAIL refuses the proposal with ALREADY_EXISTS.
+    Fail = 1,
+    /// ON_EXISTS_SKIP leaves the existing design as it is.
+    Skip = 2,
+    /// ON_EXISTS_UPDATE writes the proposal's artifacts over the existing design's when their files
+    /// differ, and leaves a design whose files match alone. The design's title, series, packs and
+    /// intent stay as they are.
+    Update = 3,
+}
+impl OnExists {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "ON_EXISTS_UNSPECIFIED",
+            Self::Fail => "ON_EXISTS_FAIL",
+            Self::Skip => "ON_EXISTS_SKIP",
+            Self::Update => "ON_EXISTS_UPDATE",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "ON_EXISTS_UNSPECIFIED" => Some(Self::Unspecified),
+            "ON_EXISTS_FAIL" => Some(Self::Fail),
+            "ON_EXISTS_SKIP" => Some(Self::Skip),
+            "ON_EXISTS_UPDATE" => Some(Self::Update),
+            _ => None,
+        }
+    }
+}
+/// AddOutcome is what AddDesigns did with one proposal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum AddOutcome {
+    Unspecified = 0,
+    /// ADD_OUTCOME_ADDED made a new design.
+    Added = 1,
+    /// ADD_OUTCOME_UPDATED wrote new files over an existing design.
+    Updated = 2,
+    /// ADD_OUTCOME_UNCHANGED found an existing design already holding the proposal's files.
+    Unchanged = 3,
+    /// ADD_OUTCOME_SKIPPED left an existing design alone under ON_EXISTS_SKIP.
+    Skipped = 4,
+    /// ADD_OUTCOME_REFUSED kept nothing for the proposal, and reason says why.
+    Refused = 5,
+}
+impl AddOutcome {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "ADD_OUTCOME_UNSPECIFIED",
+            Self::Added => "ADD_OUTCOME_ADDED",
+            Self::Updated => "ADD_OUTCOME_UPDATED",
+            Self::Unchanged => "ADD_OUTCOME_UNCHANGED",
+            Self::Skipped => "ADD_OUTCOME_SKIPPED",
+            Self::Refused => "ADD_OUTCOME_REFUSED",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "ADD_OUTCOME_UNSPECIFIED" => Some(Self::Unspecified),
+            "ADD_OUTCOME_ADDED" => Some(Self::Added),
+            "ADD_OUTCOME_UPDATED" => Some(Self::Updated),
+            "ADD_OUTCOME_UNCHANGED" => Some(Self::Unchanged),
+            "ADD_OUTCOME_SKIPPED" => Some(Self::Skipped),
+            "ADD_OUTCOME_REFUSED" => Some(Self::Refused),
             _ => None,
         }
     }

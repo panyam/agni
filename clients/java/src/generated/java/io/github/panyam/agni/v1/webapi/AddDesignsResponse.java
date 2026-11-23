@@ -31,6 +31,7 @@ private static final long serialVersionUID = 0L;
     designs_ = java.util.Collections.emptyList();
     uncopiedSymbols_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    results_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -56,7 +57,7 @@ private static final long serialVersionUID = 0L;
   private java.util.List<io.github.panyam.agni.v1.webapi.Design> designs_;
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -67,7 +68,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -79,7 +80,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -90,7 +91,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -101,7 +102,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * designs are the designs made, in the request's order.
+   * designs are the designs made or updated, in the request's order.
    * </pre>
    *
    * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -173,6 +174,67 @@ private static final long serialVersionUID = 0L;
     return uncopiedSymbols_.getByteString(index);
   }
 
+  public static final int RESULTS_FIELD_NUMBER = 3;
+  @SuppressWarnings("serial")
+  private java.util.List<io.github.panyam.agni.v1.webapi.AddResult> results_;
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<io.github.panyam.agni.v1.webapi.AddResult> getResultsList() {
+    return results_;
+  }
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends io.github.panyam.agni.v1.webapi.AddResultOrBuilder> 
+      getResultsOrBuilderList() {
+    return results_;
+  }
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  @java.lang.Override
+  public int getResultsCount() {
+    return results_.size();
+  }
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.webapi.AddResult getResults(int index) {
+    return results_.get(index);
+  }
+  /**
+   * <pre>
+   * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+   * </pre>
+   *
+   * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.webapi.AddResultOrBuilder getResultsOrBuilder(
+      int index) {
+    return results_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -192,6 +254,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < uncopiedSymbols_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 2, uncopiedSymbols_.getRaw(i));
+    }
+    for (int i = 0; i < results_.size(); i++) {
+      output.writeMessage(3, results_.get(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -214,6 +279,15 @@ private static final long serialVersionUID = 0L;
       size += dataSize;
       size += 1 * getUncopiedSymbolsList().size();
     }
+
+        {
+          final int count = results_.size();
+          for (int i = 0; i < count; i++) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSizeNoTag(results_.get(i));
+          }
+          size += 1 * count;
+        }
     return size;
   }
   @java.lang.Override
@@ -242,6 +316,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getDesignsList())) return false;
     if (!getUncopiedSymbolsList()
         .equals(other.getUncopiedSymbolsList())) return false;
+    if (!getResultsList()
+        .equals(other.getResultsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -260,6 +336,10 @@ private static final long serialVersionUID = 0L;
     if (getUncopiedSymbolsCount() > 0) {
       hash = (37 * hash) + UNCOPIED_SYMBOLS_FIELD_NUMBER;
       hash = (53 * hash) + getUncopiedSymbolsList().hashCode();
+    }
+    if (getResultsCount() > 0) {
+      hash = (37 * hash) + RESULTS_FIELD_NUMBER;
+      hash = (53 * hash) + getResultsList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -401,6 +481,13 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000001);
       uncopiedSymbols_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
+      if (resultsBuilder_ == null) {
+        results_ = java.util.Collections.emptyList();
+      } else {
+        results_ = null;
+        resultsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000004);
       return this;
     }
 
@@ -442,6 +529,15 @@ private static final long serialVersionUID = 0L;
         result.designs_ = designs_;
       } else {
         result.designs_ = designsBuilder_.build();
+      }
+      if (resultsBuilder_ == null) {
+        if (((bitField0_ & 0x00000004) != 0)) {
+          results_ = java.util.Collections.unmodifiableList(results_);
+          bitField0_ = (bitField0_ & ~0x00000004);
+        }
+        result.results_ = results_;
+      } else {
+        result.results_ = resultsBuilder_.build();
       }
     }
 
@@ -501,6 +597,32 @@ private static final long serialVersionUID = 0L;
         }
         onChanged();
       }
+      if (resultsBuilder_ == null) {
+        if (!other.results_.isEmpty()) {
+          if (results_.isEmpty()) {
+            results_ = other.results_;
+            bitField0_ = (bitField0_ & ~0x00000004);
+          } else {
+            ensureResultsIsMutable();
+            results_.addAll(other.results_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.results_.isEmpty()) {
+          if (resultsBuilder_.isEmpty()) {
+            resultsBuilder_.dispose();
+            resultsBuilder_ = null;
+            results_ = other.results_;
+            bitField0_ = (bitField0_ & ~0x00000004);
+            resultsBuilder_ = 
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetResultsFieldBuilder() : null;
+          } else {
+            resultsBuilder_.addAllMessages(other.results_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -543,6 +665,19 @@ private static final long serialVersionUID = 0L;
               uncopiedSymbols_.add(input.readStringRequireUtf8());
               break;
             } // case 18
+            case 26: {
+              io.github.panyam.agni.v1.webapi.AddResult m =
+                  input.readMessage(
+                      io.github.panyam.agni.v1.webapi.AddResult.parser(),
+                      extensionRegistry);
+              if (resultsBuilder_ == null) {
+                ensureResultsIsMutable();
+                results_.add(m);
+              } else {
+                resultsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 26
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -574,7 +709,7 @@ private static final long serialVersionUID = 0L;
 
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -588,7 +723,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -602,7 +737,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -616,7 +751,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -635,7 +770,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -653,7 +788,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -671,7 +806,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -690,7 +825,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -708,7 +843,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -726,7 +861,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -745,7 +880,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -762,7 +897,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -779,7 +914,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -790,7 +925,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -804,7 +939,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -819,7 +954,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -830,7 +965,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -842,7 +977,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * designs are the designs made, in the request's order.
+     * designs are the designs made or updated, in the request's order.
      * </pre>
      *
      * <code>repeated .agni.v1.webapi.Design designs = 1 [json_name = "designs"];</code>
@@ -1029,6 +1164,312 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000002;
       onChanged();
       return this;
+    }
+
+    private java.util.List<io.github.panyam.agni.v1.webapi.AddResult> results_ =
+      java.util.Collections.emptyList();
+    private void ensureResultsIsMutable() {
+      if (!((bitField0_ & 0x00000004) != 0)) {
+        results_ = new java.util.ArrayList<io.github.panyam.agni.v1.webapi.AddResult>(results_);
+        bitField0_ |= 0x00000004;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.webapi.AddResult, io.github.panyam.agni.v1.webapi.AddResult.Builder, io.github.panyam.agni.v1.webapi.AddResultOrBuilder> resultsBuilder_;
+
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.webapi.AddResult> getResultsList() {
+      if (resultsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(results_);
+      } else {
+        return resultsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public int getResultsCount() {
+      if (resultsBuilder_ == null) {
+        return results_.size();
+      } else {
+        return resultsBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.AddResult getResults(int index) {
+      if (resultsBuilder_ == null) {
+        return results_.get(index);
+      } else {
+        return resultsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public Builder setResults(
+        int index, io.github.panyam.agni.v1.webapi.AddResult value) {
+      if (resultsBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureResultsIsMutable();
+        results_.set(index, value);
+        onChanged();
+      } else {
+        resultsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public Builder setResults(
+        int index, io.github.panyam.agni.v1.webapi.AddResult.Builder builderForValue) {
+      if (resultsBuilder_ == null) {
+        ensureResultsIsMutable();
+        results_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        resultsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public Builder addResults(io.github.panyam.agni.v1.webapi.AddResult value) {
+      if (resultsBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureResultsIsMutable();
+        results_.add(value);
+        onChanged();
+      } else {
+        resultsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public Builder addResults(
+        int index, io.github.panyam.agni.v1.webapi.AddResult value) {
+      if (resultsBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureResultsIsMutable();
+        results_.add(index, value);
+        onChanged();
+      } else {
+        resultsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public Builder addResults(
+        io.github.panyam.agni.v1.webapi.AddResult.Builder builderForValue) {
+      if (resultsBuilder_ == null) {
+        ensureResultsIsMutable();
+        results_.add(builderForValue.build());
+        onChanged();
+      } else {
+        resultsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public Builder addResults(
+        int index, io.github.panyam.agni.v1.webapi.AddResult.Builder builderForValue) {
+      if (resultsBuilder_ == null) {
+        ensureResultsIsMutable();
+        results_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        resultsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public Builder addAllResults(
+        java.lang.Iterable<? extends io.github.panyam.agni.v1.webapi.AddResult> values) {
+      if (resultsBuilder_ == null) {
+        ensureResultsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, results_);
+        onChanged();
+      } else {
+        resultsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public Builder clearResults() {
+      if (resultsBuilder_ == null) {
+        results_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        onChanged();
+      } else {
+        resultsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public Builder removeResults(int index) {
+      if (resultsBuilder_ == null) {
+        ensureResultsIsMutable();
+        results_.remove(index);
+        onChanged();
+      } else {
+        resultsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.AddResult.Builder getResultsBuilder(
+        int index) {
+      return internalGetResultsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.AddResultOrBuilder getResultsOrBuilder(
+        int index) {
+      if (resultsBuilder_ == null) {
+        return results_.get(index);  } else {
+        return resultsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public java.util.List<? extends io.github.panyam.agni.v1.webapi.AddResultOrBuilder> 
+         getResultsOrBuilderList() {
+      if (resultsBuilder_ != null) {
+        return resultsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(results_);
+      }
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.AddResult.Builder addResultsBuilder() {
+      return internalGetResultsFieldBuilder().addBuilder(
+          io.github.panyam.agni.v1.webapi.AddResult.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.AddResult.Builder addResultsBuilder(
+        int index) {
+      return internalGetResultsFieldBuilder().addBuilder(
+          index, io.github.panyam.agni.v1.webapi.AddResult.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * results holds one outcome per proposal the request named, in its order (agni issue 1860).
+     * </pre>
+     *
+     * <code>repeated .agni.v1.webapi.AddResult results = 3 [json_name = "results"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.webapi.AddResult.Builder> 
+         getResultsBuilderList() {
+      return internalGetResultsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.webapi.AddResult, io.github.panyam.agni.v1.webapi.AddResult.Builder, io.github.panyam.agni.v1.webapi.AddResultOrBuilder> 
+        internalGetResultsFieldBuilder() {
+      if (resultsBuilder_ == null) {
+        resultsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            io.github.panyam.agni.v1.webapi.AddResult, io.github.panyam.agni.v1.webapi.AddResult.Builder, io.github.panyam.agni.v1.webapi.AddResultOrBuilder>(
+                results_,
+                ((bitField0_ & 0x00000004) != 0),
+                getParentForChildren(),
+                isClean());
+        results_ = null;
+      }
+      return resultsBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.AddDesignsResponse)

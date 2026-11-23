@@ -183,7 +183,7 @@ public enum ArtifactType
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return io.github.panyam.agni.v1.webapi.DesignsProto.getDescriptor().getEnumType(2);
+    return io.github.panyam.agni.v1.webapi.DesignsProto.getDescriptor().getEnumType(4);
   }
 
   private static final ArtifactType[] VALUES = values();

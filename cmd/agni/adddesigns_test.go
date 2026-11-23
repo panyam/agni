@@ -77,11 +77,13 @@ func TestAddingAFolderKeepsOneDesignPerBoard(t *testing.T) {
 	if out, err := runDesigns(t, srv.URL, "add", "lab/boards", "--only", "boards/gw", "--series", "lab"); err != nil || count() != 1 {
 		t.Fatalf("designs add --only boards/gw = %q, %v, %d designs; want the gateway kept alone", out, err, count())
 	}
-	if out, err := runDesigns(t, srv.URL, "add", "lab/boards", "--yes"); err == nil {
-		t.Fatalf("designs add --yes over a kept gateway = %q; want ALREADY_EXISTS", out)
-	}
 	if out, err := runDesigns(t, srv.URL, "add", "lab/boards", "--only", "cut"); err != nil || count() != 2 {
 		t.Fatalf("designs add --only cut = %q, %v, %d designs; want both kept, each named for its folder", out, err, count())
+	}
+	// --yes keeps what it can and refuses a board already kept, so over two kept boards it keeps
+	// nothing more and fails (agni issue 1860).
+	if out, err := runDesigns(t, srv.URL, "add", "lab/boards", "--yes"); err == nil || !strings.Contains(out, "already exists") || count() != 2 {
+		t.Fatalf("designs add --yes over kept boards = %q, %v, %d designs; want ALREADY_EXISTS and the two kept", out, err, count())
 	}
 
 	for id, folder := range map[string]string{"gw": "boards/gw", "cut": "boards/cut"} {

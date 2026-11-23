@@ -428,6 +428,13 @@
               "designs/jetson-cut/artifacts/board"
             ]
           }
+        ],
+        "results": [
+          {
+            "folder": "boards/jetson-cut",
+            "design": "designs/jetson-cut",
+            "outcome": "ADD_OUTCOME_ADDED"
+          }
         ]
       }
     },

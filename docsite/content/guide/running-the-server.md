@@ -338,6 +338,12 @@ agni designs add boards/memory_unit --yes --series b200 --remote http://localhos
 The server copies each board's files, and each artifact records the mount and folder they came
 from.
 
+`add` keeps every board it can. A board the server refuses gets a `refused` line with its folder and
+the reason, and the command exits 1 once it has kept the rest. `--only` narrows what `--yes` keeps,
+so a broken board elsewhere in the folder doesn't stop the one you name. A board the server already
+keeps is refused too. Pass `--skip-existing` to leave it alone, or `--update` to rewrite it when its
+files changed, and the command can run on every start (agni issue 1860).
+
 Some schematics keep their parts' pins in separate symbol files: gEDA, Lepton and xschem read `.sym`
 files from the folders a `design.yaml` names under `symbols:` (agni issue 1756). An added design
 keeps each of those folders as an artifact of its own, a symbol library, even when the folder sits

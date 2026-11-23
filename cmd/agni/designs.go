@@ -295,6 +295,7 @@ left alone. Check the design with --pack and that name. --no-pack skips it.`,
 	var addOnly []string
 	var addSeries string
 	var noSymbolCopy bool
+	var addSkipExisting, addUpdate bool
 	add := &cobra.Command{
 		Use:   "add <mount>/<path>",
 		Short: "Keep the boards in a folder of a server's mount as designs",
@@ -304,7 +305,13 @@ once, keeps its own copy, and records where they came from. It writes nothing in
 
 With neither --yes nor --only, add lists the proposals and keeps nothing. --yes keeps them all, and
 --only keeps the ones whose folder, id or entry it names (repeatable), and
---only <folder|id|entry>=<id> gives that one an id of its own.
+--only <folder|id|entry>=<id> gives that one an id of its own. With --only, --yes keeps only the
+named ones.
+
+add keeps every board it can. It prints "refused", the folder and the reason for each board the
+server refused, and exits 1 after keeping the rest (agni issue 1860). A board whose design the server
+already keeps is refused too, unless --skip-existing leaves it as it is or --update rewrites it
+when its files changed. Either one makes the command safe to run on every start.
 
 A design keeps the symbol folders its design.yaml names as an artifact of its own, so it reads
 alone, and --no-symbol-copy leaves them out. When the design.yaml extends a project, the server
@@ -312,6 +319,16 @@ keeps that project as a pack and the design reads under it, so the project's own
 shared by every design added from it rather than copied.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if addSkipExisting && addUpdate {
+				return fmt.Errorf("--skip-existing leaves a kept design alone and --update rewrites it; pass one")
+			}
+			onExists := webapi.OnExists_ON_EXISTS_FAIL
+			switch {
+			case addSkipExisting:
+				onExists = webapi.OnExists_ON_EXISTS_SKIP
+			case addUpdate:
+				onExists = webapi.OnExists_ON_EXISTS_UPDATE
+			}
 			c, err := client(cmd)
 			if err != nil {
 				return err
@@ -335,7 +352,9 @@ shared by every design added from it rather than copied.`,
 			var picks []*webapi.DesignToAdd
 			for _, p := range proposed.GetDesigns() {
 				id := service.DefaultDesignID(p, proposed.GetDesigns())
-				named, picked := "", addAll
+				// --only narrows what --yes keeps, so a refused board elsewhere in the folder doesn't
+				// matter (agni issue 1860).
+				named, picked := "", addAll && len(only) == 0
 				entry := p.GetDesign().GetEntryUri()
 				for _, k := range []string{p.GetFolder(), id, entry, strings.TrimPrefix(entry, uri+"/")} {
 					if v, ok := only[k]; ok {
@@ -359,7 +378,7 @@ shared by every design added from it rather than copied.`,
 				fmt.Fprintln(cmd.ErrOrStderr(), "note: nothing kept; pass --yes to keep every proposal, or --only <folder or id>")
 				return nil
 			}
-			resp, err := unary(cmd.Context(), c.designs.AddDesigns, &webapi.AddDesignsRequest{Uri: uri, Designs: picks, NoSymbolCopy: noSymbolCopy})
+			resp, err := unary(cmd.Context(), c.designs.AddDesigns, &webapi.AddDesignsRequest{Uri: uri, Designs: picks, NoSymbolCopy: noSymbolCopy, OnExists: onExists, AllowPartial: true})
 			if err != nil {
 				return err
 			}
@@ -369,6 +388,21 @@ shared by every design added from it rather than copied.`,
 			for _, d := range resp.GetDesigns() {
 				printDesign(cmd.OutOrStdout(), d)
 			}
+			refused := 0
+			for _, r := range resp.GetResults() {
+				switch r.GetOutcome() {
+				case webapi.AddOutcome_ADD_OUTCOME_SKIPPED:
+					fmt.Fprintf(cmd.OutOrStdout(), "skipped\t%s\t%s\talready kept\n", displayFolder(r.GetFolder()), r.GetDesign())
+				case webapi.AddOutcome_ADD_OUTCOME_UNCHANGED:
+					fmt.Fprintf(cmd.OutOrStdout(), "unchanged\t%s\t%s\n", displayFolder(r.GetFolder()), r.GetDesign())
+				case webapi.AddOutcome_ADD_OUTCOME_REFUSED:
+					refused++
+					fmt.Fprintf(cmd.OutOrStdout(), "refused\t%s\t%s\n", displayFolder(r.GetFolder()), r.GetReason())
+				}
+			}
+			if refused > 0 {
+				return fmt.Errorf("%d of %d proposals refused; the rest were kept", refused, len(picks))
+			}
 			return nil
 		},
 	}
@@ -376,6 +410,8 @@ shared by every design added from it rather than copied.`,
 	add.Flags().StringArrayVar(&addOnly, "only", nil, "keep the proposal at this folder, with this id, or with this entry, as <folder|id|entry>[=<new id>] to name its id (repeatable)")
 	add.Flags().StringVar(&addSeries, "series", "", "the series every kept design joins")
 	add.Flags().BoolVar(&noSymbolCopy, "no-symbol-copy", false, "leave out the symbol folders each design.yaml names, for a library a pack already holds")
+	add.Flags().BoolVar(&addSkipExisting, "skip-existing", false, "leave a design the server already keeps as it is, so the command can run again")
+	add.Flags().BoolVar(&addUpdate, "update", false, "rewrite a design the server already keeps when its files changed, and leave it alone when they didn't")
 
 	link := &cobra.Command{
 		Use:   "link <id> <artifact> <mount>[/<path>][@<ref>]",

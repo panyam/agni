@@ -58,6 +58,8 @@ type addedDesign struct {
 }
 
 // AddDesigns makes stored designs from the proposals a mounted folder makes that the request names.
+// Each proposal gets one result. Without allow_partial, one refused proposal fails the request and
+// nothing is kept. A proposal whose design exists follows on_exists (agni issue 1860).
 func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRequest) (*webapi.AddDesignsResponse, error) {
 	if s.proposer == nil || s.mountRead == nil {
 		return nil, fmt.Errorf("%w: this server reads no mounted folders into designs", ErrFailedPrecondition)
@@ -76,65 +78,111 @@ func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRe
 	if err != nil {
 		return nil, err
 	}
-	var adds []addedDesign
+	resp := &webapi.AddDesignsResponse{}
+	// planned is a proposal that passed planning, with its result and whether it updates a design.
+	type planned struct {
+		add    addedDesign
+		result *webapi.AddResult
+		update bool
+	}
+	var plans []planned
 	ids := map[string]bool{}
 	for _, want := range req.GetDesigns() {
-		p, err := pickProposal(req.GetUri(), proposed.GetDesigns(), want)
+		result := &webapi.AddResult{Folder: want.GetFolder(), Entry: want.GetEntry()}
+		resp.Results = append(resp.Results, result)
+		add, exists, err := s.planOne(ctx, u.Mount, req, proposed.GetDesigns(), want, ids)
+		if add.id != "" {
+			result.Design = StandaloneDesignName(add.id)
+		}
 		if err != nil {
-			return nil, err
+			if !req.GetAllowPartial() {
+				return nil, err
+			}
+			result.Outcome, result.Reason = webapi.AddOutcome_ADD_OUTCOME_REFUSED, err.Error()
+			continue
 		}
-		if want.GetDesignId() == "" {
-			want = &webapi.DesignToAdd{Folder: want.GetFolder(), Entry: want.GetEntry(), DesignId: DefaultDesignID(p, proposed.GetDesigns()), Title: want.GetTitle(), Series: want.GetSeries()}
+		if exists {
+			switch req.GetOnExists() {
+			case webapi.OnExists_ON_EXISTS_SKIP:
+				result.Outcome = webapi.AddOutcome_ADD_OUTCOME_SKIPPED
+				continue
+			case webapi.OnExists_ON_EXISTS_UPDATE:
+				same, err := s.holdsFiles(ctx, add)
+				if err != nil {
+					return nil, err
+				}
+				if same {
+					result.Outcome = webapi.AddOutcome_ADD_OUTCOME_UNCHANGED
+					continue
+				}
+				plans = append(plans, planned{add: add, result: result, update: true})
+				continue
+			default:
+				err := fmt.Errorf("%w: %s", ErrAlreadyExists, StandaloneDesignName(add.id))
+				if !req.GetAllowPartial() {
+					return nil, err
+				}
+				result.Outcome, result.Reason = webapi.AddOutcome_ADD_OUTCOME_REFUSED, err.Error()
+				continue
+			}
 		}
-		add, err := s.planAdd(ctx, u.Mount, p, want)
-		if err != nil {
-			return nil, err
-		}
-		if err := s.planSymbols(ctx, u.Mount, p, &add, req.GetNoSymbolCopy()); err != nil {
-			return nil, err
-		}
-		if ids[add.id] {
-			return nil, fmt.Errorf("%w: two proposals would both be %s", ErrInvalidArgument, StandaloneDesignName(add.id))
-		}
-		ids[add.id] = true
-		if _, err := s.catalog.Design(ctx, StandaloneDesignName(add.id)); err == nil {
-			return nil, fmt.Errorf("%w: %s", ErrAlreadyExists, StandaloneDesignName(add.id))
-		} else if !errors.Is(err, ErrNotFound) {
-			return nil, err
-		}
-		adds = append(adds, add)
+		plans = append(plans, planned{add: add, result: result})
 	}
-	resp := &webapi.AddDesignsResponse{}
 	if req.GetValidateOnly() {
-		for _, a := range adds {
-			d := &webapi.Design{Name: StandaloneDesignName(a.id), Title: a.record.Title, Series: a.record.Series}
-			for _, w := range a.writes {
-				d.Artifacts = append(d.Artifacts, ArtifactName(a.id, w.ID))
+		for _, p := range plans {
+			p.result.Outcome = webapi.AddOutcome_ADD_OUTCOME_ADDED
+			if p.update {
+				p.result.Outcome = webapi.AddOutcome_ADD_OUTCOME_UPDATED
+			}
+			d := &webapi.Design{Name: StandaloneDesignName(p.add.id), Title: p.add.record.Title, Series: p.add.record.Series}
+			for _, w := range p.add.writes {
+				d.Artifacts = append(d.Artifacts, ArtifactName(p.add.id, w.ID))
 			}
 			resp.Designs = append(resp.Designs, d)
 		}
 		return resp, nil
 	}
-	for i, a := range adds {
-		if !a.project.IsZero() && s.packer != nil {
-			pack, err := s.packer(ctx, a.project)
-			if err != nil {
-				return nil, fmt.Errorf("%s: keeping its project %s as a pack: %w", StandaloneDesignName(a.id), a.project, err)
+	for i, p := range plans {
+		if p.update || p.add.project.IsZero() || s.packer == nil {
+			continue
+		}
+		pack, err := s.packer(ctx, p.add.project)
+		if err != nil {
+			err = fmt.Errorf("%s: keeping its project %s as a pack: %w", StandaloneDesignName(p.add.id), p.add.project, err)
+			if !req.GetAllowPartial() {
+				return nil, err
 			}
-			adds[i].record.Packs = []string{pack}
+			p.result.Outcome, p.result.Reason = webapi.AddOutcome_ADD_OUTCOME_REFUSED, err.Error()
+			continue
 		}
+		plans[i].add.record.Packs = []string{pack}
 	}
-	for _, a := range adds {
-		if err := s.writeAdded(ctx, a); err != nil {
-			return nil, err
+	var written []planned
+	for _, p := range plans {
+		if p.result.Outcome == webapi.AddOutcome_ADD_OUTCOME_REFUSED {
+			continue
 		}
-		for _, u := range a.uncopied {
-			resp.UncopiedSymbols = append(resp.UncopiedSymbols, StandaloneDesignName(a.id)+": "+u)
+		write := s.writeAdded
+		outcome := webapi.AddOutcome_ADD_OUTCOME_ADDED
+		if p.update {
+			write, outcome = s.writeUpdated, webapi.AddOutcome_ADD_OUTCOME_UPDATED
 		}
+		if err := write(ctx, p.add); err != nil {
+			if !req.GetAllowPartial() {
+				return nil, err
+			}
+			p.result.Outcome, p.result.Reason = webapi.AddOutcome_ADD_OUTCOME_REFUSED, err.Error()
+			continue
+		}
+		p.result.Outcome = outcome
+		for _, u := range p.add.uncopied {
+			resp.UncopiedSymbols = append(resp.UncopiedSymbols, StandaloneDesignName(p.add.id)+": "+u)
+		}
+		written = append(written, p)
 	}
 	// Read back once every design is written, so a series' latest is marked among all of them.
-	for _, a := range adds {
-		d, err := s.catalog.Design(ctx, StandaloneDesignName(a.id))
+	for _, p := range written {
+		d, err := s.catalog.Design(ctx, StandaloneDesignName(p.add.id))
 		if err != nil {
 			return nil, err
 		}
@@ -144,6 +192,67 @@ func (s *DesignService) AddDesigns(ctx context.Context, req *webapi.AddDesignsRe
 		resp.Designs = append(resp.Designs, d)
 	}
 	return resp, nil
+}
+
+// planOne plans the proposal want names: its id, its artifacts and its symbol folders. exists says
+// whether the server already holds a design with its id. ids holds the ids earlier proposals in the
+// request took, and planOne adds this one's.
+func (s *DesignService) planOne(ctx context.Context, mount string, req *webapi.AddDesignsRequest, proposed []*webapi.ProposedDesign, want *webapi.DesignToAdd, ids map[string]bool) (addedDesign, bool, error) {
+	p, err := pickProposal(req.GetUri(), proposed, want)
+	if err != nil {
+		return addedDesign{}, false, err
+	}
+	if want.GetDesignId() == "" {
+		want = &webapi.DesignToAdd{Folder: want.GetFolder(), Entry: want.GetEntry(), DesignId: DefaultDesignID(p, proposed), Title: want.GetTitle(), Series: want.GetSeries()}
+	}
+	add, err := s.planAdd(ctx, mount, p, want)
+	if err != nil {
+		return addedDesign{id: add.id}, false, err
+	}
+	if err := s.planSymbols(ctx, mount, p, &add, req.GetNoSymbolCopy()); err != nil {
+		return addedDesign{id: add.id}, false, err
+	}
+	if ids[add.id] {
+		return add, false, fmt.Errorf("%w: two proposals would both be %s", ErrInvalidArgument, StandaloneDesignName(add.id))
+	}
+	ids[add.id] = true
+	if _, err := s.catalog.Design(ctx, StandaloneDesignName(add.id)); err == nil {
+		return add, true, nil
+	} else if !errors.Is(err, ErrNotFound) {
+		return add, false, err
+	}
+	return add, false, nil
+}
+
+// holdsFiles reports whether the stored design a's id names already holds each artifact a would
+// write, with the same files, so an update can leave it alone. An artifact a doesn't write is not
+// compared, as an update leaves it.
+func (s *DesignService) holdsFiles(ctx context.Context, a addedDesign) (bool, error) {
+	arts, err := s.catalog.Artifacts(ctx, StandaloneDesignName(a.id))
+	if err != nil {
+		return false, err
+	}
+	have := map[string]string{}
+	for _, art := range arts {
+		_, id, _ := ArtifactID(art.GetName())
+		have[id] = fileSet(art.GetFiles())
+	}
+	for _, w := range a.writes {
+		if got, ok := have[w.ID]; !ok || got != fileSet(w.Files) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// fileSet is a canonical string of files' paths and hashes, in path order.
+func fileSet(files []*webapi.SnapshotFile) string {
+	lines := make([]string, 0, len(files))
+	for _, f := range files {
+		lines = append(lines, f.GetPath()+"\x00"+f.GetSha256())
+	}
+	slices.Sort(lines)
+	return strings.Join(lines, "\n")
 }
 
 // pickProposal finds the proposal want names, by its folder and, when set, its entry. A folder holding
@@ -246,6 +355,17 @@ func (s *DesignService) planAdd(ctx context.Context, mount string, p *webapi.Pro
 		add.writes = append(add.writes, w)
 	}
 	return add, nil
+}
+
+// writeUpdated writes an existing design's artifacts from a, and leaves its record as it is. An
+// artifact the design holds that a doesn't write stays.
+func (s *DesignService) writeUpdated(ctx context.Context, a addedDesign) error {
+	read := func(_ context.Context, h string) ([]byte, bool) {
+		b, ok := a.contents[h]
+		return b, ok
+	}
+	_, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(a.id), a.writes, read)
+	return err
 }
 
 // writeAdded makes one design and writes its artifacts. A design it made and could not fill is
