@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # The enterprise mission's exercise (agni issues 1799, 1800). It runs agni the way an IT admin would
-# inside a company network, against a fake GitHub Enterprise Server (tools/fakegithub --seed), so it
-# needs no network and no GitHub account.
+# inside a company network, against goapplib's fake GitHub Enterprise Server (githubtest's
+# cmd/fakegithub, agni issue 1841), so it needs no network and no GitHub account.
 #
 # The fake holds two private repos. hw/baseboard has the tutorial's gateway board at tags rev-b and
 # rev-c, with the schematic and board kept in Git LFS (#1809), and hw/agni-packs has the tutorial project's checks as a pack. alice is in org acme and can
 # read both. mallory is in org acme and can read neither, as a contractor might.
+#
+# The GitHub App is installed on hw with Contents at Read and no Members permission, as an operator
+# who missed that box makes it. So the server lets alice and mallory in by name. bob is in acme too,
+# and his sign-in through org:acme is refused with a message naming the missing permission (#1841).
 #
 # agni serve starts as the enterprise bundle starts it: TLS from a throwaway CA, --auth tokens,
 # sign-in through a GitHub App on the fake, a connections key and a webhook secret. Every request it
@@ -132,8 +136,9 @@ server_token=$(openssl rand -hex 20)
 client_secret=$(openssl rand -hex 20)
 cat >"$out/repos/seed.json" <<EOF
 {
-  "app": {"client_id": "Iv1.exercise", "client_secret": "$client_secret"},
-  "users": [{"login": "alice", "orgs": ["acme"]}, {"login": "mallory", "orgs": ["acme"]}],
+  "app": {"client_id": "Iv1.exercise", "client_secret": "$client_secret",
+          "permissions": {"contents": "read"}, "installations": [{"account": "hw"}]},
+  "users": [{"login": "alice", "orgs": ["acme"]}, {"login": "mallory", "orgs": ["acme"]}, {"login": "bob", "orgs": ["acme"]}],
   "tokens": ["$server_token"],
   "repos": [
     {"repo": "hw/baseboard", "private": true, "readers": ["alice"], "tokens": ["$server_token"],
@@ -166,11 +171,14 @@ fi
 echo "made $out/ca.pem and a server certificate it signed"
 
 step "start the fake GitHub Enterprise Server"
-(cd "$root" && go build -o "$out/fakegithub" ./tools/fakegithub)
+(cd "$root" && go build -o "$out/fakegithub" github.com/panyam/goapplib/storage/mounts/github/githubtest/cmd/fakegithub)
 ctl_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
 ctl=http://127.0.0.1:$ctl_port
 fake_host=()
-[ "$mode" != binary ] && fake_host=(--host "$host" --tls-cert "$out/fake.pem" --tls-key "$out/fake.key")
+if [ "$mode" != binary ]; then
+  fake_port=$(python3 -c 'import socket,sys; s=socket.socket(); s.bind((sys.argv[1],0)); print(s.getsockname()[1])' "$host")
+  fake_host=(--listen "$host:$fake_port" --base-url "https://$host:$fake_port" --tls-cert "$out/fake.pem" --tls-key "$out/fake.key")
+fi
 "$out/fakegithub" --seed "$out/repos/seed.json" --addr "127.0.0.1:$ctl_port" ${fake_host[@]+"${fake_host[@]}"} --hook-ca "$out/ca.pem" >>"$out/fakegithub.log" 2>&1 &
 pids+=($!)
 wait_for "$ctl/" || { echo "the fake didn't start; see $out/fakegithub.log" >&2; exit 1; }
@@ -240,7 +248,7 @@ AGNI_CONNECTIONS_KEY_FILE=$out/secrets/connections.key
 AGNI_GITHUB_API=$ghes/api/v3
 AGNI_GITHUB_CLIENT_ID=Iv1.exercise
 AGNI_GITHUB_CLIENT_SECRET_FILE=$out/secrets/github-client-secret
-AGNI_GITHUB_ALLOW=org:acme
+AGNI_GITHUB_ALLOW=org:acme,user:alice,user:mallory
 AGNI_GITHUB_WEBHOOK_SECRET_FILE=$out/secrets/github-webhook-secret
 EXERCISE_PROXY=http://$host:$trap_port
 EXERCISE_NO_PROXY=$host
@@ -269,7 +277,7 @@ trustedProxies: [${EXERCISE_POD_CIDR:-10.244.0.0/16}]
 github:
   api: $ghes/api/v3
   clientID: Iv1.exercise
-  allow: [org:acme]
+  allow: [org:acme, "user:alice", "user:mallory"]
 caConfigMap: agni-ca
 ingress:
   host: localhost
@@ -306,7 +314,7 @@ serve() {
     --auth tokens --tls-cert "$out/server.pem" --tls-key "$out/server.key" \
     --connections-key env:AGNI_CONNECTIONS_KEY --public-url "$url" \
     --github-api "$ghes/api/v3" --github-raw "$ghes/raw" \
-    --github-client-id Iv1.exercise --github-client-secret env:AGNI_GITHUB_CLIENT_SECRET --github-allow org:acme \
+    --github-client-id Iv1.exercise --github-client-secret env:AGNI_GITHUB_CLIENT_SECRET --github-allow org:acme,user:alice,user:mallory \
     --github-webhook-secret env:AGNI_WEBHOOK_SECRET) >>"$out/serve.log" 2>&1 &
   serve_pid=$!
   wait_for --cacert "$out/ca.pem" "$url/healthz" || { echo "agni serve didn't start; see $out/serve.log" >&2; exit 1; }
@@ -374,6 +382,13 @@ for who in alice mallory; do
     no "$who's sign-in; see $out/login-$who.log and $out/serve.log"
   fi
 done
+
+step "bob, in acme, is refused because the App can't read acme's members"
+if ! login bob && grep -q "Members organization permission" "$out/login-bob.log"; then
+  pass "bob's sign-in through org:acme is refused, naming the App's missing Members permission"
+else
+  no "bob's sign-in wasn't refused with the Members permission named; see $out/login-bob.log"
+fi
 
 step "the admin adds a server connection and mounts hw/baseboard through it"
 # The local server reads the connection's token from its own environment. A server in a container

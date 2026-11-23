@@ -971,6 +971,10 @@ agni login --remote https://agni.example.com
 - `--github-allow` takes `org:<org>` for an org's members and `user:<login>` for one person, comma
   separated or repeated. It can't be empty, since anyone with a GitHub account could sign in
   otherwise. Someone it leaves out gets a page saying so, and no session.
+- An `org:` entry asks GitHub whether the person is in the org, through the App. That needs the
+  App's Members organization permission at Read. Without it GitHub refuses to answer, so the server
+  refuses each person the entry would let in, and its message names the permission (agni issue
+  1841). A `user:` entry needs no permission.
 - `agni login` signs in from a terminal through GitHub's device flow. It prints an address and a
   code, waits while the person types the code there, and keeps the token the server mints in
   `agni/credentials` in their config folder. Every `--remote` call to that server sends it when

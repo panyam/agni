@@ -140,6 +140,21 @@ func TestSignInWithGitHubKeepsThePersonsConnection(t *testing.T) {
 	}
 }
 
+// Say the operator made the GitHub App without the Members permission. bob is in acme, which the
+// server lets in, but GitHub answers 403 when the server asks about his membership through the App.
+// The refusal names the permission to add, so the operator knows what to fix (agni issue 1841).
+func TestSignInThroughAnAppWithoutMembersNamesThePermission(t *testing.T) {
+	gh := githubtest.New(t)
+	gh.AddUser("bob", "acme")
+	server, _ := signInServer(t, gh)
+	gh.AddApp(appClientID, appSecret).SetPermissions(map[string]string{"contents": "read"})
+
+	path, code, body, session := browserSignIn(t, gh, server, "bob", "/designs")
+	if code != http.StatusForbidden || session != "" || !strings.Contains(body, "Members") || !strings.Contains(body, "acme") {
+		t.Errorf("bob's sign-in ended at %s with %d and session %q:\n%s\nwant 403, no session, naming the Members permission on acme", path, code, session, body)
+	}
+}
+
 // agni login signs a person in with GitHub's device flow through the server and keeps the token,
 // so later --remote calls send it with no AGNI_TOKEN (agni issue 1772).
 func TestAgniLoginSignsInFromATerminal(t *testing.T) {

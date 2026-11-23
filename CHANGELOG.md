@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+### Fixed
+
+- A sign-in refused because the GitHub App lacks the Members permission now says so (issue 1841).
+  The server asks GitHub about an `org:` entry's members through the App, and GitHub answers 403
+  without that permission. The refusal used to read "GitHub answered 403", and now names the
+  permission to add. The enterprise exercise runs on goapplib's fake GHES and checks this refusal.
+
 ### Added
 
 - A Helm chart for agni and agnids (issue 1803). Each release publishes it to

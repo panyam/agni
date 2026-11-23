@@ -266,6 +266,10 @@ func (s *githubSignIns) allowed(ctx context.Context, login string, tok *oauth2.T
 		case http.StatusNoContent:
 			return true, nil
 		case http.StatusNotFound, http.StatusFound:
+		case http.StatusForbidden:
+			// GitHub answers 403 to an App token when the App lacks the Members permission
+			// (agni issue 1841).
+			return false, fmt.Errorf("the GitHub App can't see who is in %s; its operator needs to give the App the Members organization permission at Read, or add user:%s to --github-allow", org, login)
 		default:
 			return false, fmt.Errorf("GitHub answered %d about %s's membership of %s", resp.StatusCode, login, org)
 		}

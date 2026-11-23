@@ -22,7 +22,8 @@ on:
       - hack/exercise_enterprise.sh
       - hack/exercise-enterprise.compose.yaml
       - hack/kind_up.sh
-      - tools/fakegithub/**
+      # The exercise builds goapplib's fake GHES at the version go.mod names (agni issue 1841).
+      - go.mod
       # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
       - protos/agni/v1/webapi/**
       - deploy/**
@@ -42,7 +43,8 @@ on:
       - hack/exercise_enterprise.sh
       - hack/exercise-enterprise.compose.yaml
       - hack/kind_up.sh
-      - tools/fakegithub/**
+      # The exercise builds goapplib's fake GHES at the version go.mod names (agni issue 1841).
+      - go.mod
       # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
       - protos/agni/v1/webapi/**
       - deploy/**
