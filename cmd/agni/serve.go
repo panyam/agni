@@ -96,7 +96,7 @@ func serveCmd() *cobra.Command {
 	var oidcIssuer, oidcClientID, oidcSecretRef, oidcLabel string
 	var oidcAllow []string
 	var pollEvery time.Duration
-	var bootstrapPath string
+	var bootstrapPath, configPath string
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -107,6 +107,10 @@ func serveCmd() *cobra.Command {
 			"anywhere and no ./web, it serves the API alone, which is what an installed binary has.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			plan, err := applyServeConfig(cmd, configPath)
+			if err != nil {
+				return err
+			}
 			if err := checkEmbedOrigins(embedOrigins); err != nil {
 				return err
 			}
@@ -135,11 +139,12 @@ func serveCmd() *cobra.Command {
 			if (webhookSecretRef != "" || graphStateRef != "" || pollEvery != 0) && (store == nil || uploadsDir == "") {
 				return fmt.Errorf("--github-webhook-secret and --poll move linked designs, so they need --store and --uploads")
 			}
-			var plan *service.BootstrapPlan
-			if bootstrapPath != "" {
+			if plan != nil || bootstrapPath != "" {
 				if store == nil || uploadsDir == "" {
 					return fmt.Errorf("--bootstrap makes designs, packs and mounts in the store, so it needs --store and --uploads")
 				}
+			}
+			if plan == nil && bootstrapPath != "" {
 				if plan, err = readBootstrap(bootstrapPath); err != nil {
 					return err
 				}
@@ -271,6 +276,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&gcsEndpoint, "gcs-endpoint", "", "the Cloud Storage API a gs:// mount reads. Empty is Google's (agni issue 1730)")
 	c.Flags().StringVar(&graphAPI, "graph-api", "", "the Microsoft Graph API a msgraph:// mount reads, for a national cloud. Empty is https://graph.microsoft.com/v1.0 (agni issue 1729)")
 	c.Flags().StringVar(&bootstrapPath, "bootstrap", "", "a YAML file naming the connections, mounts, packs, designs and projects this server should hold (agni issue 1808). The server applies it at start and again until every entry applies, and /readyz answers 503 until then. An entry that already matches is left alone. A stored design, pack or project the file doesn't name is logged, and prune: true in the file deletes it. Needs --store and --uploads")
+	c.Flags().StringVar(&configPath, "config", "", "a YAML file that sets these flags (agni issue 1853). Each key is a flag's name, with underscores for dashes, and sections nest: github: {client_id: x} sets --github-client-id. A list sets a list flag. bootstrap: holds the --bootstrap resources inline, or names their file. A flag typed here wins over the file, and an unknown key stops the server before it listens. A value is passed as written, so a path resolves as the flag's would and a secret stays an env: or file: reference")
 	c.Flags().DurationVar(&pollEvery, "poll", 0, "ask every source a linked design follows whether it moved, this often, such as 5m (agni issue 1726). It resolves each branch or folder once per pass, one request to GitHub for a repo, and syncs or marks the designs behind it. 0 polls nothing. Needs --store and --uploads")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with, HTTP/2 included, so gRPC clients reach the server over TLS; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")

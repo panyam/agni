@@ -1,12 +1,4 @@
-{{- $publicURL := required "set publicURL, the URL people open, such as https://agni.example.com" .Values.publicURL -}}
-{{- $clientID := required "set github.clientID, the GitHub App's client id" .Values.github.clientID -}}
-{{- $allow := .Values.github.allow | default list -}}
-{{- if not $allow }}{{ fail "set github.allow, such as [org:acme]" }}{{ end -}}
 {{- $oidc := .Values.oidc | default dict -}}
-{{- if $oidc.issuer }}
-{{- if not $oidc.clientID }}{{ fail "set oidc.clientID, the client registered with oidc.issuer" }}{{ end -}}
-{{- if not $oidc.allow }}{{ fail "set oidc.allow, such as [domain:example.com]" }}{{ end -}}
-{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,11 +19,9 @@ spec:
     metadata:
       labels:
         {{- include "agni.selector" . | nindent 8 }}
-      {{- with .Values.bootstrap }}
       annotations:
-        # A changed bootstrap restarts the pod, so the server applies the new one.
-        agni/bootstrap-sha256: {{ toYaml . | sha256sum }}
-      {{- end }}
+        # A changed serve.yaml restarts the pod, so the server reads the new one.
+        agni/serve-sha256: {{ include "agni.serveConfig" . | sha256sum }}
     spec:
       securityContext:
         runAsNonRoot: true
@@ -44,35 +34,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - serve
-            - --addr=:8080
-            - --store={{ include "agni.store" . }}
-            - --uploads={{ include "agni.uploads" . }}
-            {{- if regexMatch "^(s3|gs)://" (include "agni.uploads" .) }}
-            - --uploads-cache=/var/lib/agni/uploads-cache
-            {{- end }}
-            - --auth=tokens
-            - --trusted-proxy={{ include "agni.proxies" . }}
-            - --connections-key=file:/run/secrets/agni/connections-key
-            - --public-url={{ $publicURL }}
-            - --github-api={{ .Values.github.api }}
-            - --github-client-id={{ $clientID }}
-            - --github-client-secret=file:/run/secrets/agni/github-client-secret
-            - --github-allow={{ join "," $allow }}
-            - --github-webhook-secret=file:/run/secrets/agni/github-webhook-secret
-            {{- if .Values.bootstrap }}
-            - --bootstrap=/etc/agni/bootstrap/bootstrap.yaml
-            {{- end }}
-            {{- if $oidc.issuer }}
-            - --oidc-issuer={{ $oidc.issuer }}
-            - --oidc-client-id={{ $oidc.clientID }}
-            - --oidc-allow={{ join "," $oidc.allow }}
-            {{- if $oidc.clientSecret }}
-            - --oidc-client-secret=file:/run/secrets/agni/oidc-client-secret
-            {{- end }}
-            {{- with $oidc.label }}
-            - --oidc-label={{ . }}
-            {{- end }}
-            {{- end }}
+            - --config=/etc/agni/serve.yaml
           ports:
             - name: http
               containerPort: 8080
@@ -107,11 +69,10 @@ spec:
               mountPath: /run/agni/connections
               readOnly: true
             {{- end }}
-            {{- if .Values.bootstrap }}
-            - name: bootstrap
-              mountPath: /etc/agni/bootstrap
+            - name: serve-config
+              mountPath: /etc/agni/serve.yaml
+              subPath: serve.yaml
               readOnly: true
-            {{- end }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -152,11 +113,9 @@ spec:
             secretName: {{ .Values.connectionSecrets }}
             defaultMode: 0440
         {{- end }}
-        {{- if .Values.bootstrap }}
-        - name: bootstrap
+        - name: serve-config
           configMap:
-            name: {{ include "agni.name" . }}-bootstrap
-        {{- end }}
+            name: {{ include "agni.name" . }}-serve
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -318,6 +318,13 @@ serve() {
     wait_for --cacert "$out/ca.pem" "$url/healthz" || { bundle logs agni >"$out/serve.log" 2>&1; echo "the bundle's agni serve didn't answer; see $out/serve.log" >&2; exit 1; }
     return
   fi
+  if [ -n "${config:-}" ]; then
+    (cd "$out" && HTTPS_PROXY="http://127.0.0.1:$trap_port" HTTP_PROXY="http://127.0.0.1:$trap_port" NO_PROXY=127.0.0.1,localhost \
+      exec "$agni" serve --config "$config") >>"$out/serve.log" 2>&1 &
+    serve_pid=$!
+    wait_for --cacert "$out/ca.pem" "$url/healthz" || { echo "agni serve --config didn't start; see $out/serve.log" >&2; exit 1; }
+    return
+  fi
   (cd "$out" && HTTPS_PROXY="http://127.0.0.1:$trap_port" HTTP_PROXY="http://127.0.0.1:$trap_port" NO_PROXY=127.0.0.1,localhost \
     exec "$agni" serve --addr "127.0.0.1:$port" --store "file://$store" --uploads "file://$uploads" \
     --auth tokens --tls-cert "$out/server.pem" --tls-key "$out/server.key" \
@@ -546,7 +553,29 @@ designs:
 BOOT
 chmod 0755 "$out/bootstrap" && chmod 0644 "$out/bootstrap/bootstrap.yaml"
 case "$mode" in
-  binary) bootstrap=$out/bootstrap/bootstrap.yaml ;;
+  binary)
+    # The binary restarts from one serve.yaml, its flags in sections and the bootstrap inline (agni
+    # issue 1853).
+    config=$out/serve.yaml
+    cat >"$config" <<SERVE
+addr: "127.0.0.1:$port"
+store: file://$store
+uploads: file://$uploads
+auth: tokens
+tls: {cert: $out/server.pem, key: $out/server.key}
+connections_key: env:AGNI_CONNECTIONS_KEY
+public_url: $url
+github:
+  api: $ghes/api/v3
+  raw: $ghes/raw
+  client_id: Iv1.exercise
+  client_secret: env:AGNI_GITHUB_CLIENT_SECRET
+  allow: [org:acme, user:alice, user:mallory]
+  webhook_secret: env:AGNI_WEBHOOK_SECRET
+bootstrap:
+$(sed 's/^/  /' "$out/bootstrap/bootstrap.yaml")
+SERVE
+    ;;
   bundle)
     bootstrap=/etc/agni/bootstrap/bootstrap.yaml
     sed -i.bak "s|^AGNI_BOOTSTRAP=.*|AGNI_BOOTSTRAP=$bootstrap|" "$out/bundle.env"

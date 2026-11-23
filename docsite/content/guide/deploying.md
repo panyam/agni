@@ -251,8 +251,8 @@ branch is followed, and a tag or commit is pinned.
 - With the compose bundle, put the file at `bootstrap/bootstrap.yaml` and set
   `AGNI_BOOTSTRAP=/etc/agni/bootstrap/bootstrap.yaml` in `.env`. Secret files go in
   `secrets/connections/`, which the server reads at `/run/agni/connections/`.
-- With the chart, put the same YAML under `bootstrap` in your values. The chart writes it into a
-  ConfigMap and restarts the pod when it changes. Secret files come from the Secret that
+- With the chart, put the same YAML under `bootstrap` in your values. The chart writes it into the
+  server's `serve.yaml` and restarts the pod when it changes. Secret files come from the Secret that
   `connectionSecrets` names.
 
 At start the server applies the entries in order, connections first, then mounts, packs, designs and
@@ -272,6 +272,43 @@ bootstrap: designs/alice-test, designs/psu are in the store but not in bootstrap
 With `prune: true` at the top of the file, the next start deletes them. Prune covers designs, their
 artifacts, packs and projects, and never a connection or a mount. Bootstrap makes no reports, so
 `agni reports create` still makes one when someone asks.
+
+## Keep the server's settings in one file
+
+Say you run `agni serve` yourself, outside the bundle and the chart. Its settings then sit on one
+long command line. `agni serve --config serve.yaml` reads them from a file instead (agni issue 1853).
+
+```yaml
+addr: ":8443"
+store: file:///srv/agni/meta
+uploads: file:///srv/agni/files
+auth: tokens
+public_url: https://agni.example.com
+connections_key: file:/srv/agni/secrets/connections.key
+tls:
+  cert: /srv/agni/tls.crt
+  key: /srv/agni/tls.key
+github:
+  api: https://github.example.com/api/v3
+  client_id: Iv1.0123456789abcdef
+  client_secret: file:/srv/agni/secrets/github-client-secret
+  allow: [org:acme]
+  webhook_secret: file:/srv/agni/secrets/github-webhook-secret
+bootstrap: /srv/agni/bootstrap.yaml
+```
+
+Each key names a flag from `agni serve --help`, with underscores for dashes. Sections nest, so
+`github: {client_id: ...}` sets `--github-client-id`, as a flat `github_client_id` would. A list
+sets a flag that takes several values. `bootstrap` names the file from the section above, or holds
+its entries inline. A secret stays an `env:` or `file:` reference.
+
+A flag typed on the command line wins over the file. A key that names no flag stops the server
+before it listens, so a typo can't slip by. A relative path resolves against the folder the server
+starts in, as it does on the command line.
+
+The chart hands the server a file like this one. It writes its values into a `serve.yaml`
+ConfigMap and passes `--config` alone. `serve` in the values holds any setting the chart doesn't
+make itself, such as `poll: 5m`. The compose bundle still passes flags from `.env`.
 
 ## Check who can open it
 

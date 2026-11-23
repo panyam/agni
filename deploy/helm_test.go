@@ -13,6 +13,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/panyam/agni/internal/flagfile"
 	"github.com/panyam/agni/service"
 )
 
@@ -43,6 +44,9 @@ type manifest struct {
 			Type string `yaml:"type"`
 		} `yaml:"strategy"`
 		Template struct {
+			Metadata struct {
+				Annotations map[string]string `yaml:"annotations"`
+			} `yaml:"metadata"`
 			Spec podSpec `yaml:"spec"`
 		} `yaml:"template"`
 	} `yaml:"spec"`
@@ -67,6 +71,7 @@ type podSpec struct {
 		VolumeMounts   []struct {
 			Name      string `yaml:"name"`
 			MountPath string `yaml:"mountPath"`
+			SubPath   string `yaml:"subPath"`
 			ReadOnly  bool   `yaml:"readOnly"`
 		} `yaml:"volumeMounts"`
 	} `yaml:"containers"`
@@ -159,6 +164,32 @@ func argValue(args []string, flag string) (string, bool) {
 	return "", false
 }
 
+// flagsOf is the flags a Deployment's server runs with. That is its args, plus, for one started
+// with --config, the flags its serve.yaml sets, read by the flagfile package agni serve reads it
+// with (agni issue 1853). An inline bootstrap reads as --bootstrap=<inline>.
+func flagsOf(t *testing.T, ms []manifest, name string) []string {
+	t.Helper()
+	args := slices.Clone(find(t, ms, "Deployment", name).Spec.Template.Spec.Containers[0].Args)
+	if _, ok := argValue(args, "--config"); !ok {
+		return args
+	}
+	entries, err := flagfile.Parse([]byte(find(t, ms, "ConfigMap", name+"-serve").Data["serve.yaml"]), "bootstrap")
+	if err != nil {
+		t.Fatalf("%s's serve.yaml: %v", name, err)
+	}
+	for _, e := range entries {
+		switch {
+		case e.Raw != nil && e.Raw.Kind == yaml.ScalarNode:
+			args = append(args, "--"+e.Flag+"="+e.Raw.Value)
+		case e.Raw != nil:
+			args = append(args, "--"+e.Flag+"=<inline>")
+		default:
+			args = append(args, "--"+e.Flag+"="+strings.Join(e.Values, ","))
+		}
+	}
+	return args
+}
+
 func TestTheChartReadsEverySecretFromASecretItNeverMakes(t *testing.T) {
 	ms := mustRender(t, "datasheets.enabled=true", "datasheets.host=ds.example.com")
 	for _, m := range ms {
@@ -186,7 +217,7 @@ func TestTheChartReadsEverySecretFromASecretItNeverMakes(t *testing.T) {
 			flags = append(flags, "--github-client-secret", "--github-webhook-secret")
 		}
 		for _, f := range flags {
-			v, ok := argValue(c.Args, f)
+			v, ok := argValue(flagsOf(t, ms, name), f)
 			if !ok {
 				t.Errorf("%s: no %s", name, f)
 				continue
@@ -205,17 +236,17 @@ func TestTheChartReadsEverySecretFromASecretItNeverMakes(t *testing.T) {
 
 func TestTheChartServesBehindTheIngressThroughATrustedProxy(t *testing.T) {
 	ms := mustRender(t)
-	c := find(t, ms, "Deployment", "agni").Spec.Template.Spec.Containers[0]
-	if v, _ := argValue(c.Args, "--trusted-proxy"); v != "10.244.0.0/16" {
+	args := flagsOf(t, ms, "agni")
+	if v, _ := argValue(args, "--trusted-proxy"); v != "10.244.0.0/16" {
 		t.Errorf("--trusted-proxy=%q, want the values' 10.244.0.0/16", v)
 	}
-	if _, ok := argValue(c.Args, "--tls-cert"); ok {
+	if _, ok := argValue(args, "--tls-cert"); ok {
 		t.Error("agni ends TLS itself, though the ingress ends it")
 	}
-	if v, _ := argValue(c.Args, "--auth"); v != "tokens" {
+	if v, _ := argValue(args, "--auth"); v != "tokens" {
 		t.Errorf("--auth=%q, want tokens", v)
 	}
-	if v, _ := argValue(c.Args, "--public-url"); v != "https://agni.example.com" {
+	if v, _ := argValue(args, "--public-url"); v != "https://agni.example.com" {
 		t.Errorf("--public-url=%q", v)
 	}
 	find(t, ms, "Ingress", "agni")
@@ -230,7 +261,7 @@ func TestTheChartsProbesAskThePortAgniListensOn(t *testing.T) {
 	ms := mustRender(t, "datasheets.enabled=true", "datasheets.host=ds.example.com")
 	for _, name := range []string{"agni", "agni-datasheets"} {
 		c := find(t, ms, "Deployment", name).Spec.Template.Spec.Containers[0]
-		addr, _ := argValue(c.Args, "--addr")
+		addr, _ := argValue(flagsOf(t, ms, name), "--addr")
 		if len(c.Ports) != 1 || ":"+strconv.Itoa(c.Ports[0].ContainerPort) != addr {
 			t.Errorf("%s: --addr=%s but the container port is %v", name, addr, c.Ports)
 		}
@@ -283,7 +314,7 @@ func TestTheChartKeepsItsWritesOnTheClaimWithOneWriter(t *testing.T) {
 			}
 			checked := 0
 			for _, f := range flags {
-				v, ok := argValue(pod.Containers[0].Args, f)
+				v, ok := argValue(flagsOf(t, ms, "agni"), f)
 				if !ok {
 					t.Errorf("no %s", f)
 					continue
@@ -307,8 +338,8 @@ func TestTheChartsWorkbenchReadsAgnisClaimBesideIt(t *testing.T) {
 	agni := find(t, ms, "Deployment", "agni").Spec.Template.Spec
 	ds := find(t, ms, "Deployment", "agni-datasheets").Spec.Template.Spec
 	for _, f := range writableFlags {
-		a, _ := argValue(agni.Containers[0].Args, f)
-		d, _ := argValue(ds.Containers[0].Args, f)
+		a, _ := argValue(flagsOf(t, ms, "agni"), f)
+		d, _ := argValue(flagsOf(t, ms, "agni-datasheets"), f)
 		if a != d {
 			t.Errorf("%s: agni %q, the workbench %q", f, a, d)
 		}
@@ -351,7 +382,7 @@ func TestTheChartsWorkbenchReadsAgnisClaimBesideIt(t *testing.T) {
 // the same Secret. A public client mounts no secret, and an issuer with no allow list fails to
 // render, as agni would refuse to start (agni issue 1811).
 func TestTheChartSignsInThroughOIDCWhenAsked(t *testing.T) {
-	args := func(ms []manifest) []string { return find(t, ms, "Deployment", "agni").Spec.Template.Spec.Containers[0].Args }
+	args := func(ms []manifest) []string { return flagsOf(t, ms, "agni") }
 	keys := func(ms []manifest) []string {
 		var out []string
 		for _, v := range find(t, ms, "Deployment", "agni").Spec.Template.Spec.Volumes {
@@ -389,31 +420,68 @@ func TestTheChartSignsInThroughOIDCWhenAsked(t *testing.T) {
 	}
 }
 
-// The chart hands agni serve its bootstrap from a ConfigMap it renders from the values, which
-// parses as a plan, and passes no --bootstrap without one (agni issue 1808).
-func TestTheChartHandsTheServerItsBootstrap(t *testing.T) {
-	agni := func(ms []manifest) (args []string, mounted, volume bool) {
-		spec := find(t, ms, "Deployment", "agni").Spec.Template.Spec
-		for _, m := range spec.Containers[0].VolumeMounts {
-			mounted = mounted || (m.Name == "bootstrap" && m.MountPath == "/etc/agni/bootstrap" && m.ReadOnly)
-		}
-		for _, v := range spec.Volumes {
-			volume = volume || (v.Name == "bootstrap" && v.ConfigMap != nil && v.ConfigMap.Name == "agni-bootstrap")
-		}
-		return spec.Containers[0].Args, mounted, volume
+// The chart hands agni serve one serve.yaml from a ConfigMap, with --config alone on its command
+// line (agni issue 1853). The file holds the values' serve section beside the chart's own settings,
+// and the chart's win, since the pod is built around them. A changed file restarts the pod.
+func TestTheChartHandsTheServerOneServeYAML(t *testing.T) {
+	ms := mustRender(t, "serve.poll=5m", "serve.addr=:9999")
+	d := find(t, ms, "Deployment", "agni")
+	spec := d.Spec.Template.Spec
+	if got := spec.Containers[0].Args; !slices.Equal(got, []string{"serve", "--config=/etc/agni/serve.yaml"}) {
+		t.Errorf("agni's args = %v; want serve --config=/etc/agni/serve.yaml alone", got)
 	}
-	off := mustRender(t)
-	if args, mounted, volume := agni(off); slices.ContainsFunc(args, func(a string) bool { return strings.HasPrefix(a, "--bootstrap") }) || mounted || volume {
-		t.Errorf("with no bootstrap the chart passes %v, mounted %v, volume %v; want none of it", args, mounted, volume)
+	var mounted, volume bool
+	for _, m := range spec.Containers[0].VolumeMounts {
+		mounted = mounted || (m.Name == "serve-config" && m.MountPath == "/etc/agni/serve.yaml" && m.SubPath == "serve.yaml" && m.ReadOnly)
+	}
+	for _, v := range spec.Volumes {
+		volume = volume || (v.Name == "serve-config" && v.ConfigMap != nil && v.ConfigMap.Name == "agni-serve")
+	}
+	if !mounted || !volume {
+		t.Errorf("serve.yaml mounted %v from the ConfigMap %v; want agni-serve's serve.yaml read-only at /etc/agni/serve.yaml", mounted, volume)
+	}
+	flags := flagsOf(t, ms, "agni")
+	if v, _ := argValue(flags, "--poll"); v != "5m" {
+		t.Errorf("--poll = %q; want the values' serve.poll 5m", v)
+	}
+	if v, _ := argValue(flags, "--addr"); v != ":8080" {
+		t.Errorf("--addr = %q; want the chart's :8080 over serve.addr, since the port and probes use it", v)
+	}
+	sum := d.Spec.Template.Metadata.Annotations["agni/serve-sha256"]
+	other := find(t, mustRender(t, "serve.poll=10m"), "Deployment", "agni").Spec.Template.Metadata.Annotations["agni/serve-sha256"]
+	if sum == "" || sum == other {
+		t.Errorf("the pod's serve-sha256 is %q with poll 5m and %q with 10m; want it to change, so a changed file restarts the pod", sum, other)
+	}
+}
+
+// The chart puts the values' bootstrap in serve.yaml, where it parses as a plan, and puts none
+// there without one (agni issue 1808).
+func TestTheChartHandsTheServerItsBootstrap(t *testing.T) {
+	bootstrapOf := func(ms []manifest) *yaml.Node {
+		var doc map[string]yaml.Node
+		if err := yaml.Unmarshal([]byte(find(t, ms, "ConfigMap", "agni-serve").Data["serve.yaml"]), &doc); err != nil {
+			t.Fatal(err)
+		}
+		if n, ok := doc["bootstrap"]; ok {
+			return &n
+		}
+		return nil
+	}
+	if n := bootstrapOf(mustRender(t)); n != nil {
+		t.Errorf("with no bootstrap, serve.yaml holds bootstrap: %v; want none", n)
 	}
 	on := mustRender(t, "bootstrap.mounts[0].id=board", "bootstrap.mounts[0].source=github://hw/baseboard",
 		"bootstrap.designs[0].id=bb", "bootstrap.designs[0].link.schematic=board/gateway.kicad_sch@main")
-	args, mounted, volume := agni(on)
-	if got, _ := argValue(args, "--bootstrap"); got != "/etc/agni/bootstrap/bootstrap.yaml" || !mounted || !volume {
-		t.Errorf("with a bootstrap the chart passes --bootstrap=%q, mounted %v, volume %v; want the ConfigMap's file mounted read-only", got, mounted, volume)
+	n := bootstrapOf(on)
+	if n == nil {
+		t.Fatal("with a bootstrap, serve.yaml holds none")
 	}
-	plan, err := service.ParseBootstrap([]byte(find(t, on, "ConfigMap", "agni-bootstrap").Data["bootstrap.yaml"]))
+	b, err := yaml.Marshal(n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := service.ParseBootstrap(b)
 	if err != nil || len(plan.Mounts) != 1 || len(plan.Designs) != 1 || plan.Designs[0].Link["schematic"] != "board/gateway.kicad_sch@main" {
-		t.Errorf("the ConfigMap's bootstrap.yaml = %+v, %v; want the values' mount and design", plan, err)
+		t.Errorf("serve.yaml's bootstrap = %+v, %v; want the values' mount and design", plan, err)
 	}
 }
