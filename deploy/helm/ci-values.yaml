@@ -1,0 +1,13 @@
+# The values the release's lint of deploy/helm/agni renders with (agni issue 1803), since the chart
+# refuses to render without the ones a deployment supplies. It sits outside the chart folder, so the
+# published chart never carries it.
+publicURL: https://agni.example.com
+trustedProxies: [10.244.0.0/16]
+github:
+  clientID: Iv1.example
+  allow: [org:acme]
+ingress:
+  host: agni.example.com
+datasheets:
+  enabled: true
+  host: datasheets.example.com

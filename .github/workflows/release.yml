@@ -215,7 +215,7 @@ jobs:
       - name: A kind cluster with ingress-nginx and the published image
         id: kind
         if: matrix.kind == 'agni'
-        uses: panyam/ci-actions/kind-ingress@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
+        uses: panyam/ci-actions/kind-ingress@06676ee1a59ebad76f679e595168fc74f4626281 # v0.1.5
         with:
           images: ghcr.io/${{ github.repository_owner }}/agni:${{ needs.tag.outputs.tag }}
 
@@ -229,9 +229,10 @@ jobs:
 
       - name: Publish the Helm chart
         if: matrix.kind == 'agni'
-        uses: panyam/ci-actions/helm-oci-publish@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
+        uses: panyam/ci-actions/helm-oci-publish@06676ee1a59ebad76f679e595168fc74f4626281 # v0.1.5
         with:
           chart: deploy/helm/agni
+          values: deploy/helm/ci-values.yaml
           version: ${{ needs.tag.outputs.tag }}
 
       - name: Record the digest

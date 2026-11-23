@@ -123,7 +123,7 @@ jobs:
       # gateway, which the pods reach.
       - name: A kind cluster with ingress-nginx and this image
         id: kind
-        uses: panyam/ci-actions/kind-ingress@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
+        uses: panyam/ci-actions/kind-ingress@06676ee1a59ebad76f679e595168fc74f4626281 # v0.1.5
         with:
           images: agni-ci/agni:ci
 
@@ -142,8 +142,9 @@ jobs:
 
       # The release's own lint and package of the chart, with nothing pushed.
       - name: Lint and package the chart
-        uses: panyam/ci-actions/helm-oci-publish@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
+        uses: panyam/ci-actions/helm-oci-publish@06676ee1a59ebad76f679e595168fc74f4626281 # v0.1.5
         with:
           chart: deploy/helm/agni
+          values: deploy/helm/ci-values.yaml
           version: v0.0.0-ci
           push: "false"
