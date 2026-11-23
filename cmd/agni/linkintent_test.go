@@ -63,3 +63,39 @@ func TestALinkFromGitHubChecksUnderTheDesignYAMLsIntent(t *testing.T) {
 		t.Errorf("check designs/gw = %d findings, check of its files = %d; want the same set\nonly stored: %v\nonly on disk: %v", len(stored), len(onDisk), minus(stored, onDisk), minus(onDisk, stored))
 	}
 }
+
+// A board and a schematic linked one at a time from a folder whose design.yaml names the board its
+// entry read the board, as a check of the folder does, though a schematic would win by type (agni
+// issue 1858).
+func TestLinkingTheDeclaredEntryReadsIt(t *testing.T) {
+	folder := boardAndSchematic(t, true)
+	files := map[string]string{}
+	for _, f := range []string{"design.yaml", "odb.tgz", "gateway.eds"} {
+		b, err := os.ReadFile(filepath.Join(folder, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		files["hw/"+f] = string(b)
+	}
+	gh, _ := privateGitHubRepo(t)
+	gh.AddRepo("acme", "open", false, files)
+	dir := t.TempDir()
+	url := serveViewer(t, viewerOpts{store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	must := func(out string, err error) string {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("%v\n%s", err, out)
+		}
+		return out
+	}
+	must(runMounts(t, "add", "open", "github://acme/open", "--remote", url))
+	must(runDesigns(t, url, "create", "gw"))
+	must(runDesigns(t, url, "link", "gw", "board", "open/hw/odb.tgz@main"))
+	must(runDesigns(t, url, "link", "gw", "schematic", "open/hw/gateway.eds@main"))
+
+	stored := findingKeys(t, "check", "designs/gw", "--remote", url)
+	local := findingKeys(t, "check", folder)
+	if len(local) == 0 || !slices.Equal(stored, local) {
+		t.Errorf("check designs/gw = %d findings, check of its folder = %d; want the same set\nonly stored: %v\nonly on disk: %v", len(stored), len(local), minus(stored, local), minus(local, stored))
+	}
+}

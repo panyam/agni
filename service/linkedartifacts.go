@@ -96,7 +96,7 @@ func (s *DesignService) LinkArtifact(ctx context.Context, req *webapi.LinkArtifa
 	if err != nil {
 		return nil, err
 	}
-	files, _, intent, err := s.readEntry(ctx, r, version, p)
+	files, _, decl, err := s.readEntry(ctx, r, version, p)
 	if err != nil {
 		return nil, err
 	}
@@ -108,20 +108,27 @@ func (s *DesignService) LinkArtifact(ctx context.Context, req *webapi.LinkArtifa
 	if err != nil {
 		return nil, err
 	}
-	if err := s.keepIntent(ctx, StandaloneDesignName(d), intent); err != nil {
+	if err := s.keepDeclared(ctx, StandaloneDesignName(d), id, decl); err != nil {
 		return nil, err
 	}
 	return out[0], nil
 }
 
-// keepIntent stores the intent a linked entry's design.yaml declares as the design's own, as
-// ImportDesignFiles does for a pushed folder (agni issue 1854). A nil intent leaves the kept one, so
-// a descriptor with no intent: section never clears an intent set with UpdateDesign.
-func (s *DesignService) keepIntent(ctx context.Context, design string, intent *configpb.DesignIntent) error {
-	if intent == nil {
+// keepDeclared stores what a linked entry's design.yaml declares, as ImportDesignFiles does for a
+// pushed folder. The intent becomes the design's own (agni issue 1854), and a nil intent leaves the
+// kept one, so a descriptor with no intent: section never clears an intent set with UpdateDesign.
+// The artifact id becomes the design's Entry, so the design reads the entry the descriptor names
+// rather than a schematic linked beside a board (agni issue 1858). A nil decl changes nothing.
+func (s *DesignService) keepDeclared(ctx context.Context, design, id string, decl *entryDecl) error {
+	if decl == nil {
 		return nil
 	}
-	_, err := s.catalog.UpdateDesign(ctx, design, func(r *DesignRecord) { r.Intent = intent })
+	_, err := s.catalog.UpdateDesign(ctx, design, func(r *DesignRecord) {
+		if decl.Intent != nil {
+			r.Intent = decl.Intent
+		}
+		r.Entry = id
+	})
 	return err
 }
 
@@ -201,8 +208,10 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 	}
 	var rows []rowFiles
 	now := timestamppb.New(s.clock())
-	// intent is what the design.yaml beside a rewritten entry declares now, kept after the write.
-	var intent *configpb.DesignIntent
+	// decl is what the design.yaml beside a rewritten entry declares now, kept after the write for
+	// the artifact entryID.
+	var decl *entryDecl
+	var entryID string
 	for _, a := range picked {
 		src := a.GetSource()
 		row := &webapi.ArtifactSync{Artifact: a.GetName(), FromVersion: src.GetVersion(), ToVersion: src.GetVersion()}
@@ -249,7 +258,7 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 		next := &webapi.ArtifactSource{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: true, Version: version, ReadTime: now, ReadHash: hash}
 		writes = append(writes, ArtifactWrite{ID: id, Files: files, Source: next})
 		if declared != nil {
-			intent = declared
+			decl, entryID = declared, id
 		}
 	}
 	for _, rf := range rows {
@@ -266,7 +275,7 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 	if _, err := s.catalog.WriteArtifacts(ctx, req.GetName(), writes, s.blobs); err != nil {
 		return nil, err
 	}
-	if err := s.keepIntent(ctx, req.GetName(), intent); err != nil {
+	if err := s.keepDeclared(ctx, req.GetName(), entryID, decl); err != nil {
 		return nil, err
 	}
 	return resp, nil
@@ -342,8 +351,14 @@ func (s *DesignService) readSource(ctx context.Context, r MountReader, version, 
 	return readSource(ctx, s.blobs, r, version, p)
 }
 
-// readEntry is readSource, plus the intent of the design whose entry p is.
-func (s *DesignService) readEntry(ctx context.Context, r MountReader, version, p string) ([]*webapi.SnapshotFile, []string, *configpb.DesignIntent, error) {
+// entryDecl is what the design.yaml beside a linked path declares when it names that path as its
+// entry. Intent is nil when it declares none.
+type entryDecl struct {
+	Intent *configpb.DesignIntent
+}
+
+// readEntry is readSource, plus what the design.yaml declares when p is its entry, nil otherwise.
+func (s *DesignService) readEntry(ctx context.Context, r MountReader, version, p string) ([]*webapi.SnapshotFile, []string, *entryDecl, error) {
 	return readLinkedSource(ctx, s.blobs, r, version, p)
 }
 
@@ -356,7 +371,7 @@ func readSource(ctx context.Context, blobs BlobSource, r MountReader, version, p
 // readLinkedSource is readSource, plus the intent the design.yaml beside p declares when p is that
 // descriptor's entry, so a link keeps the intent a push of the folder keeps (agni issue 1854). The
 // intent is nil when p is no descriptor's entry.
-func readLinkedSource(ctx context.Context, blobs BlobSource, r MountReader, version, p string) ([]*webapi.SnapshotFile, []string, *configpb.DesignIntent, error) {
+func readLinkedSource(ctx context.Context, blobs BlobSource, r MountReader, version, p string) ([]*webapi.SnapshotFile, []string, *entryDecl, error) {
 	listed, err := r.List(ctx, version, p)
 	if err != nil {
 		return nil, nil, nil, err
@@ -457,17 +472,17 @@ func readLinkedSource(ctx context.Context, blobs BlobSource, r MountReader, vers
 		out = append(out, sf)
 	}
 	slices.SortFunc(out, func(a, b *webapi.SnapshotFile) int { return strings.Compare(a.GetPath(), b.GetPath()) })
-	intent, err := entryIntent(rels, read, path.Base(p))
+	decl, err := entryDeclared(rels, read, path.Base(p))
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return out, fetched, intent, nil
+	return out, fetched, decl, nil
 }
 
-// entryIntent is the intent the design.yaml among a folder's files declares, when that descriptor
-// names target as its entry. A companion such as the board is linked on its own, so its link reads
-// no intent. A folder with no descriptor, or one naming another entry, gives nil.
-func entryIntent(files []string, read func(string) ([]byte, error), target string) (*configpb.DesignIntent, error) {
+// entryDeclared is what the design.yaml among a folder's files declares, when that descriptor names
+// target as its entry. A companion such as the board is linked on its own, so its link reads
+// nothing. A folder with no descriptor, or one naming another entry, gives nil.
+func entryDeclared(files []string, read func(string) ([]byte, error), target string) (*entryDecl, error) {
 	if !slices.Contains(files, DesignDescriptorName) {
 		return nil, nil
 	}
@@ -481,7 +496,11 @@ func entryIntent(files []string, read func(string) ([]byte, error), target strin
 	if yaml.Unmarshal(raw, &d) != nil || d.Entry == "" || path.Clean(d.Entry) != target {
 		return nil, nil
 	}
-	return declaredIntent(files, read)
+	intent, err := declaredIntent(files, read)
+	if err != nil {
+		return nil, err
+	}
+	return &entryDecl{Intent: intent}, nil
 }
 
 // artifactGroup finds the design among a folder's files whose entry or companion is target, and

@@ -450,8 +450,10 @@ so grouping alone sees two designs. The folder's `design.yaml` names the board a
 `agni designs add` group by the descriptor when the folder has one (agni issue 1858). The design keeps
 the entry's design and every declared companion, and reports the folder's other designs as not
 kept. The design's record keeps the entry's artifact as `entry_artifact`, and analysis reads that
-artifact ahead of the type order. A later push of a folder with no `design.yaml` clears it. When
-that artifact is deleted, the type order applies again. Two artifacts of the winning type
+artifact ahead of the type order. A link or sync of the file a `design.yaml` names as its entry
+records it the same way, so a board and a schematic linked one at a time read the board. A later
+push of a folder with no `design.yaml` clears it. When that artifact is deleted, the type order
+applies again. Two artifacts of the winning type
 are refused, and so are two boards, because the server could not tell which one to read. The viewer
 and the checks then read one design built from all the artifacts, and a finding names its file as
 `{artifact}/{path}`.
