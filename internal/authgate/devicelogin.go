@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,29 +24,77 @@ func loginClient() (*http.Client, error) {
 	return &http.Client{Transport: tr}, nil
 }
 
-// DeviceLogin signs in to the agni server at server through GitHub's device flow, which the server
-// runs (agni issue 1772). It calls show with the code the person types at GitHub, then waits until
-// the server answers with a token, the code expires, or ctx ends.
-func DeviceLogin(ctx context.Context, server string, show func(DeviceStart)) (DeviceToken, error) {
+// AnyDevicePath and AnyDeviceTokenPath run the device flow of the server's only sign-in provider, so
+// `agni login` needs no --with when the server offers one (agni issue 1811).
+const (
+	AnyDevicePath      = "/signin/device"
+	AnyDeviceTokenPath = "/signin/device/token" // #nosec G101 -- a URL path, not a credential
+)
+
+// errNoSignIn says a server signs nobody in through a provider. postJSON returns it for a 404 that
+// isn't about a handle.
+var errNoSignIn = errors.New("no sign-in")
+
+// DeviceLogin signs in to the agni server at server through a provider's device flow, which the
+// server runs (agni issues 1772, 1811). with is "github", "oidc", or empty for the server's only
+// provider. It calls show with the code the person types at the provider, then waits until the
+// server answers with a token, the code expires, or ctx ends.
+func DeviceLogin(ctx context.Context, server, with string, show func(DeviceStart)) (DeviceToken, error) {
 	server = strings.TrimRight(server, "/")
-	var start DeviceStart
-	if err := postJSON(ctx, server+DevicePath, nil, &start); err != nil {
+	var start, poll string
+	switch with {
+	case "":
+		start, poll = AnyDevicePath, AnyDeviceTokenPath
+	case "github":
+		start, poll = DevicePath, DeviceTokenPath
+	case "oidc":
+		start, poll = oidcDevice, oidcDeviceToken
+	default:
+		return DeviceToken{}, fmt.Errorf("--with %q: want github or oidc", with)
+	}
+	var st DeviceStart
+	err := postJSON(ctx, server+start, nil, &st)
+	var se *statusError
+	if with == "" && errors.As(err, &se) && se.code == http.StatusUnauthorized {
+		// A server from before agni issue 1811 has no AnyDevicePath and guards it like any other
+		// path. It signs in with GitHub alone.
+		start, poll = DevicePath, DeviceTokenPath
+		err = postJSON(ctx, server+start, nil, &st)
+	}
+	if errors.Is(err, errNoSignIn) {
+		if with == "" {
+			return DeviceToken{}, fmt.Errorf("%s signs nobody in from a terminal; its operator starts it with --github-client-id or --oidc-issuer", server)
+		}
+		return DeviceToken{}, fmt.Errorf("%s doesn't sign people in with %s", server, with)
+	}
+	if err != nil {
 		return DeviceToken{}, err
 	}
-	show(start)
-	deadline := time.Now().Add(time.Duration(start.ExpiresIn) * time.Second)
+	show(st)
+	deadline := time.Now().Add(time.Duration(st.ExpiresIn) * time.Second)
 	for {
 		var got DeviceToken
-		if err := postJSON(ctx, server+DeviceTokenPath, map[string]string{"handle": start.Handle}, &got); err != nil {
+		if err := postJSON(ctx, server+poll, map[string]string{"handle": st.Handle}, &got); err != nil {
 			return DeviceToken{}, err
 		}
 		if !got.Pending {
 			return got, nil
 		}
-		if start.ExpiresIn > 0 && time.Now().After(deadline) {
-			return DeviceToken{}, fmt.Errorf("the code %s expired before it was entered; run agni login again", start.UserCode)
+		if st.ExpiresIn > 0 && time.Now().After(deadline) {
+			return DeviceToken{}, fmt.Errorf("the code %s expired before it was entered; run agni login again", st.UserCode)
 		}
 	}
+}
+
+// statusError is a non-2xx answer, with the server's text.
+type statusError struct {
+	target string
+	code   int
+	text   string
+}
+
+func (e *statusError) Error() string {
+	return fmt.Sprintf("%s answered %d: %s", e.target, e.code, e.text)
 }
 
 // postJSON posts in, or no body when in is nil, and decodes a 2xx answer into out. Any other
@@ -75,10 +124,36 @@ func postJSON(ctx context.Context, target string, in, out any) error {
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
 	if resp.StatusCode == http.StatusNotFound && !bytes.Contains(raw, []byte("handle")) {
-		return fmt.Errorf("%s doesn't sign people in with GitHub; its operator starts it with --github-client-id", target)
+		return errNoSignIn
 	}
 	if resp.StatusCode/100 != 2 {
-		return fmt.Errorf("%s answered %d: %s", target, resp.StatusCode, strings.TrimSpace(string(raw)))
+		return &statusError{target: target, code: resp.StatusCode, text: strings.TrimSpace(string(raw))}
 	}
 	return json.Unmarshal(raw, out)
+}
+
+// anyDevice runs the device route of the gate's only sign-in provider. With none it answers 404, so
+// DeviceLogin says the server signs nobody in, and with two it answers 409 naming both.
+func (g *Gate) anyDevice(w http.ResponseWriter, r *http.Request) {
+	var names []string
+	if g.github != nil {
+		names = append(names, "github")
+	}
+	if g.oidc != nil {
+		names = append(names, "oidc")
+	}
+	switch {
+	case len(names) == 0:
+		http.Error(w, "this server signs nobody in from a terminal", http.StatusNotFound)
+	case len(names) > 1:
+		http.Error(w, "this server signs people in with "+strings.Join(names, " and ")+"; run agni login --with github or --with oidc", http.StatusConflict)
+	case g.github != nil && r.URL.Path == AnyDevicePath:
+		g.github.deviceStart(w, r)
+	case g.github != nil:
+		g.github.deviceToken(w, r)
+	case r.URL.Path == AnyDevicePath:
+		g.oidc.deviceStart(w, r)
+	default:
+		g.oidc.deviceToken(w, r)
+	}
 }

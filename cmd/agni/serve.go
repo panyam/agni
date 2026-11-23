@@ -93,6 +93,8 @@ func serveCmd() *cobra.Command {
 	var s3Endpoint, gcsEndpoint, graphAPI string
 	var githubClientID, githubSecretRef, publicURL string
 	var githubAllow, trustedProxy []string
+	var oidcIssuer, oidcClientID, oidcSecretRef, oidcLabel string
+	var oidcAllow []string
 	var pollEvery time.Duration
 	c := &cobra.Command{
 		Use:   "serve",
@@ -166,8 +168,31 @@ func serveCmd() *cobra.Command {
 				}
 				signIn = &githubSignIn{clientID: githubClientID, clientSecret: string(secret), allow: githubAllow}
 			}
+			var oidcIn *oidcSignIn
+			if oidcIssuer != "" || oidcClientID != "" || oidcSecretRef != "" || len(oidcAllow) > 0 {
+				if oidcIssuer == "" || oidcClientID == "" {
+					return fmt.Errorf("signing in through OIDC needs both --oidc-issuer and --oidc-client-id")
+				}
+				if auth != authgate.Tokens {
+					return fmt.Errorf("signing in through OIDC mints a token, so it needs --auth %s", authgate.Tokens)
+				}
+				if _, err := authgate.ParseOIDCAllow(oidcAllow); err != nil {
+					return err
+				}
+				if len(proxies) > 0 && publicURL == "" {
+					return fmt.Errorf("signing in through OIDC behind --trusted-proxy needs --public-url, the URL a browser reaches the proxy at, since the provider sends the browser back there")
+				}
+				oidcIn = &oidcSignIn{issuer: oidcIssuer, clientID: oidcClientID, allow: oidcAllow, label: oidcLabel}
+				if oidcSecretRef != "" {
+					secret, err := secretFlag("--oidc-client-secret", oidcSecretRef)
+					if err != nil {
+						return err
+					}
+					oidcIn.clientSecret = string(secret)
+				}
+			}
 			return runViewer(cmd, viewerOpts{
-				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey,
+				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey, oidcSignIn: oidcIn,
 				webhookSecret: hookSecret, graphState: graphState, s3Endpoint: s3Endpoint, gcsEndpoint: gcsEndpoint, graphAPI: graphAPI, poll: pollEvery, githubSignIn: signIn, publicURL: publicURL,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
@@ -225,6 +250,11 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&githubClientID, "github-client-id", "", "the client id of the GitHub App people sign in through (agni issue 1772). With --github-client-secret and --github-allow, /signin offers Sign in with GitHub and agni login signs in from a terminal. Either one keeps the person's GitHub token as their own connection. Needs --auth tokens and --connections-key")
 	c.Flags().StringVar(&githubSecretRef, "github-client-secret", "", "where the GitHub App's client secret is, as env:NAME or file:/abs/path; with --github-client-id")
 	c.Flags().StringSliceVar(&githubAllow, "github-allow", nil, "who may sign in with GitHub, as org:<org> for an org's members or user:<login>, comma-separated or repeated; with --github-client-id")
+	c.Flags().StringVar(&oidcIssuer, "oidc-issuer", "", "the issuer URL of an OpenID Connect provider people sign in through, such as https://login.microsoftonline.com/<tenant>/v2.0 for Entra ID (agni issue 1811). With --oidc-client-id and --oidc-allow, /signin offers it beside any GitHub sign-in, and agni login --with oidc signs in from a terminal through its device flow. A person signs in as oidc:<sub> and keeps no connection. Needs --auth tokens")
+	c.Flags().StringVar(&oidcClientID, "oidc-client-id", "", "the client id registered with the --oidc-issuer provider, whose redirect URI is <public-url>/signin/oidc/callback/")
+	c.Flags().StringVar(&oidcSecretRef, "oidc-client-secret", "", "where that client's secret is, as env:NAME or file:/abs/path; empty for a public client")
+	c.Flags().StringSliceVar(&oidcAllow, "oidc-allow", nil, "who may sign in through --oidc-issuer, as domain:<domain> for a verified email in it, group:<id> for a value in the groups claim, sub:<sub> for one person, or hd:<domain> for a Google Workspace domain, comma-separated or repeated")
+	c.Flags().StringVar(&oidcLabel, "oidc-label", "", "the provider's name on the sign-in button, such as Okta. Empty is \"single sign-on\"")
 	c.Flags().StringVar(&publicURL, "public-url", "", "the server's URL as a browser reaches it, such as https://agni.example.com. GitHub sends a signed-in browser back to <public-url>/signin/github/callback/, which the GitHub App must list. Empty takes the address the server listens on, which works on localhost only")
 	c.Flags().StringVar(&graphStateRef, "msgraph-client-state", "", "where the secret Microsoft Graph echoes in each change notification is, as env:NAME or file:/abs/path (agni issue 1729). With it, the server takes notifications at "+graphHookPath+", agni mounts webhook subscribes a SharePoint mount's drive there, and the server renews each subscription before Graph ends it. A change in the drive syncs or marks the designs that follow a folder in it. Graph sends notifications only to a public https address. Needs --store and --uploads")
 	c.Flags().StringVar(&s3Endpoint, "s3-endpoint", "", "the S3 API an s3:// mount reads, for an S3-compatible store such as MinIO. Empty is AWS (agni issue 1730)")
@@ -241,6 +271,12 @@ func serveCmd() *cobra.Command {
 type githubSignIn struct {
 	clientID, clientSecret string
 	allow                  []string
+}
+
+// oidcSignIn is the OpenID Connect provider a server signs people in through (agni issue 1811).
+type oidcSignIn struct {
+	issuer, clientID, clientSecret, label string
+	allow                                 []string
 }
 
 // viewerOpts is everything the viewer server is built from, so `serve` and `open` compose the same
@@ -331,6 +367,8 @@ type viewerOpts struct {
 	connectionsKey string
 	// githubSignIn is the GitHub App people sign in through, nil for none (agni issue 1772).
 	githubSignIn *githubSignIn
+	// oidcSignIn is the OpenID Connect provider people sign in through, nil for none (agni issue 1811).
+	oidcSignIn *oidcSignIn
 	// publicURL is --public-url, the server's URL as a browser reaches it. Empty takes the address it
 	// listens on.
 	publicURL string
@@ -753,6 +791,18 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 					_, err := table.SaveSignedIn(ctx, subject, login, tok)
 					return err
 				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+		if oi := o.oidcSignIn; oi != nil {
+			pub := o.publicURL
+			if pub == "" {
+				pub = strings.TrimSuffix(urls[0], "/")
+			}
+			gate, err = gate.WithOIDC(life, authgate.OIDC{
+				Issuer: oi.issuer, ClientID: oi.clientID, ClientSecret: oi.clientSecret, PublicURL: pub, Allow: oi.allow, Label: oi.label,
 			})
 			if err != nil {
 				return err

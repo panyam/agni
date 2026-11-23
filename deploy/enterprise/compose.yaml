@@ -41,6 +41,13 @@ services:
       - --github-client-secret=file:/run/secrets/github_client_secret
       - --github-allow=${AGNI_GITHUB_ALLOW:?set AGNI_GITHUB_ALLOW in .env, such as org:acme}
       - --github-webhook-secret=file:/run/secrets/github_webhook_secret
+      # Sign-in through your OpenID Connect provider beside GitHub, off while AGNI_OIDC_ISSUER is empty
+      # (agni issue 1811).
+      - --oidc-issuer=${AGNI_OIDC_ISSUER:-}
+      - --oidc-client-id=${AGNI_OIDC_CLIENT_ID:-}
+      - --oidc-client-secret=${AGNI_OIDC_CLIENT_SECRET:-}
+      - --oidc-allow=${AGNI_OIDC_ALLOW:-}
+      - --oidc-label=${AGNI_OIDC_LABEL:-}
     ports:
       - "${AGNI_PORT:-8443}:8443"
     volumes:

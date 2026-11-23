@@ -57,6 +57,8 @@ type Gate struct {
 	proxies skmw.TrustedProxies
 	// github signs people in through a GitHub App, and is set by WithGitHub (agni issue 1772).
 	github *githubSignIns
+	// oidc signs people in through an OpenID Connect provider, and is set by WithOIDC (agni issue 1811).
+	oidc *oidcSignIns
 }
 
 // New checks tokens against store. proxies are the proxies that end TLS in front of the server, as
@@ -84,8 +86,23 @@ func (g *Gate) Wrap(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(service.WithCaller(r.Context(), caller)))
 	}))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == AnyDevicePath || r.URL.Path == AnyDeviceTokenPath {
+			g.anyDevice(w, r)
+			return
+		}
 		if g.github != nil && g.github.serve(g, w, r) {
 			return
+		}
+		if g.oidc != nil && g.oidc.serve(g, w, r) {
+			return
+		}
+		// A provider's routes on a server that doesn't offer it answer 404, so agni login --with names
+		// the missing provider rather than meeting the token check.
+		for _, p := range []string{SignInPath, OIDCSignInPath} {
+			if r.URL.Path == p || strings.HasPrefix(r.URL.Path, p+"/") {
+				http.Error(w, "this server doesn't sign people in that way", http.StatusNotFound)
+				return
+			}
 		}
 		switch {
 		case r.URL.Path == "/signin":
@@ -124,9 +141,10 @@ a.github { display: inline-block; padding: .5rem 1rem; border: 1px solid current
 </style></head>
 <body>
 <h1>Sign in to agni</h1>
-<p>This server asks who you are.{{if .GitHub}} Sign in with GitHub, or paste{{else}} Paste{{end}} the token its operator gave you, made with <code>agni token create</code>.</p>
+<p>This server asks who you are.{{if or .GitHub .OIDC}} Sign in below, or paste{{else}} Paste{{end}} the token its operator gave you, made with <code>agni token create</code>.</p>
 {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
 {{if .GitHub}}<p><a class="github" href="/signin/github?next={{.Next}}">Sign in with GitHub</a></p>{{end}}
+{{if .OIDC}}<p><a class="github" href="/signin/oidc?next={{.Next}}">Sign in with {{.OIDC}}</a></p>{{end}}
 <form method="post" action="/signin">
 <input type="hidden" name="next" value="{{.Next}}">
 <label for="token">Token</label>
@@ -136,18 +154,26 @@ a.github { display: inline-block; padding: .5rem 1rem; border: 1px solid current
 </body></html>
 `))
 
-// signInView is what the sign-in page shows. GitHub offers the GitHub button.
+// signInView is what the sign-in page shows. GitHub offers the GitHub button, and a non-empty OIDC
+// offers the OIDC provider's button under that label.
 type signInView struct {
 	Next, Error string
 	GitHub      bool
+	OIDC        string
 }
 
 // signIn shows the sign-in form, and on a post checks the token and keeps it in a session cookie.
 func (g *Gate) signIn(w http.ResponseWriter, r *http.Request) {
 	next := safeNext(r.FormValue("next"))
 	page := signInView{Next: next, GitHub: g.github != nil}
+	if g.oidc != nil {
+		page.OIDC = g.oidc.cfg.Label
+	}
 	if r.URL.Query().Get("github") == "failed" {
 		page.Error = "Signing in with GitHub didn't work. Try again, or paste a token."
+	}
+	if r.URL.Query().Get("oidc") == "failed" {
+		page.Error = "Signing in with " + page.OIDC + " didn't work. Try again, or paste a token."
 	}
 	switch r.Method {
 	case http.MethodGet:
