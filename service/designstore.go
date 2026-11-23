@@ -90,6 +90,10 @@ type DesignRecord struct {
 	// hold yet. The store keeps it on the artifact's source as newer_version, and drops it when the
 	// artifact's files are written again. An id naming no linked artifact is ignored.
 	Newer map[string]NewerVersion
+	// Entry is the id of the artifact analysis reads, when a design.yaml named the design's entry
+	// (agni issue 1858). Empty, or naming no artifact a reader opens, picks the entry by type as
+	// CONSTRAINTS C21 orders it, a netlist, then a schematic, then a board.
+	Entry string
 }
 
 // NewerVersion is a version a linked artifact's source moved to, and when the server saw it.

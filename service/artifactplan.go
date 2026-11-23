@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"google.golang.org/protobuf/proto"
 	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -42,10 +43,15 @@ type ArtifactPlan struct {
 	Files map[string][]PlannedFile
 	// Unread names the folder's files no reader opens.
 	Unread []string
+	// Declared says a design.yaml named the entry, so IDs[0] is the artifact analysis reads, as a
+	// DesignRecord's Entry.
+	Declared bool
 }
 
 // PlanArtifacts groups a folder's files into artifacts (agni issues 1696, 1719). It proposes the
-// folder's design with ProposeFromFiles, leaving out any design.yaml or project.yaml. Each companion,
+// folder's design with ProposeFromFiles, leaving out any design.yaml or project.yaml. A top-level
+// design.yaml picks the design its entry names, and adds the companions it declares that the
+// proposals read apart, such as an EDIF schematic beside an ODB++ board (agni issue 1858). Each companion,
 // with the files under it when it is a folder such as an ODB++ job, becomes an artifact named for its
 // type, and keeps its paths relative to its own folder. The entry's artifact holds every other file
 // the design reads, with paths relative to the folder, since a KiCad root sheet finds its child
@@ -60,19 +66,27 @@ func PlanArtifacts(files []string, read func(string) ([]byte, error)) (ArtifactP
 	resp := ProposeFromFiles("", kept, read)
 	designs := resp.GetDesigns()
 	var strays []string
-	if entry := declaredEntry(files, read); entry != "" && len(designs) > 1 {
-		// A folder often holds sheets its root never places. Its design.yaml names the entry, as the
-		// CLI reads it, so that design is kept and the others' files are reported as not kept.
-		for _, d := range designs {
-			if d.GetDesign().GetEntryUri() == entry {
-				for _, o := range designs {
-					if o != d {
-						strays = append(strays, o.GetFiles()...)
-					}
+	decl := declaredDesign(files, read)
+	if decl.entry != "" && len(designs) > 1 {
+		// A folder often holds sheets its root never places, or views of the design no file name
+		// pairs, such as an ODB++ board and an EDIF schematic. Its design.yaml names the entry and
+		// the companions, as the CLI reads it, so that design keeps those views and the others' files
+		// are reported as not kept (agni issues 1719, 1858).
+		if i := slices.IndexFunc(designs, func(d *webapi.ProposedDesign) bool { return namedBy(decl.entry, d.GetDesign().GetEntryUri()) }); i >= 0 {
+			kept := proto.Clone(designs[i]).(*webapi.ProposedDesign)
+			for j, o := range designs {
+				if j == i {
+					continue
 				}
-				designs = []*webapi.ProposedDesign{d}
-				break
+				e := o.GetDesign().GetEntryUri()
+				if slices.ContainsFunc(decl.companions, func(c string) bool { return namedBy(c, e) }) {
+					kept.Design.CompanionUris = append(kept.Design.CompanionUris, e)
+					kept.Files = append(kept.Files, o.GetFiles()...)
+					continue
+				}
+				strays = append(strays, o.GetFiles()...)
 			}
+			designs = []*webapi.ProposedDesign{kept}
 		}
 	}
 	switch n := len(designs); {
@@ -86,7 +100,7 @@ func PlanArtifacts(files []string, read func(string) ([]byte, error)) (ArtifactP
 		return ArtifactPlan{}, fmt.Errorf("%w: these files hold %d designs, read from %s; send each design's files on their own, or put artifacts one by one", ErrInvalidArgument, n, strings.Join(entries, ", "))
 	}
 	pd := designs[0]
-	plan := ArtifactPlan{Files: map[string][]PlannedFile{}}
+	plan := ArtifactPlan{Files: map[string][]PlannedFile{}, Declared: decl.entry != "" && namedBy(decl.entry, pd.GetDesign().GetEntryUri())}
 	taken := map[string]bool{}
 	name := func(entry string) string {
 		base := artifactWord(entry)
@@ -132,23 +146,41 @@ func PlanArtifacts(files []string, read func(string) ([]byte, error)) (ArtifactP
 	return plan, nil
 }
 
-// declaredEntry reads the entry a top-level design.yaml among the files names, loosely, as
-// ProposeDesigns reads a descriptor. None, or one that does not parse, gives "".
-func declaredEntry(files []string, read func(string) ([]byte, error)) string {
+// declared is what a top-level design.yaml names: its entry and its companions, as cleaned paths.
+type declared struct {
+	entry      string
+	companions []string
+}
+
+// declaredDesign reads the entry and companions a top-level design.yaml among the files names,
+// loosely, as ProposeDesigns reads a descriptor. None, or one that does not parse, gives no entry.
+func declaredDesign(files []string, read func(string) ([]byte, error)) declared {
 	if !slices.Contains(files, DesignDescriptorName) {
-		return ""
+		return declared{}
 	}
 	raw, err := read(DesignDescriptorName)
 	if err != nil {
-		return ""
+		return declared{}
 	}
 	var d struct {
-		Entry string `yaml:"entry"`
+		Entry      string   `yaml:"entry"`
+		Companions []string `yaml:"companions"`
 	}
 	if yaml.Unmarshal(raw, &d) != nil || d.Entry == "" {
-		return ""
+		return declared{}
 	}
-	return path.Clean(strings.ReplaceAll(d.Entry, "\\", "/"))
+	clean := func(p string) string { return path.Clean(strings.ReplaceAll(p, "\\", "/")) }
+	out := declared{entry: clean(d.Entry)}
+	for _, c := range d.Companions {
+		out.companions = append(out.companions, clean(c))
+	}
+	return out
+}
+
+// namedBy says whether a path a descriptor declares names the design read from entry. An ODB++ job
+// is declared by its folder or archive, and proposed by a file inside it.
+func namedBy(declared, entry string) bool {
+	return entry == declared || strings.HasPrefix(entry, declared+"/")
 }
 
 // artifactWord names an artifact by what its entry holds: netlist, schematic, board or files.

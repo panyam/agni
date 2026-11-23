@@ -65,16 +65,24 @@ func classifyArtifact(id string, files []string, read func(string) ([]byte, erro
 func typeOf(entry string) webapi.ArtifactType { return service.ArtifactTypeOf(entry) }
 
 // composeDesign picks the file analysis reads from a design's artifacts, and names the rest as its
-// views (CONSTRAINTS C21). A netlist wins, then a schematic, then a board. Two artifacts of the
-// winning type are an error, and so are two boards, since a design has one copper tier. Paths come
-// back relative to the design, "{artifact}/{path}". No artifact a reader opens gives an empty entry.
-func composeDesign(roles []artifactRole) (entry string, companions []string, err error) {
+// views (CONSTRAINTS C21). The artifact prefer names wins when a reader opens it, since a design.yaml
+// chose it (agni issue 1858). Otherwise a netlist wins, then a schematic, then a board, and two
+// artifacts of the winning type are an error. Two boards are always an error, since a design has
+// one copper tier. Paths come back relative to the design, "{artifact}/{path}". No artifact a
+// reader opens gives an empty entry.
+func composeDesign(roles []artifactRole, prefer string) (entry string, companions []string, err error) {
 	byType := map[webapi.ArtifactType][]artifactRole{}
 	for _, r := range roles {
 		byType[r.typ] = append(byType[r.typ], r)
 	}
 	var source *artifactRole
+	if i := slices.IndexFunc(roles, func(r artifactRole) bool { return r.id == prefer && r.entry != "" }); prefer != "" && i >= 0 {
+		source = &roles[i]
+	}
 	for _, t := range []webapi.ArtifactType{webapi.ArtifactType_ARTIFACT_TYPE_NETLIST, webapi.ArtifactType_ARTIFACT_TYPE_SCHEMATIC, webapi.ArtifactType_ARTIFACT_TYPE_BOARD} {
+		if source != nil {
+			break
+		}
 		rs := byType[t]
 		if len(rs) > 1 {
 			return "", nil, fmt.Errorf("%w: artifacts %s are each a %s, and a design reads one; delete one, or keep it in another design", service.ErrFailedPrecondition, ids(rs), typeWord(t))

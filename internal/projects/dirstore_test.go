@@ -396,6 +396,26 @@ func TestDeletingAnArtifactRecomposesTheDesign(t *testing.T) {
 	}
 }
 
+// A design whose record names its entry artifact reads that artifact, a board here over a
+// schematic, through later updates. Once the artifact is gone it reads by type (agni issue 1858).
+func TestADesignReadsTheEntryItsRecordNames(t *testing.T) {
+	ctx := context.Background()
+	ds, _ := dirStore(t)
+	mustDesign(t, ds, "mul", arts{"schematic": {"a.kicad_sch": "(kicad_sch)"}, "board": {"a.kicad_pcb": "(kicad_pcb)"}})
+	if d, err := ds.UpdateDesign(ctx, "mul", func(r *service.DesignRecord) { r.Entry = "board" }); err != nil || d.GetEntryUri() != inView(t, d, "board/a.kicad_pcb") {
+		t.Fatalf("design naming the board its entry = %v, %v; want the board as entry", d, err)
+	}
+	if d, err := ds.UpdateDesign(ctx, "mul", func(r *service.DesignRecord) { r.Series = "mul" }); err != nil || d.GetEntryUri() != inView(t, d, "board/a.kicad_pcb") {
+		t.Errorf("design after setting its series = %v, %v; want the board kept as entry", d, err)
+	}
+	if err := ds.DeleteArtifact(ctx, "mul", "board"); err != nil {
+		t.Fatal(err)
+	}
+	if d, err := ds.Design(ctx, "mul"); err != nil || d.GetEntryUri() != inView(t, d, "schematic/a.kicad_sch") {
+		t.Errorf("design after deleting the board it named = %v, %v; want the schematic as entry", d, err)
+	}
+}
+
 func TestDeletingADesignRemovesItsRecordAndTheSweepItsFiles(t *testing.T) {
 	ctx := context.Background()
 	ds, l := dirStore(t)

@@ -408,7 +408,8 @@ into the mount. A design's title, series and intent come from the proposal and t
 from a `design.yaml`. `ListDesigns` with `source = "mount://<mount>/<path>"` lists the designs read
 from a folder.
 
-Two things from a folder's `design.yaml` do carry over, and both are about symbols (agni issue
+A folder's `design.yaml` decides how its files group, by its `entry:` and `companions:`, as the next
+section says (agni issue 1858). Two more things carry over, and both are about symbols (agni issue
 1756). A symbol folder it names under `symbols:` is copied in as an artifact of type
 `ARTIFACT_TYPE_SYMBOLS`, which the view's `design.yaml` names, so the stored design reads its parts'
 pins alone. The project it `extends` is kept as a pack, and the design's `packs` name it. A read
@@ -440,8 +441,19 @@ when a followed source moves, or notes the new version as `newer_version` on a d
 
 The server reads each artifact to find its type and its entry, with the grouping `ProposeDesigns`
 uses on a dropped folder. Files that make two designs are refused, since the artifact would hold two
-sources. From the types it picks the file analysis reads: the netlist, else the schematic, else the
-board (C21). Every other artifact a reader opens is a companion. Two artifacts of the winning type
+sources. From the types it picks the file analysis reads, the netlist, else the schematic, else the
+board (C21). Every other artifact a reader opens is a companion.
+
+Picture a folder holding an ODB++ board and an EDIF schematic export. No file name pairs the two,
+so grouping alone sees two designs. The folder's `design.yaml` names the board as its entry and the
+`.eds` as a companion, and `agni check <folder>` reads it that way. So `agni designs push` and
+`agni designs add` group by the descriptor when the folder has one (agni issue 1858). The design keeps
+the entry's design and every declared companion, and reports the folder's other designs as not
+kept. The design's record keeps the entry's artifact as `entry_artifact`, and analysis reads that
+artifact ahead of the type order. A link or sync of the file a `design.yaml` names as its entry
+records it the same way, so a board and a schematic linked one at a time read the board. A later
+push of a folder with no `design.yaml` clears it. When that artifact is deleted, the type order
+applies again. Two artifacts of the winning type
 are refused, and so are two boards, because the server could not tell which one to read. The viewer
 and the checks then read one design built from all the artifacts, and a finding names its file as
 `{artifact}/{path}`.

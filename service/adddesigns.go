@@ -197,8 +197,10 @@ func (s *DesignService) planAdd(ctx context.Context, mount string, p *webapi.Pro
 	contents := map[string][]byte{}
 	var rels []string
 	for _, f := range p.GetFiles() {
+		// The folder's design.yaml goes to PlanArtifacts too, which reads the entry and companions
+		// it declares and keeps it out of every artifact (agni issue 1858).
 		rel, ok := strings.CutPrefix(f, prefix)
-		if !ok || path.Base(f) == DesignDescriptorName {
+		if !ok || (path.Base(f) == DesignDescriptorName && rel != DesignDescriptorName) {
 			continue
 		}
 		fu, err := mounts.NewURI(mount, f)
@@ -224,6 +226,9 @@ func (s *DesignService) planAdd(ctx context.Context, mount string, p *webapi.Pro
 		return addedDesign{}, err
 	}
 	add := addedDesign{id: id, record: DesignRecord{Title: title, Series: want.GetSeries()}, contents: map[string][]byte{}}
+	if plan.Declared {
+		add.record.Entry = plan.IDs[0]
+	}
 	for _, a := range plan.IDs {
 		w := ArtifactWrite{ID: a, AllowMissing: true}
 		root := ""

@@ -376,10 +376,19 @@ func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.Impor
 	}
 	// The folder's design.yaml declares the design's intent, which a stored design keeps as its own
 	// (agni issue 1697). One with no intent leaves the kept intent as it was, as `designs push` does.
-	if declared != nil {
-		if _, err := s.catalog.UpdateDesign(ctx, StandaloneDesignName(id), func(r *DesignRecord) { r.Intent = declared }); err != nil {
-			return nil, err
+	// The entry it names is the artifact analysis reads, and a folder naming none reads by type
+	// (agni issue 1858).
+	entry := ""
+	if plan.Declared {
+		entry = plan.IDs[0]
+	}
+	if _, err := s.catalog.UpdateDesign(ctx, StandaloneDesignName(id), func(r *DesignRecord) {
+		if declared != nil {
+			r.Intent = declared
 		}
+		r.Entry = entry
+	}); err != nil {
+		return nil, err
 	}
 	return &webapi.ImportDesignFilesResponse{Artifacts: arts, Unread: plan.Unread}, nil
 }
