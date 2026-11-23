@@ -4,7 +4,7 @@ This file covers project and design descriptors, the config YAML they bind, and 
 
 - **Every config YAML binds through `internal/yamlpb` against its proto** (agni 827). That covers a design's `intent:`, a project's `conventions:`, a `--conventions` file, and a profile file (`ProfileDef`, or `ProfileNamingMap` for an `override:` file). Keys are proto field NAMES only, never the camelCase JSON spelling. An unknown key fails with its line.
 - **A new config file binds the same way.** Go structs with yaml tags are the bug shape, because they drop an unknown key silently.
-- **A descriptor NAMES every tier a run reads** (agni 1136). Nothing is found by its folder's name. `project.yaml` and `design.yaml` share one schema, `descriptorYAML` in `internal/projects/descriptor.go`.
+- **A descriptor NAMES every tier a run reads** (agni 1136). Nothing is found by its folder's name. `project.yaml` and `design.yaml` share one schema, `descriptorYAML` in `internal/projects/descriptor.go`. A tier folder beside a descriptor that lists none of it is noted through `FSStore.OnUnlisted` (agni 1861).
 - **The schema has sections and path lists.** `conventions:`, `checklists:` and `intent:` are sections. `profiles`, `params`, `symbols`, `lib` and `queries` are lists of paths, each a file or a directory, relative to the descriptor or a `mount://` URI.
 - **Only a design names its own files**, through `entry`, `companions` and `flatten_hierarchy`, and only a design names a `series`.
 - **A later revision is a design of its own, in its own folder** (agni 1692). `revisions:` in a `design.yaml` fails at its line with that hint.

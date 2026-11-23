@@ -320,7 +320,7 @@ func (cliProjectStore) store() (*projects.FSStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return projects.NewFSStore(projectTrees(ws.Mounts())...), nil
+	return projects.NewFSStore(projectTrees(ws.Mounts())...).OnUnlisted(noteUnlisted), nil
 }
 
 func (c cliProjectStore) Project(ctx context.Context, name string) (*webapi.Project, error) {
