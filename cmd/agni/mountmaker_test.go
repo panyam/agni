@@ -271,11 +271,16 @@ func TestServeMakesAGitHubMountOverConnect(t *testing.T) {
 // once /healthz answers. A runViewer that stops before answering fails the test with its error.
 func serveViewer(t *testing.T, o viewerOpts) string {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
+	// A test that must know the server's URL first, such as for a redirect URI it registers
+	// elsewhere, opens the listener itself.
+	ln := o.listener
+	if ln == nil {
+		var err error
+		if ln, err = net.Listen("tcp", "127.0.0.1:0"); err != nil {
+			t.Fatal(err)
+		}
+		o.listener = ln
 	}
-	o.listener = ln
 	cmd := rootCmd()
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)

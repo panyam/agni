@@ -71,6 +71,9 @@ type podSpec struct {
 		Name   string `yaml:"name"`
 		Secret *struct {
 			SecretName string `yaml:"secretName"`
+			Items      []struct {
+				Key string `yaml:"key"`
+			} `yaml:"items"`
 		} `yaml:"secret"`
 		PersistentVolumeClaim *struct {
 			ClaimName string `yaml:"claimName"`
@@ -332,5 +335,47 @@ func TestTheChartsWorkbenchReadsAgnisClaimBesideIt(t *testing.T) {
 		if !fromMap {
 			t.Errorf("%s: the CA folder doesn't come from caConfigMap", name)
 		}
+	}
+}
+
+// With oidc.issuer set, the chart passes the OIDC sign-in flags and mounts oidc-client-secret from
+// the same Secret. A public client mounts no secret, and an issuer with no allow list fails to
+// render, as agni would refuse to start (agni issue 1811).
+func TestTheChartSignsInThroughOIDCWhenAsked(t *testing.T) {
+	args := func(ms []manifest) []string { return find(t, ms, "Deployment", "agni").Spec.Template.Spec.Containers[0].Args }
+	keys := func(ms []manifest) []string {
+		var out []string
+		for _, v := range find(t, ms, "Deployment", "agni").Spec.Template.Spec.Volumes {
+			if v.Secret != nil {
+				for _, it := range v.Secret.Items {
+					out = append(out, it.Key)
+				}
+			}
+		}
+		return out
+	}
+	off := mustRender(t)
+	if _, ok := argValue(args(off), "--oidc-issuer"); ok || slices.Contains(keys(off), "oidc-client-secret") {
+		t.Errorf("with no oidc.issuer the chart passes %v and mounts %v; want no OIDC sign-in", args(off), keys(off))
+	}
+	oidc := []string{"oidc.issuer=https://login.example.com/t/v2.0", "oidc.clientID=agni", "oidc.allow={domain:example.com,group:g-eng}", "oidc.label=Okta"}
+	on := mustRender(t, oidc...)
+	for flag, want := range map[string]string{
+		"--oidc-issuer": "https://login.example.com/t/v2.0", "--oidc-client-id": "agni", "--oidc-allow": "domain:example.com,group:g-eng",
+		"--oidc-label": "Okta", "--oidc-client-secret": "file:/run/secrets/agni/oidc-client-secret",
+	} {
+		if got, _ := argValue(args(on), flag); got != want {
+			t.Errorf("with oidc set, %s = %q; want %q", flag, got, want)
+		}
+	}
+	if !slices.Contains(keys(on), "oidc-client-secret") {
+		t.Errorf("with oidc set the chart mounts %v; want oidc-client-secret from the Secret", keys(on))
+	}
+	public := mustRender(t, append(oidc, "oidc.clientSecret=false")...)
+	if _, ok := argValue(args(public), "--oidc-client-secret"); ok || slices.Contains(keys(public), "oidc-client-secret") {
+		t.Errorf("a public client passes %v and mounts %v; want no client secret", args(public), keys(public))
+	}
+	if _, err := render(t, append(slices.Clone(required), "oidc.issuer=https://login.example.com", "oidc.clientID=agni")...); err == nil || !strings.Contains(err.Error(), "set oidc.allow") {
+		t.Errorf("an issuer with no allow list rendered: %v; want it refused, asking for oidc.allow", err)
 	}
 }

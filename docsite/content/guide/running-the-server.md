@@ -1042,6 +1042,44 @@ agni login --remote https://agni.example.com
   sign in, and back to the page they were on. `ListMounts` names the address as `sign_in_url`.
 - On localhost `--public-url` can be left out, and the server uses the address it listens on.
 
+### Signing in through your identity provider
+
+Say the team signs in to everything through Entra ID or Okta, and its admins won't install a GitHub
+App on the org, or the boards aren't on GitHub at all. The server can sign people in through any
+OpenID Connect provider instead, or beside GitHub (agni issue 1811).
+
+The operator registers a client with the provider first. Its redirect URI is the server's
+`/signin/oidc/callback/`. Turn on the device flow there too, if the provider has one, for `agni login`.
+
+```bash
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth tokens \
+  --tls-cert /etc/agni/cert.pem --tls-key /etc/agni/key.pem --public-url https://agni.example.com \
+  --oidc-issuer https://login.microsoftonline.com/tenant-id/v2.0 --oidc-client-id agni-client \
+  --oidc-client-secret env:AGNI_OIDC_SECRET --oidc-allow domain:example.com --oidc-label Entra
+agni login --remote https://agni.example.com --with oidc
+```
+
+- The server reads the issuer's discovery document when it starts, so a wrong `--oidc-issuer` stops
+  the start rather than the first sign-in. The issuer must be https, apart from a provider on
+  localhost.
+- `/signin` offers "Sign in with Entra", from `--oidc-label`, beside any GitHub button. The person
+  signs in at the provider, and the server checks the claims of the verified ID token against
+  `--oidc-allow`.
+- `--oidc-allow` takes `domain:<domain>` for a verified email in a domain, `group:<id>` for a value
+  in the groups claim, `sub:<sub>` for one person and `hd:<domain>` for a Google Workspace domain,
+  comma separated or repeated. It can't be empty. Entra leaves the groups out of the token for
+  someone in more than 200, and such a person is refused with a page saying their groups couldn't
+  be checked.
+- A person signed in this way is the caller `oidc:<sub>`. The minted token works for 30 days, and
+  `agni token ls` lists it as "oidc sign-in" with their email. The server keeps no connection for
+  them. A person who also needs private repos adds their own with `agni connections add --mine`.
+- `agni login --with oidc` signs in through the provider's device flow. Without `--with`, it uses the
+  server's only sign-in, and a server offering GitHub and OIDC asks which one. A provider with no
+  device flow is refused by name, and the person signs in at `/signin` in a browser.
+- `--oidc-client-secret` is empty for a public client. The enterprise bundle reads the `AGNI_OIDC_*`
+  lines of its `.env`, and the chart its `oidc` values, and both offer GitHub alone while the issuer
+  is empty.
+
 ## Analysing in the visitor's browser
 
 The viewer's analysis can run in the visitor's browser instead of on the server. The engine is the

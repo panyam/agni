@@ -38,8 +38,22 @@ github:
   # Who may sign in: org:<org> for an org's members, user:<login> for one person.
   allow: []
 
+# Sign-in through your OpenID Connect provider, such as Entra ID or Okta, beside GitHub (agni issue
+# 1811). Off while issuer is empty. The provider sends a signed-in browser back to
+# <publicURL>/signin/oidc/callback/, so the client lists it.
+oidc:
+  # The provider's issuer URL, such as https://login.microsoftonline.com/<tenant>/v2.0.
+  issuer: ""
+  clientID: ""
+  # Whether secretName also holds oidc-client-secret. false for a public client.
+  clientSecret: true
+  # Who may sign in: domain:<domain>, group:<id>, sub:<sub> or hd:<domain>.
+  allow: []
+  # The provider's name on the sign-in button, such as Okta.
+  label: ""
+
 # The Secret holding connections-key (64 hex characters), github-client-secret and
-# github-webhook-secret.
+# github-webhook-secret, and oidc-client-secret when oidc.issuer is set.
 secretName: agni
 
 # A ConfigMap of CA certificates, as PEM files, that agni and agnids trust beside the system's, for a
