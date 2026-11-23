@@ -112,6 +112,34 @@ func TestOpenKeepsAFileStoreAsFolders(t *testing.T) {
 	}
 }
 
+// agnids only reads agni serve's store, and its image runs as a user that can't create
+// /var/lib/agni. So a read-only Open of a folder that isn't there yet makes nothing, and reads it as
+// empty until agni serve makes it (agni issue 1847).
+func TestAReadOnlyOpenMakesNoFolder(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "meta")
+	st, _, err := Open(fileURL(dir), "", ReadOnly())
+	if err != nil {
+		t.Fatalf("a read-only Open of a missing folder: %v", err)
+	}
+	defer st.Close()
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("a read-only Open made %s (stat: %v); want no folder", dir, err)
+	}
+	if ents, err := st.Records.List(t.Context(), "designs"); err != nil || len(ents) != 0 {
+		t.Errorf("listing designs in the missing folder = %v, %v; want nothing and no error", ents, err)
+	}
+
+	// The control: a server that writes the store makes the folder.
+	st2, _, err := Open(fileURL(dir), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st2.Close()
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		t.Errorf("Open without ReadOnly left %s as %v, %v; want a folder", dir, fi, err)
+	}
+}
+
 func TestOpenRefusesABadPostgresOrDatastoreURL(t *testing.T) {
 	for _, tc := range []struct{ store, want string }{
 		{"postgres://agni:hunter2@db/agni", "names a password; put it in PGPASSWORD"},

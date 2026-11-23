@@ -65,6 +65,7 @@ type Store struct {
 type options struct {
 	uploadsCache            string
 	s3Endpoint, gcsEndpoint string
+	readOnly                bool
 }
 
 // Option sets one of Open's optional settings.
@@ -74,6 +75,10 @@ type Option func(*options)
 // copies of the files and every view (--uploads-cache). Empty takes a folder named for the URL under
 // the user's cache folder.
 func WithUploadsCache(dir string) Option { return func(o *options) { o.uploadsCache = dir } }
+
+// ReadOnly opens a file:// store without making its folder, for a server that only reads another's
+// store, such as agnids (agni issue 1847). A folder that isn't there yet reads as empty.
+func ReadOnly() Option { return func(o *options) { o.readOnly = true } }
 
 // WithEndpoints points an s3:// or gs:// --uploads at another S3 or Cloud Storage API, as
 // --s3-endpoint and --gcs-endpoint do for mounts. Empty takes each service's own.
@@ -115,7 +120,7 @@ func uploadsLocal(uploads string, o options) (local, remote string, err error) {
 // refused, since uploads need a store to record what they hold. An s3:// or gs:// --uploads returns
 // its local cache as the uploads folder, and UploadBlobs reaches the bucket (agni issue 1730). A file:// folder and a sqlite://
 // file are created if absent. A postgres:// database and a Datastore project must exist, and Open
-// creates the tables it needs in them.
+// creates the tables it needs in them. ReadOnly leaves a missing file:// folder alone.
 func Open(store, uploads string, opts ...Option) (*Store, string, error) {
 	var o options
 	for _, f := range opts {
@@ -125,14 +130,14 @@ func Open(store, uploads string, opts ...Option) (*Store, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	st, up, err := open(store, uploads)
+	st, up, err := open(store, uploads, o)
 	if st != nil {
 		st.UploadsRemote, st.uploadsDir, st.opts = remote, up, o
 	}
 	return st, up, err
 }
 
-func open(store, uploads string) (*Store, string, error) {
+func open(store, uploads string, o options) (*Store, string, error) {
 	scheme, _, _ := strings.Cut(store, "://")
 	switch scheme {
 	case "sqlite", "postgres", "postgresql", "datastore":
@@ -141,7 +146,11 @@ func open(store, uploads string) (*Store, string, error) {
 		if err != nil || dir == "" {
 			return nil, up, err
 		}
-		recs, err := records.NewDir(dir)
+		newDir := records.NewDir
+		if o.readOnly {
+			newDir = records.OpenDir
+		}
+		recs, err := newDir(dir)
 		if err != nil {
 			return nil, "", fmt.Errorf("--store %q: %w", store, err)
 		}

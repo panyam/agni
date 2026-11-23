@@ -212,12 +212,12 @@ jobs:
 
       # The Helm chart, run through the same exercise on kind over the published image, then
       # published to GHCR as an OCI chart at the release's version (agni issue 1803).
-      - name: A kind cluster with ingress-nginx and the published image
+      # The cluster pulls the published image from GHCR itself. kind load can't import a
+      # multi-platform image from the runner's docker, which failed v0.11.0's run (agni issue 1847).
+      - name: A kind cluster with ingress-nginx
         id: kind
         if: matrix.kind == 'agni'
         uses: panyam/ci-actions/kind-ingress@06676ee1a59ebad76f679e595168fc74f4626281 # v0.1.5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/agni:${{ needs.tag.outputs.tag }}
 
       - name: Verify the Helm chart runs on the published image
         if: matrix.kind == 'agni'
