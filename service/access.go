@@ -94,9 +94,10 @@ func unguarded(ctx context.Context) context.Context {
 	return context.WithValue(ctx, unguardedKey{}, true)
 }
 
-// Check returns nil when the caller may read every one of sources.
+// Check returns nil when the caller may read every one of sources. A context the server marked
+// as its own, such as a bootstrap's, reads every source.
 func (g *AccessGuard) Check(ctx context.Context, sources []string) error {
-	if g == nil {
+	if g == nil || ctx.Value(unguardedKey{}) != nil {
 		return nil
 	}
 	for _, s := range sources {
@@ -107,9 +108,9 @@ func (g *AccessGuard) Check(ctx context.Context, sources []string) error {
 	return nil
 }
 
-// Mount returns nil when the caller may read what mount serves.
+// Mount returns nil when the caller may read what mount serves, as Check judges it.
 func (g *AccessGuard) Mount(ctx context.Context, mount string) error {
-	if g == nil {
+	if g == nil || ctx.Value(unguardedKey{}) != nil {
 		return nil
 	}
 	if s := g.src.Guarding(mount); s != "" {

@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/panyam/agni/service"
 )
 
 // The Helm chart's tests render it with the helm CLI, as `helm install` would, and read the
@@ -30,7 +32,8 @@ var required = []string{
 }
 
 type manifest struct {
-	Kind     string `yaml:"kind"`
+	Kind     string            `yaml:"kind"`
+	Data     map[string]string `yaml:"data"`
 	Metadata struct {
 		Name string `yaml:"name"`
 	} `yaml:"metadata"`
@@ -231,9 +234,15 @@ func TestTheChartsProbesAskThePortAgniListensOn(t *testing.T) {
 		if len(c.Ports) != 1 || ":"+strconv.Itoa(c.Ports[0].ContainerPort) != addr {
 			t.Errorf("%s: --addr=%s but the container port is %v", name, addr, c.Ports)
 		}
+		// agni is ready once its bootstrap applied (agni issue 1808), and the workbench has none.
+		ready := map[string]string{"agni": "/readyz", "agni-datasheets": "/healthz"}[name]
 		for which, p := range map[string]probe{"readiness": c.ReadinessProbe, "liveness": c.LivenessProbe} {
-			if p.HTTPGet.Path != "/healthz" || p.HTTPGet.Port != "http" {
-				t.Errorf("%s: the %s probe asks %v %v, want /healthz on the http port", name, which, p.HTTPGet.Path, p.HTTPGet.Port)
+			want := "/healthz"
+			if which == "readiness" {
+				want = ready
+			}
+			if p.HTTPGet.Path != want || p.HTTPGet.Port != "http" {
+				t.Errorf("%s: the %s probe asks %v %v, want %s on the http port", name, which, p.HTTPGet.Path, p.HTTPGet.Port, want)
 			}
 		}
 	}
@@ -377,5 +386,34 @@ func TestTheChartSignsInThroughOIDCWhenAsked(t *testing.T) {
 	}
 	if _, err := render(t, append(slices.Clone(required), "oidc.issuer=https://login.example.com", "oidc.clientID=agni")...); err == nil || !strings.Contains(err.Error(), "set oidc.allow") {
 		t.Errorf("an issuer with no allow list rendered: %v; want it refused, asking for oidc.allow", err)
+	}
+}
+
+// The chart hands agni serve its bootstrap from a ConfigMap it renders from the values, which
+// parses as a plan, and passes no --bootstrap without one (agni issue 1808).
+func TestTheChartHandsTheServerItsBootstrap(t *testing.T) {
+	agni := func(ms []manifest) (args []string, mounted, volume bool) {
+		spec := find(t, ms, "Deployment", "agni").Spec.Template.Spec
+		for _, m := range spec.Containers[0].VolumeMounts {
+			mounted = mounted || (m.Name == "bootstrap" && m.MountPath == "/etc/agni/bootstrap" && m.ReadOnly)
+		}
+		for _, v := range spec.Volumes {
+			volume = volume || (v.Name == "bootstrap" && v.ConfigMap != nil && v.ConfigMap.Name == "agni-bootstrap")
+		}
+		return spec.Containers[0].Args, mounted, volume
+	}
+	off := mustRender(t)
+	if args, mounted, volume := agni(off); slices.ContainsFunc(args, func(a string) bool { return strings.HasPrefix(a, "--bootstrap") }) || mounted || volume {
+		t.Errorf("with no bootstrap the chart passes %v, mounted %v, volume %v; want none of it", args, mounted, volume)
+	}
+	on := mustRender(t, "bootstrap.mounts[0].id=board", "bootstrap.mounts[0].source=github://hw/baseboard",
+		"bootstrap.designs[0].id=bb", "bootstrap.designs[0].link.schematic=board/gateway.kicad_sch@main")
+	args, mounted, volume := agni(on)
+	if got, _ := argValue(args, "--bootstrap"); got != "/etc/agni/bootstrap/bootstrap.yaml" || !mounted || !volume {
+		t.Errorf("with a bootstrap the chart passes --bootstrap=%q, mounted %v, volume %v; want the ConfigMap's file mounted read-only", got, mounted, volume)
+	}
+	plan, err := service.ParseBootstrap([]byte(find(t, on, "ConfigMap", "agni-bootstrap").Data["bootstrap.yaml"]))
+	if err != nil || len(plan.Mounts) != 1 || len(plan.Designs) != 1 || plan.Designs[0].Link["schematic"] != "board/gateway.kicad_sch@main" {
+		t.Errorf("the ConfigMap's bootstrap.yaml = %+v, %v; want the values' mount and design", plan, err)
 	}
 }

@@ -1,0 +1,13 @@
+{{- with .Values.bootstrap }}
+# The connections, mounts, packs, designs and projects the server holds, as `agni serve --bootstrap`
+# reads them (agni issue 1808).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "agni.name" $ }}-bootstrap
+  labels:
+    {{- include "agni.labels" $ | nindent 4 }}
+data:
+  bootstrap.yaml: |
+    {{- toYaml . | nindent 4 }}
+{{- end }}
