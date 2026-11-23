@@ -267,7 +267,9 @@ agni check designs/memory_unit --remote http://localhost:8080
 agni diff designs/memory_unit designs/memory_unit-rev-b --remote http://localhost:8080 --format json
 ```
 
-A stored design keeps the `intent:` of the folder's `design.yaml`, and nothing else from it. The
+A stored design keeps the `intent:` of the folder's `design.yaml`. The `entry:` and `companions:`
+decide which files become its artifacts and which one analysis reads, so an ODB++ board and an EDIF
+schematic export declared together stay one design. Nothing else from the descriptor is kept. The
 project's convention, checklists, profiles and params go up as a pack, `packs/<id>`, which `agni
 packs push` reads from a `project.yaml` (agni issue 1704). A check names the pack, and the server
 reads the design under it:

@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+### Fixed
+
+- `agni designs push` and `agni designs add` keep the companions a folder's `design.yaml` declares,
+  and read the entry it names (issue 1858). An ODB++ board and an EDIF schematic export declared
+  together used to lose the schematic on push, and add refused the folder as two designs. The stored
+  design now holds both artifacts and checks as its folder does.
+
 ## [0.11.1] - 2026-11-23
 
 v0.11.0's release failed before it published agnids, the chart and the GitHub Release. agnids

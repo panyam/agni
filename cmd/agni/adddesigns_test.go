@@ -244,3 +244,75 @@ func TestBoardsOfOneNameInTwoFoldersAddWithoutAClash(t *testing.T) {
 		t.Errorf("designs add printed %q; want rev-b's spare left as a proposal with its own id", out)
 	}
 }
+
+// boardAndSchematic is a folder whose design.yaml pairs a packed ODB++ board, as its entry, with an
+// EDIF schematic export. Nothing pairs the two but the descriptor, since they differ in format.
+func boardAndSchematic(t *testing.T, descriptor bool) string {
+	t.Helper()
+	dir := t.TempDir()
+	writeJobArchive(t, "../../examples/common/boards/odb/gateway-layout", filepath.Join(dir, "odb.tgz"))
+	eds, err := os.ReadFile("../../examples/common/boards/demo-schematic.eds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFiles(t, dir, map[string]string{"gateway.eds": string(eds)})
+	if descriptor {
+		writeFiles(t, dir, map[string]string{"design.yaml": "name: gw\nentry: odb.tgz\ncompanions:\n  - gateway.eds\n"})
+	}
+	return dir
+}
+
+// artifactTypes lists a stored design's artifacts by type.
+func artifactTypes(t *testing.T, url, design string) []string {
+	t.Helper()
+	list, err := webapiconnect.NewDesignServiceClient(http.DefaultClient, url).ListArtifacts(context.Background(), connect.NewRequest(&webapi.ListArtifactsRequest{Parent: design}))
+	if err != nil {
+		t.Fatalf("artifacts of %s: %v", design, err)
+	}
+	var got []string
+	for _, a := range list.Msg.GetArtifacts() {
+		got = append(got, strings.ToLower(strings.TrimPrefix(a.GetType().String(), "ARTIFACT_TYPE_")))
+	}
+	slices.Sort(got)
+	return got
+}
+
+// Pushing or adding a folder keeps the files its design.yaml declares as the design's artifacts, a
+// board and a schematic in two formats here, and reads the entry it names, as a local read of the
+// folder does. So the stored design checks as the folder does (agni issue 1858).
+func TestPushAndAddKeepTheCompanionsADescriptorDeclares(t *testing.T) {
+	ctx := context.Background()
+	want := []string{"board", "schematic"}
+	folder := boardAndSchematic(t, true)
+	local := findingKeys(t, "check", folder)
+	checksAsTheFolder := func(url string) {
+		t.Helper()
+		if stored := findingKeys(t, "check", "designs/gw", "--remote", url); len(local) == 0 || !slices.Equal(stored, local) {
+			t.Errorf("check designs/gw = %d findings, check on its folder = %d; want the same set\nonly stored: %v\nonly on the folder: %v", len(stored), len(local), minus(stored, local), minus(local, stored))
+		}
+	}
+
+	pushed := designServer(t, t.TempDir(), t.TempDir())
+	out, err := runDesigns(t, pushed.URL, "push", folder)
+	if err != nil || strings.Contains(out, "not kept") {
+		t.Errorf("push = %v\n%s; want the schematic kept, not reported", err, out)
+	}
+	if got := artifactTypes(t, pushed.URL, "designs/gw"); !slices.Equal(got, want) {
+		t.Errorf("pushed artifacts = %v, want %v", got, want)
+	}
+	checksAsTheFolder(pushed.URL)
+
+	added := designServer(t, t.TempDir(), t.TempDir(), mountset.Folder("lab", folder))
+	_, err = webapiconnect.NewDesignServiceClient(http.DefaultClient, added.URL).AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://lab", Designs: []*webapi.DesignToAdd{{Folder: "", DesignId: "gw"}}}))
+	if err != nil {
+		t.Fatalf("AddDesigns = %v; want the declared design added", err)
+	}
+	if got := artifactTypes(t, added.URL, "designs/gw"); !slices.Equal(got, want) {
+		t.Errorf("added artifacts = %v, want %v", got, want)
+	}
+	checksAsTheFolder(added.URL)
+
+	if out, err := runDesigns(t, pushed.URL, "push", boardAndSchematic(t, false), "--id", "guess"); err == nil || !strings.Contains(err.Error(), "hold 2 designs") {
+		t.Errorf("push with no design.yaml = %v\n%s; want two designs refused, as nothing pairs them", err, out)
+	}
+}

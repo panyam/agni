@@ -142,6 +142,9 @@ type recordYAML struct {
 	// OnSourceChange is the design's webapi.SourceChange by name, empty for the default (agni issue
 	// 1726).
 	OnSourceChange string `yaml:"on_source_change,omitempty"`
+	// Entry is the id of the artifact a design.yaml named the entry of, as service.DesignRecord's
+	// Entry (agni issue 1858).
+	Entry string `yaml:"entry_artifact,omitempty"`
 }
 
 type artifactRecord struct {
@@ -291,7 +294,7 @@ func describe(id string, rec recordYAML) (entry string, companions []string, raw
 	for _, a := range rec.Artifacts {
 		roles = append(roles, a.role())
 	}
-	if entry, companions, err = composeDesign(roles); err != nil || entry == "" {
+	if entry, companions, err = composeDesign(roles, rec.Entry); err != nil || entry == "" {
 		return entry, companions, nil, err
 	}
 	// The view's descriptor holds what reading the board needs. The series stays in the record alone,
@@ -351,7 +354,7 @@ func (s *DirStore) CreateDesign(ctx context.Context, id string, rec service.Desi
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	_, r, err := s.change(ctx, id, true, func(r *recordYAML) error {
-		*r = recordYAML{Title: rec.Title, Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy, Packs: rec.Packs, Intent: intent}
+		*r = recordYAML{Title: rec.Title, Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy, Packs: rec.Packs, Intent: intent, Entry: rec.Entry}
 		return nil
 	})
 	if err != nil {
@@ -375,7 +378,7 @@ func (s *DirStore) UpdateDesign(ctx context.Context, id string, update func(*ser
 // leaves.
 func applyUpdate(r *recordYAML, update func(*service.DesignRecord)) error {
 	var err error
-	rec := service.DesignRecord{Title: r.Title, Series: r.Series, FlattenHierarchy: r.FlattenHierarchy, Packs: r.Packs,
+	rec := service.DesignRecord{Title: r.Title, Series: r.Series, FlattenHierarchy: r.FlattenHierarchy, Packs: r.Packs, Entry: r.Entry,
 		OnSourceChange: webapi.SourceChange(webapi.SourceChange_value[r.OnSourceChange]), Newer: map[string]service.NewerVersion{}}
 	if rec.Intent, err = decodeIntent(r.Intent); err != nil {
 		return err
@@ -386,7 +389,7 @@ func applyUpdate(r *recordYAML, update func(*service.DesignRecord)) error {
 		}
 	}
 	update(&rec)
-	r.Title, r.Series, r.FlattenHierarchy, r.Packs = rec.Title, rec.Series, rec.FlattenHierarchy, rec.Packs
+	r.Title, r.Series, r.FlattenHierarchy, r.Packs, r.Entry = rec.Title, rec.Series, rec.FlattenHierarchy, rec.Packs, rec.Entry
 	r.OnSourceChange = ""
 	if rec.OnSourceChange != webapi.SourceChange_SOURCE_CHANGE_UNSPECIFIED {
 		r.OnSourceChange = rec.OnSourceChange.String()
