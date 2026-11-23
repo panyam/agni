@@ -9,23 +9,23 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `67e095f7`.
+Last pruned 2026-11-23, at `9a724274`.
 
 ## At a glance
 
 **#1799** (run agni inside an enterprise, against designs and packs in its own GitHub Enterprise
-Server) is active from 2026-11-21, at 11 of 14. Its exercise is `make exercise-enterprise`, against
-a fake GHES (`tools/fakegithub --seed`), and CI runs it in its own job. At `3dbe743a` all 21 steps
-pass. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
+Server) is active from 2026-11-21, at 12 of 14. Its exercise is `make exercise-enterprise`, against
+goapplib's fake GHES (`githubtest/cmd/fakegithub`, PR 1844), and CI runs it in its own job. At
+`9a724274` all 22 steps pass in all three modes. It also runs as `make exercise-enterprise-bundle` against `deploy/enterprise/compose.yaml`
 (PR 1832), and `make kind-up exercise-enterprise-helm` against `deploy/helm/agni` on kind (PR 1837),
 which needs helm and kind. `guide/deploying/` (PR 1843) walks an admin through the same steps, and
 nobody has followed it by hand on a fresh VM yet. #1805 (the demo repo) comes next.
 
-- **agni is on goapplib v0.7.33, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
+- **agni is on goapplib v0.7.34, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
   in through an OpenID Connect provider beside or instead of GitHub, and `agni login --with oidc`
-  uses its device flow (PR 1842). The exercise signs in through the App only. #1841 moves the
-  exercise onto goapplib's fake GHES once panyam/goapplib#240 gives it TLS.
+  uses its device flow (PR 1842). The exercise signs in through the App only. Its App lacks the
+  Members permission, so alice and mallory come in by name and bob's `org:acme` sign-in is refused.
 - **A checklist can be a folder of item files** (`items_dir`), in a descriptor (PR 1835) or a
   standalone manifest, and `--checklist checklist/` takes the folder itself (PR 1839). `agni
   checklists packs/<id> --remote` lists a pack's checklists, and a server design takes its
@@ -46,10 +46,10 @@ nobody has followed it by hand on a fresh VM yet. #1805 (the demo repo) comes ne
 
 ## Open, ranked
 
-1. **#1804**, the guide that takes an admin from a fresh machine to a running agni against their own
-   GitHub Enterprise Server, through the compose bundle or the Helm chart. Its "Done when" runs
-   against the exercise's fake GHES.
-2. **#1808**, bootstrap. Linked packs (PR 1819) give it `LinkPack` to call. Its scope is still
+1. **#1805**, a demo repo of designs and packs that a team copies into their own GitHub. The guide
+   names it.
+2. **#1846**, `make secrets` fails locally on the wire fixture's old page tokens. CI passes.
+3. **#1808**, bootstrap. Linked packs (PR 1819) give it `LinkPack` to call. Its scope is still
    open: the leaning is a file beside `agni.yaml`, not inside it, that also declares runtime
    mounts, plus what happens to a design the file drops and whether reports are made at start.
 
