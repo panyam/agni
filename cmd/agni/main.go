@@ -698,8 +698,9 @@ func checkCmd() *cobra.Command {
 			// rules selected" for a rule that runs.
 			var names []string
 			// runRules are the rules the run's catalog holds, for the verdict report, and rulesRun how
-			// many the run selected. Under --pack the catalog is the server's, so runRules stays nil, the
-			// coverage line counts the verdicts alone, and rulesRun is counted from the server's listing.
+			// many the run selected. For a design the server keeps, the catalog is the server's, so
+			// runRules stays nil, the coverage line counts the verdicts alone, and rulesRun is counted
+			// from the server's listing.
 			var runRules []*check.Rule
 			rulesRun := 0
 			if len(packs) == 0 {
@@ -707,12 +708,13 @@ func checkCmd() *cobra.Command {
 					return err
 				}
 			}
-			if len(packs) > 0 {
-				// The packs compose the run's catalog on the server, and this process never sees it. So
-				// --rule names go as written and the server refuses one it lacks, and no --rule runs the
-				// whole catalog the packs compose (agni issue 1704).
+			// A design the server keeps composes its catalog on the server, from its own intent and its
+			// packs, and this process never sees it. So --rule names go as written and the server
+			// refuses one it lacks, and no --rule runs the whole catalog (agni issues 1704, 1854).
+			serverCatalog := len(packs) > 0 || (remoteURL != "" && storedDesignArg(args[0]))
+			if serverCatalog {
 				if len(tagPairs) > 0 {
-					return fmt.Errorf("--tag selects rules from a catalog this process builds, and --pack builds the run's catalog on the server; name the rules with --rule")
+					return fmt.Errorf("--tag selects rules from a catalog this process builds, and the server builds the catalog of a design it keeps; name the rules with --rule")
 				}
 				names = ruleNames
 			} else {
@@ -745,8 +747,9 @@ func checkCmd() *cobra.Command {
 			// The CLI keeps the local loader even under --remote, because a viewer link hashes the bytes
 			// on this machine (designContentHash).
 			ll := &localLoader{loader: newLoader()}
-			// --remote sends the same requests to a running server (agni issue 998). The rule names
-			// are still resolved here, against the catalog this design's project composes.
+			// --remote sends the same requests to a running server (agni issue 998). For a design on
+			// this machine, the rule names are still resolved here, against the catalog its project
+			// composes.
 			var svc checkAPI
 			var snaps snapshotAPI
 			var queries queryAPI
@@ -792,7 +795,7 @@ func checkCmd() *cobra.Command {
 				return rpcFailed(err)
 			}
 			defer drop()
-			if len(packs) > 0 {
+			if serverCatalog {
 				rulesRun = len(names)
 				if rulesRun == 0 {
 					listed, err := svc.ListRules(ctx, &webapi.ListRulesRequest{Snapshot: snap})

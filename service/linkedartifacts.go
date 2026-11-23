@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"gopkg.in/yaml.v3"
 
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -94,7 +96,7 @@ func (s *DesignService) LinkArtifact(ctx context.Context, req *webapi.LinkArtifa
 	if err != nil {
 		return nil, err
 	}
-	files, _, err := s.readSource(ctx, r, version, p)
+	files, _, intent, err := s.readEntry(ctx, r, version, p)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +108,21 @@ func (s *DesignService) LinkArtifact(ctx context.Context, req *webapi.LinkArtifa
 	if err != nil {
 		return nil, err
 	}
+	if err := s.keepIntent(ctx, StandaloneDesignName(d), intent); err != nil {
+		return nil, err
+	}
 	return out[0], nil
+}
+
+// keepIntent stores the intent a linked entry's design.yaml declares as the design's own, as
+// ImportDesignFiles does for a pushed folder (agni issue 1854). A nil intent leaves the kept one, so
+// a descriptor with no intent: section never clears an intent set with UpdateDesign.
+func (s *DesignService) keepIntent(ctx context.Context, design string, intent *configpb.DesignIntent) error {
+	if intent == nil {
+		return nil
+	}
+	_, err := s.catalog.UpdateDesign(ctx, design, func(r *DesignRecord) { r.Intent = intent })
+	return err
 }
 
 // UnlinkArtifact makes a linked artifact an uploaded one, keeping its files.
@@ -185,6 +201,8 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 	}
 	var rows []rowFiles
 	now := timestamppb.New(s.clock())
+	// intent is what the design.yaml beside a rewritten entry declares now, kept after the write.
+	var intent *configpb.DesignIntent
 	for _, a := range picked {
 		src := a.GetSource()
 		row := &webapi.ArtifactSync{Artifact: a.GetName(), FromVersion: src.GetVersion(), ToVersion: src.GetVersion()}
@@ -214,7 +232,7 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 			continue
 		}
 		// A mount with no history names no version, so the files are read to see whether they moved.
-		files, got, err := s.readSource(ctx, r, version, src.GetPath())
+		files, got, declared, err := s.readEntry(ctx, r, version, src.GetPath())
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", a.GetName(), err)
 		}
@@ -230,6 +248,9 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 		_, id, _ := ArtifactID(a.GetName())
 		next := &webapi.ArtifactSource{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: true, Version: version, ReadTime: now, ReadHash: hash}
 		writes = append(writes, ArtifactWrite{ID: id, Files: files, Source: next})
+		if declared != nil {
+			intent = declared
+		}
 	}
 	for _, rf := range rows {
 		for _, f := range rf.files {
@@ -243,6 +264,9 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 		return resp, nil
 	}
 	if _, err := s.catalog.WriteArtifacts(ctx, req.GetName(), writes, s.blobs); err != nil {
+		return nil, err
+	}
+	if err := s.keepIntent(ctx, req.GetName(), intent); err != nil {
 		return nil, err
 	}
 	return resp, nil
@@ -318,18 +342,31 @@ func (s *DesignService) readSource(ctx context.Context, r MountReader, version, 
 	return readSource(ctx, s.blobs, r, version, p)
 }
 
+// readEntry is readSource, plus the intent of the design whose entry p is.
+func (s *DesignService) readEntry(ctx context.Context, r MountReader, version, p string) ([]*webapi.SnapshotFile, []string, *configpb.DesignIntent, error) {
+	return readLinkedSource(ctx, s.blobs, r, version, p)
+}
+
 // readSource is DesignService.readSource over blobs, so a linked pack reads its folder the same way.
 func readSource(ctx context.Context, blobs BlobSource, r MountReader, version, p string) ([]*webapi.SnapshotFile, []string, error) {
+	files, fetched, _, err := readLinkedSource(ctx, blobs, r, version, p)
+	return files, fetched, err
+}
+
+// readLinkedSource is readSource, plus the intent the design.yaml beside p declares when p is that
+// descriptor's entry, so a link keeps the intent a push of the folder keeps (agni issue 1854). The
+// intent is nil when p is no descriptor's entry.
+func readLinkedSource(ctx context.Context, blobs BlobSource, r MountReader, version, p string) ([]*webapi.SnapshotFile, []string, *configpb.DesignIntent, error) {
 	listed, err := r.List(ctx, version, p)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if len(listed) == 0 {
 		at := ""
 		if version != "" {
 			at = " at " + version
 		}
-		return nil, nil, fmt.Errorf("%w: the mount has no file or folder %q%s", ErrNotFound, p, at)
+		return nil, nil, nil, fmt.Errorf("%w: the mount has no file or folder %q%s", ErrNotFound, p, at)
 	}
 	var fetched []string
 	hashes := map[string]string{}
@@ -363,11 +400,11 @@ func readSource(ctx context.Context, blobs BlobSource, r MountReader, version, p
 			}
 			sf, err := take(f, rel)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			out = append(out, sf)
 		}
-		return out, fetched, nil
+		return out, fetched, nil, nil
 	}
 	dir := path.Dir(p)
 	if dir == "." {
@@ -375,7 +412,7 @@ func readSource(ctx context.Context, blobs BlobSource, r MountReader, version, p
 	}
 	siblings, err := r.List(ctx, version, dir)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	byRel := map[string]MountFile{}
 	var rels []string
@@ -403,24 +440,48 @@ func readSource(ctx context.Context, blobs BlobSource, r MountReader, version, p
 	}
 	group := artifactGroup(rels, read, path.Base(p))
 	if readErr != nil {
-		return nil, nil, readErr
+		return nil, nil, nil, readErr
 	}
 	if group == nil {
 		sf, err := take(listed[0], path.Base(p))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
-		return []*webapi.SnapshotFile{sf}, fetched, nil
+		return []*webapi.SnapshotFile{sf}, fetched, nil, nil
 	}
 	for _, pf := range group {
 		sf, err := take(byRel[pf.Folder], pf.Rel)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		out = append(out, sf)
 	}
 	slices.SortFunc(out, func(a, b *webapi.SnapshotFile) int { return strings.Compare(a.GetPath(), b.GetPath()) })
-	return out, fetched, nil
+	intent, err := entryIntent(rels, read, path.Base(p))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return out, fetched, intent, nil
+}
+
+// entryIntent is the intent the design.yaml among a folder's files declares, when that descriptor
+// names target as its entry. A companion such as the board is linked on its own, so its link reads
+// no intent. A folder with no descriptor, or one naming another entry, gives nil.
+func entryIntent(files []string, read func(string) ([]byte, error), target string) (*configpb.DesignIntent, error) {
+	if !slices.Contains(files, DesignDescriptorName) {
+		return nil, nil
+	}
+	raw, err := read(DesignDescriptorName)
+	if err != nil {
+		return nil, err
+	}
+	var d struct {
+		Entry string `yaml:"entry"`
+	}
+	if yaml.Unmarshal(raw, &d) != nil || d.Entry == "" || path.Clean(d.Entry) != target {
+		return nil, nil
+	}
+	return declaredIntent(files, read)
 }
 
 // artifactGroup finds the design among a folder's files whose entry or companion is target, and
