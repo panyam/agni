@@ -12,6 +12,13 @@ GitHub Release body carries.
 
 ### Added
 
+- A Helm chart for agni and agnids (issue 1803). Each release publishes it to
+  `oci://ghcr.io/panyam/charts/agni` at its version. It runs the enterprise bundle's server behind
+  the cluster's ingress with `--trusted-proxy`, takes every secret from a Secret the team makes, and
+  keeps the store and uploads on a claim, in postgres or in a bucket. The release runs the
+  enterprise exercise against it on kind over the published image before publishing it. The
+  exercise also checks that a browser's session cookie is Secure.
+
 - A deployment bundle for a team's own GitHub or GitHub Enterprise Server (issue 1802). Each release
   attaches `agni-enterprise-<version>.tar.gz`, a compose file and env example that run `agni serve`
   with TLS, `--auth tokens`, sign-in through a GitHub App, a connections key and webhooks, and agnids

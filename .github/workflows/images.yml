@@ -1,5 +1,5 @@
-# Builds the agni container image on a change that could break it, and smoke-tests it and the
-# compose bundle, without pushing anything.
+# Builds the agni container image on a change that could break it, and smoke-tests it, the compose
+# bundles and the Helm chart, without pushing anything.
 #
 # Before this, an image was first built by `release`, after a tag was already public, so a broken
 # Dockerfile surfaced as a failed release. It runs only when a file the image is made from changes.
@@ -17,9 +17,11 @@ on:
       - pnpm-workspace.yaml
       - hack/image_smoke.sh
       - hack/compose_smoke.sh
-      # The enterprise exercise runs against the enterprise bundle here (agni issue 1802).
+      # The enterprise exercise runs against the enterprise bundle (agni issue 1802) and the Helm
+      # chart (agni issue 1803) here.
       - hack/exercise_enterprise.sh
       - hack/exercise-enterprise.compose.yaml
+      - hack/kind_up.sh
       - tools/fakegithub/**
       # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
       - protos/agni/v1/webapi/**
@@ -35,9 +37,11 @@ on:
       - pnpm-workspace.yaml
       - hack/image_smoke.sh
       - hack/compose_smoke.sh
-      # The enterprise exercise runs against the enterprise bundle here (agni issue 1802).
+      # The enterprise exercise runs against the enterprise bundle (agni issue 1802) and the Helm
+      # chart (agni issue 1803) here.
       - hack/exercise_enterprise.sh
       - hack/exercise-enterprise.compose.yaml
+      - hack/kind_up.sh
       - tools/fakegithub/**
       # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
       - protos/agni/v1/webapi/**
@@ -113,3 +117,33 @@ jobs:
         with:
           name: exercise-enterprise-bundle
           path: ${{ runner.temp }}/exercise/enterprise/*.log
+
+      # The same exercise against the Helm chart on a kind cluster, behind ingress-nginx, which ends
+      # TLS in front of agni (agni issue 1803). The fake and the trap listen on the kind network's
+      # gateway, which the pods reach.
+      - name: A kind cluster with ingress-nginx and this image
+        id: kind
+        uses: panyam/ci-actions/kind-ingress@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
+        with:
+          images: agni-ci/agni:ci
+
+      - name: Enterprise exercise against the Helm chart
+        env:
+          EXERCISE_OUT: ${{ runner.temp }}/exercise-helm
+          EXERCISE_HOST: ${{ steps.kind.outputs.gateway }}
+        run: make exercise-enterprise-helm IMAGE_NAME=agni-ci/agni IMAGE_TAG=ci
+
+      - name: Keep the chart run's logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: exercise-enterprise-helm
+          path: ${{ runner.temp }}/exercise-helm/enterprise/*.log
+
+      # The release's own lint and package of the chart, with nothing pushed.
+      - name: Lint and package the chart
+        uses: panyam/ci-actions/helm-oci-publish@73f816432c03fc3680877114f22ebe54659eb175 # v0.1.4
+        with:
+          chart: deploy/helm/agni
+          version: v0.0.0-ci
+          push: "false"

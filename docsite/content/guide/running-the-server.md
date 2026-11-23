@@ -908,6 +908,43 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files \
 
 `agnids` takes the same flag.
 
+### Running on Kubernetes
+
+Each release publishes a Helm chart beside the images, as `oci://ghcr.io/panyam/charts/agni` at
+the release's version (agni issue 1803). It runs the same server as the enterprise bundle, behind
+your ingress controller, which ends TLS. agni trusts it through `--trusted-proxy`.
+
+```bash
+kubectl create secret generic agni \
+  --from-file=connections-key=connections.key \
+  --from-file=github-client-secret=github-client-secret \
+  --from-file=github-webhook-secret=github-webhook-secret
+kubectl create secret tls agni-tls --cert=tls.crt --key=tls.key
+helm install agni oci://ghcr.io/panyam/charts/agni --version 0.11.0 \
+  --set publicURL=https://agni.example.com --set ingress.host=agni.example.com \
+  --set github.api=https://github.example.com/api/v3 --set github.clientID=Iv1.0000000000000000 \
+  --set 'github.allow={org:acme}' --set 'trustedProxies={10.244.0.0/16}'
+```
+
+- You make every Secret with kubectl, and the chart makes none, so no secret sits in a values file
+  or in helm's release history. `secretName` names the generic Secret, and `ingress.tlsSecret` the
+  certificate.
+- `trustedProxies` is your cluster's pod range, where the ingress controller's pods run. The chart
+  refuses to render without it, since agni would refuse to start.
+- One pod runs, and an upgrade stops it before starting the next, since one server writes the store
+  and holds sign-ins in flight (agni issue 1827 covers several).
+- The store and the uploads live on a PersistentVolumeClaim, which `helm uninstall` keeps. `store`
+  takes a `postgres://` URL, with `PGPASSWORD` set through `env` from a Secret. `uploads` takes an
+  `s3://` or `gs://` bucket, with its cache on the claim.
+- `caConfigMap` names a ConfigMap of CA certificates both servers trust beside the system's.
+  `connectionSecrets` names a Secret mounted at `/run/agni/connections`, as the bundle's folder is.
+- `--set datasheets.enabled=true --set datasheets.host=...` adds the workbench on its own host. With
+  the store on the claim it runs on agni's node, since the claim mounts on one node.
+- A token for a script comes from `kubectl exec deploy/agni -- agni token create ops --store
+  file:///var/lib/agni/meta`.
+- `make kind-up exercise-enterprise-helm` runs the enterprise exercise against the chart on a kind
+  cluster, and each release runs it over the published image before publishing the chart.
+
 ### Who can open a design linked from a private repo
 
 Say alice and bob share a server, and the server reads the team's private board repo through a

@@ -1,0 +1,11 @@
+agni answers at {{ .Values.publicURL }}. Sign in there with GitHub.
+
+A token for a script or a CI job, printed once:
+  kubectl exec -n {{ .Release.Namespace }} deploy/{{ include "agni.name" . }} -- agni token create ops --store {{ include "agni.store" . }}
+
+A connection the server reads repos through, with the token sealed in the store:
+  agni connections add hw --seal --github-token env:HW_TOKEN --remote {{ .Values.publicURL }}
+{{- if .Values.datasheets.enabled }}
+
+The datasheet workbench answers at https://{{ .Values.datasheets.host }}.
+{{- end }}

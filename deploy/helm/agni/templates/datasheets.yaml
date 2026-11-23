@@ -1,0 +1,182 @@
+{{- if .Values.datasheets.enabled }}
+{{- $onClaim := and .Values.persistence.enabled (or (hasPrefix "file://" (include "agni.store" .)) (hasPrefix "file://" (include "agni.uploads" .))) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agni.name" . }}-datasheets
+  labels:
+    {{- include "agni.labels" . | nindent 4 }}
+    app.kubernetes.io/component: datasheets
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "agni.dsSelector" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agni.dsSelector" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      {{- if $onClaim }}
+      # A ReadWriteOnce claim mounts on one node, so the workbench runs beside agni.
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  {{- include "agni.selector" . | nindent 18 }}
+      {{- end }}
+      containers:
+        - name: agnids
+          image: "{{ .Values.datasheets.image.repository }}:{{ .Values.datasheets.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - serve
+            - --addr=:8090
+            - --corpus=/corpus
+            - --store={{ include "agni.store" . }}
+            - --uploads={{ include "agni.uploads" . }}
+            - --auth=tokens
+            - --trusted-proxy={{ include "agni.proxies" . }}
+            - --connections-key=file:/run/secrets/agni/connections-key
+            - --github-api={{ .Values.github.api }}
+            - --viewer-url={{ .Values.publicURL }}
+          ports:
+            - name: http
+              containerPort: 8090
+          env:
+            {{- include "agni.caEnv" . | nindent 12 }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: corpus
+              mountPath: /corpus
+            {{- if $onClaim }}
+            - name: data
+              mountPath: /var/lib/agni
+              readOnly: true
+            {{- end }}
+            - name: secrets
+              mountPath: /run/secrets/agni
+              readOnly: true
+            - name: ca
+              mountPath: /etc/agni/ca
+              readOnly: true
+          {{- with .Values.datasheets.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: corpus
+          persistentVolumeClaim:
+            claimName: {{ include "agni.name" . }}-corpus
+        {{- if $onClaim }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "agni.claim" . }}
+            readOnly: true
+        {{- end }}
+        - name: secrets
+          secret:
+            secretName: {{ .Values.secretName }}
+            defaultMode: 0440
+            items:
+              - key: connections-key
+                path: connections-key
+        - name: ca
+          {{- if .Values.caConfigMap }}
+          configMap:
+            name: {{ .Values.caConfigMap }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "agni.name" . }}-corpus
+  labels:
+    {{- include "agni.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with .Values.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.datasheets.corpusSize }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agni.name" . }}-datasheets
+  labels:
+    {{- include "agni.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "agni.dsSelector" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "agni.name" . }}-datasheets
+  labels:
+    {{- include "agni.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  tls:
+    - hosts: [{{ required "set datasheets.host, the workbench's host" .Values.datasheets.host | quote }}]
+      secretName: {{ .Values.datasheets.tlsSecret }}
+  rules:
+    - host: {{ .Values.datasheets.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "agni.name" . }}-datasheets
+                port:
+                  name: http
+{{- end }}

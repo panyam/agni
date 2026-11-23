@@ -1,0 +1,100 @@
+# agni for a team on Kubernetes (agni issue 1803). It runs the same server as the enterprise compose
+# bundle: tokens for every caller, sign-in through a GitHub App, people's GitHub tokens sealed with a
+# key only the server holds, and pushes followed through a webhook. The ingress ends TLS, and agni
+# trusts the X-Forwarded-Proto it sets.
+#
+# Every secret lives in a Secret you make with kubectl, and never in a values file. Make them before
+# installing:
+#
+#   kubectl create secret generic agni \
+#     --from-file=connections-key=connections.key \
+#     --from-file=github-client-secret=github-client-secret \
+#     --from-file=github-webhook-secret=github-webhook-secret
+#   kubectl create secret tls agni-tls --cert=tls.crt --key=tls.key
+#
+# "Running on Kubernetes" in https://panyam.github.io/agni/guide/running-the-server/ walks through
+# the rest.
+
+image:
+  repository: ghcr.io/panyam/agni
+  # Empty means the chart's appVersion, which the release sets to its own tag.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# The URL people open, as their browser reaches the ingress. GitHub sends a signed-in browser back
+# to <publicURL>/signin/github/callback/, and pushes to <publicURL>/hooks/github.
+publicURL: ""
+
+# The addresses of the proxy that ends TLS in front of agni, as CIDR ranges: your cluster's pod
+# range, where the ingress controller's pods run. agni gives Secure cookies to a request from one
+# of these that says X-Forwarded-Proto: https, and ignores the header from anyone else.
+trustedProxies: []
+
+github:
+  # Your GitHub's REST API. For GitHub Enterprise Server it is https://<host>/api/v3.
+  api: https://api.github.com
+  # The GitHub App people sign in through.
+  clientID: ""
+  # Who may sign in: org:<org> for an org's members, user:<login> for one person.
+  allow: []
+
+# The Secret holding connections-key (64 hex characters), github-client-secret and
+# github-webhook-secret.
+secretName: agni
+
+# A ConfigMap of CA certificates, as PEM files, that agni and agnids trust beside the system's, for a
+# GitHub Enterprise Server behind your own CA. Empty trusts the system's alone.
+caConfigMap: ""
+
+# A Secret of files the server reads for its own connections, mounted read-only at
+# /run/agni/connections. `agni connections add --github-token file:/run/agni/connections/hw` reads
+# its key hw. `agni connections add --seal` keeps the token sealed in the store instead, and needs
+# nothing here.
+connectionSecrets: ""
+
+# Where designs, packs, people's sealed tokens and accounts live. Empty keeps them on the
+# PersistentVolumeClaim below, at file:///var/lib/agni/meta. postgres://agni@db/agni keeps them in
+# your database, with the password in PGPASSWORD, set through env from a Secret.
+store: ""
+# Where uploaded files live. Empty keeps them on the claim, at file:///var/lib/agni/files.
+# s3://<bucket>/<prefix> and gs://<bucket>/<prefix> keep them in a bucket, with a local cache on the
+# claim, and read the cloud's usual credentials, which env can set.
+uploads: ""
+
+persistence:
+  # The claim the store, the uploads and their cache live on. One agni pod writes it.
+  enabled: true
+  size: 10Gi
+  storageClass: ""
+  # A claim you made yourself, used in place of making one.
+  existingClaim: ""
+
+ingress:
+  className: nginx
+  # The host in publicURL.
+  host: ""
+  # A kubernetes.io/tls Secret with the certificate for host.
+  tlsSecret: agni-tls
+  annotations: {}
+
+# Environment variables for agni and agnids, as a list of Kubernetes EnvVars, such as HTTPS_PROXY for
+# an outbound proxy, or PGPASSWORD with valueFrom.secretKeyRef.
+env: []
+
+resources: {}
+nodeSelector: {}
+tolerations: []
+
+# The datasheet workbench, off unless asked for. It checks the same tokens and people's sealed
+# connections, and reads the store, which it never writes. With the store on the claim, it runs on
+# agni's node so it can mount the claim too.
+datasheets:
+  enabled: false
+  image:
+    repository: ghcr.io/panyam/agnids
+    tag: ""
+  # The workbench's own host, with a certificate in tlsSecret.
+  host: ""
+  tlsSecret: agni-datasheets-tls
+  corpusSize: 10Gi
+  resources: {}

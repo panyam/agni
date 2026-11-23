@@ -1,0 +1,10 @@
+apiVersion: v2
+name: agni
+description: agni and the agnids datasheet workbench for a team, against its own GitHub or GitHub Enterprise Server, behind an ingress that ends TLS.
+type: application
+# The release workflow sets both to the release's version when it publishes the chart.
+version: 0.0.0
+appVersion: latest
+home: https://panyam.github.io/agni/guide/running-the-server/
+sources:
+  - https://github.com/panyam/agni
