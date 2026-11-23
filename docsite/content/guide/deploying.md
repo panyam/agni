@@ -206,6 +206,73 @@ the report, and each rule's row opens to the nets it names.
 
 ![The Jetson design's page after Validate against the jetson-rules pack, with the bulk-cap row open on VCC_IN]({{.Site.PathPrefix}}/static/images/guide/deploying-try-report.png)
 
+## Declare what the server holds
+
+Say the pod comes back on a new node with an empty volume, or a team wants a second server with the
+same boards. The commands above live in someone's shell history. A bootstrap file lists the same
+things, and the server makes them at every start (agni issue 1808).
+
+```yaml
+connections:
+  - id: hw
+    kind: github-token
+    token: file:/run/agni/connections/hw
+mounts:
+  - id: jetson
+    source: github://hw/jetson-agx-thor-baseboard
+    ref: main
+    connection: hw
+  - id: packs
+    source: github://hw/agni-packs
+    ref: main
+    connection: hw
+packs:
+  - id: house
+    link: packs@main
+designs:
+  - id: jetson
+    title: Jetson AGX Thor baseboard
+    packs: [house]
+    link:
+      schematic: jetson/jetson-agx-thor-baseboard.kicad_sch@1.1.3
+      board: jetson/jetson-agx-thor-baseboard.kicad_pcb@1.1.3
+projects:
+  - id: boards
+    designs: [jetson]
+    packs: [house]
+```
+
+Each entry does what the matching command does. A connection names where its secret is, as `env:`
+or `file:`, and never holds one, so the file can sit in a ConfigMap or in Git. Its `kind` is
+`github-app` with `app_id`, `installation_id` and `key`, or `github-token` with `token`, or `aws`,
+`gcp` or `entra`. A link reads `<mount>[/<path>][@<ref>]`, as `agni designs link` takes it. A
+branch is followed, and a tag or commit is pinned.
+
+- With the compose bundle, put the file at `bootstrap/bootstrap.yaml` and set
+  `AGNI_BOOTSTRAP=/etc/agni/bootstrap/bootstrap.yaml` in `.env`. Secret files go in
+  `secrets/connections/`, which the server reads at `/run/agni/connections/`.
+- With the chart, put the same YAML under `bootstrap` in your values. The chart writes it into a
+  ConfigMap and restarts the pod when it changes. Secret files come from the Secret that
+  `connectionSecrets` names.
+
+At start the server applies the entries in order, connections first, then mounts, packs, designs and
+projects. An entry that already matches is left alone, so a restart reads no file again. An entry
+whose source changed is linked again. One that fails is logged by name, and the server tries again
+after 5 seconds, then 10, and so on up to every 5 minutes. `/readyz` answers 503 with the failed
+entries until every one applies, and the chart's readiness probe asks it. A first install often
+fails at the mounts until the App is installed on the repo, and then turns ready by itself.
+
+The server keeps what the file doesn't name. Say someone made `designs/alice-test` by hand, and the
+team took `psu` out of the file. The log then says
+
+```
+bootstrap: designs/alice-test, designs/psu are in the store but not in bootstrap.yaml; set prune: true to delete them
+```
+
+With `prune: true` at the top of the file, the next start deletes them. Prune covers designs, their
+artifacts, packs and projects, and never a connection or a mount. Bootstrap makes no reports, so
+`agni reports create` still makes one when someone asks.
+
 ## Check who can open it
 
 Ask someone who can't read `hw/baseboard` on GitHub to sign in and open `designs/bb`. agni refuses

@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/panyam/agni/service"
 )
 
 const guide = "../docsite/content/guide/deploying.md"
@@ -48,7 +50,7 @@ func TestTheEnterpriseGuideNamesSettingsThatExist(t *testing.T) {
 	for _, m := range regexp.MustCompile("`((?:oidc|github|datasheets|ingress|persistence)\\.[a-zA-Z.]+)`").FindAllStringSubmatch(string(page), -1) {
 		keys = append(keys, m[1])
 	}
-	for _, m := range regexp.MustCompile("`(trustedProxies|connectionSecrets|caConfigMap|secretName|store|uploads|publicURL)`").FindAllStringSubmatch(string(page), -1) {
+	for _, m := range regexp.MustCompile("`(trustedProxies|connectionSecrets|caConfigMap|secretName|store|uploads|publicURL|bootstrap)`").FindAllStringSubmatch(string(page), -1) {
 		keys = append(keys, m[1])
 	}
 	if len(keys) < 10 {
@@ -80,4 +82,28 @@ func hasKey(values map[string]any, k string) bool {
 		at = v
 	}
 	return false
+}
+
+// The guide's bootstrap file parses as the plan agni serve --bootstrap reads (agni issue 1808).
+func TestTheGuidesBootstrapFileParses(t *testing.T) {
+	page, err := os.ReadFile(guide)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, section, ok := strings.Cut(string(page), "## Declare what the server holds\n")
+	if !ok {
+		t.Fatal("the guide has no section \"Declare what the server holds\"")
+	}
+	_, block, ok := strings.Cut(section, "```yaml\n")
+	block, _, closed := strings.Cut(block, "```")
+	if !ok || !closed {
+		t.Fatal("the section has no yaml block")
+	}
+	plan, err := service.ParseBootstrap([]byte(block))
+	if err != nil {
+		t.Fatalf("the guide's bootstrap file: %v", err)
+	}
+	if len(plan.Connections) != 1 || len(plan.Mounts) != 2 || len(plan.Packs) != 1 || len(plan.Designs) != 1 || len(plan.Projects) != 1 {
+		t.Errorf("the guide's bootstrap file = %+v; want one connection, two mounts, a pack, a design and a project", plan)
+	}
 }
