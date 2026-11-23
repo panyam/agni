@@ -2,7 +2,9 @@ package mountset
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"strings"
 
@@ -68,7 +70,7 @@ func (w *Workspace) ListDir(_ context.Context, uri mounts.URI) ([]service.DirEnt
 	// An archive lists as the folder it was made from, and a path can run into one (agni issue 1591).
 	dirents, err := archivefs.OSReadDir(abs)
 	if err != nil {
-		return nil, fmt.Errorf("mount %q: %w", uri.Mount, err)
+		return nil, fmt.Errorf("mount %q: %w", uri.Mount, byURI(uri, err))
 	}
 	out := make([]service.DirEntry, 0, len(dirents))
 	for _, de := range dirents {
@@ -83,5 +85,17 @@ func (w *Workspace) ReadFile(_ context.Context, uri mounts.URI) ([]byte, error) 
 	if err != nil {
 		return nil, err
 	}
-	return archivefs.OSReadFile(abs)
+	b, err := archivefs.OSReadFile(abs)
+	return b, byURI(uri, err)
+}
+
+// byURI names the file a read failed on by its mount URI rather than the folder it sits in on the
+// server, since a caller sees the error and has no business knowing where the mount lives (agni
+// issue 1864). The error still matches what it wrapped, such as fs.ErrNotExist.
+func byURI(uri mounts.URI, err error) error {
+	var pe *fs.PathError
+	if !errors.As(err, &pe) {
+		return err
+	}
+	return &fs.PathError{Op: pe.Op, Path: uri.String(), Err: pe.Err}
 }

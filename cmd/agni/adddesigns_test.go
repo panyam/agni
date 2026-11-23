@@ -388,3 +388,31 @@ func TestAddKeepsTheIntentItsDesignYAMLDeclares(t *testing.T) {
 		t.Errorf("an add whose design.yaml intent doesn't parse = %v; want INVALID_ARGUMENT naming design.yaml", err)
 	}
 }
+
+// A board refused because the symbol folder its design.yaml names is missing says so by the
+// folder's mount URI, and its reason holds no part of the folder the mount serves from on the
+// server (agni issue 1864).
+func TestARefusedBoardsReasonNamesNoServerFolder(t *testing.T) {
+	lab := t.TempDir()
+	broken := filepath.Join(lab, "boards", "broken")
+	if err := os.MkdirAll(broken, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(gatewayRevA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFiles(t, broken, map[string]string{"gateway.edn": string(b), "design.yaml": "entry: gateway.edn\nsymbols: [symbols]\n"})
+	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Folder("lab", lab))
+	resp, err := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL).AddDesigns(context.Background(), connect.NewRequest(&webapi.AddDesignsRequest{
+		Uri: "mount://lab/boards", Designs: []*webapi.DesignToAdd{{Folder: "boards/broken"}}, AllowPartial: true,
+	}))
+	if err != nil || len(resp.Msg.GetResults()) != 1 {
+		t.Fatalf("AddDesigns = %v, %v; want one result", resp, err)
+	}
+	reason := resp.Msg.GetResults()[0].GetReason()
+	real, _ := filepath.EvalSymlinks(lab)
+	if !strings.Contains(reason, "mount://lab/boards/broken/symbols") || strings.Contains(reason, lab) || strings.Contains(reason, real) {
+		t.Errorf("the refused board's reason = %q; want the symbol folder named mount://lab/boards/broken/symbols, and no part of %s", reason, lab)
+	}
+}

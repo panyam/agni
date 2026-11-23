@@ -20,7 +20,8 @@ GitHub Release body carries.
 - `agni designs add` keeps the intent a board's `design.yaml` declares, as push and link do (issue
   1864). A design added from a mount used to check as if it declared nothing. `--update` stores a
   changed intent though no file the design holds changed, and an intent that doesn't parse refuses
-  the add.
+  the add. A refused board's reason names a missing file by its mount URI, where it used to show
+  the folder the mount serves from on the server.
 
 ## [0.11.1] - 2026-11-23
 
