@@ -318,3 +318,101 @@ func TestPushAndAddKeepTheCompanionsADescriptorDeclares(t *testing.T) {
 		t.Errorf("push with no design.yaml = %v\n%s; want two designs refused, as nothing pairs them", err, out)
 	}
 }
+
+// Adding a folder from a mount keeps the intent its design.yaml declares, as push and link do, so
+// the stored design checks as its folder does. An update follows a changed intent though no file the
+// design holds changed, and an intent that doesn't parse refuses the add (agni issue 1864).
+func TestAddKeepsTheIntentItsDesignYAMLDeclares(t *testing.T) {
+	ctx := context.Background()
+	lab := t.TempDir()
+	hw := filepath.Join(lab, "hw")
+	if err := os.MkdirAll(hw, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"gateway.kicad_sch", "gateway.kicad_pcb", "gateway.kicad_pro"} {
+		b, err := os.ReadFile(filepath.Join("..", "..", "examples", "tutorial-project", "boards", "gateway", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(hw, f), b, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	describe := func(body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(hw, "design.yaml"), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	describe(gatewayDescriptor)
+	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Folder("lab", lab))
+	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	add := func(on webapi.OnExists) (map[string]string, error) {
+		t.Helper()
+		resp, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{
+			Uri: "mount://lab/hw", Designs: []*webapi.DesignToAdd{{Folder: "hw", DesignId: "gw"}}, OnExists: on,
+		}))
+		if err != nil {
+			return nil, err
+		}
+		return outcomes(resp.Msg), nil
+	}
+	checksAsTheFolder := func(when string) {
+		t.Helper()
+		local := findingKeys(t, "check", hw)
+		if !slices.ContainsFunc(local, func(k string) bool { return strings.HasPrefix(k, "intent/") }) {
+			t.Fatalf("%s: a check of the folder finds nothing from an intent/ rule, so the comparison proves nothing: %v", when, local)
+		}
+		if stored := findingKeys(t, "check", "designs/gw", "--remote", srv.URL); !slices.Equal(stored, local) {
+			t.Errorf("%s: check designs/gw = %d findings, check of its folder = %d; want the same set\nonly stored: %v\nonly on disk: %v", when, len(stored), len(local), minus(stored, local), minus(local, stored))
+		}
+	}
+
+	if got, err := add(webapi.OnExists_ON_EXISTS_UNSPECIFIED); err != nil || got["hw"] != "ADDED" {
+		t.Fatalf("the first add = %v, %v; want gw added", got, err)
+	}
+	checksAsTheFolder("after the add")
+
+	before := findingKeys(t, "check", hw)
+	describe(strings.Replace(gatewayDescriptor, "    PMIC_IO_1V8: {nominal: 3.3, domain: core}\n", "", 1))
+	if slices.Equal(findingKeys(t, "check", hw), before) {
+		t.Fatalf("the changed intent gives the folder the same findings, so the update below proves nothing")
+	}
+	if got, err := add(webapi.OnExists_ON_EXISTS_UPDATE); err != nil || got["hw"] != "UPDATED" {
+		t.Errorf("ON_EXISTS_UPDATE over a changed intent = %v, %v; want gw updated", got, err)
+	}
+	checksAsTheFolder("after the update")
+
+	describe(gatewayDescriptor + "  io_map: 7\n")
+	if _, err := add(webapi.OnExists_ON_EXISTS_UPDATE); connect.CodeOf(err) != connect.CodeInvalidArgument || !strings.Contains(err.Error(), "design.yaml") {
+		t.Errorf("an add whose design.yaml intent doesn't parse = %v; want INVALID_ARGUMENT naming design.yaml", err)
+	}
+}
+
+// A board refused because the symbol folder its design.yaml names is missing says so by the
+// folder's mount URI, and its reason holds no part of the folder the mount serves from on the
+// server (agni issue 1864).
+func TestARefusedBoardsReasonNamesNoServerFolder(t *testing.T) {
+	lab := t.TempDir()
+	broken := filepath.Join(lab, "boards", "broken")
+	if err := os.MkdirAll(broken, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(gatewayRevA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFiles(t, broken, map[string]string{"gateway.edn": string(b), "design.yaml": "entry: gateway.edn\nsymbols: [symbols]\n"})
+	srv := designServer(t, t.TempDir(), t.TempDir(), mountset.Folder("lab", lab))
+	resp, err := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL).AddDesigns(context.Background(), connect.NewRequest(&webapi.AddDesignsRequest{
+		Uri: "mount://lab/boards", Designs: []*webapi.DesignToAdd{{Folder: "boards/broken"}}, AllowPartial: true,
+	}))
+	if err != nil || len(resp.Msg.GetResults()) != 1 {
+		t.Fatalf("AddDesigns = %v, %v; want one result", resp, err)
+	}
+	reason := resp.Msg.GetResults()[0].GetReason()
+	real, _ := filepath.EvalSymlinks(lab)
+	if !strings.Contains(reason, "mount://lab/boards/broken/symbols") || strings.Contains(reason, lab) || strings.Contains(reason, real) {
+		t.Errorf("the refused board's reason = %q; want the symbol folder named mount://lab/boards/broken/symbols, and no part of %s", reason, lab)
+	}
+}

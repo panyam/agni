@@ -17,6 +17,11 @@ GitHub Release body carries.
   together used to lose the schematic on push, and add refused the folder as two designs. The stored
   design now holds both artifacts and checks as its folder does. Linking the declared entry with
   `agni designs link` records it too, so a board and a schematic linked one at a time read the board.
+- `agni designs add` keeps the intent a board's `design.yaml` declares, as push and link do (issue
+  1864). A design added from a mount used to check as if it declared nothing. `--update` stores a
+  changed intent though no file the design holds changed, and an intent that doesn't parse refuses
+  the add. A refused board's reason names a missing file by its mount URI, where it used to show
+  the folder the mount serves from on the server.
 
 ## [0.11.1] - 2026-11-23
 
