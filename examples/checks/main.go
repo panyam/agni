@@ -24,7 +24,7 @@ import (
 var walkthroughMD []byte
 
 func main() {
-	design := common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn")
+	design := common.AskPath("design", "../common/boards/i2c-sensor/i2c-sensor.edn")
 
 	demo := demokit.New("checks").
 		Dir("checks").
@@ -48,11 +48,11 @@ func main() {
 	// The pull-up reach section reads its own fixture and declaration whatever design was picked,
 	// because the point is one board read twice, once at the default reach and once as declared.
 	demo.Bind("reach").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		d, err := common.Load("../common/designs/pullup-reach.edn")
+		d, err := common.Load("../common/boards/pullup-reach.edn")
 		if err != nil {
 			return demokit.Errf("load pullup-reach.edn: %v", err)
 		}
-		b, err := os.ReadFile("../common/designs/pullup-reach.intent.yaml")
+		b, err := os.ReadFile("../common/boards/pullup-reach.intent.yaml")
 		if err != nil {
 			return demokit.Errf("read the declaration: %v", err)
 		}

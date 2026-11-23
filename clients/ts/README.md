@@ -11,7 +11,7 @@ import { createAgniClient, snapshotUnavailable, textPosition } from "@panyam/agn
 const agni = createAgniClient("http://127.0.0.1:8080", { token: process.env.AGNI_TOKEN });
 const info = await agni.checkServer(); // refuses a server that does not speak agni.v1
 
-const snap = await agni.snapshot.ingest({ snapshot: { uri: "mount://probe/designs/jetson-cut" } });
+const snap = await agni.snapshot.ingest({ snapshot: { uri: "mount://probe/boards/jetson-cut" } });
 const design = await agni.designView.getSummary({ snapshot: snap.name });
 const rows = await agni.query.runQuery({ snapshot: snap.name, query: 'component.class(?c, "resistor") => ?c' });
 await agni.snapshot.deleteSnapshot({ name: snap.name });

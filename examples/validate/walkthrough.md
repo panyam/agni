@@ -19,8 +19,8 @@ structures (CONSTRAINTS C1), and this walkthrough runs them the same way the CLI
 ## Pick a design {#pick}
 
 > Give a path to any design (relative to this example folder), or your own file. The
-> bundled ../common/designs/i2c-sensor/i2c-sensor.edn is a healthy netlist;
-> ../common/designs/dangling-wire.kicad_sch is deliberately
+> bundled ../common/boards/i2c-sensor/i2c-sensor.edn is a healthy netlist;
+> ../common/boards/dangling-wire.kicad_sch is deliberately
 > degenerate (wires drawn to empty space, no components), so it shows what failure looks
 > like if you point the walkthrough at it.
 

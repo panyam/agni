@@ -15,7 +15,7 @@
 //!
 //! let client = agni_client::Client::connect("http://127.0.0.1:8080", None).await?;
 //! let ingest = IngestRequest {
-//!     snapshot: Some(Snapshot { uri: "mount://probe/designs/jetson-cut".into(), ..Default::default() }),
+//!     snapshot: Some(Snapshot { uri: "mount://probe/boards/jetson-cut".into(), ..Default::default() }),
 //!     ..Default::default()
 //! };
 //! let snap = client.snapshots().ingest(ingest).await?.into_inner();

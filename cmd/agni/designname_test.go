@@ -69,7 +69,7 @@ func designServer(t *testing.T, store, uploads string, mounted ...mounts.Mount) 
 func gatewayFolder(t *testing.T, netlist string) string {
 	t.Helper()
 	dir := t.TempDir()
-	src := "../../examples/tutorial-project/designs/gateway-rev-b/"
+	src := "../../examples/tutorial-project/boards/gateway-rev-b/"
 	for from, to := range map[string]string{netlist: "gateway.edn", src + "gateway-rev-b.kicad_pcb": "gateway.kicad_pcb"} {
 		b, err := os.ReadFile(from)
 		if err != nil {
@@ -83,8 +83,8 @@ func gatewayFolder(t *testing.T, netlist string) string {
 }
 
 const (
-	gatewayRevA = "../../examples/tutorial-project/designs/gateway/gateway.edn"
-	gatewayRevB = "../../examples/tutorial-project/designs/gateway-rev-b/gateway-rev-b.edn"
+	gatewayRevA = "../../examples/tutorial-project/boards/gateway/gateway.edn"
+	gatewayRevB = "../../examples/tutorial-project/boards/gateway-rev-b/gateway-rev-b.edn"
 )
 
 func ingestByName(ctx context.Context, c webapiconnect.SnapshotServiceClient, design string) (*webapi.Snapshot, error) {

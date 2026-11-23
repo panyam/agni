@@ -38,7 +38,7 @@ func TestTheSeedRouteServesADesignsStoreUnderItsVersion(t *testing.T) {
 	}
 
 	versioned := newSeeds(ws, tableOf(ms), func() string { return "v1" })
-	resp := get(versioned, "/seed/tut/designs/gateway")
+	resp := get(versioned, "/seed/tut/boards/gateway")
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || len(body) == 0 {
@@ -47,10 +47,10 @@ func TestTheSeedRouteServesADesignsStoreUnderItsVersion(t *testing.T) {
 	if got := resp.Header.Get(wasmengine.SeedVersionHeader); got != "v1" {
 		t.Errorf("the seed names version %q, want v1", got)
 	}
-	if resp := get(versioned, "/seed/tut/designs/nothing-here"); resp.StatusCode != http.StatusNotFound {
+	if resp := get(versioned, "/seed/tut/boards/nothing-here"); resp.StatusCode != http.StatusNotFound {
 		t.Errorf("an unknown design answered %d, want 404", resp.StatusCode)
 	}
-	if resp := get(newSeeds(ws, tableOf(ms), func() string { return "" }), "/seed/tut/designs/gateway"); resp.StatusCode != http.StatusNoContent {
+	if resp := get(newSeeds(ws, tableOf(ms), func() string { return "" }), "/seed/tut/boards/gateway"); resp.StatusCode != http.StatusNoContent {
 		t.Errorf("an unversioned binary answered %d, want 204 with no seed", resp.StatusCode)
 	}
 }
@@ -69,7 +69,7 @@ func TestARequestNamingADesignWarmsItsSeedOnce(t *testing.T) {
 	hook := warmSeeds(s)(func(context.Context, connect.AnyRequest) (connect.AnyResponse, error) {
 		return connect.NewResponse(&webapi.ListDesignFilesResponse{}), nil
 	})
-	if _, err := hook(context.Background(), connect.NewRequest(&webapi.ListDesignFilesRequest{Uri: "mount://tut/designs/gateway"})); err != nil {
+	if _, err := hook(context.Background(), connect.NewRequest(&webapi.ListDesignFilesRequest{Uri: "mount://tut/boards/gateway"})); err != nil {
 		t.Fatal(err)
 	}
 	// The seed builds with no request for it.
@@ -85,7 +85,7 @@ func TestARequestNamingADesignWarmsItsSeedOnce(t *testing.T) {
 	}
 	srv := httptest.NewServer(s)
 	t.Cleanup(srv.Close)
-	resp, err := http.Get(srv.URL + "/seed/tut/designs/gateway")
+	resp, err := http.Get(srv.URL + "/seed/tut/boards/gateway")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestARequestNamingADesignWarmsItsSeedOnce(t *testing.T) {
 
 // Only a listing or a server read of a design on a mount warms a seed. A design sent as files has none.
 func TestOnlyAListingOrAReadOfAMountedDesignWarmsASeed(t *testing.T) {
-	const gateway = "mount://tut/designs/gateway"
+	const gateway = "mount://tut/boards/gateway"
 	cases := []struct {
 		name string
 		msg  any
@@ -118,7 +118,7 @@ func TestOnlyAListingOrAReadOfAMountedDesignWarmsASeed(t *testing.T) {
 		if ok != c.want {
 			t.Errorf("%s: names a design %v, want %v", c.name, ok, c.want)
 		}
-		if ok && (u.Mount != "tut" || u.Path != "designs/gateway") {
+		if ok && (u.Mount != "tut" || u.Path != "boards/gateway") {
 			t.Errorf("%s: names %+v", c.name, u)
 		}
 	}

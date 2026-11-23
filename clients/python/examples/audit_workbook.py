@@ -52,7 +52,7 @@ def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("-o", "--out", required=True, help="the .xlsx to write")
     ap.add_argument("--folder", default=str(TUTORIAL), help="the folder to mount (default: the tutorial project)")
-    ap.add_argument("--design", default="designs/gateway", help="the design, relative to --folder")
+    ap.add_argument("--design", default="boards/gateway", help="the design, relative to --folder")
     ap.add_argument("--server", help="a running `agni serve` to ask instead of the CLI")
     ap.add_argument("--agni", default=os.environ.get("AGNI_BIN", "agni"), help="the agni binary for the CLI transport")
     args = ap.parse_args(argv)

@@ -48,8 +48,8 @@ func main() {
 	// 1) Convergence. The same board read from three formats yields the same netlist.
 	demo.Bind("converge").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 		echo(
-			"agni stats examples/common/designs/mixer.kicad_pcb",
-			"agni diff  examples/common/designs/mixer.edn examples/common/designs/mixer.ipc2581.xml",
+			"agni stats examples/common/boards/mixer.kicad_pcb",
+			"agni diff  examples/common/boards/mixer.edn examples/common/boards/mixer.ipc2581.xml",
 		)
 		edn, err := common.ReadFixture("mixer.edn")
 		if err != nil {
@@ -71,7 +71,7 @@ func main() {
 
 	// 2) Structural checks over the netlist.
 	demo.Bind("check").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		echo("agni check examples/common/designs/i2c-sensor")
+		echo("agni check examples/common/boards/i2c-sensor")
 		d, err := common.ReadFixture("i2c-sensor.edn")
 		if err != nil {
 			return demokit.Errf("read i2c-sensor.edn: %v", err)
@@ -82,7 +82,7 @@ func main() {
 
 	// 3) Semantic diff of two revisions, showing the full change taxonomy.
 	demo.Bind("diff").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		echo("agni diff examples/common/designs/rev-a.edn examples/common/designs/rev-b.edn")
+		echo("agni diff examples/common/boards/rev-a.edn examples/common/boards/rev-b.edn")
 		a, err := common.ReadFixture("rev-a.edn")
 		if err != nil {
 			return demokit.Errf("read rev-a.edn: %v", err)
@@ -97,7 +97,7 @@ func main() {
 
 	// 4) Emit. Convert across formats through the IR, with an in-line round-trip.
 	demo.Bind("emit").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		echo("agni emit examples/common/designs/mixer.edn mixer.ipc2581.xml")
+		echo("agni emit examples/common/boards/mixer.edn mixer.ipc2581.xml")
 		d, err := common.ReadFixture("mixer.edn")
 		if err != nil {
 			return demokit.Errf("read mixer.edn: %v", err)
@@ -117,8 +117,8 @@ func main() {
 
 	// 5) Render a schematic sheet from EDIF geometry to SVG.
 	demo.Bind("schematic").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		echo("agni render examples/common/designs/demo-schematic.eds -o schematic.svg")
-		g, err := common.LoadSchematic("../common/designs/demo-schematic.eds")
+		echo("agni render examples/common/boards/demo-schematic.eds -o schematic.svg")
+		g, err := common.LoadSchematic("../common/boards/demo-schematic.eds")
 		if err != nil {
 			return demokit.Errf("load schematic: %v", err)
 		}
@@ -138,8 +138,8 @@ func main() {
 	// every registered layout by crossings.
 	demo.Bind("graph").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 		echo(
-			"agni render --compare examples/common/designs/i2c-sensor",
-			"agni render --layout layered examples/common/designs/i2c-sensor -o graph.svg",
+			"agni render --compare examples/common/boards/i2c-sensor",
+			"agni render --layout layered examples/common/boards/i2c-sensor -o graph.svg",
 		)
 		d, err := common.ReadFixture("i2c-sensor.edn")
 		if err != nil {

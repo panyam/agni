@@ -101,7 +101,7 @@ item just looks like a finding you have not got round to.
 
 Naming the design is the whole command. This project already declares every input a review needs.
 `project.yaml` carries its checklists and its naming vocabulary, `profiles/` its
-interfaces, `params/` its part limits, and `designs/jetson/design.yaml` names the schematic to read,
+interfaces, `params/` its part limits, and `boards/jetson/design.yaml` names the schematic to read,
 the board beside it and the board's intent.
 
 {{ agniRun "content/tutorials/runs/08-review.yaml" }}
@@ -127,7 +127,7 @@ The markdown above is for reading in a terminal and pasting into a review. `--fo
 same checklist as a self-contained page instead:
 
 ```
-agni review designs/jetson --format html --server self > review.html
+agni review boards/jetson --format html --server self > review.html
 ```
 
 The page differs from the markdown in two ways. Every finding is listed per item, where the Detail

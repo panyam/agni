@@ -30,7 +30,7 @@ var walkthroughMD []byte
 // fixtureRoot is the bundled project for the walkthrough to resolve against. A store's tree is
 // rooted at one filesystem. On a server that is a mount, and here it is this folder. Everything the
 // example names is relative to it, never a host path.
-const fixtureRoot = "../common/designs/demo-project"
+const fixtureRoot = "../common/boards/demo-project"
 
 // mount names this one tree. An artifact URI always has an authority, so even a single-tree client
 // names its tree rather than inventing a path-shaped alternative.

@@ -95,7 +95,7 @@ func TestASetFromAFileLinksEachQueryByItsText(t *testing.T) {
 func TestAProjectSetLinksEachQueryByName(t *testing.T) {
 	freshWorkspace(t)
 	cliMountSpecs = []string{"tut=" + filepath.Join("..", "..", "examples", "tutorial-project")}
-	_, stderr := runQueryBoth(t, "mount://tut/designs/gateway", "--set", "power-review", "--server", urlBaseFlag)
+	_, stderr := runQueryBoth(t, "mount://tut/boards/gateway", "--set", "power-review", "--server", urlBaseFlag)
 	n := strings.Count(stderr, "look at ")
 	if n < 2 {
 		t.Fatalf("%d links for the power-review set, want one per query:\n%s", n, stderr)

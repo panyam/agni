@@ -1,7 +1,7 @@
 # A query set the project keeps, so every design in it can open the same tables. The viewer lists
 # the sets under queries/ and opens one as a tab per query; the CLI runs a set file with
 #
-#   agni query designs/gateway --set queries/power-review.yaml --format markdown
+#   agni query boards/gateway --set queries/power-review.yaml --format markdown
 #
 # The shape is the one examples/netlist-audit/audit.yaml documents.
 title: Power review

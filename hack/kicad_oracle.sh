@@ -22,8 +22,8 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 
 # <seed> <design dir> <schematic, or - for none> <board, or - for none>
 seeds=(
-  "gateway examples/tutorial-project/designs/gateway gateway.kicad_sch gateway.kicad_pcb"
-  "gateway-rev-b examples/tutorial-project/designs/gateway-rev-b - gateway-rev-b.kicad_pcb"
+  "gateway examples/tutorial-project/boards/gateway gateway.kicad_sch gateway.kicad_pcb"
+  "gateway-rev-b examples/tutorial-project/boards/gateway-rev-b - gateway-rev-b.kicad_pcb"
   "jetson-agx-thor-baseboard tools/samples/boards/jetson-agx-thor-baseboard jetson-agx-thor-baseboard.kicad_sch jetson-agx-thor-baseboard.kicad_pcb"
   "royalblue54l-feather tools/samples/boards/royalblue54L-feather RoyalBlue54L-Feather.kicad_sch RoyalBlue54L-Feather.kicad_pcb"
   "royalblue54l-nfc-antenna tools/samples/boards/royalblue54L-feather/nfc_antenna/RoyalBlue54L-NFC-Antenna RoyalBlue54L-NFC-Antenna.kicad_sch RoyalBlue54L-NFC-Antenna.kicad_pcb"

@@ -150,7 +150,7 @@ engine repo:
 
 | Sample | Run from | What it is |
 |---|---|---|
-| `designs/gateway/gateway.edn` | `examples/tutorial-project` | the tutorial's synthetic gateway board, with a team's naming and parameters wrapped around it |
+| `boards/gateway/gateway.edn` | `examples/tutorial-project` | the tutorial's synthetic gateway board, with a team's naming and parameters wrapped around it |
 | `regulator.fires.kicad_sch`, `fires.edn` | `cmd/agni/testdata/conformance` | small single-purpose boards, each built so one thing has something true to report |
 | `board.kicad_pcb` | `readers/kicad/testdata` | a board export, for the copper facts a netlist cannot answer |
 
@@ -663,7 +663,7 @@ written this way, and it needs no preamble at all, because the shipped library (
 everything its tables share.
 
 **A project keeps its sets in `queries/`**, one per `.yaml` file beside `project.yaml`, and `--set`
-takes a set's name there as well as a file: `agni query designs/gateway --set power-review` runs the
+takes a set's name there as well as a file: `agni query boards/gateway --set power-review` runs the
 tutorial project's `queries/power-review.yaml`. As with `--checklist`, a value ending in `.yaml` or
 `.yml` is a file and any other value is a name the project must keep. In the viewer, the query
 panel's **Sets** menu lists the same sets and opens one as a tab per query, in the set's order. Each
@@ -819,7 +819,7 @@ provenance sits behind each row's expand toggle instead of in a trailing column.
 A question you keep asking is a **view**, and `--format` takes one out of the tool.
 
 ```bash
-agni query designs/gateway/gateway.edn \
+agni query boards/gateway/gateway.edn \
   'component.net(?r,?n), component.class(?r,"test_point") => ?n, ?r' \
   --format markdown --title "Test point coverage" > tp-coverage.md
 ```
@@ -861,7 +861,7 @@ The design is named by its mount URI, never by the path on the machine that ran 
 is safe to commit or mail.
 
 ```bash
-agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n' --format csv > rails.csv
+agni query boards/gateway/gateway.edn 'net.rail(?n) => ?n' --format csv > rails.csv
 ```
 
 ## Following a signal across the parts in the way

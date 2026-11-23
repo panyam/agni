@@ -28,7 +28,7 @@ var walkthroughMD []byte
 // walkthrough.md states what they hold, and ask_test.go checks those claims against them.
 const (
 	defaultFolder = "../tutorial-project"
-	defaultDesign = "designs/gateway"
+	defaultDesign = "boards/gateway"
 )
 
 // questions are the calls the walkthrough makes after connecting, in order, by step id.
@@ -40,7 +40,7 @@ var questions = []struct {
 	{"look", "look", map[string]any{"name": "net.has_test_point"}},
 	{"query", "query", map[string]any{"program": `net.rail(?net), not net.has_test_point(?net) => ?net`}},
 	{"trace", "trace", map[string]any{"from": "J1.1", "to": "U1.1"}},
-	{"diff", "diff", map[string]any{"design": mountName + "/" + defaultDesign + "/gateway.edn", "against": mountName + "/designs/gateway-rev-b/gateway-rev-b.edn"}},
+	{"diff", "diff", map[string]any{"design": mountName + "/" + defaultDesign + "/gateway.edn", "against": mountName + "/boards/gateway-rev-b/gateway-rev-b.edn"}},
 }
 
 func main() {

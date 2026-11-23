@@ -1,12 +1,12 @@
-#agni-run e45042fe1f09ab4e
+#agni-run 17bdbd270948b82e
 r   n               provenance
-U1  GND             designs/gateway/gateway.edn ; designs/gateway/gateway.edn:GND
-U1  PMIC_CORE_3V3   designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_CORE_3V3
-U1  PMIC_EN         designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_EN
-U1  PMIC_MAIN_12V0  designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_MAIN_12V0
-U1  PMIC_PG         designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_PG
-U2  GND             designs/gateway/gateway.edn ; designs/gateway/gateway.edn:GND
-U2  PMIC_CORE_3V3   designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_CORE_3V3
-U2  PMIC_IO_1V8     designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_IO_1V8
+U1  GND             boards/gateway/gateway.edn ; boards/gateway/gateway.edn:GND
+U1  PMIC_CORE_3V3   boards/gateway/gateway.edn ; boards/gateway/gateway.edn:PMIC_CORE_3V3
+U1  PMIC_EN         boards/gateway/gateway.edn ; boards/gateway/gateway.edn:PMIC_EN
+U1  PMIC_MAIN_12V0  boards/gateway/gateway.edn ; boards/gateway/gateway.edn:PMIC_MAIN_12V0
+U1  PMIC_PG         boards/gateway/gateway.edn ; boards/gateway/gateway.edn:PMIC_PG
+U2  GND             boards/gateway/gateway.edn ; boards/gateway/gateway.edn:GND
+U2  PMIC_CORE_3V3   boards/gateway/gateway.edn ; boards/gateway/gateway.edn:PMIC_CORE_3V3
+U2  PMIC_IO_1V8     boards/gateway/gateway.edn ; boards/gateway/gateway.edn:PMIC_IO_1V8
 
 8 result(s)

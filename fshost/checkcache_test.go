@@ -72,7 +72,7 @@ func newCheckFixture(t *testing.T, outcome check.Outcome, cached bool, wrap func
 	}
 	loader := service.NewCachingLoader(New(ms...), c)
 	svc := service.NewCheckService(loader, cat, nil, "", nil, res)
-	return &checkFixture{dir: dir, evals: evals, svc: svc, design: "mount://m/designs/gateway", snaps: map[string]string{}}
+	return &checkFixture{dir: dir, evals: evals, svc: svc, design: "mount://m/boards/gateway", snaps: map[string]string{}}
 }
 
 func (f *checkFixture) check(t *testing.T, req *webapi.CheckDesignRequest) *webapi.CheckDesignResponse {
@@ -153,10 +153,10 @@ func TestASecondCheckDoesNotEvaluateTheRuleAgain(t *testing.T) {
 func TestEditingAnyTierEvaluatesTheRuleAgain(t *testing.T) {
 	f := newCheckFixture(t, check.Fail, true, nil)
 	f.counted(t, &webapi.CheckDesignRequest{})
-	f.touch(t, "designs/gateway/gateway.edn")
+	f.touch(t, "boards/gateway/gateway.edn")
 	f.counted(t, &webapi.CheckDesignRequest{})
 	f.wantEvals(t, 2, "an edited netlist was answered from the run before the edit")
-	f.touch(t, "designs/gateway/gateway.kicad_pcb")
+	f.touch(t, "boards/gateway/gateway.kicad_pcb")
 	f.counted(t, &webapi.CheckDesignRequest{})
 	f.wantEvals(t, 3, "an edited board was answered from the run before the edit")
 	f.counted(t, &webapi.CheckDesignRequest{})

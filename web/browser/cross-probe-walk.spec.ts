@@ -27,7 +27,7 @@
 // - data-action="prev-sheet" and "next-sheet" open the previous and next sheet that draws the
 //   selection, and [data-sheet-place] reads where the canvas is among them, such as "2 of 4" (#1589)
 // - data-action="agreement" opens [data-agreement], which counts the parts both views place (#1590)
-// - an ODB++ job packed in a .7z, the cut's board as designs/jetson-cut-odb, opens as a design (#1591)
+// - an ODB++ job packed in a .7z, the cut's board as boards/jetson-cut-odb, opens as a design (#1591)
 // - a board layer row states its thickness in [data-thickness], and the stack follows the rows (#1603)
 // - data-action="explode" sets data-exploded="true" on the board view (#1593)
 // - data-action="stack-bodies" shows the parts' bodies in the stack view, and the canvas counts them
@@ -95,7 +95,7 @@ type Models = { stated: number; meshed: number } | null;
 const walks = {
   cut: {
     mount: "probe",
-    path: "designs/jetson-cut",
+    path: "boards/jetson-cut",
     about: "nineteen parts of Antmicro's Jetson AGX Thor baseboard, cut with their copper",
     ...jetsonPicks,
     agreement: { parts: "19 of 19 parts on the board", pick: "" },
@@ -104,7 +104,7 @@ const walks = {
   },
   jetson: {
     mount: "jetson",
-    path: "designs/jetson",
+    path: "boards/jetson",
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
     ...jetsonPicks,
     agreement: { parts: "1,123 of 1,123 parts on the board", pick: "unconnected-(U8-GL-Pad10)_2" },
@@ -772,7 +772,7 @@ for (const name of chosen) {
         // This one leaves the page, so it goes after the page error check, and a page error on the way
         // out does not fail it. The bookmark step moved to the markup walk (#1612).
         await step("open an ODB++ job packed in a .7z", {}, async () => {
-          await page.goto(`${base()}/mounts/probe/designs/jetson-cut-odb/view?mode=svg`, { waitUntil: "networkidle" });
+          await page.goto(`${base()}/mounts/probe/boards/jetson-cut-odb/view?mode=svg`, { waitUntil: "networkidle" });
           // Earlier steps may have closed the Sheets panel, so the tile need only be in the page.
           await page.locator('#sheet-overview .sheet-tile[title="board"]').waitFor({ state: "attached", timeout: 30_000 });
           await page.locator('#svg-view svg [data-ref="C133"]').first().waitFor({ state: "attached", timeout: 30_000 });

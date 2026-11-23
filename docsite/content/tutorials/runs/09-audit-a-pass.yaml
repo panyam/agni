@@ -2,9 +2,9 @@
 # the rule's tally and its first passes.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 show: |
-  agni check --verdicts --rule i2c-pull-up designs/jetson
+  agni check --verdicts --rule i2c-pull-up boards/jetson
 script: |
-  agni check --verdicts --rule i2c-pull-up designs/jetson 2>/dev/null | head -1
-  agni check --verdicts --rule i2c-pull-up designs/jetson 2>/dev/null | grep -A1 '^    pass ' | head -8
+  agni check --verdicts --rule i2c-pull-up boards/jetson 2>/dev/null | head -1
+  agni check --verdicts --rule i2c-pull-up boards/jetson 2>/dev/null | grep -A1 '^    pass ' | head -8

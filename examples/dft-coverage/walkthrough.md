@@ -19,7 +19,7 @@ The last step goes past what a coverage report can ask.
 
 ## Pick a design {#pick}
 
-> The bundled fixture is `../common/designs/probe-coverage.edn`, a small board built so each coverage
+> The bundled fixture is `../common/boards/probe-coverage.edn`, a small board built so each coverage
 > case occurs once. Point this at any design you can read. Setting `AGNI_EXAMPLE_DESIGN` changes the
 > default. A walkthrough can then run over a board this repo does not carry, and nobody types or
 > commits that board's path.

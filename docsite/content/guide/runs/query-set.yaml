@@ -2,7 +2,7 @@
 #
 # The heredoc writes the set the page shows, verbatim, so `show` hides only that setup. The design is
 # the netlist-audit fixture, built so each of these tables has rows.
-fixture: examples/common/designs
+fixture: examples/common/boards
 script: |
   cat > audit.yaml <<'YAML'
   title: Test point audit

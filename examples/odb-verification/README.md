@@ -14,7 +14,7 @@ form of `agni check <job>` and `agni diff <schematic> <job>`.
 - The board tier built from the job's copper, which the copper-clearance and track-width rules
   read.
 - A schematic-against-layout diff. The default layout, the gateway's rev B, adds two I2C pull-ups
-  and renames the crystal nets, and `../common/designs/odb/gateway-layout` (rev A) matches its
+  and renames the crystal nets, and `../common/boards/odb/gateway-layout` (rev A) matches its
   schematic exactly.
 
 ## Run it
@@ -30,7 +30,7 @@ make doc        # render the walkthrough to markdown
 
 ## How it is built
 
-The layouts in `../common/designs/odb` are KiCad's own ODB++ exports of the tutorial gateway board,
+The layouts in `../common/boards/odb` are KiCad's own ODB++ exports of the tutorial gateway board,
 written by `hack/odb_fixtures.sh`, and `gateway.edn` there is the tutorial's schematic netlist. The
 narration lives in [`walkthrough.md`](walkthrough.md), and `main.go` binds the five steps that run
 engine code. See [`../CONVENTIONS.md`](../CONVENTIONS.md) for the layout every example follows.

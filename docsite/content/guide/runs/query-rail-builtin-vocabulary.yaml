@@ -17,4 +17,4 @@ fixture: examples/tutorial-project
 script: |
   sed -i.orig '/^conventions:/,/^$/d' project.yaml
   sed -i.orig2 '/^params:/d' project.yaml
-  agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n'
+  agni query boards/gateway/gateway.edn 'net.rail(?n) => ?n'

@@ -1,5 +1,5 @@
 // A finding's net lights on an EDIF companion schematic drawn in WebGL (agni issue 1443). The design
-// is examples/common/designs/i2c-sensor, an EDIF netlist whose design.yaml names its .eds export as
+// is examples/common/boards/i2c-sensor, an EDIF netlist whose design.yaml names its .eds export as
 // the drawing. The .eds names its wires and carries no net ids, and a finding names its net by id.
 // The server keys each wire with its net's id when it packs the sheet, and the finding's spec also
 // carries the net's name for a wire keyed by name alone. Either half lights SCL, a name one net has.

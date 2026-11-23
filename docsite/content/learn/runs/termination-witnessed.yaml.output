@@ -1,7 +1,7 @@
-#agni-run 1f7da2b0847b7584
+#agni-run fb04c19ff0f8fe96
 r   m              n               provenance
-R1  ACME-RES-120R  CAN1_CANH       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANH
-R1  ACME-RES-120R  CAN1_CANL       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANL
+R1  ACME-RES-120R  CAN1_CANH       boards/gateway/gateway.edn ; boards/gateway/gateway.edn:CAN1_CANH
+R1  ACME-RES-120R  CAN1_CANL       boards/gateway/gateway.edn ; boards/gateway/gateway.edn:CAN1_CANL
 #agni-step
 gateway-profiles/can-termination-missing  1 pass
     pass  CAN1_CANH  CAN bus (net CAN1_CANH) is bridged to its _CANL twin by a series passive

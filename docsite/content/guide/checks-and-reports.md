@@ -28,7 +28,7 @@ directory that holds its sample. Two samples appear, both checked into a clone o
 | Sample | Run from | What it is |
 |---|---|---|
 | `showcase.fires.*`, `showcase.passes.*` | `demo/` | one small board that trips several rules, and its clean twin |
-| `designs/gateway` | `examples/tutorial-project` | the tutorial's synthetic board, with a team's checklist wrapped around it |
+| `boards/gateway` | `examples/tutorial-project` | the tutorial's synthetic board, with a team's checklist wrapped around it |
 
 So the `agni check` lines below assume you are standing in `demo/`:
 
@@ -211,8 +211,8 @@ rule that could not evaluate produces no findings, and no findings looks like cl
 `review` gates on the other axis:
 
 ```
-agni review designs/gateway --checklist review --fail-on-outcome fail
-agni review designs/gateway --checklist review --min-answered 13
+agni review boards/gateway --checklist review --fail-on-outcome fail
+agni review boards/gateway --checklist review --min-answered 13
 ```
 
 `--min-answered` counts the items that produced an answer (`pass`, `fail`, `provisional`,

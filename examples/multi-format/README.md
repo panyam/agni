@@ -31,5 +31,5 @@ This example reads a fixed bundled trio (`mixer.edn`, `mixer.kicad_pcb`,
 
 The narration lives in [`walkthrough.md`](walkthrough.md), loaded by demokit's
 `FromMarkdown`. `main.go` binds the `read` step (stats per format) and the `converge` step
-(`diff.Designs` over the pairs). The fixtures live in [`../common/designs`](../common/designs);
+(`diff.Designs` over the pairs). The fixtures live in [`../common/boards`](../common/boards);
 see [`../CONVENTIONS.md`](../CONVENTIONS.md) for the shared layout.

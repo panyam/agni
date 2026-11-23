@@ -13,8 +13,8 @@ import (
 // read on its own has no copper, so every board-tier rule found nothing and the run reported clean.
 func TestCheckBoardPath(t *testing.T) {
 	const (
-		netlist = "../../examples/tutorial-project/designs/gateway/gateway.edn"
-		board   = "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb"
+		netlist = "../../examples/tutorial-project/boards/gateway/gateway.edn"
+		board   = "../../examples/tutorial-project/boards/gateway/gateway.kicad_pcb"
 	)
 	// as-named reads exactly the netlist, so the design's own declared board companion does not supply
 	// the copper and --board-path is the only thing that can. It is set directly because it is a ROOT

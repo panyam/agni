@@ -18,7 +18,7 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 # <name> <board>
 boards=(
   "board readers/kicad/testdata/board.kicad_pcb"
-  "gateway examples/tutorial-project/designs/gateway/gateway.kicad_pcb"
+  "gateway examples/tutorial-project/boards/gateway/gateway.kicad_pcb"
   "jetson-agx-thor-baseboard tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"
 )
 for line in "${boards[@]}"; do

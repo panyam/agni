@@ -17,7 +17,7 @@ make board
 ```
 
 Run the commands on this page and the next ones from that folder. The board is copied into
-`designs/jetson/`, beside the project's own `design.yaml`.
+`boards/jetson/`, beside the project's own `design.yaml`.
 
 The vocabulary is the `conventions:` section of `project.yaml`, and it carries two halves that are
 wired very differently.

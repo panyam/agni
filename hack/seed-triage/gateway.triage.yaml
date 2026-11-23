@@ -2,7 +2,7 @@
 # a judgement (agni issue 857). TestSeedTriage fails on any difference from what the engine finds,
 # and `make seed-triage` drafts new findings as untriaged. Classes: defect, design-choice,
 # needs-intent (a fact about the board is undeclared) and false-positive (with its ticket).
-design: examples/tutorial-project/designs/gateway
+design: examples/tutorial-project/boards/gateway
 findings:
   copper-clearance:
     - class: defect

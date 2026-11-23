@@ -1,6 +1,6 @@
 # Rung 9: the checklist's coverage rollup, covered and answered before any result.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 script: |
-  agni review designs/jetson --coverage
+  agni review boards/jetson --coverage

@@ -19,7 +19,7 @@ const DESIGN_SUMMARY = '[data-component="properties"] dd[data-row="read"]';
 const base = (): string => inject("baseUrl");
 const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const tutorial = join(repo, "examples", "tutorial-project");
-const gateway = join(tutorial, "designs", "gateway");
+const gateway = join(tutorial, "boards", "gateway");
 const apiPrefix = "/agni.v1.webapi.";
 
 let browser: Browser;
@@ -50,7 +50,7 @@ describe("dropping files on the Load page", () => {
   it("opens a dropped zip's declared design and finds what the server finds in the same files", async () => {
     let served: string[] = [];
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/mounts/tut/designs/gateway/load`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/tut/boards/gateway/load`, { waitUntil: "domcontentloaded" });
       served = await runChecks(page);
     });
     await withPage(browser, async (page) => {
@@ -67,7 +67,7 @@ describe("dropping files on the Load page", () => {
       const dropped = await runChecks(page);
       expect(served.length, "the served run found nothing, so agreeing with it proves nothing").toBeGreaterThan(0);
       expect([...dropped].sort()).toEqual([...served].sort());
-      expect(page.url()).toMatch(/\/mounts\/local\/drop-[a-z0-9]+\/tutorial\.zip\/designs\/gateway/);
+      expect(page.url()).toMatch(/\/mounts\/local\/drop-[a-z0-9]+\/tutorial\.zip\/boards\/gateway/);
 
       // The design never touched the server: no analysis call, no listing, no file read.
       expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
@@ -93,7 +93,7 @@ describe("dropping files on the Load page", () => {
       await dialog.locator(".drop-design-open").first().click();
 
       expect((await runChecks(page)).length).toBeGreaterThan(0);
-      expect(page.url()).toMatch(/\/mounts\/local\/drop-[a-z0-9]+\/tutorial-project\/designs\/gateway\//);
+      expect(page.url()).toMatch(/\/mounts\/local\/drop-[a-z0-9]+\/tutorial-project\/boards\/gateway\//);
       await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 30_000 }).toContain("faithful");
       expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
       expect(log.errors).toEqual([]);

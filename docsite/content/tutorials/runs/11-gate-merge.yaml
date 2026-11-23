@@ -1,8 +1,8 @@
 # Rung 11: the merge gate on rev A, which trips on the board's error findings.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 script: |
-  agni check designs/jetson --fail-on error
+  agni check boards/jetson --fail-on error
 capture: none
 exit: true

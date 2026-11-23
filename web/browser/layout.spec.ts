@@ -122,7 +122,7 @@ describe("query results table", () => {
   // main.ts and a real engine, and the tree is asserted painted where it sits rather than present.
   it("opens a row onto how it holds, with the absence and the values painted where they are", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway/gateway.edn");
+      await openViewer(page, "tut", "boards/gateway/gateway.edn");
       await growQueryPanel(page);
       await runQuery(page, "component.probed_one(?r, ?p, ?u) => ?r, ?u");
       await page.locator(".query-row .query-cite-toggle").first().click();
@@ -534,7 +534,7 @@ describe("the checks table's severity marks", () => {
 describe("Properties", () => {
   it("describes a clicked part, keeps the typed query, and asks about it from Ask", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       await page.fill("textarea.query-text", "net.rail(?n) => ?n");
 
       const at = await page.evaluate(() => {
@@ -566,7 +566,7 @@ describe("Properties", () => {
   // a cell shows it again when it comes back, and one that located nothing shows no cell.
   it("opens an Ask row in a named tab, and the tab in front drives the highlight", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       await page.fill("textarea.query-text", "net.rail(?n) => ?n");
       const at = await page.evaluate(() => {
         const r = document.querySelector('#svg-view [data-kind="component"][data-ref="U1"]')!.getBoundingClientRect();
@@ -607,7 +607,7 @@ describe("Properties", () => {
   // The menu sits beside the tab strip, which scrolls, so this also proves it is painted unclipped.
   it("opens a project's query set, and a set file, as one tab per query", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       await growQueryPanel(page);
       await page.click(".query-sets-open");
       await page.waitForSelector(".query-set-item", { timeout: 30_000 });
@@ -635,7 +635,7 @@ describe("Properties", () => {
 
   it("selects the sheet for a click on empty paper", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       // A corner of the canvas inside the sheet border, where nothing is keyed.
       const at = await page.evaluate(() => {
         const r = document.querySelector("#svg-view svg")!.getBoundingClientRect();
@@ -656,7 +656,7 @@ describe("Properties", () => {
 describe("Review", () => {
   it("runs a checklist and saves it as the checklist page", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       await showPanel(page, "review");
       await page.waitForSelector("select.rv-checklist option[value]", { state: "attached", timeout: 30_000 });
       await page.selectOption("select.rv-checklist", { label: "review" });
@@ -685,7 +685,7 @@ describe("Review", () => {
   // engine with the project's own library, and only a served design has that library.
   it("opens a query item's finding onto how it holds", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       await showPanel(page, "review");
       await page.waitForSelector("select.rv-checklist option[value]", { state: "attached", timeout: 30_000 });
       await page.selectOption("select.rv-checklist", { label: "house" });
@@ -774,7 +774,7 @@ describe("a query link", () => {
 describe("the default dock", () => {
   it("opens the query panel tall enough to show an answer's first rows", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       await runQuery(page, "component.net(?part, ?net) => ?part, ?net");
       const seen = await page.evaluate(() => {
         const panel = document.querySelector(".query")?.closest(".dv-render-overlay") ?? document.querySelector(".query");
@@ -806,7 +806,7 @@ describe("the default dock", () => {
         });
       // Jetson's cut opened on its board takes long enough that its restore saved before the layout.
       for (const visit of ["first", "second"]) {
-        await page.goto(`${base()}/mounts/probe/designs/jetson-cut/view?mode=svg&sheet=board`, { waitUntil: "networkidle", timeout: 120_000 });
+        await page.goto(`${base()}/mounts/probe/boards/jetson-cut/view?mode=svg&sheet=board`, { waitUntil: "networkidle", timeout: 120_000 });
         await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
         const s = await sizes();
         expect(s.rail, `the Properties rail's width on the ${visit} visit`).toBeGreaterThan(240);
@@ -819,7 +819,7 @@ describe("the default dock", () => {
 
   it("keeps every checks-table header on one line", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       await showPanel(page, "checks");
       await page.click(".checks-run");
       await page.waitForSelector(".check-row", { timeout: 60_000 });
@@ -843,7 +843,7 @@ describe("the default dock", () => {
 
   it("resets a rearranged dock to the default from the Panels menu, keeping what the panels hold", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       const queryHeight = () =>
         page.evaluate(() => {
           const tab = Array.from(document.querySelectorAll(".dv-tab")).find((t) => t.textContent?.trim().startsWith("Query"));
@@ -882,7 +882,7 @@ describe("the default dock", () => {
   // drills to it.
   it("drills the relation picker to a library member's definition, on screen", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway/gateway.edn");
+      await openViewer(page, "tut", "boards/gateway/gateway.edn");
       await page.click(".query-drawer-handle");
       const chip = (label: string) => page.locator(".query-drawer .query-relchip", { hasText: label }).first();
       await chip("component ›").click({ timeout: 30_000 });
@@ -910,7 +910,7 @@ describe("the default dock", () => {
 
   it("gives Changes its rail width when a comparison adds it back", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/mounts/tut/designs/gateway/gateway.edn/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/boards/gateway/gateway.edn/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
       const tab = page.locator(".dv-tab", { hasText: "Changes" });
       await tab.hover();
@@ -955,7 +955,7 @@ describe("the top bar's menu buttons", () => {
 describe("the trace pickers", () => {
   it("fill an end from Properties, list the part's pins where they can be clicked, and trace the pick", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       const at = await page.evaluate(() => {
         const r = document.querySelector('#svg-view [data-kind="component"][data-ref="U1"]')!.getBoundingClientRect();
         return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
@@ -1012,7 +1012,7 @@ describe("a walk's goal question", () => {
 describe("a rule group's docs link", () => {
   it("sits beside the group's count, on the same line", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       await showPanel(page, "checks");
       await page.click(".checks-run:not([disabled])", { timeout: 30_000 });
       await page.waitForSelector("tr.check-row", { timeout: 60_000 });
@@ -1059,7 +1059,7 @@ describe("the Sheets dock on a hierarchical design", () => {
 describe("an area of a sheet", () => {
   it("is selected with a Shift-drag, states its interface, asks once for the set, and grows with a Shift-click", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
+      await openViewer(page, "tut", "boards/gateway");
       await page.waitForSelector('#svg-view [data-kind="component"][data-ref="U2"]', { timeout: 30_000 });
       const box = await page.evaluate(() => {
         let l = 1e9, t = 1e9, r = -1e9, b = -1e9;

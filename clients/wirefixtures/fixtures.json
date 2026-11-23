@@ -24,18 +24,18 @@
       "method": "Ingest",
       "request": {
         "snapshot": {
-          "uri": "mount://probe/designs/jetson-cut"
+          "uri": "mount://probe/boards/jetson-cut"
         },
         "snapshotId": "wire"
       },
       "response": {
         "name": "snapshots/wire",
-        "revisionId": "e0c54201071944e2",
-        "uri": "mount://probe/designs/jetson-cut",
+        "revisionId": "f80df77a27ca7d90",
+        "uri": "mount://probe/boards/jetson-cut",
         "tiers": {
-          "netlistUri": "mount://probe/designs/jetson-cut/jetson-cut.kicad_sch",
-          "boardUri": "mount://probe/designs/jetson-cut/jetson-cut.kicad_pcb",
-          "geometryUri": "mount://probe/designs/jetson-cut/jetson-cut.kicad_sch"
+          "netlistUri": "mount://probe/boards/jetson-cut/jetson-cut.kicad_sch",
+          "boardUri": "mount://probe/boards/jetson-cut/jetson-cut.kicad_pcb",
+          "geometryUri": "mount://probe/boards/jetson-cut/jetson-cut.kicad_sch"
         },
         "project": "projects/cross-probe"
       }
@@ -106,7 +106,7 @@
             },
             "message": "power rail has no bulk capacitor",
             "provenance": {
-              "sourceFile": "designs/jetson-cut/jetson-cut.kicad_sch"
+              "sourceFile": "boards/jetson-cut/jetson-cut.kicad_sch"
             },
             "sheets": [
               "/",
@@ -238,7 +238,7 @@
           "component"
         ],
         "query": "component.class(?c, \"resistor\") =\u003e ?c",
-        "source": "mount://probe/designs/jetson-cut",
+        "source": "mount://probe/boards/jetson-cut",
         "work": "4",
         "entities": [
           {
@@ -282,7 +282,7 @@
       "request": {
         "snapshot": "snapshots/wire",
         "maxBytes": "1",
-        "pageToken": "YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA"
+        "pageToken": "YjF8ZjgwZGY3N2EyN2NhN2Q5MHwwfDA"
       },
       "response": {
         "board": {
@@ -332,13 +332,13 @@
                 }
               ],
               "prov": {
-                "sourceFile": "designs/jetson-cut/jetson-cut.kicad_pcb",
+                "sourceFile": "boards/jetson-cut/jetson-cut.kicad_pcb",
                 "sourceId": "35275121-36dc-4039-8033-f8e1087b54f1"
               }
             }
           ]
         },
-        "nextPageToken": "YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDE"
+        "nextPageToken": "YjF8ZjgwZGY3N2EyN2NhN2Q5MHwwfDE"
       }
     },
     {
@@ -408,10 +408,10 @@
       "service": "agni.v1.webapi.DesignService",
       "method": "AddDesigns",
       "request": {
-        "uri": "mount://probe/designs/jetson-cut",
+        "uri": "mount://probe/boards/jetson-cut",
         "designs": [
           {
-            "folder": "designs/jetson-cut",
+            "folder": "boards/jetson-cut",
             "designId": "jetson-cut",
             "series": "probe"
           }

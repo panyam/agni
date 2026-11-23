@@ -3,7 +3,7 @@
 // it three questions, and prints one line of JSON summing up the answers. The exercise compares the
 // line with the CLI's answers. docsite/content/build/client-contract.md names the line's fields.
 //
-//	clients/examples/ts/run -server http://127.0.0.1:8080 -design mount://probe/designs/jetson-cut
+//	clients/examples/ts/run -server http://127.0.0.1:8080 -design mount://probe/boards/jetson-cut
 
 import { create, merge, type AgniClient } from "@panyam/agni-client";
 import { BoardGeometrySchema, type BoardGeometry } from "@panyam/agni-client/gen/agni/v1/geom/geom_board_pb";
@@ -31,7 +31,7 @@ async function boardGeometry(client: AgniClient, snapshot: string): Promise<Boar
 
 // flags reads Go-style flags, -server <url> and -design <uri>, with one or two dashes.
 function flags(args: string[]): { server: string; design: string } {
-  const out = { server: "http://127.0.0.1:8080", design: "mount://probe/designs/jetson-cut" };
+  const out = { server: "http://127.0.0.1:8080", design: "mount://probe/boards/jetson-cut" };
   for (let i = 0; i < args.length; i++) {
     const [name, inline] = args[i].replace(/^--?/, "").split(/=(.*)/s, 2);
     if (name !== "server" && name !== "design") throw new Error(`unknown flag ${args[i]}`);

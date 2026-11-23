@@ -46,7 +46,7 @@ from agni import Client, CliTransport, ConnectTransport, rows_as_dicts
 cli = Client(CliTransport("agni", mounts={"tut": "examples/tutorial-project"}))
 srv = Client(ConnectTransport("http://127.0.0.1:8080"))
 
-snap = cli.ingest("mount://tut/designs/gateway")
+snap = cli.ingest("mount://tut/boards/gateway")
 answer = cli.run_query(snapshot=snap, query='component.class(?c, "resistor") => ?c')
 for row in rows_as_dicts(answer):
     print(row["c"])

@@ -227,7 +227,7 @@ func TestWriteReport(t *testing.T) {
 // registry. The information was never missing. `agni stats` on the same folder already reported
 // "sheets from gateway.kicad_sch", because it resolves the descriptor and render did not.
 func TestRenderResolvesDeclaredGeometryCompanion(t *testing.T) {
-	const design = "../../examples/tutorial-project/designs/gateway"
+	const design = "../../examples/tutorial-project/boards/gateway"
 	got, note := renderSource(design)
 	if !strings.HasSuffix(got, "gateway.kicad_sch") {
 		t.Fatalf("render source = %q, want the declared schematic companion", got)
@@ -244,7 +244,7 @@ func TestRenderResolvesDeclaredGeometryCompanion(t *testing.T) {
 // being fixed. The resolution existed elsewhere in the CLI and this command did not reach for it.
 func TestRenderCmdDrawsADesignFolder(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "sheet.svg")
-	runCLI(t, renderCmd(), "../../examples/tutorial-project/designs/gateway", "-o", out)
+	runCLI(t, renderCmd(), "../../examples/tutorial-project/boards/gateway", "-o", out)
 	b, err := os.ReadFile(out)
 	if err != nil {
 		t.Fatalf("no svg written for a design folder: %v", err)

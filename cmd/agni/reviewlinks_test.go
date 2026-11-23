@@ -22,7 +22,7 @@ var verdictParam = regexp.MustCompile(`verdict=([^&"]+)`)
 func TestEveryChecklistLinkResolves(t *testing.T) {
 	freshWorkspace(t)
 	cliMountSpecs = []string{"tp=../../examples/tutorial-project"}
-	const design = "mount://tp/designs/gateway"
+	const design = "mount://tp/boards/gateway"
 
 	var run webapi.CheckDesignResponse
 	if err := protojson.Unmarshal([]byte(runCheck(t, "--verdicts", "--format", "json", design)), &run); err != nil {

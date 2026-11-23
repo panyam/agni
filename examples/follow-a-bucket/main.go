@@ -24,7 +24,7 @@ import (
 var walkthroughMD []byte
 
 // netlist is the bundled board the bucket holds.
-const netlist = "../common/designs/demo-project/designs/mixer/mixer.edn"
+const netlist = "../common/boards/demo-project/designs/mixer/mixer.edn"
 
 func main() {
 	root, err := os.MkdirTemp("", "agni-follow-a-bucket-")

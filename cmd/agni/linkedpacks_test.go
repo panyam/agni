@@ -70,7 +70,7 @@ func TestAPushMovesALinkedPackAndTheReportNamesItsCommit(t *testing.T) {
 		return out
 	}
 	project := tutorialProject(t)
-	must(runDesigns(t, url, "push", filepath.Join(project, "designs", "gw"), "--id", "gw"))
+	must(runDesigns(t, url, "push", filepath.Join(project, "boards", "gw"), "--id", "gw"))
 	must(runMounts(t, "add", "rules", repo.Source(), "--remote", url))
 
 	out := must(runPacks(t, url, "link", "house", "rules@main"))

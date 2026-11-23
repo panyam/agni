@@ -21,7 +21,7 @@ describe("the Tables panel under Compare", () => {
   it("shows the comparison as agni diff --rename-approx writes it, and locates a net from it", async () => {
     const want = gatewayDiffRows();
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/mounts/tut/designs/gateway/gateway.edn/view`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/boards/gateway/gateway.edn/view`, { waitUntil: "networkidle" });
       await page.click("#compare button");
       await page.locator("#compare-tree").getByText("gateway-rev-c.edn").click();
       await expectCompareTables(page, want);
@@ -33,8 +33,8 @@ describe("the Tables panel under Compare", () => {
   it("opens the same comparison from a link naming the revision to compare against", async () => {
     const want = gatewayDiffRows();
     await withPage(browser, async (page) => {
-      const against = encodeURIComponent("tut/designs/gateway/gateway-rev-c.edn");
-      await page.goto(`${base()}/mounts/tut/designs/gateway/gateway.edn/view?against=${against}`, { waitUntil: "networkidle" });
+      const against = encodeURIComponent("tut/boards/gateway/gateway-rev-c.edn");
+      await page.goto(`${base()}/mounts/tut/boards/gateway/gateway.edn/view?against=${against}`, { waitUntil: "networkidle" });
       await expectCompareTables(page, want);
     });
   });
@@ -44,8 +44,8 @@ describe("the Tables panel under Compare", () => {
   it("pairs near-renames when the link says the diff did", async () => {
     const want = gatewayDiffRows();
     await withPage(browser, async (page) => {
-      const against = encodeURIComponent("tut/designs/gateway/gateway-rev-c.edn");
-      await page.goto(`${base()}/mounts/tut/designs/gateway/gateway.edn/view?against=${against}&rename_approx=1`, { waitUntil: "networkidle" });
+      const against = encodeURIComponent("tut/boards/gateway/gateway-rev-c.edn");
+      await page.goto(`${base()}/mounts/tut/boards/gateway/gateway.edn/view?against=${against}&rename_approx=1`, { waitUntil: "networkidle" });
       await page.locator(".dv-default-tab-content", { hasText: /^Tables$/ }).first().click();
       await page.click('.tables-source[data-source="compare"]', { timeout: 60_000 });
       await page.waitForSelector(".tables-row", { timeout: 60_000 });

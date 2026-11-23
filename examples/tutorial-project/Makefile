@@ -2,7 +2,7 @@
 # show you the command and you can see it here unchanged. There is no code-generation step: the
 # checklist under checklists.review in project.yaml is hand-authored, which is the right scale for a checklist this size.
 #
-# DESIGN selects which folder under designs/ to run against. Each design declares its own entry file
+# DESIGN selects which folder under boards/ to run against. Each design declares its own entry file
 # in design.yaml, so adding a second board needs no edit here.
 AGNI   ?= go run github.com/panyam/agni/cmd/agni
 DESIGN ?= gateway
@@ -11,7 +11,7 @@ DESIGN ?= gateway
 # and picks up the declared board and schematic companions for the tiers a netlist has none of. This
 # used to be an awk that scraped `entry:` out of the descriptor, because a folder was not something
 # the CLI could be pointed at.
-DIR = designs/$(DESIGN)
+DIR = boards/$(DESIGN)
 
 # No tier flags. agni resolves this design to its project and reads the project's own conventions,
 # profiles, params, and the design's intent from beside the descriptors — so the config a board is
@@ -43,10 +43,10 @@ coverage: ## Per-area rollup: how many items each area actually decided
 	@$(AGNI) review $(DIR) --checklist review $(TIERS) --coverage
 
 diff: ## Structural diff of the two bundled revisions
-	@$(AGNI) diff $(DIR)/gateway.edn designs/gateway-rev-b/gateway-rev-b.edn
+	@$(AGNI) diff $(DIR)/gateway.edn boards/gateway-rev-b/gateway-rev-b.edn
 
 diff-approx: ## Diff rev B against rev C, pairing the net it renamed and rewired
-	@$(AGNI) diff --rename-approx designs/gateway-rev-b/gateway-rev-b.edn $(DIR)/gateway-rev-c.edn
+	@$(AGNI) diff --rename-approx boards/gateway-rev-b/gateway-rev-b.edn $(DIR)/gateway-rev-c.edn
 
 report: ## Write the review as a self-contained results document you can re-render later
 	@mkdir -p reports/$(DESIGN)

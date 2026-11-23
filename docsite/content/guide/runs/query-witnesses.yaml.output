@@ -1,8 +1,8 @@
-#agni-run 23e0a98f5162ae4e
+#agni-run 86e971c61ba6bf9f
 n               provenance
-PMIC_MAIN_12V0  designs/gateway/gateway.edn:PMIC_MAIN_12V0
+PMIC_MAIN_12V0  boards/gateway/gateway.edn:PMIC_MAIN_12V0
     house.pmic_rail(PMIC_MAIN_12V0)  via house.pmic_rail(?n: net) :- net.rail(?n), str.prefix(?n, "PMIC_")
-      net.rail(PMIC_MAIN_12V0)  [designs/gateway/gateway.edn:PMIC_MAIN_12V0]
+      net.rail(PMIC_MAIN_12V0)  [boards/gateway/gateway.edn:PMIC_MAIN_12V0]
       str.prefix(PMIC_MAIN_12V0, PMIC_)
     not house.pmic_probe_point(PMIC_MAIN_12V0)  (absent)
 

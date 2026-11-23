@@ -14,7 +14,7 @@ import (
 // one entry covering two names. Without it the response is unchanged, and the status maps never list
 // equal nets.
 func TestIncludeEqualAccountsForEveryNet(t *testing.T) {
-	base := filepath.Join("..", "examples", "tutorial-project", "designs")
+	base := filepath.Join("..", "examples", "tutorial-project", "boards")
 	svc := NewDiffService(fsQueryLoader{base: base}, nil)
 	ask := func(equal bool) *webapi.DiffDesignsResponse {
 		t.Helper()

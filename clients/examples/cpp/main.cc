@@ -3,7 +3,7 @@
 // server, ingests a design, asks it three questions, and prints one line of JSON summing up the
 // answers. docsite/content/build/client-contract.md names the line's fields.
 //
-//   clients/examples/cpp/run -server http://127.0.0.1:8080 -design mount://probe/designs/jetson-cut
+//   clients/examples/cpp/run -server http://127.0.0.1:8080 -design mount://probe/boards/jetson-cut
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
@@ -54,7 +54,7 @@ std::string Quote(const std::string& s) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  std::string server = "http://127.0.0.1:8080", design = "mount://probe/designs/jetson-cut";
+  std::string server = "http://127.0.0.1:8080", design = "mount://probe/boards/jetson-cut";
   for (int i = 1; i + 1 < argc; i += 2) {
     std::string flag = argv[i];
     if (flag == "-server" || flag == "--server") {

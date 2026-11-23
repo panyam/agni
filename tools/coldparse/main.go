@@ -2,7 +2,7 @@
 // starts a server the way the browser suite's childserver.ts does, ingests a design with its board,
 // reads build.board from the Agni-Timing breakdown, and stops the server.
 //
-//	go run ./tools/coldparse -n 10 -mount jetson=examples/jetson-project -uri mount://jetson/designs/jetson
+//	go run ./tools/coldparse -n 10 -mount jetson=examples/jetson-project -uri mount://jetson/boards/jetson
 //
 // -wrap runs each server under another command, such as "taskpolicy -c utility", and -attached
 // keeps it in this process group. Any environment, such as GOGC or GODEBUG, passes through.
@@ -30,7 +30,7 @@ func main() {
 	n := flag.Int("n", 10, "how many fresh servers")
 	bin := flag.String("bin", "bin/agni", "the agni binary")
 	mount := flag.String("mount", "jetson=examples/jetson-project", "the --mount to serve")
-	uri := flag.String("uri", "mount://jetson/designs/jetson", "the design to ingest with its board")
+	uri := flag.String("uri", "mount://jetson/boards/jetson", "the design to ingest with its board")
 	wrap := flag.String("wrap", "", "a command to run each server under, such as \"taskpolicy -c utility\"")
 	attached := flag.Bool("attached", false, "keep each server in this process group rather than its own")
 	wait := flag.Duration("wait", 0, "how long to wait after the server answers /healthz before ingesting")

@@ -57,7 +57,7 @@ const (
 )
 
 func main() {
-	design := common.AskPath("design", "../common/designs/probe-coverage.edn")
+	design := common.AskPath("design", "../common/boards/probe-coverage.edn")
 
 	demo := demokit.New("dft-coverage").
 		Dir("dft-coverage").

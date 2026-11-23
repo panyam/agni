@@ -1,5 +1,5 @@
-#agni-run a24f1c082d28430e
+#agni-run f1b77eb0e56cfa90
 n    provenance
-GND  designs/gateway/gateway.edn:GND
+GND  boards/gateway/gateway.edn:GND
 
 1 result(s)

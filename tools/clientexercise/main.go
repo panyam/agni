@@ -70,7 +70,7 @@ const resistorsOf = `component.class(?c, "resistor") => ?c`
 func main() {
 	agni := flag.String("agni", "bin/agni", "the agni binary to serve and to ask for the CLI's answers")
 	mount := flag.String("mount", "probe=examples/cross-probe-project", "the mount the server and the CLI read, name=path")
-	design := flag.String("design", "mount://probe/designs/jetson-cut", "the design every example ingests")
+	design := flag.String("design", "mount://probe/boards/jetson-cut", "the design every example ingests")
 	out := flag.String("out", "", "a directory to write clients.md into")
 	flag.Parse()
 	rows, err := exercise(*agni, *mount, *design)

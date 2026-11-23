@@ -1,4 +1,4 @@
-#agni-run 05d0662a1fa24f95
+#agni-run 821e10f0939185aa
 {
   "name": "",
   "sourceFormat": "",
@@ -27,7 +27,7 @@
             "pinRef": "4",
             "attributes": {},
             "prov": {
-              "sourceFile": "designs/gateway/gateway.edn",
+              "sourceFile": "boards/gateway/gateway.edn",
               "span": null,
               "nativeId": "IU1",
               "nativeIdKind": "edif-rename-id"
@@ -38,7 +38,7 @@
             "pinRef": "1",
             "attributes": {},
             "prov": {
-              "sourceFile": "designs/gateway/gateway.edn",
+              "sourceFile": "boards/gateway/gateway.edn",
               "span": null,
               "nativeId": "IR2",
               "nativeIdKind": "edif-rename-id"
@@ -55,7 +55,7 @@
         ],
         "attributes": {},
         "prov": {
-          "sourceFile": "designs/gateway/gateway.edn",
+          "sourceFile": "boards/gateway/gateway.edn",
           "span": null,
           "nativeId": "PMIC_EN",
           "nativeIdKind": "edif-rename-id"

@@ -96,7 +96,7 @@ step "the repos' contents"
 # tags hold different commits.
 mkdir -p "$out/repos/rev-b" "$out/repos/rev-c" "$out/repos/pack"
 for f in gateway.kicad_sch gateway.kicad_pcb gateway.kicad_pro; do
-  cp "$tutorial/designs/gateway/$f" "$out/repos/rev-b/"
+  cp "$tutorial/boards/gateway/$f" "$out/repos/rev-b/"
 done
 cp "$out/repos/rev-b/"* "$out/repos/rev-c/"
 sed -i.bak 's/(property "Value" "120"/(property "Value" "60"/' "$out/repos/rev-c/gateway.kicad_sch" && rm "$out/repos/rev-c/gateway.kicad_sch.bak"

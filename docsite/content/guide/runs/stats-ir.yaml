@@ -5,6 +5,6 @@
 # why a JSON capture cannot be committed without it. `show` hides the pipe as plumbing.
 fixture: examples/tutorial-project
 show: |
-  agni stats designs/gateway/gateway.edn --format json --mask design.nets --net PMIC_EN
+  agni stats boards/gateway/gateway.edn --format json --mask design.nets --net PMIC_EN
 script: |
-  agni stats designs/gateway/gateway.edn --format json --mask design.nets --net PMIC_EN | sed 's/":  */": /'
+  agni stats boards/gateway/gateway.edn --format json --mask design.nets --net PMIC_EN | sed 's/":  */": /'

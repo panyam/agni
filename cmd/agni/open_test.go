@@ -17,13 +17,13 @@ import (
 func TestOpenBannerPrintsAPasteableCheckCommand(t *testing.T) {
 	var b bytes.Buffer
 	m := mountset.Folder("gateway", "/boards/gw")
-	openBanner(&b, "http://127.0.0.1:5000/", m, "mount://gateway/designs/gw.edn", "/mounts/gateway/designs/gw.edn/view")
+	openBanner(&b, "http://127.0.0.1:5000/", m, "mount://gateway/boards/gw.edn", "/mounts/gateway/boards/gw.edn/view")
 	out := b.String()
 
 	if !strings.Contains(out, "--mount gateway=/boards/gw") {
 		t.Errorf("the check line must declare the mount, or it fails when pasted:\n%s", out)
 	}
-	if !strings.Contains(out, "mount://gateway/designs/gw.edn") {
+	if !strings.Contains(out, "mount://gateway/boards/gw.edn") {
 		t.Errorf("the check line must name the design it opened:\n%s", out)
 	}
 	if !strings.Contains(out, "--server http://127.0.0.1:5000\n") {

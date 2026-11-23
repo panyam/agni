@@ -68,7 +68,7 @@ across 0 rules" until the import was added.
 
 ## The design
 
-The bundled fixture `../common/designs/probe-coverage.edn` is synthetic and small, built so each
+The bundled fixture `../common/boards/probe-coverage.edn` is synthetic and small, built so each
 coverage case occurs exactly once: one passive with both ends probed, three with one end, two with
 neither. The two with neither share a part number, so the grouping in step 6 has something to find.
 GND deliberately carries no test point.

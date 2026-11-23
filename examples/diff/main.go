@@ -23,8 +23,8 @@ var walkthroughMD []byte
 const diffLimit = 40
 
 func main() {
-	oldRev := common.AskPath("old", "../common/designs/rev-a.edn")
-	newRev := common.AskPath("new", "../common/designs/rev-b.edn")
+	oldRev := common.AskPath("old", "../common/boards/rev-a.edn")
+	newRev := common.AskPath("new", "../common/boards/rev-b.edn")
 
 	demo := demokit.New("diff").
 		Dir("diff").

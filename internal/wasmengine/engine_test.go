@@ -45,7 +45,7 @@ func readTree(t *testing.T, dir string) map[string][]byte {
 // does not hold the project, so the descriptor is read without the `extends` line.
 func gatewayAlone(t *testing.T) map[string][]byte {
 	t.Helper()
-	files := readTree(t, filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway"))
+	files := readTree(t, filepath.Join("..", "..", "examples", "tutorial-project", "boards", "gateway"))
 	var kept []string
 	for _, line := range strings.Split(string(files["design.yaml"]), "\n") {
 		if !strings.HasPrefix(line, "extends:") {
@@ -62,7 +62,7 @@ func gatewayAlone(t *testing.T) map[string][]byte {
 func checkReport(t *testing.T, h *wasmhost.Host) string {
 	t.Helper()
 	// The host rebuilds its engine when files are added, so the design is ingested on each ask.
-	ing := hostDo(t, h, "/agni.v1.webapi.SnapshotService/Ingest", `{"snapshot":{"uri":"mount://tut/designs/gateway"}}`)
+	ing := hostDo(t, h, "/agni.v1.webapi.SnapshotService/Ingest", `{"snapshot":{"uri":"mount://tut/boards/gateway"}}`)
 	var snap struct{ Name string }
 	if err := json.Unmarshal([]byte(ing), &snap); err != nil || snap.Name == "" {
 		t.Fatalf("Ingest answered %s (%v)", ing, err)
@@ -102,7 +102,7 @@ func TestBuildServesThroughWasmhost(t *testing.T) {
 	all := readTree(t, filepath.Join("..", "..", "examples", "tutorial-project"))
 	design, project := map[string][]byte{}, map[string][]byte{}
 	for p, b := range all {
-		if strings.HasPrefix(p, "designs/") {
+		if strings.HasPrefix(p, "boards/") {
 			design[p] = b
 		} else {
 			project[p] = b
@@ -114,7 +114,7 @@ func TestBuildServesThroughWasmhost(t *testing.T) {
 	res, err := h.Do(context.Background(), wasmhost.Request{
 		Method: "POST", URL: "/agni.v1.webapi.SnapshotService/Ingest",
 		Header: http.Header{"Content-Type": {"application/json"}},
-		Body:   []byte(`{"snapshot":{"uri":"mount://tut/designs/gateway"}}`),
+		Body:   []byte(`{"snapshot":{"uri":"mount://tut/boards/gateway"}}`),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +125,7 @@ func TestBuildServesThroughWasmhost(t *testing.T) {
 	if err := h.Add("tut", project); err != nil {
 		t.Fatal(err)
 	}
-	if body := checkReport(t, h); !strings.Contains(body, "gateway-profiles/") || !strings.Contains(body, `"sourceFile":"designs/gateway/gateway.edn"`) {
+	if body := checkReport(t, h); !strings.Contains(body, "gateway-profiles/") || !strings.Contains(body, `"sourceFile":"boards/gateway/gateway.edn"`) {
 		t.Errorf("after adding the project's files, the report lacks its profile rules or its locators:\n%.400s", body)
 	}
 }

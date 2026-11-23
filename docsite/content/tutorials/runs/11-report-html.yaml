@@ -1,7 +1,7 @@
 # Rung 11: the self-contained HTML report. The lesson is that it writes, so nothing is captured.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
-fetched_into: designs/jetson
+fetched_into: boards/jetson
 script: |
-  agni check --format html designs/jetson > review.html
+  agni check --format html boards/jetson > review.html
 capture: none

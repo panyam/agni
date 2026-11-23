@@ -10,7 +10,7 @@ reviewer would plausibly ask for after the first review:
      series resistor whose far side is already ~{PDC_I2Cn_IRQ}, so they take the _R suffix the board
      uses for that shape elsewhere (~{USBC2_INT_R}) rather than a name that would join the two nets.
 
-Usage: python3 tools/make_rev_b.py designs/jetson designs/jetson-rev-b
+Usage: python3 tools/make_rev_b.py boards/jetson boards/jetson-rev-b
 
 It copies every file of rev A except design.yaml into the rev B folder, then edits the copies. Each
 edit must apply exactly once, so an upstream change to the board fails here rather than producing a

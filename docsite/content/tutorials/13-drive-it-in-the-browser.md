@@ -36,7 +36,7 @@ lives; [Running the server](../../guide/running-the-server/) covers it.
 
 `--mount name=path` exposes a folder in the file browser, and it is repeatable, so a real deployment
 mounts several project folders at once. Point it at the **project root**, not at
-`designs/jetson/`. `project.yaml` carries the checklists. A mount rooted inside the design leaves
+`boards/jetson/`. `project.yaml` carries the checklists. A mount rooted inside the design leaves
 `project.yaml` above the mount, where the server cannot reach it, and the Review panel then has no
 checklist to offer.
 

@@ -1,5 +1,5 @@
-#agni-run 6f24f908929df5af
-diff designs/gateway/gateway.edn -> designs/gateway-rev-b/gateway-rev-b.edn
+#agni-run abf150a96517e39d
+diff boards/gateway/gateway.edn -> boards/gateway-rev-b/gateway-rev-b.edn
 
 Components: +2  -0  ~0
 Nets:       new 0  deleted 0  renamed 2  hard 3  soft 0

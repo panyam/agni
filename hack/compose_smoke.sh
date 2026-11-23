@@ -36,7 +36,7 @@ up() {
 up
 
 rpc() { curl -fsS -H 'Content-Type: application/json' -d "$2" "http://127.0.0.1:$port/agni.v1.webapi.$1"; }
-design=mount://designs/designs/gateway
+design=mount://designs/boards/gateway
 # Every question names a snapshot of the design, ingested once (agni 1061).
 snapshot=$(rpc SnapshotService/Ingest "{\"snapshot\":{\"uri\":\"$design\"}}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["name"])') \
   || fail "Ingest did not take the mounted design"
@@ -52,7 +52,7 @@ rpc ReviewService/CreateReview "{\"snapshot\":\"$snapshot\",\"manifest\":$manife
 # The mounted gateway already holds the id "gateway", so the stored copy takes another.
 count() { rpc DesignViewService/GetSummary "{\"snapshot\":\"$1\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["componentCount"])'; }
 mounted=$(count "$snapshot")
-compose run --rm -T --entrypoint agni trial designs push /designs/designs/gateway --id gateway-kept --remote http://agni:8080 >"$work/push.out" 2>&1 \
+compose run --rm -T --entrypoint agni trial designs push /designs/boards/gateway --id gateway-kept --remote http://agni:8080 >"$work/push.out" 2>&1 \
   || { cat "$work/push.out" >&2; fail "agni designs push did not store the design, so the store volume is not writable"; }
 compose down >/dev/null 2>&1
 up
@@ -61,7 +61,7 @@ kept=$(rpc SnapshotService/Ingest '{"snapshot":{"design":"designs/gateway-kept"}
   || fail "Ingest did not read the stored design by name"
 [ "$(count "$kept")" = "$mounted" ] || fail "the stored design has $(count "$kept") components, and the mounted folder $mounted"
 
-compose run --rm trial /designs/designs/gateway >"$work/report.md" 2>"$work/trial.err" || { cat "$work/trial.err" >&2; fail "the trial did not run"; }
+compose run --rm trial /designs/boards/gateway >"$work/report.md" 2>"$work/trial.err" || { cat "$work/trial.err" >&2; fail "the trial did not run"; }
 grep -q '| run every rule | ok |' "$work/report.md" || { cat "$work/report.md" >&2; fail "the trial report has no ok rule step"; }
 grep -q 'github.com/panyam/agni/issues/new' "$work/trial.err" || fail "the trial printed no issue link"
 if grep -Eqi '(^|[^a-z])(gateway|sample board|i2c_scl|pmic_main)' "$work/report.md"; then

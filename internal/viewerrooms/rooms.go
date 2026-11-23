@@ -119,7 +119,7 @@ func New(o Options) (*Rooms, error) {
 				return "", errors.New("name the design the tab shows, as mount/path (the designs tool lists them)")
 			}
 			return o.RoomOf(context.Background(), design)
-		}, rooms.RoomArgs{"design": {"type": "string", "description": "The design the tab shows, as mount/path (tut/designs/gateway)."}}),
+		}, rooms.RoomArgs{"design": {"type": "string", "description": "The design the tab shows, as mount/path (tut/boards/gateway)."}}),
 		// A reader's question from a tab's Ask box, and what the reader selected, reach an agent through
 		// next_request or the room's events resource, from the tabs that agreed to it.
 		rooms.WithEventFallbacks(0),

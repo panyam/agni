@@ -18,7 +18,7 @@ func TestProposeReadsAZipAsTheFolderItWasMadeFrom(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", home)
-	src := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
+	src := filepath.Join("..", "..", "examples", "tutorial-project", "boards", "gateway")
 	zipPath := filepath.Join(t.TempDir(), "gateway.zip")
 	f, err := os.Create(zipPath)
 	if err != nil {

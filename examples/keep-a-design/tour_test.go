@@ -17,10 +17,10 @@ func TestTheTourKeepsTwoRevisionsAndRefusesTheMountedDesign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, asked, err := tr.keep(ctx, "mixer-rev-a", "Mixer rev A", "../common/designs/rev-a.edn"); err != nil || asked != 1 {
+	if _, asked, err := tr.keep(ctx, "mixer-rev-a", "Mixer rev A", "../common/boards/rev-a.edn"); err != nil || asked != 1 {
 		t.Fatalf("keep rev A = asked %d, %v; want the netlist's contents asked for", asked, err)
 	}
-	if _, asked, err := tr.keep(ctx, "mixer-rev-b", "Mixer rev B", "../common/designs/rev-b.edn"); err != nil || asked != 1 {
+	if _, asked, err := tr.keep(ctx, "mixer-rev-b", "Mixer rev B", "../common/boards/rev-b.edn"); err != nil || asked != 1 {
 		t.Fatalf("keep rev B = asked %d, %v; want its netlist's contents asked for", asked, err)
 	}
 	before, after, err := tr.keepPack(ctx)
@@ -96,10 +96,10 @@ func TestTheTourKeepsDesignsInSqlite(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer closeDB()
-	if _, _, err := tr.keep(ctx, "mixer-rev-a", "Mixer rev A", "../common/designs/rev-a.edn"); err != nil {
+	if _, _, err := tr.keep(ctx, "mixer-rev-a", "Mixer rev A", "../common/boards/rev-a.edn"); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := tr.keep(ctx, "mixer-rev-b", "Mixer rev B", "../common/designs/rev-b.edn"); err != nil {
+	if _, _, err := tr.keep(ctx, "mixer-rev-b", "Mixer rev B", "../common/boards/rev-b.edn"); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := tr.keepPack(ctx); err != nil {

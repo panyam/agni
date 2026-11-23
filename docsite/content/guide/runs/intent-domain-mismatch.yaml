@@ -3,4 +3,4 @@
 # intent in design.yaml and the project finds it.
 fixture: examples/tutorial-project
 script: |
-  agni check designs/gateway --rule intent/voltage-domain-mismatch
+  agni check boards/gateway --rule intent/voltage-domain-mismatch

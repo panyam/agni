@@ -11,7 +11,7 @@ has to outlive the run, and to change behavior it has to be able to stop a merge
 `--results-out` writes the run to a file as it happens:
 
 ```
-agni review designs/jetson --results-out review.results.json
+agni review boards/jetson --results-out review.results.json
 ```
 
 The file is a self-contained check-result document. It carries what produced it and at what build,
@@ -50,7 +50,7 @@ Give it `--server self` and each subject becomes a link into a viewer, which ope
 that verdict's proof drawn:
 
 ```
-agni check --format html --server self designs/jetson > review.html
+agni check --format html --server self boards/jetson > review.html
 ```
 
 `--server self` makes this one command rather than two, for the same reason the CLI can withhold a
@@ -62,7 +62,7 @@ Point it at a server someone else is running and the promise has to be checked i
 
 ```
 agni check --format html --server http://localhost:8080 \
-  --mount work=. designs/jetson > review.html
+  --mount work=. boards/jetson > review.html
 ```
 
 The report needs that `--mount` to carry links. The CLI asks that server whether it serves the

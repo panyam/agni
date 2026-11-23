@@ -35,7 +35,7 @@ func problemsLine(problems []string) string {
 }
 
 func main() {
-	design := common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn")
+	design := common.AskPath("design", "../common/boards/i2c-sensor/i2c-sensor.edn")
 
 	demo := demokit.New("validate").
 		Dir("validate").
@@ -57,7 +57,7 @@ func main() {
 	})
 
 	demo.Bind("geometry").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		const eds = "../common/designs/demo-schematic.eds"
+		const eds = "../common/boards/demo-schematic.eds"
 		f, err := os.Open(eds)
 		if err != nil {
 			return demokit.Errf("open %s: %v", eds, err)

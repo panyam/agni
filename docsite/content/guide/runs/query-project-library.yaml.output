@@ -1,5 +1,5 @@
-#agni-run 425f3307a6a5efac
+#agni-run 3126e77d2f47955b
 n               provenance
-PMIC_MAIN_12V0  designs/gateway/gateway.edn:PMIC_MAIN_12V0
+PMIC_MAIN_12V0  boards/gateway/gateway.edn:PMIC_MAIN_12V0
 
 1 result(s)

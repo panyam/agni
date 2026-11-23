@@ -26,7 +26,7 @@ func TestCheckDeclaredPullUpReachCLI(t *testing.T) {
 	const fail = "no rail is reachable from SDA_MAIN through a resistor within 3 hops"
 	const pass = "SDA_MAIN reaches rail VCC_3V3 along SDA_MAIN -> [R1] -> SER_A -> [R2] ->\n                    SER_B -> [R3] -> SER_C -> [R4] -> VCC_3V3"
 
-	out, err := runPullUpCheck(t, "../../examples/common/designs/pullup-reach.edn")
+	out, err := runPullUpCheck(t, "../../examples/common/boards/pullup-reach.edn")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestCheckDeclaredPullUpReachCLI(t *testing.T) {
 		t.Fatalf("with no declaration SDA_MAIN fails at the default reach:\n%s", out)
 	}
 
-	out, err = runPullUpCheck(t, "../../examples/common/designs/pullup-reach.edn", "--intent-path", "../../examples/common/designs/pullup-reach.intent.yaml")
+	out, err = runPullUpCheck(t, "../../examples/common/boards/pullup-reach.edn", "--intent-path", "../../examples/common/boards/pullup-reach.intent.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestCheckDeclaredPullUpReachCLI(t *testing.T) {
 		t.Errorf("--intent-path declaring reach 4 must pass SDA_MAIN through all four resistors:\n%s", out)
 	}
 
-	edn, err := os.ReadFile("../../examples/common/designs/pullup-reach.edn")
+	edn, err := os.ReadFile("../../examples/common/boards/pullup-reach.edn")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestCheckNegativePullUpReachRejected(t *testing.T) {
 	if err := os.WriteFile(path, []byte("name: bad\nintent:\n  nets:\n    SDA_MAIN: {pull_up_reach_hops: -1}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	out, err := runPullUpCheck(t, "../../examples/common/designs/pullup-reach.edn", "--intent-path", path)
+	out, err := runPullUpCheck(t, "../../examples/common/boards/pullup-reach.edn", "--intent-path", path)
 	if err == nil {
 		t.Fatalf("a negative reach must fail the load, not run:\n%s", out)
 	}

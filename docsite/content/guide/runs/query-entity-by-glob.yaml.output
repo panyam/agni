@@ -1,5 +1,5 @@
-#agni-run 6a7ed3ce689dc3d2
+#agni-run 0c9e787ae2b2c949
 name         provenance
-PMIC_IO_1V8  designs/gateway/gateway.edn:PMIC_IO_1V8
+PMIC_IO_1V8  boards/gateway/gateway.edn:PMIC_IO_1V8
 
 1 result(s)

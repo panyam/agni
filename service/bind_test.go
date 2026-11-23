@@ -22,7 +22,7 @@ func number(f float64) *webapi.QueryValue {
 
 func tutorialQueries() (*QueryService, string) {
 	return NewQueryService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project")}, nil, nil),
-		"mount://m/designs/gateway/gateway.edn"
+		"mount://m/boards/gateway/gateway.edn"
 }
 
 func TestABoundQueryAnswersAsTheWrittenConstant(t *testing.T) {

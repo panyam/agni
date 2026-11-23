@@ -34,7 +34,7 @@ func remoteParityServer(t *testing.T) (url, design string, served func() []strin
 		mux.ServeHTTP(w, r)
 	}))
 	t.Cleanup(srv.Close)
-	return srv.URL, filepath.Join(root, "designs", "gateway"), func() []string {
+	return srv.URL, filepath.Join(root, "boards", "gateway"), func() []string {
 		mu.Lock()
 		defer mu.Unlock()
 		return append([]string(nil), procs...)

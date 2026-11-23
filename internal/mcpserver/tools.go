@@ -130,7 +130,7 @@ func (s *srv) designsTool(ctx context.Context, _ designsInput) (core.ToolResult,
 const checkDesc = `Run agni's design checks over a design and get every finding, with the verdict each rule reached on each subject, and a link per failing verdict that opens it in the viewer. rules narrows the run to those rules (the agni://rules resource lists them).`
 
 type checkInput struct {
-	Design string   `json:"design" jsonschema:"required" jsonschema_description:"The design, as mount/path (tut/designs/gateway)."`
+	Design string   `json:"design" jsonschema:"required" jsonschema_description:"The design, as mount/path (tut/boards/gateway)."`
 	Rules  []string `json:"rules,omitempty" jsonschema_description:"Only these rules, by id. Empty runs every rule."`
 }
 
@@ -205,7 +205,7 @@ func rulesAsked(rules []string) string {
 const traceDesc = `Follow a signal from one pin to another through the series parts between them (resistors, inductors, ferrites, fuses; never a capacitor), and get the route, the nets it crosses and where each can be probed. Name each pin as ref.pin (U7.3). An endpoint naming no pin the design has is an error, which is not the same as two pins with no route between them.`
 
 type traceInput struct {
-	Design string `json:"design" jsonschema:"required" jsonschema_description:"The design, as mount/path (tut/designs/gateway)."`
+	Design string `json:"design" jsonschema:"required" jsonschema_description:"The design, as mount/path (tut/boards/gateway)."`
 	From   string `json:"from" jsonschema:"required" jsonschema_description:"The pin to start at, as ref.pin: U7.3."`
 	To     string `json:"to" jsonschema:"required" jsonschema_description:"The pin to reach, as ref.pin: J2.1."`
 	Hops   int32  `json:"hops,omitempty" jsonschema_description:"The most series parts to cross; the server's default when 0."`
@@ -247,7 +247,7 @@ func (s *srv) trace(ctx context.Context, in traceInput) (core.ToolResult, error)
 const walkDesc = `Walk outwards from one part (R1) or pin (U7.3), hop by hop, and get the nets reached, the part crossed into each, and the parts the walk did not cross with the reason. Hop 1 is the start's own nets. A ground ends its branch. kind picks which parts a hop crosses: "series" (resistors, inductors, ferrites, fuses, passing through rails as trace does), "small-parts" (any part with up to four pins, stopping at ICs, connectors and rails) or "all". through names parts to cross anyway. goal asks a goal question from a net the walk reached (at, default the start's own net): "pin" routes to the pin in to as trace does, "pull-up" finds every pull-up resistor taking the net to a rail, "rail" routes to the nearest rail. Each route runs from the start along the walk to at, then on to the goal, and the answer keeps trace's three outcomes: routed, no route within the radius, or a goal naming nothing.`
 
 type walkInput struct {
-	Design  string   `json:"design" jsonschema:"required" jsonschema_description:"The design, as mount/path (tut/designs/gateway)."`
+	Design  string   `json:"design" jsonschema:"required" jsonschema_description:"The design, as mount/path (tut/boards/gateway)."`
 	From    string   `json:"from" jsonschema:"required" jsonschema_description:"The part (R1) or pin (U7.3) to start from."`
 	Kind    string   `json:"kind,omitempty" jsonschema_description:"series, small-parts or all; series when empty."`
 	Hops    int32    `json:"hops,omitempty" jsonschema_description:"How many hops to walk, hop 1 being the start's own nets; 2 when 0."`

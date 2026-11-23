@@ -20,7 +20,7 @@ func TestOSSnapshotStoreKeepsADefinitionAcrossInstances(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	def := &webapi.Snapshot{Uri: "mount://tut/designs/gateway", AsNamed: true, Refresh: true}
+	def := &webapi.Snapshot{Uri: "mount://tut/boards/gateway", AsNamed: true, Refresh: true}
 	if err := st.Put(ctx, "snapshots/abc", def); err != nil {
 		t.Fatal(err)
 	}
