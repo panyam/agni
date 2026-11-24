@@ -238,4 +238,30 @@ public interface ArtifactSourceOrBuilder extends
    * <code>.google.protobuf.Timestamp newer_time = 10 [json_name = "newerTime"];</code>
    */
   com.google.protobuf.TimestampOrBuilder getNewerTimeOrBuilder();
+
+  /**
+   * <pre>
+   * companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+   * as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+   * artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+   * names its entry, so a prune keeps it. Only the server sets it. Output only.
+   * </pre>
+   *
+   * <code>string companion_of = 11 [json_name = "companionOf"];</code>
+   * @return The companionOf.
+   */
+  java.lang.String getCompanionOf();
+  /**
+   * <pre>
+   * companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+   * as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+   * artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+   * names its entry, so a prune keeps it. Only the server sets it. Output only.
+   * </pre>
+   *
+   * <code>string companion_of = 11 [json_name = "companionOf"];</code>
+   * @return The bytes for companionOf.
+   */
+  com.google.protobuf.ByteString
+      getCompanionOfBytes();
 }

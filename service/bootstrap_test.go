@@ -21,6 +21,9 @@ type bootWorld struct {
 	boot    *service.Bootstrap
 	board   *fakeMount
 	designs *service.DesignService
+	// catalog writes the store's records directly, as an older server left them.
+	catalog *service.DesignCatalog
+	blobs   blobs
 }
 
 func bootstrapWorld(t *testing.T) *bootWorld {
@@ -37,7 +40,8 @@ func bootstrapWorld(t *testing.T) *bootWorld {
 	if err != nil {
 		t.Fatal(err)
 	}
-	designs := service.NewDesignService(service.NewDesignCatalog(store).WithGuard(guard), b.source).WithLinks(func(_ context.Context, name string) (service.MountReader, error) {
+	catalog := service.NewDesignCatalog(store).WithGuard(guard)
+	designs := service.NewDesignService(catalog, b.source).WithLinks(func(_ context.Context, name string) (service.MountReader, error) {
 		if name == "board" {
 			return board, nil
 		}
@@ -47,7 +51,7 @@ func bootstrapWorld(t *testing.T) *bootWorld {
 	projectSvc := service.NewProjectService(nil).WithRecords(service.NewMemProjectRecords())
 	return &bootWorld{
 		boot:  &service.Bootstrap{Designs: designs, Packs: packs, Projects: projectSvc},
-		board: board, designs: designs,
+		board: board, designs: designs, catalog: catalog, blobs: b,
 	}
 }
 

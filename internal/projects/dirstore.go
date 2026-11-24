@@ -175,13 +175,16 @@ type sourceRecord struct {
 	// the server saw it (agni issue 1726). A write of new files makes a new record without them.
 	NewerVersion string    `yaml:"newer_version,omitempty"`
 	NewerTime    time.Time `yaml:"newer_time,omitempty"`
+	// CompanionOf is the id of the entry whose design.yaml declared this artifact as a companion
+	// (agni issue 1890).
+	CompanionOf string `yaml:"companion_of,omitempty"`
 }
 
 func sourceRecordOf(src *webapi.ArtifactSource) *sourceRecord {
 	if src == nil {
 		return nil
 	}
-	out := &sourceRecord{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: src.GetFollow(), Version: src.GetVersion(), ReadHash: src.GetReadHash(), AccessSource: src.GetAccessSource()}
+	out := &sourceRecord{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: src.GetFollow(), Version: src.GetVersion(), ReadHash: src.GetReadHash(), AccessSource: src.GetAccessSource(), CompanionOf: src.GetCompanionOf()}
 	if src.GetReadTime() != nil {
 		out.ReadTime = src.GetReadTime().AsTime().UTC()
 	}
@@ -189,7 +192,7 @@ func sourceRecordOf(src *webapi.ArtifactSource) *sourceRecord {
 }
 
 func (r *sourceRecord) proto() *webapi.ArtifactSource {
-	out := &webapi.ArtifactSource{Mount: r.Mount, Path: r.Path, Ref: r.Ref, Follow: r.Follow, Version: r.Version, ReadHash: r.ReadHash, AccessSource: r.AccessSource}
+	out := &webapi.ArtifactSource{Mount: r.Mount, Path: r.Path, Ref: r.Ref, Follow: r.Follow, Version: r.Version, ReadHash: r.ReadHash, AccessSource: r.AccessSource, CompanionOf: r.CompanionOf}
 	if !r.ReadTime.IsZero() {
 		out.ReadTime = timestamppb.New(r.ReadTime)
 	}

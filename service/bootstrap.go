@@ -440,6 +440,15 @@ func (b *Bootstrap) design(ctx context.Context, d BootstrapDesign) (bool, error)
 		}
 		changed = true
 	}
+	// A link before agni issue 1890 left the companions it followed without companion_of, and a
+	// bootstrap that skips the unchanged entry would report them as unnamed.
+	for _, id := range sortedKeys(d.Link) {
+		stamped, err := b.Designs.stampCompanions(ctx, name, id)
+		if err != nil {
+			return changed, fmt.Errorf("artifact %s: %w", id, err)
+		}
+		changed = changed || stamped
+	}
 	return changed, nil
 }
 
@@ -476,11 +485,14 @@ func (b *Bootstrap) project(ctx context.Context, p BootstrapProject) (bool, erro
 }
 
 // unnamed lists the stored designs, packs and projects plan doesn't name, and the artifacts of a
-// named design that its entry doesn't link, by resource name.
+// named design that its entry doesn't link, by resource name. A companion that a link of a named
+// artifact followed counts as named (agni issue 1890).
 func (b *Bootstrap) unnamed(ctx context.Context, plan *BootstrapPlan) ([]string, error) {
 	var out []string
 	named := map[string]bool{}
+	links := map[string]map[string]string{}
 	for _, d := range plan.Designs {
+		links[StandaloneDesignName(d.ID)] = d.Link
 		named[StandaloneDesignName(d.ID)] = true
 		for id := range d.Link {
 			named[ArtifactName(d.ID, id)] = true
@@ -514,9 +526,16 @@ func (b *Bootstrap) unnamed(ctx context.Context, plan *BootstrapPlan) ([]string,
 			case !named[d.GetName()]:
 				out = append(out, d.GetName())
 			default:
-				for _, a := range d.GetArtifacts() {
-					if !named[a] {
-						out = append(out, a)
+				arts, err := b.Designs.catalog.Artifacts(ctx, d.GetName())
+				if err != nil {
+					return nil, err
+				}
+				for _, a := range arts {
+					of := a.GetSource().GetCompanionOf()
+					_, followed := links[d.GetName()][of]
+					followed = followed && of != ""
+					if !named[a.GetName()] && !followed {
+						out = append(out, a.GetName())
 					}
 				}
 			}

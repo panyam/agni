@@ -134,7 +134,7 @@ func (s *DesignService) revisionOf(ctx context.Context, name, rev string) (*weba
 		_, aid, _ := ArtifactID(a.GetName())
 		writes = append(writes, ArtifactWrite{ID: aid, Files: files, Source: &webapi.ArtifactSource{
 			Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: src.GetFollow(), Version: version,
-			ReadTime: now, ReadHash: manifestHash(files), AccessSource: src.GetAccessSource(),
+			ReadTime: now, ReadHash: manifestHash(files), AccessSource: src.GetAccessSource(), CompanionOf: src.GetCompanionOf(),
 		}})
 	}
 	if !history {
