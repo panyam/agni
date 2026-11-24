@@ -1016,6 +1016,18 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth
   `--grant` wins over it.
 - The server refuses a grant it can't read, such as a `*` in the middle of a pattern, and names it
   before it listens. `--grant` needs `--auth tokens`, since a server without it opens everything.
+- `oidc:group:<id>` admits a person whose OIDC sign-in listed `<id>` in the groups claim, as
+  `--oidc-allow group:` reads it. `github:org:<org>` admits a person who was a member of `<org>`
+  when they signed in with GitHub, as `--github-allow org:` checks it (agni issue 1896). The
+  sign-in records these on the person's token, so a token from `agni token create` never matches
+  one.
+- A person's groups and orgs are as old as their token. Someone added to a group, or a server
+  restarted with a new `github:org:` grant, reaches them when they sign in again. Someone removed
+  from a group keeps the grant until their token expires, or until `agni token revoke`.
+- A `github:org:` grant asks GitHub about the org at sign-in through the App, which needs the
+  Members organization permission at Read there. `github:org:*` names no org, so it admits only
+  members of an org `--github-allow` names. An identity provider that leaves the groups claim out,
+  as Entra does past 200 groups, gives the person no groups.
 - `--grants-file` reads the grants from a file holding only an `access` list, the shape below. An
   empty list grants nothing. It refuses to run beside `--grant` or a `serve.yaml`'s `access`.
 - `agnids` takes the same `--grant` and `--grants-file` (agni issue 1895). Give it the grants agni
@@ -1026,7 +1038,7 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth
 ```yaml
 access:
   - source: github://acme/board
-    allow: ["local:*", "oidc:*"]
+    allow: ["local:*", "oidc:group:hw", "github:org:hw"]
 ```
 
 ### Signing in with GitHub

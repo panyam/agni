@@ -175,8 +175,10 @@ func TestAgnidsWithAuthServesAPrivateMountToItsReaders(t *testing.T) {
 }
 
 // A grant of local:* on a private mount's repo lets agnids serve it to a person signed in with a
-// local account and no connection of their own, as agni serve does. A token's subject stays
-// refused, and agnids without the grant refuses both (agni issue 1895).
+// local account and no connection of their own, as agni serve does. A grant of oidc:group:hw lets
+// it serve the mount to a person whose sign-in recorded the group hw (agni issue 1896). A token's
+// subject and a person in another group stay refused, and agnids without the grant refuses everyone
+// (agni issue 1895).
 func TestAgnidsReadsAgniServesGrants(t *testing.T) {
 	gh := githubtest.New(t)
 	repo := gh.AddRepo("acme", "sheets", true, map[string]string{"ti/TPS62.pdf": "%PDF-1.4"})
@@ -199,15 +201,16 @@ func TestAgnidsReadsAgniServesGrants(t *testing.T) {
 		t.Fatal(err)
 	}
 	tokens := map[string]string{}
-	for _, who := range []string{"local:carol", "dave"} {
-		made, err := storeTokens(t, store).CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: who, Name: who})
+	claims := map[string][]string{"oidc:ada": {"oidc:group:hw"}, "oidc:bo": {"oidc:group:sales"}}
+	for _, who := range []string{"local:carol", "dave", "oidc:ada", "oidc:bo"} {
+		made, err := storeTokens(t, store).CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: who, Name: who, Scopes: claims[who]})
 		if err != nil {
 			t.Fatal(err)
 		}
 		tokens[who] = made.FullKey
 	}
 	grantsFile := filepath.Join(t.TempDir(), "access.yaml")
-	if err := os.WriteFile(grantsFile, []byte("access:\n  - {source: github://acme/sheets, allow: [\"local:*\"]}\n"), 0o600); err != nil {
+	if err := os.WriteFile(grantsFile, []byte("access:\n  - {source: github://acme/sheets, allow: [\"local:*\", \"oidc:group:hw\"]}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	granted, err := readGrants(nil, grantsFile)
@@ -252,10 +255,10 @@ func TestAgnidsReadsAgniServesGrants(t *testing.T) {
 	}
 
 	withGrant, without := workbench(granted), workbench(nil)
-	want := map[string]bool{"local:carol": true, "dave": false}
+	want := map[string]bool{"local:carol": true, "dave": false, "oidc:ada": true, "oidc:bo": false}
 	for who, ok := range want {
 		if got := opens(withGrant, who); got != ok {
-			t.Errorf("%s opens sheets under a grant of local:* = %v; want %v", who, got, ok)
+			t.Errorf("%s opens sheets under a grant of local:* and oidc:group:hw = %v; want %v", who, got, ok)
 		}
 		if opens(without, who) {
 			t.Errorf("%s opens sheets on agnids with no grant", who)

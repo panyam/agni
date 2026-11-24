@@ -85,7 +85,7 @@ func New(store core.APIKeyStore, proxies skmw.TrustedProxies) *Gate {
 // Wrap guards next.
 func (g *Gate) Wrap(next http.Handler) http.Handler {
 	checked := g.mw.ValidateToken(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		caller := service.Caller{Subject: apiauth.GetSubjectFromAPIContext(r.Context())}
+		caller := service.Caller{Subject: apiauth.GetSubjectFromAPIContext(r.Context()), Claims: Claims(apiauth.GetScopesFromAPIContext(r.Context()))}
 		next.ServeHTTP(w, r.WithContext(service.WithCaller(r.Context(), caller)))
 	}))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

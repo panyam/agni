@@ -120,3 +120,13 @@ func ReadFile(path string) ([]connections.SourceGrant, error) {
 	}
 	return ParseAll(vs)
 }
+
+// Patterns returns every viewer pattern across gs, so a GitHub sign-in can check the orgs a
+// github:org: pattern names (agni issue 1896).
+func Patterns(gs []connections.SourceGrant) []string {
+	var out []string
+	for _, g := range gs {
+		out = append(out, g.Viewers...)
+	}
+	return out
+}

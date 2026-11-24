@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,10 @@ type GitHub struct {
 	Allow []string
 	// Save keeps the GitHub token of the person signed in as login, as subject's own connection.
 	Save func(ctx context.Context, subject, login string, tok *oauth2.Token) error
+	// GrantOrgs are the orgs an operator's grants name as github:org:<org> (agni issue 1896). Sign-in
+	// checks the person's membership of each, beside Allow's, and the token carries each org they
+	// are in as a claim.
+	GrantOrgs []string
 	// TTL is how long a minted agni token works. Zero is 30 days.
 	TTL time.Duration
 	// HTTPClient makes the calls to GitHub. Nil is http.DefaultClient.
@@ -213,33 +218,43 @@ func (s *githubSignIns) signedIn(_, _ string, tok *oauth2.Token, info map[string
 }
 
 // admit checks the person signed in as login against Allow, keeps their GitHub token, and mints
-// them an agni token. It returns the token and its subject.
+// them an agni token carrying each org they are in, of Allow's and GrantOrgs, as a claim. It
+// returns the token and its subject.
 func (s *githubSignIns) admit(ctx context.Context, login string, tok *oauth2.Token) (string, string, error) {
 	if login == "" || tok == nil {
 		return "", "", errors.New("GitHub didn't say who signed in")
 	}
-	ok, err := s.allowed(ctx, login, tok)
+	m := memberships{}
+	ok, err := s.allowed(ctx, login, tok, m)
 	if err != nil {
 		return "", "", fmt.Errorf("asking GitHub whether %s may sign in: %w", login, err)
 	}
 	if !ok {
 		return "", "", fmt.Errorf("%s isn't someone this server lets sign in; ask its operator to add them to --github-allow", login)
 	}
+	claims, err := s.orgClaims(ctx, login, tok, m)
+	if err != nil {
+		return "", "", fmt.Errorf("asking GitHub which of the grants' orgs %s is in: %w", login, err)
+	}
 	subject := "github:" + login
 	if err := s.cfg.Save(ctx, subject, login, tok); err != nil {
 		return "", "", fmt.Errorf("keeping %s's GitHub token: %w", login, err)
 	}
 	expires := time.Now().Add(s.cfg.TTL)
-	resp, err := s.keys.CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: subject, Name: "github sign-in", ExpiresAt: &expires})
+	resp, err := s.keys.CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: subject, Name: "github sign-in", Scopes: claims, ExpiresAt: &expires})
 	if err != nil {
 		return "", "", fmt.Errorf("minting a token for %s: %w", login, err)
 	}
 	return resp.FullKey, subject, nil
 }
 
+// memberships keeps each org's answer for one sign-in, so an org in both Allow and GrantOrgs is
+// asked once.
+type memberships map[string]bool
+
 // allowed says whether Allow lets login in. An org entry asks GitHub, with the person's own token,
-// whether login is a member.
-func (s *githubSignIns) allowed(ctx context.Context, login string, tok *oauth2.Token) (bool, error) {
+// whether login is a member, and keeps the answer in m.
+func (s *githubSignIns) allowed(ctx context.Context, login string, tok *oauth2.Token, m memberships) (bool, error) {
 	var orgs []string
 	for _, a := range s.cfg.Allow {
 		kind, name, _ := strings.Cut(a, ":")
@@ -251,30 +266,65 @@ func (s *githubSignIns) allowed(ctx context.Context, login string, tok *oauth2.T
 		}
 	}
 	for _, org := range orgs {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.api+"/orgs/"+url.PathEscape(org)+"/members/"+url.PathEscape(login), nil)
-		if err != nil {
-			return false, err
-		}
-		req.Header.Set("Authorization", "Bearer "+tok.AccessToken)
-		req.Header.Set("Accept", "application/vnd.github+json")
-		resp, err := s.client().Do(req)
-		if err != nil {
-			return false, err
-		}
-		resp.Body.Close()
-		switch resp.StatusCode {
-		case http.StatusNoContent:
-			return true, nil
-		case http.StatusNotFound, http.StatusFound:
-		case http.StatusForbidden:
-			// GitHub answers 403 to an App token when the App lacks the Members permission
-			// (agni issue 1841).
-			return false, fmt.Errorf("the GitHub App can't see who is in %s; its operator needs to give the App the Members organization permission at Read, or add user:%s to --github-allow", org, login)
-		default:
-			return false, fmt.Errorf("GitHub answered %d about %s's membership of %s", resp.StatusCode, login, org)
+		in, err := s.member(ctx, login, tok, org, m)
+		if err != nil || in {
+			return in, err
 		}
 	}
 	return false, nil
+}
+
+// orgClaims returns a claim for each org of Allow's and GrantOrgs that login is a member of. An
+// org allowed() already asked about isn't asked again.
+func (s *githubSignIns) orgClaims(ctx context.Context, login string, tok *oauth2.Token, m memberships) ([]string, error) {
+	orgs := slices.Clone(s.cfg.GrantOrgs)
+	for _, a := range s.cfg.Allow {
+		if name, ok := strings.CutPrefix(a, "org:"); ok && !slices.Contains(orgs, name) {
+			orgs = append(orgs, name)
+		}
+	}
+	var out []string
+	for _, org := range orgs {
+		in, err := s.member(ctx, login, tok, org, m)
+		if err != nil {
+			return nil, err
+		}
+		if in {
+			out = append(out, ClaimGitHubOrg+org)
+		}
+	}
+	return out, nil
+}
+
+// member asks GitHub, with the person's own token, whether login is a member of org.
+func (s *githubSignIns) member(ctx context.Context, login string, tok *oauth2.Token, org string, m memberships) (bool, error) {
+	if in, ok := m[org]; ok {
+		return in, nil
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.api+"/orgs/"+url.PathEscape(org)+"/members/"+url.PathEscape(login), nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("Authorization", "Bearer "+tok.AccessToken)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	resp, err := s.client().Do(req)
+	if err != nil {
+		return false, err
+	}
+	resp.Body.Close()
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		m[org] = true
+		return true, nil
+	case http.StatusNotFound, http.StatusFound:
+		m[org] = false
+		return false, nil
+	case http.StatusForbidden:
+		// GitHub answers 403 to an App token when the App lacks the Members permission
+		// (agni issue 1841).
+		return false, fmt.Errorf("the GitHub App can't see who is in %s; its operator needs to give the App the Members organization permission at Read, or add user:%s to --github-allow", org, login)
+	}
+	return false, fmt.Errorf("GitHub answered %d about %s's membership of %s", resp.StatusCode, login, org)
 }
 
 func (s *githubSignIns) client() *http.Client {

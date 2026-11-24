@@ -26,13 +26,13 @@ type grantStore struct {
 	// open serves the store without --auth, as the setup did.
 	open string
 	// tokens maps each person to the token their calls send: carol signed in with a local account,
-	// ada through OIDC, dave holds a token from agni token create, and so does github:erin, a GitHub
-	// subject with no connection.
+	// ada through OIDC in the group hw, bo through OIDC in the group sales, dave holds a token from
+	// agni token create, and so does github:erin, a GitHub subject with no connection.
 	tokens map[string]string
 }
 
 // people are grantStore's signed-in callers, in the order the tests ask for them.
-var people = []string{"carol", "ada", "dave", "github:erin"}
+var people = []string{"carol", "ada", "bo", "dave", "github:erin"}
 
 // newGrantStore serves the store once without --auth to make its mounts and designs, since nobody
 // holds a connection of their own to link them through. Each design records the repo it read, so
@@ -84,7 +84,8 @@ func newGrantStore(t *testing.T) *grantStore {
 	}
 	base := "http://" + ln.Addr().String()
 	iss := oidctest.New(t, oidctest.WithClient(oidcClientID, oidcSecret, base+authgate.OIDCSignInPath+"/callback/"))
-	iss.AddUser("u-ada", map[string]any{"email": "ada@example.com", "email_verified": true})
+	iss.AddUser("u-ada", map[string]any{"email": "ada@example.com", "email_verified": true, "groups": []any{"hw", "everyone"}})
+	iss.AddUser("u-bo", map[string]any{"email": "bo@example.com", "email_verified": true, "groups": []any{"sales", "everyone"}})
 	o := g.opts()
 	o.listener, o.localAccounts, o.store = ln, true, testStore(t, g.store)
 	o.oidcSignIn = &oidcSignIn{issuer: iss.URL, clientID: oidcClientID, clientSecret: oidcSecret, allow: []string{"domain:example.com"}}
@@ -98,7 +99,11 @@ func newGrantStore(t *testing.T) *grantStore {
 	if ada == "" {
 		t.Fatalf("ada's OIDC sign-in set no session:\n%s", body)
 	}
-	g.tokens["carol"], g.tokens["ada"] = carol, ada
+	_, _, body, bo := oidcBrowserSignIn(t, iss, server, "u-bo", "/")
+	if bo == "" {
+		t.Fatalf("bo's OIDC sign-in set no session:\n%s", body)
+	}
+	g.tokens["carol"], g.tokens["ada"], g.tokens["bo"] = carol, ada, bo
 	return g
 }
 
@@ -186,7 +191,7 @@ func TestAGrantOfStarOpensASourceToEveryoneSignedIn(t *testing.T) {
 func TestALocalGrantAdmitsLocalAccountsAlone(t *testing.T) {
 	g := newGrantStore(t)
 	server := g.serve(t, "github://acme/board=local:*")
-	want := map[string]bool{"carol": true, "ada": false, "dave": false, "github:erin": false}
+	want := map[string]bool{"carol": true, "ada": false, "bo": false, "dave": false, "github:erin": false}
 	for _, who := range people {
 		if got := g.reads(t, server, who, "bb", "github://acme/board"); got != want[who] {
 			t.Errorf("%s opens bb under a grant of local:* = %v; want %v", who, got, want[who])
@@ -290,5 +295,98 @@ func TestServeRefusesAMalformedGrant(t *testing.T) {
 		if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("serve %q = %v; want one saying %q", c.args, err, c.want)
 		}
+	}
+}
+
+// A grant of oidc:group:hw admits a person whose OIDC sign-in named the group hw, and nobody else:
+// not one in another group, a local account, or a token's subject, which carries no claims. The
+// same store with no grant refuses ada (agni issue 1896).
+func TestAnOIDCGroupGrantAdmitsTheGroupAlone(t *testing.T) {
+	g := newGrantStore(t)
+	server := g.serve(t, "github://acme/board=oidc:group:hw")
+	want := map[string]bool{"carol": false, "ada": true, "bo": false, "dave": false, "github:erin": false}
+	for _, who := range people {
+		if got := g.reads(t, server, who, "bb", "github://acme/board"); got != want[who] {
+			t.Errorf("%s opens bb under a grant of oidc:group:hw = %v; want %v", who, got, want[who])
+		}
+	}
+	if len(want) != len(people) {
+		t.Fatalf("checked %d people; want %d", len(people), len(want))
+	}
+	if g.reads(t, g.serve(t), "ada", "bb", "github://acme/board") {
+		t.Error("ada opens bb on the server with no grant")
+	}
+	if g.reads(t, server, "ada", "oo", "github://acme/other") {
+		t.Error("ada opens oo, linked from github://acme/other, under a group grant on github://acme/board alone")
+	}
+}
+
+// A grant of github:org:hw admits a person who was in hw when they signed in with GitHub, though
+// --github-allow names only acme, and refuses one who wasn't. A session from a server whose grants
+// named no hw carries no hw claim, so the grant admits it only after the person signs in again
+// (agni issue 1896).
+func TestAGitHubOrgGrantAdmitsTheOrgsMembersAtSignIn(t *testing.T) {
+	gh := githubtest.New(t)
+	board := gh.AddRepo("acme", "board", true, map[string]string{"hw/bb.kicad_sch": "(kicad_sch)"})
+	board.Grant(secretToken)
+	gh.AddUser("alice", "acme", "hw")
+	gh.AddUser("bob", "acme")
+	gh.AddApp(appClientID, appSecret)
+	old := authgate.CacheTTL
+	authgate.CacheTTL = time.Millisecond
+	t.Cleanup(func() { authgate.CacheTTL = old })
+	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("5e", 32))
+	t.Setenv("AGNI_TEST_GITHUB_TOKEN", secretToken)
+	t.Setenv("AGNI_CONFIG_DIR", t.TempDir())
+	t.Setenv(envToken, "")
+	dir := t.TempDir()
+	store := filepath.Join(dir, "store")
+	setup := serveViewer(t, viewerOpts{store: testStore(t, store), uploadsDir: filepath.Join(dir, "uploads"),
+		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	mustRun(t)(runCobra(t, connectionsCmd(), "add", "acme", "--github-token", "env:AGNI_TEST_GITHUB_TOKEN", "--remote", setup))
+	mustRun(t)(runMounts(t, "add", "board", "github://acme/board", "--connection", "acme", "--remote", setup))
+	mustRun(t)(runDesigns(t, setup, "create", "bb"))
+	mustRun(t)(runDesigns(t, setup, "link", "bb", "schematic", "board/hw/bb.kicad_sch@main"))
+	serve := func(vs ...string) string {
+		parsed, err := grants.ParseAll(vs)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return serveViewer(t, viewerOpts{store: testStore(t, store), uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens,
+			connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL(), grants: parsed,
+			githubSignIn: &githubSignIn{clientID: appClientID, clientSecret: appSecret, allow: []string{"org:acme"}}})
+	}
+	plain := serve()
+	_, _, _, before := browserSignIn(t, gh, plain, "alice", "/")
+
+	granted := serve("github://acme/board=github:org:hw")
+	sessions := map[string]string{}
+	for _, who := range []string{"alice", "bob"} {
+		_, _, body, s := browserSignIn(t, gh, granted, who, "/")
+		if s == "" {
+			t.Fatalf("%s's sign-in set no session:\n%s", who, body)
+		}
+		sessions[who] = s
+	}
+	opens := func(server, session string) bool {
+		t.Helper()
+		t.Setenv(envToken, session)
+		out, err := runDesigns(t, server, "get", "bb")
+		if err != nil && !strings.Contains(err.Error(), "permission_denied") {
+			t.Errorf("designs get bb = %q, %v; want it read or refused with permission_denied", out, err)
+		}
+		return err == nil
+	}
+	if !opens(granted, sessions["alice"]) {
+		t.Error("alice, in hw at sign-in, can't open bb under a grant of github:org:hw")
+	}
+	if opens(granted, sessions["bob"]) {
+		t.Error("bob, in acme alone, opens bb under a grant of github:org:hw")
+	}
+	if opens(plain, sessions["alice"]) {
+		t.Error("alice opens bb on the server with no grant")
+	}
+	if opens(granted, before) {
+		t.Error("alice's session from the server with no grant opens bb; want it refused until she signs in again")
 	}
 }

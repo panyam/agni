@@ -6,6 +6,9 @@
 #   "*"           anyone signed in
 #   local:*       anyone signed in with a local account; oidc:* and github:* likewise
 #   local:carol   one person, by the subject `agni token ls` shows
+#   oidc:group:hw anyone whose OIDC sign-in listed the group hw
+#   github:org:hw anyone who was in the GitHub org hw when they signed in
+# A person's groups and orgs are read at sign-in, so a change reaches them when they sign in again.
 #
 # access:
 #   - {source: github://acme/board, allow: ["local:*", "oidc:*"]}
