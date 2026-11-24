@@ -92,7 +92,7 @@ func TestOneFindingPerItem(t *testing.T) {
 	doc := readFixture(t, "drc.json")
 	var multi int
 	for _, f := range doc.GetFindings() {
-		if strings.Contains(f.GetMessage(), " — ") {
+		if strings.Contains(f.GetMessage(), itemOpen) {
 			multi++
 		}
 	}
@@ -101,7 +101,7 @@ func TestOneFindingPerItem(t *testing.T) {
 	}
 	byMessage := map[string]int{}
 	for _, f := range doc.GetFindings() {
-		if i := strings.Index(f.GetMessage(), " — "); i > 0 {
+		if i := strings.Index(f.GetMessage(), itemOpen); i > 0 {
 			byMessage[f.GetMessage()[:i]]++
 		}
 	}
