@@ -12,9 +12,9 @@ GitHub Release body carries.
 
 ### Fixed
 
-- `agni serve` waits for its background work before it exits (issues 1867 and 1869): a poll pass or
-  webhook sync, the bootstrap retries, the token prune, Graph renewals and the uploads and records
-  sweeps. So it never stops with a write half-done in its store. A poll test flaked on Windows over
+- `agni serve` waits for a running poll pass or webhook sync before it exits, and for the bootstrap
+  retries, the token prune, Graph renewals and the uploads and records sweeps (issues 1867 and
+  1869). So it never stops with a write half-done in its store. A poll test flaked on Windows over
   it.
 
 ## [0.11.2] - 2026-11-23
