@@ -173,7 +173,7 @@ func flagsOf(t *testing.T, ms []manifest, name string) []string {
 	if _, ok := argValue(args, "--config"); !ok {
 		return args
 	}
-	entries, err := flagfile.Parse([]byte(find(t, ms, "ConfigMap", name+"-serve").Data["serve.yaml"]), "bootstrap")
+	entries, err := flagfile.Parse([]byte(find(t, ms, "ConfigMap", name+"-serve").Data["serve.yaml"]), "bootstrap", "access")
 	if err != nil {
 		t.Fatalf("%s's serve.yaml: %v", name, err)
 	}
@@ -483,6 +483,24 @@ func TestTheChartHandsTheServerItsBootstrap(t *testing.T) {
 	plan, err := service.ParseBootstrap(b)
 	if err != nil || len(plan.Mounts) != 1 || len(plan.Designs) != 1 || plan.Designs[0].Link["schematic"] != "board/gateway.kicad_sch@main" {
 		t.Errorf("serve.yaml's bootstrap = %+v, %v; want the values' mount and design", plan, err)
+	}
+}
+
+// The values' serve.access reaches serve.yaml as the access list agni serve reads as --grant
+// (agni issue 1889).
+func TestTheChartPassesTheServeAccessList(t *testing.T) {
+	var doc struct {
+		Access []struct {
+			Source string   `yaml:"source"`
+			Allow  []string `yaml:"allow"`
+		} `yaml:"access"`
+	}
+	ms := mustRender(t, "serve.access[0].source=github://hw/baseboard", "serve.access[0].allow[0]=local:*", "serve.access[0].allow[1]=oidc:*")
+	if err := yaml.Unmarshal([]byte(find(t, ms, "ConfigMap", "agni-serve").Data["serve.yaml"]), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if len(doc.Access) != 1 || doc.Access[0].Source != "github://hw/baseboard" || strings.Join(doc.Access[0].Allow, " ") != "local:* oidc:*" {
+		t.Errorf("serve.yaml's access = %+v; want the values' one entry", doc.Access)
 	}
 }
 

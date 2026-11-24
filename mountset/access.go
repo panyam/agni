@@ -37,7 +37,9 @@ func (t *Table) privateMount(name string) bool {
 }
 
 // CanRead asks GitHub, through the caller's own connections, whether the caller can read source. A
-// server connection never answers for a person, since it can read what the server can.
+// server connection never answers for a person, since it can read what the server can. An operator's
+// grant on source admits a signed-in caller it matches first, with no call to GitHub (Config.Grants,
+// agni issue 1889).
 func (t *Table) CanRead(ctx context.Context, source string) error {
 	subject := service.CallerFrom(ctx).Subject
 	if subject == "" {

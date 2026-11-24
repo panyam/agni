@@ -105,6 +105,10 @@ type Config struct {
 	// SharePoint mounts, one record per mount, so RenewSubscriptions finds them after a restart.
 	// Nil keeps none, and CreateWebhook refuses a SharePoint mount.
 	Subscriptions records.Store
+	// Grants let callers read a private source with no connection of their own, as --grant and a
+	// serve.yaml's access: set them (agni issue 1889). CanRead checks them before the caller's
+	// connections. Each grant has passed SourceGrant.Validate, since a bad pattern matches nobody.
+	Grants []connections.SourceGrant
 }
 
 // Stores are the record stores a Table reads and writes in place of folders under --store. A nil
@@ -252,6 +256,7 @@ func Open(cfg Config) (*Table, error) {
 		if gh != nil {
 			copts = append(copts, connections.WithReadCheckFor("github", gh.CanRead, connections.KindGitHubUser, connections.KindGitHubToken))
 		}
+		copts = append(copts, connections.WithSourceGrants(cfg.Grants...))
 		t.svc = connections.NewService(t.conns, copts...)
 	}
 	if cs != nil && !cfg.ReadOnly {
@@ -268,6 +273,7 @@ func Open(cfg Config) (*Table, error) {
 			}
 			copts = append(copts, connections.WithUserTokens(t.users, cfg.ConnectionsKey, app))
 		}
+		copts = append(copts, connections.WithSourceGrants(cfg.Grants...))
 		t.svc = connections.NewService(cs, copts...)
 		opts = append(opts, mounts.WithCredentials(t.svc.Credentials))
 	}

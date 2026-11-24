@@ -66,8 +66,8 @@ github.com/klauspost/compress v1.20.2 h1:v5tiZvm1KGLyg5d5oXdXe3lsSPrbEUiKoXGia//
 github.com/klauspost/compress v1.20.2/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
-github.com/panyam/goapplib/storage v0.7.37 h1:4Qo/8VhjHEJTZ9HZnfVqaEtqm0qPfVnBKZAKKZS0TU4=
-github.com/panyam/goapplib/storage v0.7.37/go.mod h1:eVUkBUkqjJEOo4MbT2cXkHe73O4OcFCN7pZ7lyV1mgU=
+github.com/panyam/goapplib/storage v0.7.38 h1:gr8ycH1ZPiVLg/AHf+ZRr94DCeR72QrNnwpoHSBq/Aw=
+github.com/panyam/goapplib/storage v0.7.38/go.mod h1:eVUkBUkqjJEOo4MbT2cXkHe73O4OcFCN7pZ7lyV1mgU=
 github.com/panyam/goutils v0.1.15 h1:znjWI1jzAqeH2DRpxQid7GMrGCj296Wws7mWh7QPk7Y=
 github.com/panyam/goutils v0.1.15/go.mod h1:lxEmbCJ04RY+KqFgo/+67bEdU2edpLYafMiJECTm3gQ=
 github.com/panyam/jaala v0.1.101 h1:cQTr2wxR0H9ki3i9xAiav4vOiZmIMd5QsGh0KmrzVEA=

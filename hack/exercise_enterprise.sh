@@ -28,7 +28,8 @@
 # the trap listen on the kind network's gateway on Linux, or this Mac's own address.
 #
 # Each step prints PASS, FAIL with its reason, or FAIL (waits on #N) when an open ticket is what's
-# missing. The script exits 1 on any FAIL. With EXERCISE_ALLOW_WAITS=1 it exits 0 when every FAIL
+# missing. A step one mode can't run yet prints SKIP (waits on #N) and fails nothing, since another
+# mode runs it. The script exits 1 on any FAIL. With EXERCISE_ALLOW_WAITS=1 it exits 0 when every FAIL
 # waits on a ticket. CI runs it that way, and a step that used to pass still fails the job. Once
 # #1799 is done, every step passes.
 #
@@ -113,6 +114,9 @@ waiting=0
 pass() { echo "PASS: $*"; }
 no() { echo "FAIL: $*" >&2; fail=1; }
 waits() { echo "FAIL (waits on #$1): ${*:2}" >&2; waiting=1; }
+# skips names a step this mode can't run until ticket $1 lands. It fails nothing, since the other
+# modes run the step.
+skips() { echo "SKIP (waits on #$1): ${*:2}"; }
 findings() { python3 -c 'import json,sys; print(len(json.load(sys.stdin)["findings"]))'; }
 wait_for() { for _ in $(seq 1 100); do curl -s -o /dev/null "$@" && return 0; sleep 0.1; done; return 1; }
 
@@ -676,6 +680,56 @@ if grep -q "signed in to $url as local:carol" "$out/login-carol.log" && as carol
   pass "agni login --with local kept carol's token, and her next command lists the mounts with it"
 else
   no "carol's agni login --with local; see $out/login-carol.log and $out/carol-mounts.txt"
+fi
+
+# carol holds no GitHub connection, so designs/bb is closed to her. The operator grants
+# hw/baseboard to every local account and restarts, and carol opens it. mallory signed in with GitHub
+# and holds no grant. Taking the grant away closes it again (agni issue 1889).
+# grant_access restarts the server with serve.yaml's access list, or the chart's serve.access, set
+# to $1, or with none when $1 is empty.
+grant_access() {
+  case "$mode" in
+    binary)
+      [ -f "$config.nogrant" ] || cp "$config" "$config.nogrant"
+      cp "$config.nogrant" "$config"
+      [ -n "$1" ] && printf 'access:\n  - {source: github://hw/baseboard, allow: ["%s"]}\n' "$1" >>"$config"
+      ;;
+    helm)
+      [ -f "$out/values.yaml.nogrant" ] || cp "$out/values.yaml" "$out/values.yaml.nogrant"
+      cp "$out/values.yaml.nogrant" "$out/values.yaml"
+      [ -n "$1" ] && printf 'serve:\n  access:\n    - {source: github://hw/baseboard, allow: ["%s"]}\n' "$1" >>"$out/values.yaml"
+      ;;
+  esac
+  stop_serve
+  serve
+  wait_for -f --cacert "$out/ca.pem" "$url/readyz" || no "/readyz never answered 200 after the grant changed; see $out/serve.log"
+}
+opens() {
+  as "$1" designs get bb >"$out/$1-grant-$2.txt" 2>&1
+}
+step "a grant opens hw/baseboard to local accounts, and removing it closes it again"
+if [ "$mode" = bundle ]; then
+  skips 1895 "the compose bundle passes no --grant, so a grant can't be set there; the binary and the chart run this step"
+else
+  if ! opens carol before && grep -q permission_denied "$out/carol-grant-before.txt"; then
+    pass "carol, with no GitHub connection, can't open designs/bb before the grant"
+  else
+    no "carol opens designs/bb before any grant; see $out/carol-grant-before.txt"
+  fi
+  grant_access 'local:*'
+  if opens carol on && as carol mounts ls >"$out/carol-grant-mounts.txt" 2>&1 && grep -q 'github://hw/baseboard' "$out/carol-grant-mounts.txt"; then
+    pass "a grant of local:* on github://hw/baseboard opens designs/bb and the board mount to carol"
+  else
+    no "carol can't open designs/bb under the grant; see $out/carol-grant-on.txt and $out/carol-grant-mounts.txt"
+  fi
+  opens mallory on || true
+  refused "designs/bb under a grant to local accounts alone" "$out/mallory-grant-on.txt"
+  grant_access ''
+  if ! opens carol off && grep -q permission_denied "$out/carol-grant-off.txt"; then
+    pass "with the grant gone, carol is refused designs/bb again"
+  else
+    no "carol still opens designs/bb with the grant gone; see $out/carol-grant-off.txt"
+  fi
 fi
 
 step "nothing reached a host other than the fake"

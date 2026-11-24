@@ -22,6 +22,7 @@ import (
 	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/internal/authgate"
 	"github.com/panyam/agni/internal/wasmengine"
+	"github.com/panyam/goapplib/storage/connections"
 	"github.com/panyam/goapplib/storage/mounts"
 	"golang.org/x/oauth2"
 
@@ -98,6 +99,7 @@ func serveCmd() *cobra.Command {
 	var oidcIssuer, oidcClientID, oidcSecretRef, oidcLabel string
 	var oidcAllow []string
 	var localAccounts bool
+	var grantFlags []string
 	var pollEvery time.Duration
 	var bootstrapPath, configPath string
 	c := &cobra.Command{
@@ -212,11 +214,19 @@ func serveCmd() *cobra.Command {
 			if localAccounts && auth != authgate.Tokens {
 				return fmt.Errorf("--local-accounts mints a token when someone signs in, so it needs --auth %s", authgate.Tokens)
 			}
+			grants, err := parseGrants(grantFlags)
+			if err != nil {
+				return err
+			}
+			if len(grants) > 0 && auth == "" {
+				return fmt.Errorf("--grant opens a private source to people who sign in, so it needs --auth %s; without --auth every caller reads everything", authgate.Tokens)
+			}
 			if mountMaxBytes < 0 || mountMaxFiles < 0 {
 				return fmt.Errorf("--mount-max-bytes and --mount-max-files take 0 or more, got %d and %d", mountMaxBytes, mountMaxFiles)
 			}
 			return runViewer(cmd, viewerOpts{
 				localAccounts: localAccounts,
+				grants:        grants,
 				auth:          auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey, oidcSignIn: oidcIn,
 				webhookSecret: hookSecret, graphState: graphState, s3Endpoint: s3Endpoint, gcsEndpoint: gcsEndpoint, graphAPI: graphAPI, mountLimits: mounts.Limits{MaxBytes: mountMaxBytes, MaxFiles: mountMaxFiles}, poll: pollEvery, bootstrap: plan, githubSignIn: signIn, publicURL: publicURL,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
@@ -281,6 +291,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringSliceVar(&oidcAllow, "oidc-allow", nil, "who may sign in through --oidc-issuer, as domain:<domain> for a verified email in it, group:<id> for a value in the groups claim, sub:<sub> for one person, or hd:<domain> for a Google Workspace domain, comma-separated or repeated")
 	c.Flags().StringVar(&oidcLabel, "oidc-label", "", "the provider's name on the sign-in button, such as Okta. Empty is \"single sign-on\"")
 	c.Flags().BoolVar(&localAccounts, "local-accounts", false, "let people sign in at /signin with a username and password an operator made with agni users add (agni issue 1815). A person signs in as local:<username> and gets the same kind of token a GitHub or OIDC sign-in mints. Nobody can sign themselves up, and the form allows 5 tries per username and 20 per address before it asks them to wait. Needs --auth tokens")
+	c.Flags().StringArrayVar(&grantFlags, "grant", nil, "let people read a private source with no GitHub connection of their own, as source=pattern,pattern, such as github://acme/board=local:* (agni issue 1889); repeatable. A pattern is * for anyone signed in, a prefix and a final * such as local:*, oidc:* or github:*, or one subject such as local:alice. The source is a mount's github:// source, spelt as agni mounts ls shows it. A serve.yaml gives the same as access: [{source, allow: [pattern]}]. Needs --auth tokens")
 	c.Flags().StringVar(&publicURL, "public-url", "", "the server's URL as a browser reaches it, such as https://agni.example.com. GitHub sends a signed-in browser back to <public-url>/signin/github/callback/, which the GitHub App must list. Empty takes the address the server listens on, which works on localhost only")
 	c.Flags().StringVar(&graphStateRef, "msgraph-client-state", "", "where the secret Microsoft Graph echoes in each change notification is, as env:NAME or file:/abs/path (agni issue 1729). With it, the server takes notifications at "+graphHookPath+", agni mounts webhook subscribes a SharePoint mount's drive there, and the server renews each subscription before Graph ends it. A change in the drive syncs or marks the designs that follow a folder in it. Graph sends notifications only to a public https address. Needs --store and --uploads")
 	c.Flags().StringVar(&s3Endpoint, "s3-endpoint", "", "the S3 API an s3:// mount reads, for an S3-compatible store such as MinIO. Empty is AWS (agni issue 1730)")
@@ -402,6 +413,9 @@ type viewerOpts struct {
 	// localAccounts is --local-accounts, which signs people in with the accounts agni users add makes
 	// (agni issue 1815).
 	localAccounts bool
+	// grants are --grant, or a serve.yaml's access:, each validated. They let a signed-in caller read
+	// a private source with no connection of their own (agni issue 1889).
+	grants []connections.SourceGrant
 	// publicURL is --public-url, the server's URL as a browser reaches it. Empty takes the address it
 	// listens on.
 	publicURL string
@@ -535,7 +549,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// The table serves the fixed mounts and, with --store and --uploads, the GitHub mounts
 	// CreateMount made, read back from --store so they outlive a restart (agni issues 1735, 1759).
 	cfg := mountset.Config{Fixed: fixed, UploadsMount: uploadsMount, GitHubAPI: o.githubAPI, GitHubRaw: o.githubRaw, Log: cmd.ErrOrStderr(),
-		S3Endpoint: o.s3Endpoint, GCSEndpoint: o.gcsEndpoint, GraphAPI: o.graphAPI, Limits: o.mountLimits}
+		S3Endpoint: o.s3Endpoint, GCSEndpoint: o.gcsEndpoint, GraphAPI: o.graphAPI, Limits: o.mountLimits, Grants: o.grants}
 	runtime := o.store != nil && o.uploadsDir != ""
 	if runtime {
 		cfg.Uploads, cfg.ConnectionsKey = o.uploadsDir, o.connectionsKey
