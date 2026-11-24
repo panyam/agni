@@ -161,7 +161,7 @@ func findings(v kicadViolation, prefix, source string) []*checkspb.Finding {
 	for _, it := range v.Items {
 		msg := v.Description
 		if it.Description != "" {
-			msg = v.Description + " — " + it.Description
+			msg = v.Description + itemOpen + it.Description + itemClose
 		}
 		out = append(out, &checkspb.Finding{Subject: &checkspb.Subject{}, Rule: rule, Severity: sev, Message: msg, Provenance: &ir.Provenance{
 			SourceFile:   source,
@@ -171,6 +171,13 @@ func findings(v kicadViolation, prefix, source string) []*checkspb.Finding {
 	}
 	return out
 }
+
+// itemOpen and itemClose wrap the item description at the end of a finding message, and
+// itemDescription in join.go parses it back out. A violation with no items carries neither.
+const (
+	itemOpen  = " (item: "
+	itemClose = ")"
+)
 
 // severity maps KiCad's levels onto ours. "exclusion" is a violation the user acknowledged and
 // suppressed, so it becomes info. Dropping it would lose the evidence, and passing it through verbatim

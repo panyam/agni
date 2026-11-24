@@ -129,8 +129,8 @@ is visible in the coverage number. Measured on `examples/tutorial-project/`, rem
 directory moves `Covered()` by **zero** while a datasheet-backed item stops being answered:
 
 ```
-with params/     **13 of 15 covered**, **13 answered** — 3 pass,  9 fail, 0 n/a; 2 not-automated
-without          **13 of 15 covered**, **12 answered** — 2 pass, 10 fail, 1 n/a; 2 not-automated
+with params/     **13 of 15 covered**, **13 answered** (3 pass,  9 fail, 0 n/a; 2 not-automated)
+without          **13 of 15 covered**, **12 answered** (2 pass, 10 fail, 1 n/a; 2 not-automated)
 ```
 
 One assignment is worth arguing about. `ComputedNA` counts as answered and `NotApplicable` does not.

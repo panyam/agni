@@ -103,7 +103,7 @@ func evalLoadSwitchTrip(m check.Model, budgets []RailBudget) []check.Verdict {
 			"rail %q is declared to draw up to %gA peak, but the load switch feeding it limits at %gA (%s %gV across sense resistor %s at %gΩ), so %s opens under the declared load rather than under a fault",
 			b.Rail, b.Peak, sw.TripAmps,
 			sw.Ocp.GetSymbol(), sw.Ocp.GetValue().GetMax(), sw.Sense, sw.SenseOhms, sw.Controller)
-		msg += " — " + check.Citation(ctrlSpec, sw.Ocp) + sizingClause(m, sw, b.Peak)
+		msg += ", per " + check.Citation(ctrlSpec, sw.Ocp) + sizingClause(m, sw, b.Peak)
 		f := check.Finding{Subject: check.NetEntity(rail), Message: msg, Prov: rail.GetProv(), // Only the controller's threshold is cited, since the trip is that threshold over a
 			// resistance the DESIGN states. The FET's on-resistance is in the message but not cited,
 			// because a finding is rated by its WEAKEST citation and an unused value could drag a real

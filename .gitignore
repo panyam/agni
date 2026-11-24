@@ -13,6 +13,8 @@ bin/
 examples/orcad-design/orcad-design
 examples/render-board/render-board
 examples/validate/validate
+/examples/follow-a-bucket/follow-a-bucket
+/examples/keep-a-design/keep-a-design
 
 # Built docsite binary (rebuilt by `make`/`go run`; never commit it)
 docsite/docsite

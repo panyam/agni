@@ -47,7 +47,7 @@ var railNominalOutOfRecommended = &check.Rule{
 				}
 				return &check.Finding{
 					Subject: check.Entity{Kind: check.KindComponent, Ref: ev.comp.RefDes},
-					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV %s for %s — %s",
+					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV %s for %s, per %s",
 						ev.pin, ev.net, ev.nominal, rel, binding.Symbol, check.Citation(ev.spec, binding)),
 					Prov: ev.comp.Prov,
 					// The pin and the rail, as in supply-exceeds-abs-max, since a part with several

@@ -313,10 +313,10 @@ func trackingVerdicts(m check.Model, wantModality func(parampb.Modality) bool) [
 		case pt.rel.GetModality() == parampb.Modality_MODALITY_UNSPECIFIED:
 			caveat = "but the spec does not record whether the datasheet requires or merely recommends this bound, so its severity is unknown; verify by hand"
 		}
-		msg := fmt.Sprintf("%s: %s, which %s — %s", requirementText(pt), evidenceText(pt), breach,
+		msg := fmt.Sprintf("%s: %s, which %s, per %s", requirementText(pt), evidenceText(pt), breach,
 			check.RelationCitation(pt.spec, pt.rel))
 		if caveat != "" {
-			msg = fmt.Sprintf("%s: %s, which %s, %s — %s", requirementText(pt), evidenceText(pt),
+			msg = fmt.Sprintf("%s: %s, which %s, %s, per %s", requirementText(pt), evidenceText(pt),
 				breach, caveat, check.RelationCitation(pt.spec, pt.rel))
 		}
 		inconclusive := caveat != ""

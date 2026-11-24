@@ -142,7 +142,7 @@ func evalRailBudgets(m check.Model, budgets []RailBudget, factor float64, msg fu
 			Terms:     terms,
 			Datasheet: cite,
 		}
-		v.Finding = &check.Finding{Subject: check.NetEntity(n), Message: msg(b, need, ref, p) + " — " + check.Citation(spec, p), Prov: n.GetProv(), DatasheetProv: cite}
+		v.Finding = &check.Finding{Subject: check.NetEntity(n), Message: msg(b, need, ref, p) + ", per " + check.Citation(spec, p), Prov: n.GetProv(), DatasheetProv: cite}
 		out = append(out, v)
 	}
 	return out

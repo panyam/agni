@@ -45,16 +45,24 @@ func Join(m check.Model, doc *checkspb.CheckResults) {
 // shape".
 const notInDesign = "an entity the description names but the loaded design does not contain"
 
-// itemDescription recovers the per-item half of a finding message. findings() joins the violation
-// description and the item description with an em-dash-spaced separator, so the last segment is the
-// item. A violation reported with no items has no separator and yields "".
+// itemDescription recovers the per-item half of a finding message. findings() appends the item
+// description wrapped in itemOpen and itemClose. A violation reported with no items has no wrapper
+// and yields "". Results imported before #1875 joined the two halves with a spaced em-dash instead,
+// and a stored results file keeps that form, so it still parses.
 func itemDescription(msg string) string {
-	i := strings.LastIndex(msg, " — ")
-	if i < 0 {
-		return ""
+	if strings.HasSuffix(msg, itemClose) {
+		if i := strings.LastIndex(msg, itemOpen); i >= 0 {
+			return msg[i+len(itemOpen) : len(msg)-len(itemClose)]
+		}
 	}
-	return msg[i+len(" — "):]
+	if i := strings.LastIndex(msg, legacyItemSeparator); i >= 0 {
+		return msg[i+len(legacyItemSeparator):]
+	}
+	return ""
 }
+
+// legacyItemSeparator joined a violation and its item in results imported before #1875.
+const legacyItemSeparator = " \u2014 "
 
 // subjectKind reports whether a parsed reference names a pin of a component or the component itself.
 // The kind decides how a consumer highlights it.

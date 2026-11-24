@@ -124,7 +124,7 @@ func regulatorOutputVerdicts(ctx context.Context, m check.Model) []check.Verdict
 					v.Finding = &check.Finding{
 						Subject: check.ComponentEntity(ref),
 						Message: fmt.Sprintf(
-							"%s supplies net %q at %s %gV, above %s's absolute-maximum %s %gV — %s; %s",
+							"%s supplies net %q at %s %gV, above %s's absolute-maximum %s %gV, per %s and %s",
 							src.RefDes, n.GetName(), srcParam.Symbol, srcParam.Value.GetMax(),
 							ref, load.Symbol, load.Value.GetMax(),
 							check.Citation(loadSpec, load), check.Citation(srcSpec, srcParam)),

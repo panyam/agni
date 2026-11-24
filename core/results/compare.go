@@ -177,7 +177,7 @@ func WriteComparison(w io.Writer, c Comparison) error {
 		if !d.CoverageAxis {
 			axis = "   [no coverage axis: its silence is not a pass]"
 		}
-		fmt.Fprintf(w, "  %-7s %s %s — %d finding(s) over %s%s\n", label+":", d.Producer, d.Version, d.Findings, d.Source, axis)
+		fmt.Fprintf(w, "  %-7s %s %s, %d finding(s) over %s%s\n", label+":", d.Producer, d.Version, d.Findings, d.Source, axis)
 	}
 	fmt.Fprintln(w, "comparing:")
 	side("ours", c.Ours)
