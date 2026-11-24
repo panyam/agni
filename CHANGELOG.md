@@ -10,12 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
-### Fixed
+## [0.11.5] - 2026-11-24
 
-- Linking the entry a `design.yaml` declares links its companions too, from the same mount and ref,
-  as push and add keep them (issue 1873). A bootstrap `link:` needs only the entry, and a companion
-  added to `design.yaml` arrives on the next sync. A link of a folder whose `design.yaml` names an
-  entry links that entry, where it used to be refused for holding `design.yaml`.
+`agni serve --local-accounts` signs people in with a username and password that `agni users` keeps
+in `--store` (PR 1878). A GitHub repo past the mount cap mounts lazily, and `--mount-max-bytes` and
+`--mount-max-files` set the cap (PR 1881). Linking a declared entry links its companions (PR 1876).
+`make exercise-formats` runs every format's oracle in one table (PR 1874), and user-facing strings
+lost their last em-dashes (PR 1882). goapplib moves to v0.7.37 (PR 1885). It is a patch with no
+change to an exported Go API or a proto field. The full write-up is
+[RELEASES/v0.11.5.md](RELEASES/v0.11.5.md).
 
 ## [0.11.4] - 2026-11-23
 
