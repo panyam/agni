@@ -8,7 +8,7 @@ require (
 	github.com/panyam/goapplib v0.7.34
 	github.com/panyam/goapplib/storage v0.7.34
 	github.com/panyam/oneauth v0.3.21
-	github.com/panyam/servicekit v0.2.5
+	github.com/panyam/servicekit v0.2.6
 	github.com/spf13/cobra v1.10.2
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
@@ -66,7 +66,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.25 // indirect
 	github.com/googleapis/gax-go/v2 v2.27.0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/gorilla/websocket v1.5.4-0.20240701034025-d67f41855da4 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
