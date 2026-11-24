@@ -353,6 +353,14 @@ survey. The file records that neither board crosses a sheet boundary with a bus 
 baseline does not move when that fix is reverted. An in-gate fixture pair guards that fix instead,
 `hier_busvec_root.kicad_sch` against kicad-cli's own netlist.
 
+`make exercise-formats` runs `make oracle`'s tests with the Go halves of the Allegro, Altium and
+ODB++ exercises, and is outside `testall` for the same corpus (agni issue 1714). It keeps going when
+one fails. It prints one row per format and corpus file, with what read, what was compared and a
+verdict. A format with no oracle gets a row saying so. Each oracle test logs `read:`, `compared:`
+and `gaps:` lines per corpus file, and the script reads them out of `go test -json`. A board whose
+read failure the baseline holds still shows `does not read`. The gate holds the table step to canned
+input in `exercise-formats-check`.
+
 ```mermaid
 flowchart LR
     J["web-test · jsdom<br/>zero-sized boxes, elementFromPoint answers<br/>nothing, no CSS rule has any effect"] --> JP["proves what a<br/>panel RENDERS"]

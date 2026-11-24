@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise exercise-enterprise-bundle exercise-enterprise-helm kind-up image-present binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise exercise-enterprise-bundle exercise-enterprise-helm kind-up image-present binaries-check fetch-remote-check exercise-formats-check exercise-formats samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -228,6 +228,10 @@ binaries-check:
 # The remote-board fetcher against a file:// upstream, so it needs no network.
 fetch-remote-check:
 	hack/fetch_remote_test.sh
+
+# The table step of exercise-formats, over canned go test -json output, so it needs no corpus.
+exercise-formats-check:
+	hack/exercise_formats_test.sh
 
 # Every scanner, vulncheck included. lint, seccheck and secrets also run in the gate (testall).
 audit: lint seccheck secrets vulncheck
@@ -498,6 +502,14 @@ exercise-allegro: samples-oracle ui
 exercise-altium: samples-oracle ui
 	cd examples/altium-board && AGNI_EXAMPLE_DESIGN= $(GO) run . --non-interactive
 	cd web && HEADED=$(HEADED) pnpm exec vitest run -c vitest.browser.config.ts browser/native-board.spec.ts -t Altium
+
+# The format-fidelity mission's exercise (agni issues 1710 and 1714). It runs the KiCad and ODB++
+# oracles and the Go halves of exercise-allegro, exercise-altium and exercise-odb, keeps going when one
+# fails, and prints one row per format and corpus file. A format with no oracle gets a row saying so.
+# BROWSER=1 adds the browser halves. It exits 1 while any row fails or does not read, and the
+# royalblue54L-feather board does not read yet (agni issue 681).
+exercise-formats: samples-oracle
+	GO=$(GO) BROWSER=$(BROWSER) ./hack/exercise_formats.sh
 
 # Regenerates the ODB++ fixtures from the synthetic KiCad boards with kicad-cli (KiCad 9 or later).
 odb-fixtures:
@@ -890,7 +902,7 @@ testall-web: samples-oracle ui wasm-test web-test
 testall-dist: samples-oracle ui examples-test python-test python-dist-check dist-check
 
 # testall-scan is the static scanners. They read source alone, so they need no build and no corpus.
-testall-scan: vet lint seccheck secrets binaries-check fetch-remote-check
+testall-scan: vet lint seccheck secrets binaries-check fetch-remote-check exercise-formats-check
 
 # testall-docs regenerates what the docsite captures and draws, and checks the committed copies still
 # match. tutorial-runs-check is the slowest single step of the gate, which is why this is a job of its

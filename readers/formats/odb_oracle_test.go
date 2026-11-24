@@ -28,45 +28,94 @@ func TestODBOracleCorpus(t *testing.T) {
 	if len(jobs) == 0 {
 		t.Fatalf("no exports under %s/odb/kicad; run `make odb-oracle`", samples)
 	}
+	update := os.Getenv("AGNI_ODB_ORACLE_UPDATE") != ""
+	var want []string
+	if !update {
+		raw, err := os.ReadFile(odbOracleBaseline)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, l := range strings.Split(string(raw), "\n") {
+			if l != "" && !strings.HasPrefix(l, "#") {
+				want = append(want, l)
+			}
+		}
+	}
 	var got []string
+	boards := map[string]bool{}
 	for _, job := range jobs {
 		board := strings.TrimSuffix(filepath.Base(job), ".odb.tgz")
-		pcbs, _ := filepath.Glob(filepath.Join(samples, "boards", board, "*.kicad_pcb"))
-		if len(pcbs) != 1 {
-			t.Fatalf("%s: want one .kicad_pcb beside the export, found %d", board, len(pcbs))
-		}
-		diffs, err := compareBoard(odbPair{kicad: pcbs[0], odb: job})
-		if err != nil {
-			diffs = []string{"error: " + err.Error()}
-		}
-		for _, d := range diffs {
-			got = append(got, board+"\t"+d)
-		}
+		boards[board] = true
+		t.Run(board, func(t *testing.T) {
+			pcbs, _ := filepath.Glob(filepath.Join(samples, "boards", board, "*.kicad_pcb"))
+			if len(pcbs) != 1 {
+				t.Fatalf("%s: want one .kicad_pcb beside the export, found %d", board, len(pcbs))
+			}
+			diffs, err := compareBoard(odbPair{kicad: pcbs[0], odb: job})
+			// make exercise-formats reads these three lines into its table.
+			if err != nil {
+				diffs = []string{"error: " + err.Error()}
+				t.Logf("read: does not read, %s", errKind(err))
+			} else {
+				t.Logf("read: the .kicad_pcb and its ODB++ export")
+			}
+			t.Logf("compared: pin nets, parts, pads, stack and copper against the .kicad_pcb; the exporter causes each gap")
+			t.Logf("gaps: %d", len(diffs))
+			var mine []string
+			for _, d := range diffs {
+				mine = append(mine, board+"\t"+d)
+			}
+			got = append(got, mine...)
+			if update {
+				return
+			}
+			var wantBoard []string
+			for _, l := range want {
+				if strings.HasPrefix(l, board+"\t") {
+					wantBoard = append(wantBoard, l)
+				}
+			}
+			reportODBMoves(t, setDiff(mine, wantBoard), setDiff(wantBoard, mine))
+		})
 	}
 	sort.Strings(got)
 
-	if os.Getenv("AGNI_ODB_ORACLE_UPDATE") != "" {
+	if update {
+		if t.Failed() {
+			return
+		}
 		if err := os.WriteFile(odbOracleBaseline, []byte(odbBaselineHeader+strings.Join(got, "\n")+"\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		t.Logf("rewrote %s with %d lines", odbOracleBaseline, len(got))
 		return
 	}
-	raw, err := os.ReadFile(odbOracleBaseline)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var want []string
-	for _, l := range strings.Split(string(raw), "\n") {
-		if l != "" && !strings.HasPrefix(l, "#") {
-			want = append(want, l)
+	// A baseline line for a board with no export is gone too.
+	var orphans []string
+	for _, l := range want {
+		if b, _, _ := strings.Cut(l, "\t"); !boards[b] {
+			orphans = append(orphans, l)
 		}
 	}
-	added, gone := setDiff(got, want), setDiff(want, got)
+	reportODBMoves(t, nil, orphans)
+}
+
+// reportODBMoves fails t when the reads moved against the baseline.
+func reportODBMoves(t *testing.T, added, gone []string) {
+	t.Helper()
 	if len(added)+len(gone) > 0 {
 		t.Errorf("the two reads moved against %s (AGNI_ODB_ORACLE_UPDATE=1 rewrites it once the move is understood)\nnew differences (%d):\n  %s\nno longer different (%d):\n  %s",
 			odbOracleBaseline, len(added), capLines(added), len(gone), capLines(gone))
 	}
+}
+
+// errKind reduces a read error to its first clause, without the line number.
+func errKind(err error) string {
+	s := err.Error()
+	if i := strings.Index(s, " at line "); i >= 0 {
+		return s[:i]
+	}
+	return s
 }
 
 const odbBaselineHeader = `# Known differences between each samples board read from its .kicad_pcb and from kicad-cli's ODB++

@@ -56,6 +56,9 @@ func TestOracleCorpus(t *testing.T) {
 			seen[name] = true
 			got := crossCheckBoard(t, b)
 			fresh[name] = got
+			// make exercise-formats reads these two lines into its table.
+			t.Logf("compared: which pins share a net, against the .kicad_pcb's netlist")
+			t.Logf("gaps: %d", len(got))
 			if update {
 				return
 			}
@@ -128,6 +131,7 @@ func crossCheckBoard(t *testing.T, dir string) []string {
 	openSym := func(nick string) ([]byte, error) { return os.ReadFile(filepath.Join(base, nick+".kicad_sym")) }
 	d, _, err := ReadSchematicHierarchyNetsWithSymbols(root, content, open, openSym)
 	if err != nil {
+		t.Logf("read: does not read, the schematic: %s", errKind(err))
 		return []string{"schematic does not read: " + err.Error()}
 	}
 	f, err := os.Open(pcb)
@@ -137,8 +141,10 @@ func crossCheckBoard(t *testing.T, dir string) []string {
 	defer f.Close()
 	board, err := Read(f, pcb)
 	if err != nil {
+		t.Logf("read: schematic %d parts and %d nets; does not read, the board: %s", len(d.Components), len(d.Nets), errKind(err))
 		return []string{"board does not read: " + errKind(err)}
 	}
+	t.Logf("read: schematic %d parts and %d nets, board %d parts and %d nets", len(d.Components), len(d.Nets), len(board.Components), len(board.Nets))
 	out := disagreements(pinNets(d), pinNets(board))
 	sort.Strings(out)
 	return out
