@@ -6,7 +6,7 @@ require (
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/agni/examples/common v0.0.0
 	github.com/panyam/demokit v0.0.33
-	github.com/panyam/goapplib/storage v0.7.35-0.20261124071208-074bbe15a617
+	github.com/panyam/goapplib/storage v0.7.36
 )
 
 require (

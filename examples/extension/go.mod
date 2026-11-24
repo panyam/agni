@@ -15,7 +15,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/klauspost/compress v1.20.2 // indirect
-	github.com/panyam/goapplib/storage v0.7.35-0.20261124071208-074bbe15a617 // indirect
+	github.com/panyam/goapplib/storage v0.7.36 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
 	github.com/panyam/oneauth v0.3.22 // indirect
