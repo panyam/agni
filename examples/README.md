@@ -10,8 +10,8 @@ an example.
 
 ## The ladder
 
-Read them in this order. Each rung builds on the idea before it, and the last one runs the
-first six end to end in one tour.
+Read them in this order. Each rung builds on the idea before it. Rung 14, `whole-enchilada`, runs
+rungs 2 to 6 end to end in one tour.
 
 | # | Example | Shows | Status |
 |---|---------|-------|--------|
@@ -39,8 +39,8 @@ first six end to end in one tour.
 | 21 | [keep-a-design/](keep-a-design/) | Keep designs on a server: two revisions of a board as designs of one series, a pack of house rules, grouped in a project with a design from a mounted folder, and the write a mounted folder refuses (`DesignService`, `PackService`, `ProjectService`). The walkthrough form of `agni serve --store --uploads`. | ready |
 | 22 | [follow-a-bucket/](follow-a-bucket/) | Mount an S3 prefix on a server through an AWS connection, see that the snapshot keeps the files it read when an object is overwritten, and how a SharePoint folder mounts and subscribes to Graph's change notifications (`mountset.Table.CreateMount`, `CreateWebhook`). The walkthrough form of `agni mounts add <name> s3://...`. | ready |
 
-A first read should start with `whole-enchilada` for the tour, then use rungs 1-13 to go deep
-on each step.
+A first read should start with `whole-enchilada` for the tour, then use the other rungs to go
+deep on each step.
 
 ## `tutorial-project/`, off the ladder
 

@@ -16,9 +16,9 @@
 //    Tier 1 (netlist): Design, PartLibrary, PartType, Pin, Component, ComponentSection,
 //      Net, Connection, Sheet. Exercised by the EDIF netlist reader; names are frozen.
 //    Tier 2 (physical): Footprint, Layer, Constraint, BomLine. PROVISIONAL.
-//      They were designed from the IPC-2581/ODB++ schemas. The IPC-2581 reader fills all five,
-//      KiCad fills Footprint and Constraint, and ODB++ fills Layer. Names and shape may still
-//      change.
+//      They were designed from the IPC-2581/ODB++ schemas. IPC-2581, ODB++, Altium and Allegro
+//      each fill Footprint and Layer. KiCad fills Footprint and Constraint, Allegro fills
+//      Constraint too, and IPC-2581 fills BomLine. Names and shape may still change.
 //
 // CONSTRAINTS C9 is the promotion rule. A field enters the semantic layer only once a
 // second format's reader would populate it. Until then it lives in `attributes` or the
@@ -743,7 +743,7 @@ pub struct Sheet {
     #[prost(message, optional, tag="16")]
     pub prov: ::core::option::Option<Provenance>,
 }
-// --- Tier 2: physical (PROVISIONAL: no reader yet; names/shape may change) ---
+// --- Tier 2: physical (PROVISIONAL: names and shape may change; the file header says which readers fill it) ---
 
 /// Footprint is a physical land pattern / package (KiCad footprint, IPC-2581/ODB++
 /// package). It is a separate entity that a Component references, since KiCad and the PCB

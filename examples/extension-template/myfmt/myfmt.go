@@ -8,7 +8,6 @@ package myfmt
 import (
 	"bufio"
 	"io"
-	"os"
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -22,10 +21,11 @@ func init() {
 		// TODO: your file extension (lowercase, with the dot) and a UI label.
 		Ext:  ".myfmt",
 		Name: "myfmt",
-		// The registry entry opens the file so Read is io.Reader-pure (C1). Set Geometry or
-		// Board too if your format holds a faithful schematic or a board layout.
-		Design: func(_ *formats.Loader, path string) (*ir.Design, error) {
-			f, err := os.Open(path)
+		// The registry entry opens the file through the Loader, which owns file I/O, so Read is
+		// io.Reader-pure (C1). Set Geometry or Board too if your format holds a faithful schematic
+		// or a board layout.
+		Design: func(l *formats.Loader, path string) (*ir.Design, error) {
+			f, err := l.Open(path)
 			if err != nil {
 				return nil, err
 			}

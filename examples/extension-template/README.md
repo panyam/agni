@@ -18,11 +18,12 @@ The short version:
 $ go run .
 usage: agni-extension <design-file>
 registered custom format: true
-registered custom rules: 1 in the catalog
+registered custom rule: true
 ```
 
-The catalog holds one rule because the template registers its own and does not import the
-built-in catalog (`stdlib/rules/builtin`).
+`main.go` composes through `agni.New`, with the engine's four packages blank-imported beside
+your own. `agni.New` refuses a binary that misses the built-in catalog (`stdlib/rules/builtin`) or
+the fact base (`stdlib/relations`), so your rule runs alongside the shipped ones.
 
 Dependencies point **extension → engine only**, and the engine never imports your extension
 (CONSTRAINTS C18).

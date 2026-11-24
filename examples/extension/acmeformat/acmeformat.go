@@ -12,7 +12,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -26,10 +25,10 @@ func init() {
 	formats.Register(&formats.Format{
 		Ext:  ".acme",
 		Name: "acme",
-		// The registry entry opens the file, so Read is io.Reader-pure (C1). It calls os.Open
-		// rather than the Loader's Open, so it reads the host filesystem and never the Loader's FS.
-		Design: func(_ *formats.Loader, path string) (*ir.Design, error) {
-			f, err := os.Open(path)
+		// The registry entry opens the file, so Read is io.Reader-pure (C1). It opens through the
+		// Loader, which owns file I/O, so a host that serves designs from an fs.FS works too.
+		Design: func(l *formats.Loader, path string) (*ir.Design, error) {
+			f, err := l.Open(path)
 			if err != nil {
 				return nil, err
 			}

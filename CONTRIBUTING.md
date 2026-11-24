@@ -111,6 +111,9 @@ The Makefile pins `STATICCHECK`, `GOSEC`, `GITLEAKS` and `GOVULNCHECK`, and each
 - The gate also runs `binaries-check` (`hack/check_no_binaries.sh`). It refuses a tracked compiled
   executable by its magic bytes, and any tracked file over 5 MB. A bare `go build` in an example's
   folder writes a binary named after the folder (#1405).
+- The gate also runs `nul-check` (`hack/check_no_nul.sh`). It refuses a tracked text file holding a
+  NUL byte, since grep reads that file as binary and finds nothing in it (#360). Write the
+  character as an escape such as `\u0000`.
 - `vulncheck` stays out of the gate, since the advisory database moves without the code.
   `vulncheck.yml` runs it weekly and per tag, and `make audit` runs all four scanners.
 - Fix a gosec finding, or annotate it on its own line as `// #nosec G<n> -- <why>`. Never exclude it

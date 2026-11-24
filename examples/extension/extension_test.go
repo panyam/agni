@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -90,5 +91,18 @@ func TestExtensionDatalogPinRule(t *testing.T) {
 	// this had to be a pin rule.
 	if len(got) != 1 || got[0] != "VCC" {
 		t.Errorf("datalog pin rule findings = %v, want exactly [VCC]", got)
+	}
+}
+
+// TestExtensionReadsThroughTheLoadersFS holds the .acme reader to the Loader's file system. A host
+// that serves designs from an fs.FS hands the reader a name inside it, and only l.Open resolves
+// that name (agni issue 768).
+func TestExtensionReadsThroughTheLoadersFS(t *testing.T) {
+	d, err := (&formats.Loader{FS: os.DirFS("testdata")}).ReadDesign("example.acme")
+	if err != nil {
+		t.Fatalf("reading example.acme through the Loader's FS: %v", err)
+	}
+	if len(d.Components) != 4 {
+		t.Errorf("components = %d, want 4", len(d.Components))
 	}
 }

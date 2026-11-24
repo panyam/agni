@@ -29,11 +29,11 @@ func TestCheckMarkdown(t *testing.T) {
 		"## error",
 		"## warning",
 		"## info",
-		"### i2c-pull-up — An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.",
-		"### unconnected-component — A component appears on no net (none of its pins land on any signal).",
-		"### single-pin-net — A net connects to fewer than two pins (a floating stub), and is not an intentional no-connect.",
-		"- `SDA` — I2C net has no pull-up resistor",
-		"- `X1` — component has no net connections",
+		"### i2c-pull-up\n\nAn I2C net (SDA/SCL) reaches no rail through a pull-up resistor.",
+		"### unconnected-component\n\nA component appears on no net (none of its pins land on any signal).",
+		"### single-pin-net\n\nA net connects to fewer than two pins (a floating stub), and is not an intentional no-connect.",
+		"- `SDA`: I2C net has no pull-up resistor",
+		"- `X1`: component has no net connections",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("report missing %q\n%s", want, got)

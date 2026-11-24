@@ -69,7 +69,7 @@ func importResultsCmd() *cobra.Command {
 // behind a verbose flag.
 func writeImportSummary(w io.Writer, doc *checkspb.CheckResults) error {
 	s := doc.GetImportSummary()
-	fmt.Fprintf(w, "%s %s — %d finding(s) from %s\n",
+	fmt.Fprintf(w, "%s %s: %d finding(s) from %s\n",
 		doc.GetMeta().GetProducer(), doc.GetMeta().GetProducerVersion(), len(doc.GetFindings()), doc.GetDesign().GetSource())
 	if s == nil {
 		fmt.Fprintln(w, "not attached to a design (pass --design to join findings to components and nets)")
@@ -77,7 +77,7 @@ func writeImportSummary(w io.Writer, doc *checkspb.CheckResults) error {
 	}
 	fmt.Fprintf(w, "attached to an entity: %d of %d\n", s.GetJoined(), s.GetFindings())
 	for _, u := range s.GetUnjoined() {
-		fmt.Fprintf(w, "  %4d not attached — %s\n", u.GetCount(), u.GetReason())
+		fmt.Fprintf(w, "  %4d not attached: %s\n", u.GetCount(), u.GetReason())
 		for _, ex := range u.GetExamples() {
 			fmt.Fprintf(w, "         e.g. %s\n", ex)
 		}

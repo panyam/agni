@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/panyam/agni"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/readers/formats"
 )
@@ -16,5 +17,9 @@ func TestTemplateComposes(t *testing.T) {
 	}
 	if check.DefaultCatalog().Lookup("myco/example-rule") == nil {
 		t.Error("myco/example-rule not in the catalog (myrules.init did not run)")
+	}
+	// agni.New refuses a binary that misses the built-in rules or the fact base (agni issue 768).
+	if _, err := agni.New(); err != nil {
+		t.Errorf("agni.New refuses the template's composition: %v", err)
 	}
 }

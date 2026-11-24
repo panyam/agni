@@ -1,6 +1,6 @@
 ---
 title: "param.pin_relation"
-description: "a datasheet constraint BETWEEN two pins of one part: bounds on (subject - reference) in the SI base unit, with the vendor's modality (required/recommended). The pin order is load-bearing, so swapping the two inverts the requirement (needs datasheet parameters)"
+description: "a datasheet constraint BETWEEN two pins of one part: bounds on (subject - reference) in the SI base unit, with the vendor's modality (required/recommended). The pin order matters, so swapping the two inverts the requirement (needs datasheet parameters)"
 ---
 
 ### What it is

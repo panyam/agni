@@ -173,7 +173,7 @@ func companionAlignment(l *formats.Loader, designPath string, g *geom.SchematicG
 		}
 	}
 	if frac := float64(matched) / float64(len(compNets)); frac < companionOverlapFloor {
-		return fmt.Sprintf("companion net-name overlap %.0f%% (%d/%d) is low — likely a different-revision or mismatched export",
+		return fmt.Sprintf("companion net-name overlap %.0f%% (%d/%d) is low, likely a different-revision or mismatched export",
 			frac*100, matched, len(compNets))
 	}
 	return ""

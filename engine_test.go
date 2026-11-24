@@ -39,13 +39,13 @@ func TestNewRefusesWhenBuiltinRulesAreNotInstalled(t *testing.T) {
 
 // A size check on the composed catalog would NOT catch a missing built-in source. stdlib/profiles
 // registers its own rules from an init, and this package's imports trigger that init. This test
-// pins the fact, so nobody "simplifies" checkSeams into a size check that silently passes.
+// pins the fact, so nobody "simplifies" checkCompositions into a size check that silently passes.
 func TestComposedCatalogIsNonEmptyWithoutTheBuiltins(t *testing.T) {
 	if len(check.BuiltinRules()) != 0 {
 		t.Skip("built-in rules are installed in this binary; the premise does not hold")
 	}
 	if got := len(check.DefaultCatalog().Rules()); got == 0 {
 		t.Fatalf("composed catalog is empty, so a size check would have caught the missing built-ins "+
-			"and checkSeams could use one; got %d rules", got)
+			"and checkCompositions could use one; got %d rules", got)
 	}
 }

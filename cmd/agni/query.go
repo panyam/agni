@@ -242,7 +242,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[1], designURI), orderBy)
 		},
 	}
-	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (datasheet corpus) — enables the param relation")
+	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (datasheet corpus), which enables the param relation")
 	c.Flags().StringVar(&conventions, "conventions", "", "a naming-convention config (YAML) whose LEXICON is applied to the design read, so rail/feedback/pin.type answer under the project's own vocabulary rather than the built-in one. The config's rules half is not used here (a query runs no rules)")
 	c.Flags().StringVar(&boardPath, "board-path", "", "a separate board-geometry export (.kicad_pcb / IPC-2581) to attach, so the board.* relations have facts to range over; without it they are empty")
 	c.Flags().BoolVar(&specLib, "speclib", false, "query the whole seeded datasheet corpus (--params) with no <file>: the param/part.audience relations range over the whole spec library, not one design's parts")

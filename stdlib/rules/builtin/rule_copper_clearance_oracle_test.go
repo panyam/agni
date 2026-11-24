@@ -71,6 +71,17 @@ func TestPourClearanceFindsKiCadsZonePairs(t *testing.T) {
 			failing[[2]string{v.Subjects[0].Ref, v.Subjects[1].Ref}] = true
 		}
 	}
+	// make exercise-formats reads these four lines into its table.
+	t.Logf("file: jetson-agx-thor-baseboard.odb.tgz")
+	t.Logf("read: the ODB++ job's copper and pours")
+	t.Logf("compared: copper-clearance against the %d track-to-zone pairs KiCad's DRC measured under the floor", len(want))
+	missed := 0
+	for p := range want {
+		if !failing[p] {
+			missed++
+		}
+	}
+	t.Logf("gaps: %d", missed)
 	for p := range want {
 		if !failing[p] {
 			t.Errorf("KiCad measures track %s against zone %s under the floor, and the rule finds no failing pair", p[0], p[1])
