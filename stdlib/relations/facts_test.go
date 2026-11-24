@@ -1297,7 +1297,7 @@ func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
 		t.Fatalf("param.pin_range recommended for vccb = %d rows, want 1", len(rows))
 	}
 	if got := rows[0].Bind["sym"].S; got != "VCCB" {
-		t.Errorf("arg 3 (symbol) bound to %q, want VCCB — Value and Qualifier are crossed", got)
+		t.Errorf("arg 3 (symbol) bound to %q, want VCCB; Value and Qualifier are crossed", got)
 	}
 	if n := rows[0].Bind["max"].Num; n == nil || *n != 5.5 {
 		t.Errorf("arg 6 (max) bound to %v, want 5.5", rows[0].Bind["max"].S)

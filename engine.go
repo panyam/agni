@@ -64,7 +64,7 @@ func New(opts ...Option) (*Engine, error) {
 			Profiles:        len(b.profiles) > 0,
 		},
 	}
-	if err := e.checkSeams(b); err != nil {
+	if err := e.checkCompositions(b); err != nil {
 		return nil, err
 	}
 	return e, nil
@@ -92,13 +92,13 @@ var MissingRelationsError = errors.New(
 	`agni: no fact relations are installed, so every datalog rule matches nothing and reports clean. ` +
 		`Add: import _ "github.com/panyam/agni/stdlib/relations"`)
 
-// checkSeams refuses the two compositions that would run clean rather than fail, and records the two
-// that are legitimate choices as warnings.
+// checkCompositions refuses the two compositions that would run clean rather than fail, and records
+// the two that are legitimate choices as warnings.
 //
 // An empty catalog or an empty fact base makes every design look clean and no caller wants either.
 // Shipping without the datalog rule suite or without an inline-query compiler is a real choice for an
 // embedder, so those only warn. WithoutDatalogRules drops the first warning.
-func (e *Engine) checkSeams(b *builder) error {
+func (e *Engine) checkCompositions(b *builder) error {
 	if !e.registry.Installed() {
 		return MissingRelationsError
 	}

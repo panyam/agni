@@ -28,7 +28,7 @@ import { keyColumns, labelColumns } from "./testpacked.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-describe("decodePackedSheet — sample.pb fixture from the Go packer", () => {
+describe("decodePackedSheet, sample.pb fixture from the Go packer", () => {
   const bytes = readFileSync(join(here, "..", "sample.pb"));
   const sheet = decodePackedSheet(new Uint8Array(bytes));
 
@@ -103,7 +103,7 @@ describe("decodePackedSheet — sample.pb fixture from the Go packer", () => {
   });
 });
 
-describe("decodePackedSheet — hand-built PackedSheet", () => {
+describe("decodePackedSheet, hand-built PackedSheet", () => {
   it("round-trips origin, vertices, and records", () => {
     // Build vertices [10,20, 30,40] as int32 LE.
     const vbuf = new ArrayBuffer(16);

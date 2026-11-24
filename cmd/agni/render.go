@@ -150,7 +150,7 @@ func renderCmd() *cobra.Command {
 			if layout == faithfulLayout && format == "svg" && !stats {
 				if b, err := newLoader().BoardGeometry(file); err == nil && b != nil {
 					if len(specs) > 0 {
-						return fmt.Errorf("--highlight is not yet supported for a board render; it covers schematic sheets (WS7-043)")
+						return fmt.Errorf("--highlight is not yet supported for a board render; it covers schematic sheets")
 					}
 					return writeBoard(out, b)
 				}
@@ -371,7 +371,7 @@ func writeReport(w io.Writer, file, symbols string, reg *graph.Registry, format 
 // with its count and ref-des. Then it writes explicit call-outs for the unmapped (box) and the
 // unresolved components, and the unresolved call-out points at --symbol-path.
 func writeReportText(w io.Writer, design, symbols string, rep *graph.ConversionReport) {
-	fmt.Fprintf(w, "%s — %s symbols · %d components\n", design, symbols, len(rep.Components))
+	fmt.Fprintf(w, "%s, %s symbols · %d components\n", design, symbols, len(rep.Components))
 
 	// Group by label (device class for glyphs, else the kind), preserving first-seen order.
 	labels := []string{}
@@ -392,7 +392,7 @@ func writeReportText(w io.Writer, design, symbols string, rep *graph.ConversionR
 		fmt.Fprintf(w, "%d unmapped (generic box, no device glyph): %s\n", len(box), strings.Join(box, " "))
 	}
 	if un := rep.RefsByKind(graph.KindUnresolved); len(un) > 0 {
-		fmt.Fprintf(w, "%d unresolved symbols — pass --symbol-path to draw the design's own symbols: %s\n", len(un), strings.Join(un, " "))
+		fmt.Fprintf(w, "%d unresolved symbols; pass --symbol-path to draw the design's own symbols: %s\n", len(un), strings.Join(un, " "))
 	}
 }
 

@@ -30,7 +30,7 @@ interface TwinCase {
 // drifting. A team reads `covered` in particular as "how much of our checklist is mechanised". A
 // client that bucketed not-automated differently would report a checklist as answered when nobody
 // had answered it.
-describe("tally — twinned with core/review via tally_twin.json", () => {
+describe("tally, twinned with core/review via tally_twin.json", () => {
   const fixture = JSON.parse(
     readFileSync(join(here, "..", "..", "core", "review", "testdata", "tally_twin.json"), "utf8"),
   ) as { cases: TwinCase[] };

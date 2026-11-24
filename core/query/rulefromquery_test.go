@@ -477,7 +477,7 @@ func TestRuleFromQueryDomainFailuresCarryAWitness(t *testing.T) {
 		}
 		fails++
 		if v.Witness == nil || v.Witness.Statement == "" {
-			t.Fatalf("a failing verdict must carry a witness, or it crosses the service seam mute: %+v", v)
+			t.Fatalf("a failing verdict must carry a witness, or it crosses the service boundary mute: %+v", v)
 		}
 		// The witness says what the finding says, because for a datalog rule the matched row IS the
 		// proof and there is nothing else to state. They must not drift apart.
