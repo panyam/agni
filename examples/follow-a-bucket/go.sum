@@ -221,8 +221,8 @@ github.com/panyam/goutils v0.1.15 h1:znjWI1jzAqeH2DRpxQid7GMrGCj296Wws7mWh7QPk7Y
 github.com/panyam/goutils v0.1.15/go.mod h1:lxEmbCJ04RY+KqFgo/+67bEdU2edpLYafMiJECTm3gQ=
 github.com/panyam/jaala v0.1.101 h1:cQTr2wxR0H9ki3i9xAiav4vOiZmIMd5QsGh0KmrzVEA=
 github.com/panyam/jaala v0.1.101/go.mod h1:A/dm6zBFvdjXavPfpGp0xP8BZAFHKMjQ5e3ASkzdaqE=
-github.com/panyam/oneauth v0.3.21 h1:YhVKJIQ56zJLqXG6vsyzdyXUVeUXDXAFQ+sZ+srQ/3w=
-github.com/panyam/oneauth v0.3.21/go.mod h1:KovKb74ntC7sroSeMafW/lZ6lzjuC/KI0uhxezRcN+8=
+github.com/panyam/oneauth v0.3.22 h1:okKERztWqmbFnyQHvnFyKhmkt3QeKpMueRzo33l5rdw=
+github.com/panyam/oneauth v0.3.22/go.mod h1:KovKb74ntC7sroSeMafW/lZ6lzjuC/KI0uhxezRcN+8=
 github.com/pierrec/lz4/v4 v4.1.27 h1:+PhzhWDrjRj89TH2sw43nE3+4+W8lSxIuQadEHZyjUk=
 github.com/pierrec/lz4/v4 v4.1.27/go.mod h1:EoQMVJgeeEOMsCqCzqFm2O0cJvljX2nGZjcRIPL34O4=
 github.com/pkg/xattr v0.4.12 h1:rRTkSyFNTRElv6pkA3zpjHpQ90p/OdHQC1GmGh1aTjM=

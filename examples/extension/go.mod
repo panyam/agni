@@ -18,7 +18,7 @@ require (
 	github.com/panyam/goapplib/storage v0.7.34 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
-	github.com/panyam/oneauth v0.3.21 // indirect
+	github.com/panyam/oneauth v0.3.22 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/stangelandcl/ppmd v0.1.1 // indirect
