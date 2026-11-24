@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-24, at `210a2c1c`.
+Last pruned 2026-11-24, at `df47f6fd`.
 
 ## At a glance
 
@@ -30,7 +30,7 @@ declared entry, or its folder, links the companions its `design.yaml` declares (
 `make exercise-formats` prints one row per format and corpus file (PR 1874), and `agni serve
 --local-accounts` signs people in with a username and password that `agni users` keeps in `--store`
 (PR 1878). `agni login --with local` gets a CLI token, and the compose bundle (`AGNI_LOCAL_ACCOUNTS`) and
-Helm chart (`localAccounts`) turn it on (PR 1886). Email reset waits on #1884. A GitHub repo past the mount cap now mounts lazily, listing its tree and fetching what a read names, and `--mount-max-bytes` and `--mount-max-files` set the cap (PR 1881). Its follow-ups are on #1880. Rule messages, impact text and help lost their last em-dashes, and the KiCad item separator changed (PR 1882). PRs 1874, 1876, 1878, 1881, 1882, 1885 (goapplib v0.7.37) and 1886 are merged since v0.11.4 and not yet released.
+Helm chart (`localAccounts`) turn it on (PR 1886). Email reset waits on #1884. A GitHub repo past the mount cap now mounts lazily, listing its tree and fetching what a read names, and `--mount-max-bytes` and `--mount-max-files` set the cap (PR 1881). Its follow-ups are on #1880. Rule messages, impact text and help lost their last em-dashes, and the KiCad item separator changed (PR 1882). v0.11.6 shipped PRs 1874 to 1886 on 2026-11-24. Since then, a companion that a link followed records its entry in `companion_of`, so bootstrap counts it as named and `prune: true` keeps it (PR 1892). Its gaps are on #1893. goapplib v0.7.38 adds `connections.WithSourceGrants`, and #1889 maps serve.yaml `access:` onto it.
 
 - **agni is on goapplib v0.7.37, oneauth v0.3.22, servicekit v0.2.6 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
