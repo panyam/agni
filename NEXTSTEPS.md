@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-24, at `d6a85024`.
+Last pruned 2026-11-24, at `210a2c1c`.
 
 ## At a glance
 
@@ -29,7 +29,7 @@ against no size limit, and took servicekit v0.2.6 for GO-2026-6278 (PR 1872). Si
 declared entry, or its folder, links the companions its `design.yaml` declares (PR 1876).
 `make exercise-formats` prints one row per format and corpus file (PR 1874), and `agni serve
 --local-accounts` signs people in with a username and password that `agni users` keeps in `--store`
-(PR 1878). Its follow-ups are on #1176. A GitHub repo past the mount cap now mounts lazily, listing its tree and fetching what a read names, and `--mount-max-bytes` and `--mount-max-files` set the cap (PR 1881). Its follow-ups are on #1880.
+(PR 1878). Its follow-ups are on #1176. A GitHub repo past the mount cap now mounts lazily, listing its tree and fetching what a read names, and `--mount-max-bytes` and `--mount-max-files` set the cap (PR 1881). Its follow-ups are on #1880. Rule messages, impact text and help lost their last em-dashes, and the KiCad item separator changed (PR 1882). PRs 1874, 1876, 1878, 1881, 1882 and 1885 (goapplib v0.7.37) are merged since v0.11.4 and not yet released.
 
 - **agni is on goapplib v0.7.37, oneauth v0.3.22, servicekit v0.2.6 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
