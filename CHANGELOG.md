@@ -10,12 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
-### Fixed
+## [0.11.3] - 2026-11-23
 
-- `agni serve` waits for a running poll pass or webhook sync before it exits, and for the bootstrap
-  retries, the token prune, Graph renewals and the uploads and records sweeps (issues 1867 and
-  1869). So it never stops with a write half-done in its store. A poll test flaked on Windows over
-  it.
+`agni serve` waits for its background work before it exits, so a stop never leaves a store write
+half-done (PR 1870, issues 1867 and 1869). That covers a poll pass or webhook sync, the bootstrap
+retries, the token prune, Graph renewals and the uploads and records sweeps. It is a patch with no
+change to an exported Go API or a proto. The full write-up is
+[RELEASES/v0.11.3.md](RELEASES/v0.11.3.md).
 
 ## [0.11.2] - 2026-11-23
 
