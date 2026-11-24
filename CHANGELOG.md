@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.11.6] - 2026-11-24
+
+`agni login --with local` signs a local account in from a terminal, through a JSON answer from
+`/signin/local` (PR 1886). The enterprise compose bundle (`AGNI_LOCAL_ACCOUNTS`) and the Helm chart
+(`localAccounts`) turn local accounts on. It is a patch with no change to an exported Go API or a
+proto field. The full write-up is [RELEASES/v0.11.6.md](RELEASES/v0.11.6.md).
+
 ## [0.11.5] - 2026-11-24
 
 `agni serve --local-accounts` signs people in with a username and password that `agni users` keeps
