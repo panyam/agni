@@ -444,6 +444,21 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	}
 	life, stop := context.WithCancel(base)
 	defer stop()
+	// background counts the goroutines the server starts on life, such as the uploads sweep and the
+	// token prune. The server ends life and waits for them before it returns, so none of them writes
+	// to the store after the server has stopped (agni issues 1867, 1869).
+	var background sync.WaitGroup
+	defer func() {
+		stop()
+		background.Wait()
+	}()
+	spawn := func(run func()) {
+		background.Add(1)
+		go func() {
+			defer background.Done()
+			run()
+		}()
+	}
 	if o.engine != "" && o.engine != engineServer && o.engine != engineWasm {
 		return fmt.Errorf("--engine %q: want %s or %s", o.engine, engineServer, engineWasm)
 	}
@@ -657,7 +672,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	projectSvc, designSvc, packSvc, err := storeServices(life, table, o.store, o.uploadsDir, table.Blobs(), projectStore, projectResolver, checkSvc, guard, cmd.ErrOrStderr())
+	projectSvc, designSvc, packSvc, err := storeServices(life, spawn, table, o.store, o.uploadsDir, table.Blobs(), projectStore, projectResolver, checkSvc, guard, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}
@@ -691,7 +706,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 		if len(o.graphState) > 0 {
 			mux.Handle("POST "+graphHookPath, f.graphHook(o.graphState))
-			go renewSubscriptions(life, table, o.graphState, cmd.ErrOrStderr())
+			spawn(func() { renewSubscriptions(life, table, o.graphState, cmd.ErrOrStderr()) })
 		}
 		if len(o.webhookSecret) > 0 || len(o.graphState) > 0 {
 			workspace.WithWebhooks(table, service.WebhookSecrets{GitHub: o.webhookSecret, Graph: o.graphState})
@@ -707,7 +722,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 				b:    service.Bootstrap{Connections: connSvc, Workspace: workspace, Packs: packSvc, Designs: designSvc, Projects: projectSvc},
 				plan: o.bootstrap, lock: &f.mu, log: cmd.ErrOrStderr(),
 			}
-			go boot.run(life)
+			spawn(func() { boot.run(life) })
 		}
 	}
 	api := server.API{
@@ -817,7 +832,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 			return err
 		}
 		gate := authgate.New(tokens, o.trustedProxies)
-		go pruneTokens(life, tokens, cmd.ErrOrStderr())
+		spawn(func() { pruneTokens(life, tokens, cmd.ErrOrStderr()) })
 		if gs := o.githubSignIn; gs != nil {
 			pub := o.publicURL
 			if pub == "" {
