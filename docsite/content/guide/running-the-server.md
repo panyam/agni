@@ -1025,8 +1025,9 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth
   restarted with a new `github:org:` grant, reaches them when they sign in again. Someone removed
   from a group keeps the grant until their token expires, or until `agni token revoke`.
 - A `github:org:` grant asks GitHub about the org at sign-in through the App, which needs the
-  Members organization permission at Read there. `github:org:*` names no org, so it admits only
-  members of an org `--github-allow` names. An identity provider that leaves the groups claim out,
+  Members organization permission at Read there. Sign-in asks about no other org, so a person
+  `--github-allow` names as `user:` still needs no org check. `github:org:*` names no org, so it
+  admits nobody. An identity provider that leaves the groups claim out,
   as Entra does past 200 groups, gives the person no groups.
 - `--grants-file` reads the grants from a file holding only an `access` list, the shape below. An
   empty list grants nothing. It refuses to run beside `--grant` or a `serve.yaml`'s `access`.

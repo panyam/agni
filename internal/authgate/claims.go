@@ -41,7 +41,7 @@ func isClaim(s string) bool {
 
 // GrantOrgs returns the orgs a GitHub sign-in checks membership of for grants, one per
 // "github:org:<org>" pattern in patterns. A pattern ending in '*' names no one org, so it is left
-// out, and it admits only the orgs --github-allow names.
+// out, and it admits nobody.
 func GrantOrgs(patterns []string) []string {
 	var out []string
 	for _, p := range patterns {

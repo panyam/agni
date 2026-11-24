@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -218,7 +217,7 @@ func (s *githubSignIns) signedIn(_, _ string, tok *oauth2.Token, info map[string
 }
 
 // admit checks the person signed in as login against Allow, keeps their GitHub token, and mints
-// them an agni token carrying each org they are in, of Allow's and GrantOrgs, as a claim. It
+// them an agni token carrying each org of GrantOrgs they are in as a claim. It
 // returns the token and its subject.
 func (s *githubSignIns) admit(ctx context.Context, login string, tok *oauth2.Token) (string, string, error) {
 	if login == "" || tok == nil {
@@ -274,17 +273,12 @@ func (s *githubSignIns) allowed(ctx context.Context, login string, tok *oauth2.T
 	return false, nil
 }
 
-// orgClaims returns a claim for each org of Allow's and GrantOrgs that login is a member of. An
+// orgClaims returns a claim for each org of GrantOrgs that login is a member of. It asks about
+// no other org, so a person Allow lets in by name needs no org check unless a grant names one. An
 // org allowed() already asked about isn't asked again.
 func (s *githubSignIns) orgClaims(ctx context.Context, login string, tok *oauth2.Token, m memberships) ([]string, error) {
-	orgs := slices.Clone(s.cfg.GrantOrgs)
-	for _, a := range s.cfg.Allow {
-		if name, ok := strings.CutPrefix(a, "org:"); ok && !slices.Contains(orgs, name) {
-			orgs = append(orgs, name)
-		}
-	}
 	var out []string
-	for _, org := range orgs {
+	for _, org := range s.cfg.GrantOrgs {
 		in, err := s.member(ctx, login, tok, org, m)
 		if err != nil {
 			return nil, err

@@ -390,3 +390,25 @@ func TestAGitHubOrgGrantAdmitsTheOrgsMembersAtSignIn(t *testing.T) {
 		t.Error("alice's session from the server with no grant opens bb; want it refused until she signs in again")
 	}
 }
+
+// A person --github-allow lets in by name signs in without an org check, as before grants could
+// name orgs, even when the App can't see who is in an org --github-allow also names. Sign-in asks
+// GitHub only about the orgs a grant names (agni issue 1896).
+func TestAUserAllowedByNameSignsInWithNoOrgCheck(t *testing.T) {
+	gh := githubtest.New(t)
+	gh.AddUser("alice", "acme")
+	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("5e", 32))
+	t.Setenv("AGNI_CONFIG_DIR", t.TempDir())
+	dir := t.TempDir()
+	parsed, err := grants.ParseAll([]string{"github://acme/board=local:*"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := serveViewer(t, viewerOpts{store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), auth: authgate.Tokens,
+		connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, githubRaw: gh.RawURL(), grants: parsed,
+		githubSignIn: &githubSignIn{clientID: appClientID, clientSecret: appSecret, allow: []string{"org:acme", "user:alice"}}})
+	gh.AddApp(appClientID, appSecret).SetPermissions(map[string]string{"contents": "read"})
+	if _, code, body, session := browserSignIn(t, gh, server, "alice", "/"); session == "" {
+		t.Errorf("alice, allowed by name, got %d and no session from an App without the Members permission:\n%s", code, body)
+	}
+}
