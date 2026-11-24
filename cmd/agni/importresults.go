@@ -28,7 +28,7 @@ func importResultsCmd() *cobra.Command {
 			"--design attaches the findings to entities by the names the report prints (ref-des, pin, " +
 			"net); without it the findings are imported unattached. What could not be attached is " +
 			"reported in the document's import summary, never dropped.\n\n" +
-			"The result is deliberately a WEAKER artifact than an `agni check` run: a vendor report is a " +
+			"The result is a WEAKER artifact than an `agni check` run: a vendor report is a " +
 			"flat violation list with no coverage axis, so the document records that rather than " +
 			"pretending otherwise.",
 		Args: cobra.ExactArgs(1),

@@ -321,13 +321,13 @@ role or half the board depends on the board. `check` judges that against the des
 it. A profile whose signals claim an implausible share of the nets:
 
 ```
-warning: profile "ETH100": signal "AP" (regex "_H") matches 8 of 32 nets (25%) — the matcher looks too broad to name one role; narrow it with a prefix, a glob, or an anchored regex
+warning: profile "ETH100": signal "AP" (regex "_H") matches 8 of 32 nets (25%). The matcher looks too broad to name one role; narrow it with a prefix, a glob, or an anchored regex
 ```
 
 And a profile that cannot tell two of its own roles apart:
 
 ```
-warning: profile "MYBUS": signals "DATA" and "CLK" both match net "CAN_CANH" — the profile cannot tell these two roles apart, so whichever rule runs first claims the net
+warning: profile "MYBUS": signals "DATA" and "CLK" both match net "CAN_CANH". The profile cannot tell these two roles apart, so whichever rule runs first claims the net
 ```
 
 Both describe the profile you wrote, not the board, so neither is a finding. They go to stderr,

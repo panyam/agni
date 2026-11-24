@@ -131,7 +131,7 @@ func fetVdssVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 				v.Witness = w
 				f := check.Finding{
 					Subject: check.ComponentEntity(c.RefDes),
-					Message: fmt.Sprintf("%s sits on rail %q at %gV (%s), at or above its breakdown %s %gV — %s",
+					Message: fmt.Sprintf("%s sits on rail %q at %gV (%s), at or above its breakdown %s %gV, per %s",
 						c.RefDes, n.Name, volts, src.how, vdss.Symbol, vdss.Value.GetMax(),
 						check.Citation(spec, vdss)),
 					Prov:          c.Prov,

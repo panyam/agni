@@ -268,7 +268,7 @@ func edsSiblingNote(path string) string {
 	stem := strings.TrimSuffix(path, filepath.Ext(path))
 	for _, ext := range []string{".edn", ".EDN"} {
 		if _, err := os.Stat(stem + ext); err == nil {
-			return fmt.Sprintf("warning: %s is an EDIF schematic-geometry (.eds) export; component counts may be lower than the netlist. The sibling %s (.edn netlist) is authoritative for component identity — declare it as this design's entry in a %s.\n",
+			return fmt.Sprintf("warning: %s is an EDIF schematic-geometry (.eds) export; component counts may be lower than the netlist. The sibling %s (.edn netlist) is authoritative for component identity, so declare it as this design's entry in a %s.\n",
 				filepath.Base(path), filepath.Base(stem+ext), projects.DesignDescriptor)
 		}
 	}

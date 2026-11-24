@@ -98,7 +98,7 @@ func strapGroupRule(g StrapGroup) *check.Rule {
 		Severity: "warning",
 		Summary:  fmt.Sprintf("the %s strap group does not encode the value the design intent declares", g.Name),
 		Detail:   intentDoc(docKeyStrapGroup),
-		Impact:   "a multi-pin strap encodes a number the part reads at reset — its address on a shared bus, its boot source, its bus width. Encoding the wrong number does not look like a wiring fault: the board powers up and the part runs, configured as something else, and on a shared bus it may answer to an address another device already owns.",
+		Impact:   "a multi-pin strap encodes a number the part reads at reset, such as its address on a shared bus, its boot source or its bus width. Encoding the wrong number does not look like a wiring fault: the board powers up and the part runs, configured as something else, and on a shared bus it may answer to an address another device already owns.",
 		Remedy:   intentRemedy(docKeyStrapGroup),
 		Reads:    []string{"component.net", "component.class", "net.ground", "net.rail"},
 		Tags:     intentTags(),

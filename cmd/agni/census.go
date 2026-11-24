@@ -84,7 +84,7 @@ func censusCmd() *cobra.Command {
 				fmt.Fprintf(out, "  [%s] %-24s x%-4d e.g. %s\n", k.format, k.token, counts[k], examples[k])
 			}
 			if len(keys) > 0 {
-				return fmt.Errorf("%d unclassified construct(s) — classify each in its census manifest", len(keys))
+				return fmt.Errorf("%d unclassified construct(s); classify each in its census manifest", len(keys))
 			}
 			return nil
 		},

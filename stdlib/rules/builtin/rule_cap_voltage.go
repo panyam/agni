@@ -101,7 +101,7 @@ func capVoltageDetail(m check.Model, c *ir.Component) string {
 	if binding.Value.GetMax() >= required {
 		return ""
 	}
-	return fmt.Sprintf("capacitor %s (MPN %s): rated voltage %s %gV is below %gV required (rail %q %gV x derate %g) — %s",
+	return fmt.Sprintf("capacitor %s (MPN %s): rated voltage %s %gV is below %gV required (rail %q %gV x derate %g), per %s",
 		c.RefDes, m.ComponentMPN(c.RefDes), binding.Symbol, binding.Value.GetMax(),
 		required, worstNet, worstV, capVoltageDerate, check.Citation(spec, binding))
 }

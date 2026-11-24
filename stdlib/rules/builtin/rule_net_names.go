@@ -186,7 +186,7 @@ var powerTapConflict = matrixlessSpecRule(func() *check.Rule {
 		Name:     "power-tap-conflict",
 		Severity: "warning",
 		Summary:  "One net is tapped by two different design-wide names (power symbols or global labels).",
-		Impact:   "A rail tapped +3V3 here and +3.3V there is one net pretending to be two rails. Every OTHER +3.3V tap in the design joins this net too — the classic multi-sheet capture slip where two supplies quietly become one, or one rail's consumers scatter across two names.",
+		Impact:   "A rail tapped +3V3 here and +3.3V there is one net pretending to be two rails. Every OTHER +3.3V tap in the design joins this net too. This is the classic multi-sheet capture slip where two supplies quietly become one, or one rail's consumers scatter across two names.",
 		Remedy:   "Settle on one spelling for the rail and change every tap to it. Confirm afterwards which consumers moved, since the two names may have been feeding what everyone believed were separate supplies.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryPower,
