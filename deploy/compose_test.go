@@ -284,3 +284,19 @@ func TestTheEnterpriseBundleTrustsATeamsOwnCA(t *testing.T) {
 		}
 	}
 }
+
+// The enterprise bundle passes --local-accounts from AGNI_LOCAL_ACCOUNTS, off unless the operator's
+// .env sets it, and env.example names the setting (agni issue 1879).
+func TestTheEnterpriseBundleTurnsOnLocalAccountsFromItsEnv(t *testing.T) {
+	c := readComposeAt(t, "enterprise/compose.yaml")
+	if v, _ := flagValue(c.Services["agni"].Command, "--local-accounts"); v != "${AGNI_LOCAL_ACCOUNTS:-false}" {
+		t.Errorf("the agni service's --local-accounts = %q; want ${AGNI_LOCAL_ACCOUNTS:-false}", v)
+	}
+	b, err := os.ReadFile("enterprise/env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !regexp.MustCompile(`(?m)^AGNI_LOCAL_ACCOUNTS=false$`).Match(b) {
+		t.Error("env.example doesn't set AGNI_LOCAL_ACCOUNTS=false")
+	}
+}

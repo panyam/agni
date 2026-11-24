@@ -485,3 +485,14 @@ func TestTheChartHandsTheServerItsBootstrap(t *testing.T) {
 		t.Errorf("serve.yaml's bootstrap = %+v, %v; want the values' mount and design", plan, err)
 	}
 }
+
+// The chart signs people in with local accounts only when localAccounts is true, through
+// local_accounts in serve.yaml (agni issue 1879).
+func TestTheChartSignsInWithLocalAccountsWhenAsked(t *testing.T) {
+	if v, ok := argValue(flagsOf(t, mustRender(t), "agni"), "--local-accounts"); ok {
+		t.Errorf("with localAccounts unset the chart passes --local-accounts=%s; want none", v)
+	}
+	if v, _ := argValue(flagsOf(t, mustRender(t, "localAccounts=true"), "agni"), "--local-accounts"); v != "true" {
+		t.Errorf("with localAccounts=true, --local-accounts = %q; want true", v)
+	}
+}

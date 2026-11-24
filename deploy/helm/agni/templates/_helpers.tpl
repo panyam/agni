@@ -70,6 +70,7 @@ key in serve, since the pod's ports, mounts and Secret are built around it. */}}
 {{- with $oidc.label }}{{ $_ := set $o "label" . }}{{ end -}}
 {{- $_ := set $cfg "oidc" $o -}}
 {{- end -}}
+{{- if .Values.localAccounts }}{{ $_ := set $cfg "local_accounts" true }}{{ end -}}
 {{- $cfg = merge $cfg (deepCopy (.Values.serve | default dict)) -}}
 {{- with .Values.bootstrap }}{{ $_ := set $cfg "bootstrap" . }}{{ end -}}
 {{- toYaml $cfg -}}

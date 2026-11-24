@@ -1094,8 +1094,12 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth
 - `agni users passwd` and `agni users rm` stop the next sign-in. A token minted at an earlier sign-in
   keeps working until it expires, and `agni token revoke` ends it sooner.
 - `--local-accounts` needs `--auth tokens`, and in a `--config` file it's `local_accounts: true`.
-  `agni login` has no local sign-in yet, so a person who needs the CLI asks the operator for a token
-  from `agni token create`.
+- `agni login --with local --user alice --password-stdin` signs in from a terminal and keeps the
+  token, as a GitHub or OIDC login does (agni issue 1879). The password comes on stdin.
+- The CLI posts `{"username", "password"}` to `/signin/local` with `Content-Type: application/json`.
+  The server answers `{"token", "subject", "expires"}` and sets no cookie. A refusal is
+  `{"error"}` with a 401, a 429 or a 400. The JSON path shares the form's limits and its password
+  check, and the form's own path is unchanged.
 
 ## Analysing in the visitor's browser
 

@@ -1,8 +1,11 @@
 package authgate
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -269,6 +272,97 @@ func TestTheSignInPageShowsTheFormOnlyWithLocalAccounts(t *testing.T) {
 				t.Errorf("POST %s with no local accounts = %d; want 404", LocalSignInPath, w.Code)
 			}
 		}
+	}
+}
+
+// postJSONLogin posts user and password from peer as the JSON body agni login --with local sends,
+// and returns the response, its decoded body and whether it set a session cookie.
+func postJSONLogin(t *testing.T, h http.Handler, peer, user, password string) (*httptest.ResponseRecorder, map[string]any, bool) {
+	t.Helper()
+	b, _ := json.Marshal(map[string]string{"username": user, "password": password})
+	r := httptest.NewRequest(http.MethodPost, LocalSignInPath, bytes.NewReader(b))
+	r.Header.Set("Content-Type", "application/json")
+	r.RemoteAddr = peer
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Errorf("POST %s as JSON = %d %q; want a JSON answer", LocalSignInPath, w.Code, w.Body.String())
+	}
+	cookie := false
+	for _, k := range w.Result().Cookies() {
+		cookie = cookie || k.Name == SessionCookie
+	}
+	return w, body, cookie
+}
+
+// A JSON sign-in answers the token, its subject and its expiry with no cookie and no redirect, and
+// the gate accepts the token as alice (agni issue 1879).
+func TestAJSONLocalSignInAnswersATokenTheGateAccepts(t *testing.T) {
+	h, keys, _ := localGate(t, true)
+	w, body, cookie := postJSONLogin(t, h, "192.0.2.1:1000", "Alice", alicePassword)
+	token, _ := body["token"].(string)
+	if w.Code != http.StatusOK || cookie || token == "" || body["subject"] != "local:alice" || w.Header().Get("Location") != "" {
+		t.Fatalf("JSON sign-in = %d %v with cookie %v; want 200 with a token for local:alice and no cookie", w.Code, body, cookie)
+	}
+	expires, err := time.Parse(time.RFC3339, fmt.Sprint(body["expires"]))
+	if left := time.Until(expires); err != nil || left < 29*24*time.Hour || left > 31*24*time.Hour {
+		t.Errorf("the answer's expires = %v (%v); want about 30 days away", body["expires"], err)
+	}
+	r := httptest.NewRequest(http.MethodGet, "/whoami", nil)
+	r.Header.Set("Authorization", "Bearer "+token)
+	got := httptest.NewRecorder()
+	h.ServeHTTP(got, r)
+	if got.Code != http.StatusOK || got.Body.String() != "local:alice" {
+		t.Fatalf("GET /whoami with the JSON sign-in's token = %d %q; want 200 local:alice", got.Code, got.Body.String())
+	}
+	if n := tokenCount(t, keys); n != 1 {
+		t.Errorf("the JSON sign-in minted %d tokens; want 1", n)
+	}
+}
+
+// A JSON sign-in with a wrong password or an unknown user gets a 401 with one JSON error and no
+// token, and a body that isn't JSON gets a 400.
+func TestAJSONLocalSignInRefusesAWrongPasswordAndAnUnknownUser(t *testing.T) {
+	h, keys, _ := localGate(t, true)
+	var errs []string
+	for _, c := range [][2]string{{"alice", "wrong horse battery"}, {"mallory", alicePassword}} {
+		w, body, cookie := postJSONLogin(t, h, "192.0.2.1:1000", c[0], c[1])
+		if w.Code != http.StatusUnauthorized || cookie || body["token"] != nil {
+			t.Errorf("JSON sign-in as %s = %d %v with cookie %v; want 401, no token, no cookie", c[0], w.Code, body, cookie)
+		}
+		errs = append(errs, fmt.Sprint(body["error"]))
+	}
+	if !strings.Contains(errs[0], "don't match an account") || errs[0] != errs[1] {
+		t.Errorf("a wrong password and an unknown user got %q and %q; want one message", errs[0], errs[1])
+	}
+	r := httptest.NewRequest(http.MethodPost, LocalSignInPath, strings.NewReader("username=alice"))
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), `"error"`) {
+		t.Errorf("a JSON sign-in with a body that isn't JSON = %d %q; want 400 with an error", w.Code, w.Body.String())
+	}
+	if n := tokenCount(t, keys); n != 0 {
+		t.Errorf("refused JSON sign-ins minted %d tokens; want 0", n)
+	}
+}
+
+// The form and the JSON path share one limit per username, so after 5 form tries a JSON try with
+// the right password gets a 429 as JSON and no token.
+func TestTheJSONSignInSharesTheFormsLimit(t *testing.T) {
+	h, keys, _ := localGateWith(t, true, slowLimits())
+	for i := 0; i < 5; i++ {
+		if w, _ := postLogin(h, "192.0.2.1:1000", "alice", "wrong horse battery"); w.Code != http.StatusUnauthorized {
+			t.Fatalf("wrong try %d = %d; want 401", i, w.Code)
+		}
+	}
+	w, body, _ := postJSONLogin(t, h, "192.0.2.2:1000", "alice", alicePassword)
+	if w.Code != http.StatusTooManyRequests || body["token"] != nil || !strings.Contains(fmt.Sprint(body["error"]), "Too many") || w.Header().Get("Retry-After") == "" {
+		t.Fatalf("a JSON try after 5 form tries = %d %v, Retry-After %q; want 429 with a JSON error", w.Code, body, w.Header().Get("Retry-After"))
+	}
+	if n := tokenCount(t, keys); n != 0 {
+		t.Fatalf("the limited JSON try minted %d tokens; want 0", n)
 	}
 }
 

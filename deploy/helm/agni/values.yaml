@@ -52,6 +52,14 @@ oidc:
   # The provider's name on the sign-in button, such as Okta.
   label: ""
 
+# Sign-in with a local username and password beside GitHub (agni issues 1815 and 1879). true shows
+# the form on /signin. Make each account in the pod, which keeps a bcrypt hash of its password in
+# the store:
+#   printf '%s\n' "$PASSWORD" | kubectl exec -i deploy/agni -- agni users add <name> \
+#     --store file:///var/lib/agni/meta --password-stdin
+# With a store value set, pass that store instead. There is no self-signup.
+localAccounts: false
+
 # The Secret holding connections-key (64 hex characters), github-client-secret and
 # github-webhook-secret, and oidc-client-secret when oidc.issuer is set.
 secretName: agni
