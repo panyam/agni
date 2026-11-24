@@ -136,6 +136,36 @@ agni login --remote https://agni.example.com --with oidc
 agni connections add mine --mine --github-token env:GITHUB_TOKEN --remote https://agni.example.com
 ```
 
+### Signing in with a local account
+
+Say someone on the team has no GitHub account and no login at your identity provider. You can make
+them a local account with a username and password (agni issues 1815 and 1879). Turn the form on
+first, then make each account where the server runs.
+
+- With the bundle, set `AGNI_LOCAL_ACCOUNTS=true` in `.env` and run `docker compose up -d` again.
+  Then pipe the password into the container.
+- With the chart, set `localAccounts` to true and upgrade the release. Then pipe the password into the
+  pod.
+
+```bash
+printf '%s\n' "$CAROL_PASSWORD" | docker compose exec -T agni \
+  agni users add carol --store file:///var/lib/agni/meta --password-stdin
+printf '%s\n' "$CAROL_PASSWORD" | kubectl exec -i deploy/agni -- \
+  agni users add carol --store file:///var/lib/agni/meta --password-stdin
+```
+
+With the chart's `store` set to a database, pass that URL to `--store` instead. Carol signs in at
+`/signin` with the form. From a terminal she runs this:
+
+```bash
+printf '%s\n' "$CAROL_PASSWORD" | agni login --remote https://agni.example.com --with local \
+  --user carol --password-stdin
+```
+
+She holds no GitHub connection either, so she adds her own with `agni connections add --mine`, as
+above. "Signing in with a local account" in the server guide covers `agni users ls`, `rm` and
+`passwd`.
+
 ## Link a design and a pack
 
 The admin gives the server its own connection, so it can read the team's repos, and mounts the
