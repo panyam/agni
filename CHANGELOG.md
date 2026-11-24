@@ -10,8 +10,18 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.11.7] - 2026-11-24
+
+A stored hierarchical design reads every block its `design.yaml` asks for (PR 1891), bootstrap
+keeps linked companions (PR 1892), and checklist item files take a team's own fields (PR 1894).
+It is a patch with one output-only proto field added. The full write-up is
+[RELEASES/v0.11.7.md](RELEASES/v0.11.7.md).
+
 ### Fixed
 
+- A stored design keeps its `design.yaml`'s `flatten_hierarchy`, whether pushed, uploaded, added
+  or linked, and a bootstrap design entry takes it too (issue 1887). `agni check --remote` and
+  `agni review --remote` print the top-cell note, as a local run does.
 - A checklist item file may carry the team's own frontmatter fields, such as `owner:` or
   `last_triaged:`, and the review ignores them (issue 1888). A field that looks like a typo of a
   known one, such as `rul:`, still fails and names the field it meant. Items within an area run in
