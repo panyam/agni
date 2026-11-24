@@ -452,6 +452,15 @@ its sheets, and the board holds the board file alone. A path naming a folder tak
 it, which suits an ODB++ job. The server keeps its own copy of each file, by hash, so a check never
 waits on GitHub. `agni designs artifacts bb` names each artifact's source and the commit it read.
 
+When the path is the entry a `design.yaml` beside it names, the link also links each companion the
+descriptor declares, from the same mount and ref, each as an artifact of its own with the id `push`
+gives it (agni issue 1873). So `agni designs link gw board lab/hw/odb.tgz` keeps the board and its
+declared schematic export, and a bootstrap entry needs only the entry. A link of a folder whose
+`design.yaml` names an entry links that entry the same way. A companion is left alone when the
+design already has an artifact of its id or one linked to its path. A sync links a companion the
+descriptor adds later. It keeps one the descriptor drops, and `agni designs rm gw schematic`
+removes it.
+
 A tag or a commit pins the artifact. A branch, or no ref at all, makes the artifact follow the branch,
 and `agni designs sync` moves it to the branch's newest commit:
 

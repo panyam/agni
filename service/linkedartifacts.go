@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"path"
 	"slices"
@@ -96,15 +97,30 @@ func (s *DesignService) LinkArtifact(ctx context.Context, req *webapi.LinkArtifa
 	if err != nil {
 		return nil, err
 	}
+	if p, err = s.entryOf(ctx, r, version, p); err != nil {
+		return nil, err
+	}
 	files, _, decl, err := s.readEntry(ctx, r, version, p)
 	if err != nil {
 		return nil, err
 	}
-	w := ArtifactWrite{ID: id, Files: files, AllowMissing: req.GetAllowMissing(), Source: &webapi.ArtifactSource{
+	at := &webapi.ArtifactSource{
 		Mount: src.GetMount(), Path: p, Ref: src.GetRef(), Follow: follow, Version: version,
 		ReadTime: timestamppb.New(s.clock()), ReadHash: manifestHash(files),
-	}}
-	out, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(d), []ArtifactWrite{w}, s.blobs)
+	}
+	writes := []ArtifactWrite{{ID: id, Files: files, AllowMissing: req.GetAllowMissing(), Source: at}}
+	if decl != nil && len(decl.Companions) > 0 {
+		have, err := s.catalog.Artifacts(ctx, StandaloneDesignName(d))
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			return nil, err
+		}
+		more, err := s.companionWrites(ctx, r, at, decl, have, writes)
+		if err != nil {
+			return nil, err
+		}
+		writes = append(writes, more...)
+	}
+	out, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(d), writes, s.blobs)
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +128,78 @@ func (s *DesignService) LinkArtifact(ctx context.Context, req *webapi.LinkArtifa
 		return nil, err
 	}
 	return out[0], nil
+}
+
+// entryOf returns the path to link for p. When p is a folder whose design.yaml names an entry, it is
+// that entry, so a link of the folder links the design as the descriptor declares it and its
+// companions follow (agni issue 1873). Otherwise it is p.
+func (s *DesignService) entryOf(ctx context.Context, r MountReader, version, p string) (string, error) {
+	listed, err := r.List(ctx, version, p)
+	if err != nil || len(listed) == 0 || (len(listed) == 1 && listed[0].Path == p) {
+		return p, err
+	}
+	desc := path.Join(p, DesignDescriptorName)
+	i := slices.IndexFunc(listed, func(f MountFile) bool { return f.Path == desc })
+	if i < 0 {
+		return p, nil
+	}
+	h, _, err := r.Fetch(ctx, version, listed[i])
+	if err != nil {
+		return "", err
+	}
+	raw, ok := s.blobs(ctx, h)
+	if !ok {
+		return p, nil
+	}
+	var d struct {
+		Entry string `yaml:"entry"`
+	}
+	if yaml.Unmarshal(raw, &d) != nil || d.Entry == "" {
+		return p, nil
+	}
+	entry := path.Clean(d.Entry)
+	if entry == ".." || strings.HasPrefix(entry, "../") || path.IsAbs(entry) {
+		return "", fmt.Errorf("%w: %s names the entry %s outside its folder", ErrInvalidArgument, desc, d.Entry)
+	}
+	return path.Join(p, entry), nil
+}
+
+// companionWrites links each companion decl declares beside the entry linked at entry, on the same
+// mount and ref, as an artifact of its own with the id push gives it (agni issue 1873). A companion
+// is left out when the design already has an artifact of its id, or one linked to its path, or when
+// pending writes take its id, so a link a person made, or an upload, is never replaced. Each write
+// creates its artifact.
+func (s *DesignService) companionWrites(ctx context.Context, r MountReader, entry *webapi.ArtifactSource, decl *entryDecl, have []*webapi.Artifact, pending []ArtifactWrite) ([]ArtifactWrite, error) {
+	dir := path.Dir(entry.GetPath())
+	if dir == "." {
+		dir = ""
+	}
+	taken := map[string]bool{}
+	for _, w := range pending {
+		taken[w.ID] = true
+	}
+	var out []ArtifactWrite
+	for _, c := range decl.Companions {
+		p := path.Join(dir, c.Path)
+		held := slices.ContainsFunc(have, func(a *webapi.Artifact) bool {
+			_, id, _ := ArtifactID(a.GetName())
+			src := a.GetSource()
+			return id == c.ID || (s.linked(a) && src.GetMount() == entry.GetMount() && src.GetPath() == p)
+		})
+		if held || taken[c.ID] {
+			continue
+		}
+		files, _, _, err := s.readEntry(ctx, r, entry.GetVersion(), p)
+		if err != nil {
+			return nil, fmt.Errorf("companion %s: %w", c.Path, err)
+		}
+		taken[c.ID] = true
+		out = append(out, ArtifactWrite{ID: c.ID, Files: files, AllowMissing: true, Source: &webapi.ArtifactSource{
+			Mount: entry.GetMount(), Path: p, Ref: entry.GetRef(), Follow: entry.GetFollow(), Version: entry.GetVersion(),
+			ReadTime: entry.GetReadTime(), ReadHash: manifestHash(files),
+		}})
+	}
+	return out, nil
 }
 
 // keepDeclared stores what a linked entry's design.yaml declares, as ImportDesignFiles does for a
@@ -212,6 +300,8 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 	// the artifact entryID.
 	var decl *entryDecl
 	var entryID string
+	var entryReader MountReader
+	var entrySrc *webapi.ArtifactSource
 	for _, a := range picked {
 		src := a.GetSource()
 		row := &webapi.ArtifactSync{Artifact: a.GetName(), FromVersion: src.GetVersion(), ToVersion: src.GetVersion()}
@@ -258,7 +348,7 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 		next := &webapi.ArtifactSource{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: true, Version: version, ReadTime: now, ReadHash: hash}
 		writes = append(writes, ArtifactWrite{ID: id, Files: files, Source: next})
 		if declared != nil {
-			decl, entryID = declared, id
+			decl, entryID, entryReader, entrySrc = declared, id, r, next
 		}
 	}
 	for _, rf := range rows {
@@ -271,6 +361,20 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 	}
 	if len(writes) == 0 || req.GetValidateOnly() {
 		return resp, nil
+	}
+	// A companion the descriptor declares now and the design lacks is linked with the entry, so a
+	// companion added to design.yaml reaches the server on the next sync (agni issue 1873).
+	if decl != nil && len(decl.Companions) > 0 {
+		more, err := s.companionWrites(ctx, entryReader, entrySrc, decl, all, writes)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", ArtifactName(strings.TrimPrefix(req.GetName(), designsNamePrefix), entryID), err)
+		}
+		for _, w := range more {
+			resp.Artifacts = append(resp.Artifacts, &webapi.ArtifactSync{
+				Artifact: ArtifactName(strings.TrimPrefix(req.GetName(), designsNamePrefix), w.ID), ToVersion: w.Source.GetVersion(), Changed: true,
+			})
+		}
+		writes = append(writes, more...)
 	}
 	if _, err := s.catalog.WriteArtifacts(ctx, req.GetName(), writes, s.blobs); err != nil {
 		return nil, err
@@ -355,6 +459,15 @@ func (s *DesignService) readSource(ctx context.Context, r MountReader, version, 
 // entry. Intent is nil when it declares none.
 type entryDecl struct {
 	Intent *configpb.DesignIntent
+	// Companions are the files the descriptor's companions: names, each with the artifact id
+	// PlanArtifacts gives it, so a link of the entry links them as push keeps them (agni issue 1873).
+	Companions []declaredCompanion
+}
+
+// declaredCompanion is one companion a design.yaml declares. Path is relative to the descriptor's
+// folder.
+type declaredCompanion struct {
+	ID, Path string
 }
 
 // readEntry is readSource, plus what the design.yaml declares when p is its entry, nil otherwise.
@@ -453,7 +566,7 @@ func readLinkedSource(ctx context.Context, blobs BlobSource, r MountReader, vers
 		b, _ := blobs(ctx, h)
 		return b, nil
 	}
-	group := artifactGroup(rels, read, path.Base(p))
+	_, group := artifactGroup(rels, read, path.Base(p))
 	if readErr != nil {
 		return nil, nil, nil, readErr
 	}
@@ -491,7 +604,8 @@ func entryDeclared(files []string, read func(string) ([]byte, error), target str
 		return nil, err
 	}
 	var d struct {
-		Entry string `yaml:"entry"`
+		Entry      string   `yaml:"entry"`
+		Companions []string `yaml:"companions"`
 	}
 	if yaml.Unmarshal(raw, &d) != nil || d.Entry == "" || path.Clean(d.Entry) != target {
 		return nil, nil
@@ -500,12 +614,23 @@ func entryDeclared(files []string, read func(string) ([]byte, error), target str
 	if err != nil {
 		return nil, err
 	}
-	return &entryDecl{Intent: intent}, nil
+	decl := &entryDecl{Intent: intent}
+	for _, c := range d.Companions {
+		c = path.Clean(c)
+		if c == target || !slices.Contains(files, c) {
+			continue
+		}
+		if id, _ := artifactGroup(files, read, c); id != "" {
+			decl.Companions = append(decl.Companions, declaredCompanion{ID: id, Path: c})
+		}
+	}
+	return decl, nil
 }
 
 // artifactGroup finds the design among a folder's files whose entry or companion is target, and
-// returns the files PlanArtifacts gives that artifact. It returns nil when target is neither.
-func artifactGroup(files []string, read func(string) ([]byte, error), target string) []PlannedFile {
+// returns the id and files PlanArtifacts gives that artifact. It returns "" and nil when target is
+// neither.
+func artifactGroup(files []string, read func(string) ([]byte, error), target string) (string, []PlannedFile) {
 	// A design.yaml makes ProposeFromFiles propose the folder as one declared design, with no entry
 	// or companions to match target against. So it proposes without the descriptors, as
 	// PlanArtifacts does (agni issue 1851).
@@ -523,15 +648,15 @@ func artifactGroup(files []string, read func(string) ([]byte, error), target str
 		}
 		plan, err := PlanArtifacts(d.GetFiles(), read)
 		if err != nil {
-			return nil
+			return "", nil
 		}
 		for _, id := range plan.IDs {
 			if slices.ContainsFunc(plan.Files[id], func(pf PlannedFile) bool { return pf.Folder == target }) {
-				return plan.Files[id]
+				return id, plan.Files[id]
 			}
 		}
 	}
-	return nil
+	return "", nil
 }
 
 // manifestHash hashes files' paths and contents' hashes in path order, so two reads of the same

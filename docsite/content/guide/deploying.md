@@ -246,7 +246,9 @@ Each entry does what the matching command does. A connection names where its sec
 or `file:`, and never holds one, so the file can sit in a ConfigMap or in Git. Its `kind` is
 `github-app` with `app_id`, `installation_id` and `key`, or `github-token` with `token`, or `aws`,
 `gcp` or `entra`. A link reads `<mount>[/<path>][@<ref>]`, as `agni designs link` takes it. A
-branch is followed, and a tag or commit is pinned.
+branch is followed, and a tag or commit is pinned. When a board's folder has a `design.yaml`, the
+link can name its entry alone, as `board: boards/a/a.tgz@main`, and the companions it declares are
+linked with it.
 
 - With the compose bundle, put the file at `bootstrap/bootstrap.yaml` and set
   `AGNI_BOOTSTRAP=/etc/agni/bootstrap/bootstrap.yaml` in `.env`. Secret files go in
