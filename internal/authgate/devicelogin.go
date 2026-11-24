@@ -50,7 +50,7 @@ func DeviceLogin(ctx context.Context, server, with string, show func(DeviceStart
 	case "oidc":
 		start, poll = oidcDevice, oidcDeviceToken
 	default:
-		return DeviceToken{}, fmt.Errorf("--with %q: want github or oidc", with)
+		return DeviceToken{}, fmt.Errorf("--with %q: want github, oidc or local", with)
 	}
 	var st DeviceStart
 	err := postJSON(ctx, server+start, nil, &st)
@@ -63,7 +63,7 @@ func DeviceLogin(ctx context.Context, server, with string, show func(DeviceStart
 	}
 	if errors.Is(err, errNoSignIn) {
 		if with == "" {
-			return DeviceToken{}, fmt.Errorf("%s signs nobody in from a terminal; its operator starts it with --github-client-id or --oidc-issuer", server)
+			return DeviceToken{}, fmt.Errorf("%s signs nobody in through a provider; its operator starts it with --github-client-id or --oidc-issuer, and a local account signs in with agni login --with local", server)
 		}
 		return DeviceToken{}, fmt.Errorf("%s doesn't sign people in with %s", server, with)
 	}

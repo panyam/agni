@@ -1,9 +1,13 @@
 package authgate
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"mime"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -253,32 +257,102 @@ var errBadLogin = errors.New("that username and password don't match an account 
 
 // admit checks name and password and mints an agni token for "local:<name>". An unknown name runs
 // the same bcrypt comparison a wrong password does, so the two take as long to refuse.
-func (s *localSignIns) admit(ctx context.Context, name, password string) (string, string, error) {
+func (s *localSignIns) admit(ctx context.Context, name, password string) (LocalToken, error) {
 	n, nameErr := CanonicalUsername(name)
 	hash := ""
 	if nameErr == nil {
 		ch, err := readAccount(ctx, s.cfg.Store, n)
 		if err != nil {
-			return "", "", fmt.Errorf("reading the accounts: %w", err)
+			return LocalToken{}, fmt.Errorf("reading the accounts: %w", err)
 		}
 		if ch != nil {
 			hash, _ = ch.Credentials["password_hash"].(string)
 		}
 	}
 	if !localauth.CheckPassword(hash, password) || nameErr != nil {
-		return "", "", errBadLogin
+		return LocalToken{}, errBadLogin
 	}
 	subject := "local:" + n
 	expires := time.Now().Add(s.cfg.TTL)
 	resp, err := s.keys.CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: subject, Name: "local sign-in " + n, ExpiresAt: &expires})
 	if err != nil {
-		return "", "", fmt.Errorf("minting a token for %s: %w", n, err)
+		return LocalToken{}, fmt.Errorf("minting a token for %s: %w", n, err)
 	}
-	return resp.FullKey, subject, nil
+	return LocalToken{Token: resp.FullKey, Subject: subject, Expires: expires.UTC().Truncate(time.Second)}, nil
 }
 
-// serve answers a post of the sign-in page's username and password form. A good sign-in sets the
-// session cookie and goes on to next. A bad one shows the page again with a 401, and too many
+// LocalLogin is the JSON body `agni login --with local` posts to LocalSignInPath, sent with the
+// Content-Type application/json (agni issue 1879). The sign-in page posts a form instead.
+type LocalLogin struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// LocalToken answers a good JSON sign-in at LocalSignInPath. Token is an agni token for Subject,
+// which is "local:<username>". The token works until Expires. A JSON sign-in sets no cookie.
+type LocalToken struct {
+	Token   string    `json:"token"`
+	Subject string    `json:"subject"`
+	Expires time.Time `json:"expires"`
+}
+
+// LocalLoginError answers a refused JSON sign-in at LocalSignInPath. A bad username or password
+// gets a 401, too many attempts get a 429, and a body that isn't a LocalLogin gets a 400.
+type LocalLoginError struct {
+	Error string `json:"error"`
+}
+
+// PasswordLogin signs in to the agni server at server as the local account name, posting a
+// LocalLogin as JSON to LocalSignInPath (agni issue 1879). It returns the token the server mints.
+// A refusal is an error carrying the server's message, and a server without local accounts is an
+// error saying so.
+func PasswordLogin(ctx context.Context, server, name, password string) (LocalToken, error) {
+	target := strings.TrimRight(server, "/") + LocalSignInPath
+	b, err := json.Marshal(LocalLogin{Username: name, Password: password})
+	if err != nil {
+		return LocalToken{}, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, bytes.NewReader(b))
+	if err != nil {
+		return LocalToken{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client, err := loginClient()
+	if err != nil {
+		return LocalToken{}, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return LocalToken{}, fmt.Errorf("could not reach %s: %w", target, err)
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
+	if resp.StatusCode == http.StatusNotFound {
+		return LocalToken{}, fmt.Errorf("%s doesn't sign people in with local accounts; its operator starts it with --local-accounts", server)
+	}
+	if resp.StatusCode != http.StatusOK {
+		var e LocalLoginError
+		if json.Unmarshal(raw, &e) != nil || e.Error == "" {
+			e.Error = strings.TrimSpace(string(raw))
+		}
+		return LocalToken{}, &statusError{target: target, code: resp.StatusCode, text: e.Error}
+	}
+	var got LocalToken
+	if err := json.Unmarshal(raw, &got); err != nil || got.Token == "" {
+		return LocalToken{}, fmt.Errorf("%s answered no token: %s", target, strings.TrimSpace(string(raw)))
+	}
+	return got, nil
+}
+
+// isJSON reports whether r's Content-Type says its body is JSON.
+func isJSON(r *http.Request) bool {
+	mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	return mt == "application/json"
+}
+
+// serve answers a post of the sign-in page's username and password form, or of a LocalLogin as
+// JSON. A good form sign-in sets the session cookie and goes on to next. A good JSON sign-in
+// answers a LocalToken. A bad one gets a 401, as the page again or as a LocalLoginError. Too many
 // attempts for the username or from the address get a 429 before any password is checked.
 func (s *localSignIns) serve(g *Gate, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -287,30 +361,45 @@ func (s *localSignIns) serve(g *Gate, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
-	name := r.PostFormValue("username")
-	password := r.PostFormValue("password")
+	asJSON := isJSON(r)
+	var in LocalLogin
+	if asJSON {
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			writeJSON(w, http.StatusBadRequest, LocalLoginError{Error: "want a JSON body with a username and a password"})
+			return
+		}
+	} else {
+		in = LocalLogin{Username: r.PostFormValue("username"), Password: r.PostFormValue("password")}
+	}
 	next := safeNext(r.PostFormValue("next"))
 	page := g.signInView(next)
 	status := http.StatusUnauthorized
-	key := strings.ToLower(strings.TrimSpace(name))
+	key := strings.ToLower(strings.TrimSpace(in.Username))
 	s.sweep(time.Now())
 	if !s.cfg.PerAddress.Allow("addr:"+g.proxies.ClientIP(r)) || !s.cfg.PerUser.Allow("user:"+key) {
 		w.Header().Set("Retry-After", "60")
 		status = http.StatusTooManyRequests
 		page.Error = "Too many sign-in attempts. Wait a minute and try again."
 	} else {
-		full, _, err := s.admit(r.Context(), name, password)
-		if err == nil {
-			http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: full, Path: "/", HttpOnly: true, Secure: g.https(r), SameSite: http.SameSiteStrictMode}) // #nosec G124 -- Secure follows HTTPS, as in signIn
-			http.Redirect(w, r, next, http.StatusSeeOther)                                                                                                      // #nosec G710 -- next came through safeNext
+		got, err := s.admit(r.Context(), in.Username, in.Password)
+		switch {
+		case err == nil && asJSON:
+			writeJSON(w, http.StatusOK, got)
 			return
-		}
-		if errors.Is(err, errBadLogin) {
+		case err == nil:
+			http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: got.Token, Path: "/", HttpOnly: true, Secure: g.https(r), SameSite: http.SameSiteStrictMode}) // #nosec G124 -- Secure follows HTTPS, as in signIn
+			http.Redirect(w, r, next, http.StatusSeeOther)                                                                                                           // #nosec G710 -- next came through safeNext
+			return
+		case errors.Is(err, errBadLogin):
 			page.Error = "That username and password don't match an account on this server."
-		} else {
+		default:
 			status = http.StatusInternalServerError
 			page.Error = "Signing in didn't work: " + err.Error()
 		}
+	}
+	if asJSON {
+		writeJSON(w, status, LocalLoginError{Error: page.Error})
+		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")

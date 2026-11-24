@@ -152,7 +152,11 @@ revoke ends one sooner.`,
 // it out of the shell history and the process list.
 func readPassword(cmd *cobra.Command, fromStdin bool) (string, error) {
 	if !fromStdin {
-		return "", fmt.Errorf("pass --password-stdin and give the password on stdin, such as printf '%%s\\n' \"$PASSWORD\" | agni users %s ... --password-stdin", cmd.Name())
+		usage := "users " + cmd.Name()
+		if cmd.Name() == "login" {
+			usage = "login"
+		}
+		return "", fmt.Errorf("pass --password-stdin and give the password on stdin, such as printf '%%s\\n' \"$PASSWORD\" | agni %s ... --password-stdin", usage)
 	}
 	line, err := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
