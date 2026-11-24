@@ -177,7 +177,7 @@ func Open(cfg Config) (*Table, error) {
 			t.blobs, b = d, d
 		}
 		folderOpts = append(folderOpts, folder.WithBlobs(b))
-		ghOpts := []github.Option{github.WithViews(filepath.Join(cfg.Uploads, SnapshotsDir)), github.WithHTTPClient(&http.Client{Timeout: 5 * time.Minute}), github.WithLimits(cfg.Limits)}
+		ghOpts := []github.Option{github.WithViews(filepath.Join(cfg.Uploads, SnapshotsDir)), github.WithHTTPClient(&http.Client{Timeout: 5 * time.Minute}), github.WithLimits(cfg.Limits), github.WithLazyPastLimits()}
 		if cfg.GitHubAPI != "" {
 			ghOpts = append(ghOpts, github.WithBaseURL(cfg.GitHubAPI))
 		}
@@ -281,10 +281,10 @@ func Open(cfg Config) (*Table, error) {
 			return nil, fmt.Errorf("--store: %w", err)
 		}
 		// Each snapshot's view is built now rather than on first use, so a reader sharing the
-		// uploads read-only, such as agnids, finds it. A view whose blobs are lost is reported, and
+		// uploads read-only, such as agnids, finds it. A lazy mount's view fills as it is read. A view whose blobs are lost is reported, and
 		// the other mounts still serve.
 		for _, m := range all {
-			if cfg.ReadOnly || t.Fixed(m.Name) || !snapshotKind(m.Kind) {
+			if cfg.ReadOnly || t.Fixed(m.Name) || !snapshotKind(m.Kind) || Lazy(m) {
 				continue
 			}
 			if _, err := t.reg.HostPath(context.Background(), mounts.URI{Mount: m.Name}); err != nil && cfg.Log != nil {
@@ -354,11 +354,18 @@ func (t *Table) Fixed(name string) bool {
 // Resolve maps uri to a host path inside its mount, for the OS-backed adapters. An unknown mount is
 // service.ErrNotFound and a path that leaves its mount is service.ErrInvalidPath. A path may run
 // into an archive, which archivefs reads as a folder (agni issue 1591). The library resolves the
-// archive file, and the rest of the path is joined on for archivefs to read.
+// archive file, and the rest of the path is joined on for archivefs to read. On a lazy mount it
+// fetches what it resolves first: a folder whole, or a file with the folder it sits in
+// (fetchNeighbours).
 func (t *Table) Resolve(uri mounts.URI) (string, error) {
 	ctx := context.Background()
 	if t.hidePrivate && t.privateMount(uri.Mount) {
 		return "", fmt.Errorf("%w: the mount %q reads a private repo, which this server can't check your access to", service.ErrPermissionDenied, uri.Mount)
+	}
+	if m, ok := t.lazyMount(uri); ok {
+		if err := t.fetchNeighbours(ctx, m, uri); err != nil {
+			return "", Err(err)
+		}
 	}
 	p, err := t.reg.HostPath(ctx, uri)
 	if err == nil {
@@ -380,10 +387,14 @@ func (t *Table) Resolve(uri mounts.URI) (string, error) {
 }
 
 // Root returns the host folder m serves from: a folder mount's own path, or a GitHub snapshot's
-// view, built on first use. It returns "" for a mount with no folder here.
+// view, built on first use. It returns "" for a mount with no folder here, and for a lazy mount,
+// whose folder holds only what was read. Read a lazy mount through FS.
 func (t *Table) Root(m mounts.Mount) string {
 	if m.Kind == mounts.KindFolder {
 		return m.Source
+	}
+	if Lazy(m) {
+		return ""
 	}
 	p, err := t.reg.HostPath(context.Background(), mounts.URI{Mount: m.Name})
 	if err != nil {
@@ -453,9 +464,13 @@ func (t *Table) CreateMount(ctx context.Context, name, source, ref, connection s
 	if err != nil {
 		return service.MountInfo{}, service.ConnectionErr(Err(err))
 	}
-	// The view is built now, so a reader sharing the uploads read-only, such as agnids, finds it.
-	if _, err := t.reg.HostPath(ctx, mounts.URI{Mount: name}); err != nil {
-		return service.MountInfo{}, Err(err)
+	// The view is built now, so a reader sharing the uploads read-only, such as agnids, finds it. A
+	// lazy mount's view fills as it is read, so building it whole would fetch the repo the mount
+	// was made lazy to avoid.
+	if !Lazy(m) {
+		if _, err := t.reg.HostPath(ctx, mounts.URI{Mount: name}); err != nil {
+			return service.MountInfo{}, Err(err)
+		}
 	}
 	return t.Info(m), nil
 }

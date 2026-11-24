@@ -385,7 +385,24 @@ a push to the branch does not change what a stored design or a report pointed at
 files go to the uploads once each, by hash, beside the designs' files. Its view is
 `mounts/<name>/<commit>/` in the uploads, and the store keeps one record, `mounts/<name>.yaml`, with
 every file's path and hash. A restart reads the records back, and rebuilds a view the uploads lost
-from its files. A snapshot over 256 MB is refused.
+from its files.
+
+Say a hardware repo holds nine boards. Each board fits in 256 MB, and the repo together holds
+483 MB with its LFS objects. A mount whose commit passes the cap is made lazy (agni issue 1877).
+The server lists the commit's tree and downloads nothing. Browsing the mount reads the tree. A
+read fetches what it names, through the same per-file path a linked design uses. Resolving a file
+fetches the folder it sits in, since a schematic opens its sheets from beside it, and fetches the
+file alone when that folder passes the cap. A folder past the cap is refused with
+`resource_exhausted`, naming the flags below. The view fills as files are read, and the listing
+is kept beside it, so a restart serves what was fetched without GitHub. A lazy mount whose view
+folder is lost asks GitHub for its tree again. Discovery walks a lazy mount's tree but doesn't open
+its archives as folders, since telling an archive from a file would fetch each one. So a project
+packed inside an archive in a lazy mount isn't found.
+
+`--mount-max-bytes` and `--mount-max-files` set the cap, 256 MB and 100,000 files by default. On a
+GitHub mount the cap bounds a whole snapshot, or one read of a lazy mount. On a bucket or SharePoint
+mount it bounds the whole mount, which downloads when it is made. In `--config` the keys are
+`mount: {max_bytes: ..., max_files: ...}`.
 
 A repo that keeps its schematics or board files in Git LFS reads as the files themselves (agni issue
 1809). Git stores a short pointer in place of each LFS file. The server swaps each pointer for its

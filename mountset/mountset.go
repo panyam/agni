@@ -137,6 +137,7 @@ func Find(ms []mounts.Mount, name string) (mounts.Mount, bool) {
 //
 // A Git LFS object the driver couldn't read is FAILED_PRECONDITION, whatever reason ErrLFS wraps
 // with it, since the mount and the file exist and the message names the file (agni issue 1809).
+// ErrTooLarge names the serve flags that set the cap (agni issue 1877).
 func Err(err error) error {
 	if err == nil {
 		return nil
@@ -156,6 +157,9 @@ func Err(err error) error {
 		{mounts.ErrUnavailable, service.ErrUnavailable},
 		{mounts.ErrPermissionDenied, service.ErrPermissionDenied},
 	} {
+		if errors.Is(err, m.lib) && m.lib == mounts.ErrTooLarge {
+			return fmt.Errorf("%w: %w (agni serve's --mount-max-bytes and --mount-max-files set the cap)", m.svc, err)
+		}
 		if errors.Is(err, m.lib) {
 			return fmt.Errorf("%w: %w", m.svc, err)
 		}

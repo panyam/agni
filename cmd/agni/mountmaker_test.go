@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -173,22 +174,121 @@ func TestCreateMountRefusesWhatItCannotServe(t *testing.T) {
 	}
 }
 
-func TestASnapshotOverTheCapIsRefusedAndLeavesNoMount(t *testing.T) {
+// The jetson repo holds 74 bytes: README.md (12) and two schematics under hw/ (31 each).
+
+// A commit past the cap is mounted lazily: nothing is downloaded when it is made, it lists from
+// its tree, and each read fetches only what it names (agni issue 1877). A file whose folder is past
+// the cap is fetched alone. A folder past it is refused, naming the flags that set the cap. After a
+// restart with GitHub unreachable it still lists, and serves what it fetched.
+func TestAGitHubMountPastTheCapIsMountedLazily(t *testing.T) {
+	gh, _ := jetsonRepo(t)
+	dir := t.TempDir()
+	store, uploads := filepath.Join(dir, "store"), filepath.Join(dir, "uploads")
+	limits := mounts.Limits{MaxBytes: 35}
+	s := startRuntimeMounts(t, store, uploads, gh.URL, limits)
+	ctx := context.Background()
+	m, err := s.ws.CreateMount(ctx, &webapi.CreateMountRequest{Name: "jetson", Source: "github://antmicro/jetson-orin-baseboard"})
+	if err != nil {
+		t.Fatalf("CreateMount past the cap = %v; want a lazy mount", err)
+	}
+	if m.GetRoot() != "" {
+		t.Errorf("a lazy mount reports root %q; want none, since its folder holds only what was read", m.GetRoot())
+	}
+	if n := countFiles(t, filepath.Join(uploads, "blobs")); n != 0 {
+		t.Errorf("making a lazy mount stored %d blobs; want none", n)
+	}
+	if got := strings.Join(listNames(t, s.ws, "mount://jetson/hw"), ","); got != "board.kicad_sch,copy.kicad_sch" {
+		t.Errorf("mount://jetson/hw lists %q; want the two schematics and no link", got)
+	}
+	ws := mountset.NewWorkspace(s.table)
+	if b, err := ws.ReadFile(ctx, mounts.URI{Mount: "jetson", Path: "README.md"}); err != nil || string(b) != "# baseboard\n" {
+		t.Errorf("README.md = %q, %v", b, err)
+	}
+	p, err := s.table.Resolve(mounts.URI{Mount: "jetson", Path: "hw/board.kicad_sch"})
+	if err != nil {
+		t.Fatalf("resolving a schematic whose folder is past the cap = %v; want the file alone", err)
+	}
+	if b, err := os.ReadFile(p); err != nil || !strings.HasPrefix(string(b), "(kicad_sch") {
+		t.Errorf("the resolved schematic = %q, %v", b, err)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(p), "copy.kicad_sch")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("hw/copy.kicad_sch is on disk though hw/ is past the cap: %v", err)
+	}
+	_, err = s.table.Resolve(mounts.URI{Mount: "jetson", Path: "hw"})
+	if !errors.Is(err, service.ErrResourceExhausted) || !strings.Contains(err.Error(), "--mount-max-bytes") {
+		t.Errorf("resolving hw/, past the cap = %v; want ErrResourceExhausted naming --mount-max-bytes", err)
+	}
+
+	again := startRuntimeMounts(t, store, uploads, "http://127.0.0.1:1", limits)
+	if got := strings.Join(listNames(t, again.ws, "mount://jetson/hw"), ","); got != "board.kicad_sch,copy.kicad_sch" {
+		t.Errorf("after a restart with GitHub down, mount://jetson/hw lists %q", got)
+	}
+	if b, err := mountset.NewWorkspace(again.table).ReadFile(ctx, mounts.URI{Mount: "jetson", Path: "README.md"}); err != nil || string(b) != "# baseboard\n" {
+		t.Errorf("after a restart with GitHub down, README.md = %q, %v", b, err)
+	}
+}
+
+// Resolving a file in a lazy mount fetches the folder it sits in, when the folder fits the cap,
+// since a reader opens the files beside the one it was given, as a schematic opens its sheets.
+func TestResolvingAFileInALazyMountFetchesItsFolder(t *testing.T) {
+	gh, _ := jetsonRepo(t)
+	dir := t.TempDir()
+	s := startRuntimeMounts(t, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), gh.URL, mounts.Limits{MaxBytes: 70})
+	if _, err := s.ws.CreateMount(context.Background(), &webapi.CreateMountRequest{Name: "jetson", Source: "github://antmicro/jetson-orin-baseboard"}); err != nil {
+		t.Fatal(err)
+	}
+	p, err := s.table.Resolve(mounts.URI{Mount: "jetson", Path: "hw/board.kicad_sch"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(p), "copy.kicad_sch")); err != nil {
+		t.Errorf("hw/copy.kicad_sch beside the resolved schematic: %v; want it fetched with its folder", err)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(filepath.Dir(p)), "README.md")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("README.md, outside hw/, is on disk: %v", err)
+	}
+}
+
+// Project discovery walks a lazy mount through its tree, so finding descriptors downloads nothing.
+func TestDiscoveryWalksALazyMountWithoutDownloading(t *testing.T) {
 	gh, _ := jetsonRepo(t)
 	dir := t.TempDir()
 	uploads := filepath.Join(dir, "uploads")
-	s := startRuntimeMounts(t, filepath.Join(dir, "store"), uploads, gh.URL, mounts.Limits{MaxBytes: 20})
-	_, err := s.ws.CreateMount(context.Background(), &webapi.CreateMountRequest{Name: "jetson", Source: "github://antmicro/jetson-orin-baseboard"})
-	if !errors.Is(err, service.ErrResourceExhausted) {
-		t.Fatalf("CreateMount over the cap = %v; want ErrResourceExhausted", err)
+	s := startRuntimeMounts(t, filepath.Join(dir, "store"), uploads, gh.URL, mounts.Limits{MaxBytes: 35})
+	if _, err := s.ws.CreateMount(context.Background(), &webapi.CreateMountRequest{Name: "jetson", Source: "github://antmicro/jetson-orin-baseboard"}); err != nil {
+		t.Fatal(err)
 	}
-	if _, ok := s.table.Find("jetson"); ok {
-		t.Fatal("a refused snapshot is still served")
+	var found bool
+	for _, tr := range liveTrees(s.table)() {
+		if tr.Mount != "jetson" {
+			continue
+		}
+		found = true
+		if err := fs.WalkDir(tr.FS, ".", func(string, fs.DirEntry, error) error { return nil }); err != nil {
+			t.Errorf("walking the lazy mount: %v", err)
+		}
+		if ents, err := fs.ReadDir(tr.FS, "hw"); err != nil || len(ents) != 2 {
+			t.Errorf("hw/ in the lazy mount's tree = %v, %v; want the two schematics", ents, err)
+		}
 	}
-	views, _ := os.ReadDir(filepath.Join(uploads, mountset.SnapshotsDir, "jetson"))
-	if len(views) != 0 {
-		t.Fatalf("a refused snapshot left %d folders in the uploads", len(views))
+	if !found {
+		t.Fatal("discovery has no tree for the lazy mount")
 	}
+	if n := countFiles(t, filepath.Join(uploads, "blobs")); n != 0 {
+		t.Errorf("walking the lazy mount stored %d blobs; want none", n)
+	}
+}
+
+func countFiles(t *testing.T, dir string) int {
+	t.Helper()
+	n := 0
+	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			n++
+		}
+		return nil
+	})
+	return n
 }
 
 func TestTheUploadsSweepKeepsASnapshotsFiles(t *testing.T) {
