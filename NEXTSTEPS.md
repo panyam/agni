@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `b3a4ca99`.
+Last pruned 2026-11-23, at `3ede480a`.
 
 ## At a glance
 
@@ -22,11 +22,13 @@ VM yet. `agni serve --config serve.yaml` (PR 1856) holds serve's flags and the `
 resources (PR 1852), and the chart passes only `--config`. A stored design's check now runs its
 `design.yaml` intent, pushed, added or linked (PRs 1859 and 1866). Push, add and link also keep the companions a
 `design.yaml` declares and read the entry it names, so an ODB++ board and an EDIF schematic stay one
-design that checks as its folder does (PR 1863). v0.11.2 shipped all of that on 2026-11-23. Since
-then, `agni serve` waits for its poll, webhook, bootstrap, prune and sweep work before it exits (PR
-1870). #1868 (vulncheck: `gorilla/websocket` GO-2026-6278, fixed only in an untagged commit) is open.
+design that checks as its folder does (PR 1863). v0.11.2 shipped all of that on 2026-11-23. v0.11.3
+made `agni serve` wait for its poll, webhook, bootstrap, prune and sweep work before it exits (PR
+1870). v0.11.4 made a linked pack list only what its `project.yaml` names, so boards beside it count
+against no size limit, and took servicekit v0.2.6 for GO-2026-6278 (PR 1872). Since then, linking a
+declared entry, or its folder, links the companions its `design.yaml` declares (PR 1876).
 
-- **agni is on goapplib v0.7.34, oneauth v0.3.21, servicekit v0.2.5 and ci-actions v0.1.5.**
+- **agni is on goapplib v0.7.34, oneauth v0.3.21, servicekit v0.2.6 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
   in through an OpenID Connect provider beside or instead of GitHub, and `agni login --with oidc`
   uses its device flow (PR 1842). The exercise signs in through the App only. Its App lacks the
