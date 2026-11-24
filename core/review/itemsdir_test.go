@@ -71,3 +71,43 @@ func TestLoadFSRefusesABadItemsDir(t *testing.T) {
 		t.Errorf("a broken item file = %v; want the error to name reviews/checklist/01-power/p3.md", err)
 	}
 }
+
+// An item file may carry the team's own metadata beside its binding. The review ignores it, and the
+// checklist reads as its inline twin. A key that looks like a typo of a known field still fails and
+// names that field, and items within an area run in the natural order of their ids (agni issue 1888).
+func TestItemFilesKeepTeamMetadataAndSortIdsNaturally(t *testing.T) {
+	fsys := itemsFS("name: Power review\nitems_dir: checklist\n")
+	fsys["reviews/checklist/01-power/p1.md"] = &fstest.MapFile{Data: []byte("---\nid: P1\ntitle: bulk caps\nrule: bulk-cap\nowner: hw-team\nlast_triaged: 2026-11-02\nneeds: [datasheet]\n---\n")}
+	want, err := LoadFS(fsys, "inline.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadFS(fsys, "reviews/power.yaml")
+	if err != nil {
+		t.Fatalf("an item file with owner, last_triaged and needs: %v; want it read, the metadata ignored", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("with team metadata the checklist reads as\n%+v\nwant its inline twin\n%+v", got, want)
+	}
+
+	fsys["reviews/checklist/01-power/p1.md"] = &fstest.MapFile{Data: []byte("---\nid: P1\ntitle: bulk caps\nrul: bulk-cap\n---\n")}
+	if _, err := LoadFS(fsys, "reviews/power.yaml"); err == nil || !strings.Contains(err.Error(), `rul:, did you mean "rule"`) {
+		t.Errorf("rul: in place of rule: = %v; want it refused, naming rule", err)
+	}
+
+	numbered := fstest.MapFS{}
+	for _, id := range []string{"100", "16", "2"} {
+		numbered["checklist/power/"+id+".md"] = &fstest.MapFile{Data: []byte("---\nid: \"" + id + "\"\ntitle: item " + id + "\nrule: bulk-cap\n---\n")}
+	}
+	man, err := LoadFS(numbered, "checklist")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, it := range man.Areas[0].Items {
+		ids = append(ids, it.ID)
+	}
+	if !reflect.DeepEqual(ids, []string{"2", "16", "100"}) {
+		t.Errorf("items 100, 16 and 2 run as %v; want 2, 16, 100", ids)
+	}
+}

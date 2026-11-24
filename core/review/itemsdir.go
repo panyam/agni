@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
 
+	"github.com/panyam/jaala/ns"
 	"gopkg.in/yaml.v3"
+
+	"github.com/panyam/agni/core/ident"
 )
 
 // itemFile is one item file's frontmatter: what an inline item carries, plus the area it sits in.
@@ -30,9 +34,10 @@ var areaPrefix = regexp.MustCompile(`^[0-9]+[-_ .]+`)
 // Every .md file under the folder is one item, except a README.md. Its YAML frontmatter carries the
 // item's fields and its body is ignored. An item's area is its frontmatter area, or else the name of
 // the folder it sits in under dir, without an ordering number such as "01-". Areas come in the order
-// of their first file's path, and items within an area in the order of their id. A file with no
-// frontmatter, an unknown field, no area, or an item the review would refuse fails the read and names
-// the file, as does an id two files share.
+// of their first file's path, and items within an area in the natural order of their id, so 16 comes
+// before 100 (agni issue 1888). A key the item doesn't know is ignored as the team's own metadata. A
+// file with no frontmatter, a key that looks like a typo of a known one, no area, or an item the
+// review would refuse fails the read and names the file, as does an id two files share.
 //
 // It reads every item file before parsing any. A caller that lacks several files' contents then
 // learns of them all from one call, joined, as a server asking a client to upload them does.
@@ -106,7 +111,7 @@ func ItemsDir(label, title, dir string, list func(dir string) ([]string, error),
 		return Manifest{}, nil, fmt.Errorf("checklist %q: items_dir %s holds no item files (.md)", label, dir)
 	}
 	for i := range man.Areas {
-		slices.SortStableFunc(man.Areas[i].Items, func(a, b Item) int { return strings.Compare(a.ID, b.ID) })
+		slices.SortStableFunc(man.Areas[i].Items, func(a, b Item) int { return ident.CompareNatural(a.ID, b.ID) })
 	}
 	if err := ValidateStructure(man); err != nil {
 		return Manifest{}, nil, fmt.Errorf("checklist %q (items_dir %s): %w", label, dir, err)
@@ -178,7 +183,9 @@ func walkFiles(fsys fs.FS) func(string) ([]string, error) {
 }
 
 // parseItemFile reads an item file's frontmatter, the YAML between a leading "---" line and the next
-// "---" line. An unknown field is an error, as in a descriptor.
+// "---" line. A key the item doesn't know is the team's own metadata, such as owner: or needs:, and
+// the review ignores it (agni issue 1888). A key that looks like a typo of one it knows, such as rul:
+// for rule:, still fails and names the field, so a misspelling never drops a binding quietly.
 func parseItemFile(raw []byte) (itemFile, error) {
 	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
 	rest, ok := strings.CutPrefix(text, "---\n")
@@ -189,11 +196,50 @@ func parseItemFile(raw []byte) (itemFile, error) {
 	if !ok {
 		return itemFile{}, fmt.Errorf("its frontmatter has no closing --- line")
 	}
+	var keys map[string]yaml.Node
+	if err := yaml.Unmarshal([]byte(front), &keys); err != nil {
+		return itemFile{}, fmt.Errorf("frontmatter: %w", err)
+	}
+	known := itemFileKeys()
+	var typos []string
+	for k := range keys {
+		if slices.Contains(known, k) {
+			continue
+		}
+		if hint := ns.DidYouMeanValue(known, k); hint != "" {
+			typos = append(typos, fmt.Sprintf("%s:%s", k, hint))
+		}
+	}
+	if len(typos) > 0 {
+		slices.Sort(typos)
+		return itemFile{}, fmt.Errorf("frontmatter: unknown field %s", strings.Join(typos, "; unknown field "))
+	}
 	var it itemFile
-	dec := yaml.NewDecoder(bytes.NewReader([]byte(front)))
-	dec.KnownFields(true)
-	if err := dec.Decode(&it); err != nil {
+	if err := yaml.Unmarshal([]byte(front), &it); err != nil {
 		return itemFile{}, fmt.Errorf("frontmatter: %w", err)
 	}
 	return it, nil
+}
+
+// itemFileKeys lists the frontmatter keys an item file reads: area, and every field an Item takes,
+// its inlined Binding's included.
+func itemFileKeys() []string {
+	return append([]string{"area"}, yamlKeys(reflect.TypeOf(Item{}))...)
+}
+
+// yamlKeys lists the YAML keys a struct type decodes, walking into fields tagged inline.
+func yamlKeys(t reflect.Type) []string {
+	var keys []string
+	for i := range t.NumField() {
+		f := t.Field(i)
+		name, opts, _ := strings.Cut(f.Tag.Get("yaml"), ",")
+		switch {
+		case name == "-":
+		case strings.Contains(opts, "inline"):
+			keys = append(keys, yamlKeys(f.Type)...)
+		case name != "":
+			keys = append(keys, name)
+		}
+	}
+	return keys
 }

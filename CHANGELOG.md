@@ -12,6 +12,10 @@ GitHub Release body carries.
 
 ### Fixed
 
+- A checklist item file may carry the team's own frontmatter fields, such as `owner:` or
+  `last_triaged:`, and the review ignores them (issue 1888). A field that looks like a typo of a
+  known one, such as `rul:`, still fails and names the field it meant. Items within an area run in
+  the natural order of their ids, so `16` comes before `100`.
 - A bootstrap no longer reports the companions that a link of a declared entry followed, and
   `prune: true` no longer deletes them (issue 1890). The server records the entry on each companion
   in the new output-only `ArtifactSource.companion_of`. A companion linked by v0.11.5 or v0.11.6

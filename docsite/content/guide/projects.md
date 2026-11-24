@@ -93,8 +93,11 @@ Each `.md` file under the folder is one item, except a `README.md`. Its YAML fro
 `---` lines, holds what an inline item holds: `id`, `title`, `description`, `note` and one binding
 (`rule`, `tag`, `profile`, `query`, `present` or `external`). The body below it is free notes, and
 the review ignores it. An item's area is the folder it sits in, without an ordering number such as
-`01-`, and an `area:` field overrides that. Areas run in folder order and items in id order. A file
-with no frontmatter, a misspelled field or two bindings fails the load and names the file. `agni packs
+`01-`, and an `area:` field overrides that. Areas run in folder order and items in id order, with
+the digits in an id read as a number, so `16` comes before `100`. The frontmatter can also carry the
+team's own fields, such as `owner:`, `last_triaged:` or `needs:`, and the review ignores them (agni
+issue 1888). A field that looks like a typo of one agni reads, such as `rul:` for `rule:`, still fails
+and names the field it meant. A file with no frontmatter or two bindings fails the load and names the file. `agni packs
 push` carries the item files with the pack, so the server reads the same checklist.
 [`examples/jetson-project`](https://github.com/panyam/agni/tree/main/examples/jetson-project) keeps
 its `power` checklist this way.
