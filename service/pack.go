@@ -340,10 +340,13 @@ func (s *PackService) DeletePack(ctx context.Context, req *webapi.DeletePackRequ
 	return s.store.DeletePack(ctx, id)
 }
 
-// PackImporter reads the pack a project folder's files make. It takes the folder's paths and a reader
-// of one file, and returns the project's id, the pack with its config and its files' paths, and the
-// paths it kept. internal/projects.PackFromFiles is the one `agni serve` uses.
-type PackImporter func(files []string, read func(string) ([]byte, error)) (id string, pack *webapi.Pack, kept []string, err error)
+// PackImporter reads the pack a project folder makes. list returns the folder's paths that equal a
+// relative path or sit under it, and none for a path the folder lacks. read returns one file's
+// contents. It returns the project's id, the pack with its config and its files' paths, and the
+// paths it kept. An importer lists only what project.yaml names, so a linked folder that also holds
+// large designs is never listed whole (agni issue 1871). internal/projects.PackFromFolder is the one
+// `agni serve` uses.
+type PackImporter func(list func(rel string) ([]string, error), read func(string) ([]byte, error)) (id string, pack *webapi.Pack, kept []string, err error)
 
 // WithImporter lets ImportPackFiles read a project folder through imp, and returns s. Without one,
 // ImportPackFiles answers FAILED_PRECONDITION.
@@ -369,45 +372,95 @@ func (s *PackService) ImportPackFiles(ctx context.Context, req *webapi.ImportPac
 		}
 		seen[f.GetPath()] = true
 	}
-	return s.keepFolder(ctx, req.GetPackId(), req.GetTitle(), req.GetFiles(), nil)
-}
-
-// keepFolder keeps the pack a project folder's files make as id, creating it or replacing it whole,
-// with src as its source. An empty id or title takes project.yaml's. Contents the server lacks are a
-// *BlobsMissingError naming the first one met. A nil src is an upload, which a linked pack refuses,
-// so a sync never overwrites what a person put and a put never hides a link.
-func (s *PackService) keepFolder(ctx context.Context, id, title string, files []*webapi.SnapshotFile, src *webapi.ArtifactSource) (*webapi.Pack, error) {
-	if s.importer == nil {
-		return nil, fmt.Errorf("%w: this server reads no project folders into packs", ErrFailedPrecondition)
-	}
 	byPath := map[string]*webapi.SnapshotFile{}
-	paths := make([]string, 0, len(files))
-	for _, f := range files {
+	paths := make([]string, 0, len(req.GetFiles()))
+	for _, f := range req.GetFiles() {
 		byPath[f.GetPath()] = f
 		paths = append(paths, f.GetPath())
 	}
+	folder := packFolder{
+		list: func(rel string) ([]string, error) {
+			var out []string
+			for _, p := range paths {
+				if p == rel || strings.HasPrefix(p, rel+"/") {
+					out = append(out, p)
+				}
+			}
+			return out, nil
+		},
+		file: func(p string) (*webapi.SnapshotFile, error) { return byPath[p], nil },
+	}
+	pid, pack, _, err := s.importFolder(ctx, folder)
+	if err != nil {
+		return nil, err
+	}
+	return s.keepPack(ctx, req.GetPackId(), req.GetTitle(), pid, pack, nil)
+}
+
+// packFolder is a project folder a pack is read from. list is PackImporter's. file returns the
+// SnapshotFile at a path list gave, its contents kept where s.blobs finds them.
+type packFolder struct {
+	list func(rel string) ([]string, error)
+	file func(p string) (*webapi.SnapshotFile, error)
+}
+
+// importFolder reads the pack f makes through s.importer. It returns the project's id, the pack with
+// its config and its kept files, and every file the read touched: project.yaml, the files it read
+// and the files it kept. A linked pack's read hash covers those alone, so a design beside the pack
+// doesn't move it (agni issue 1871). Contents the server lacks are a *BlobsMissingError naming every
+// one the importer met.
+func (s *PackService) importFolder(ctx context.Context, f packFolder) (string, *webapi.Pack, []*webapi.SnapshotFile, error) {
+	if s.importer == nil {
+		return "", nil, nil, fmt.Errorf("%w: this server reads no project folders into packs", ErrFailedPrecondition)
+	}
+	touched := map[string]*webapi.SnapshotFile{}
 	// lacking collects every file the importer asked for and the server lacks, so one answer names
 	// them all when the importer reads several before it fails (agni issue 1812).
 	var lacking []string
 	read := func(p string) ([]byte, error) {
-		f := byPath[p]
-		b, ok := s.blobs(ctx, f.GetSha256())
+		sf, err := f.file(p)
+		if err != nil {
+			return nil, err
+		}
+		touched[p] = sf
+		b, ok := s.blobs(ctx, sf.GetSha256())
 		if !ok {
-			if !slices.Contains(lacking, f.GetSha256()) {
-				lacking = append(lacking, f.GetSha256())
+			if !slices.Contains(lacking, sf.GetSha256()) {
+				lacking = append(lacking, sf.GetSha256())
 			}
-			return nil, &missingContent{hash: f.GetSha256()}
+			return nil, &missingContent{hash: sf.GetSha256()}
 		}
 		return b, nil
 	}
-	pid, pack, kept, err := s.importer(paths, read)
+	pid, pack, kept, err := s.importer(f.list, read)
 	var missing *missingContent
 	if errors.As(err, &missing) {
-		return nil, &BlobsMissingError{Hashes: lacking}
+		return "", nil, nil, &BlobsMissingError{Hashes: lacking}
 	}
 	if err != nil {
-		return nil, err
+		return "", nil, nil, err
 	}
+	pack.Files = nil
+	for _, p := range kept {
+		sf, err := f.file(p)
+		if err != nil {
+			return "", nil, nil, err
+		}
+		touched[p] = sf
+		pack.Files = append(pack.Files, sf)
+	}
+	all := make([]*webapi.SnapshotFile, 0, len(touched))
+	for _, sf := range touched {
+		all = append(all, sf)
+	}
+	return pid, pack, all, nil
+}
+
+// keepPack keeps pack, read from a folder whose project.yaml names pid, as id, creating it or
+// replacing it whole, with src as its source. An empty id or title takes project.yaml's. A nil src
+// is an upload, which a linked pack refuses, so a sync never overwrites what a person put and a put
+// never hides a link.
+func (s *PackService) keepPack(ctx context.Context, id, title, pid string, pack *webapi.Pack, src *webapi.ArtifactSource) (*webapi.Pack, error) {
 	if id == "" {
 		id = pid
 	}
@@ -418,10 +471,6 @@ func (s *PackService) keepFolder(ctx context.Context, id, title string, files []
 		pack.Title = title
 	}
 	pack.Name = PackName(id)
-	pack.Files = nil
-	for _, p := range kept {
-		pack.Files = append(pack.Files, byPath[p])
-	}
 	pack.Source = src
 	if err := checkPack(pack); err != nil {
 		return nil, err

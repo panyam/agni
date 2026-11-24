@@ -625,10 +625,13 @@ agni check designs/bb --pack house --remote http://localhost:8080
 ```
 
 The source reads as `designs link` reads one, `<mount>[/<path>][@<ref>]`, with the path naming the
-folder that holds `project.yaml`. The server reads that folder as `packs push` reads a local one, and
-keeps the files its tiers name. A branch, or no ref, is followed. The webhook and `--poll` above move
-the pack to the branch's new commit, as they move a design, and `agni packs sync house` does the same
-by hand. The next check runs the new rules. A tag or commit pins the pack, so a team that wants a
+folder that holds `project.yaml`, or `project.yaml` itself. The server reads that folder as `packs
+push` reads a local one, and keeps the files its tiers name. It lists only `project.yaml` and those
+files, so boards kept in the same folder count against no size limit (agni issue 1871). A branch, or
+no ref, is followed. The webhook and `--poll` above move the pack to the branch's new commit, as they
+move a design, and `agni packs sync house` does the same by hand. The next check runs the new rules.
+A commit that changes none of the pack's files, such as a board edited beside it, leaves the pack
+unchanged at the new commit. A tag or commit pins the pack, so a team that wants a
 fixed set of rules links one.
 
 Each report names the commit its packs were read at, as `packs/house at 3f2a9c1b04de`, beside its

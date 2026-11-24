@@ -8,7 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/goapplib/storage/mounts/github/githubtest"
+
+	"github.com/panyam/agni/mountset"
 )
 
 // tutorialRules is the tutorial project's rules as a repo holds them: project.yaml and the folders it
@@ -128,5 +131,61 @@ func TestAPushMovesALinkedPackAndTheReportNamesItsCommit(t *testing.T) {
 	}
 	if out := must(runPacks(t, url, "unlink", "house")); strings.Contains(out, "from rules") {
 		t.Errorf("packs unlink house = %q; want no source", out)
+	}
+}
+
+// A pack linked from a folder that keeps its boards beside project.yaml reads what `packs push`
+// sends. The boards count against no size cap, and a board edited beside the pack leaves it
+// unchanged on sync (agni issue 1871).
+func TestALinkedPackBesideItsBoardsReadsWhatPushSends(t *testing.T) {
+	lab := t.TempDir()
+	rules := tutorialRules(t)
+	size := 0
+	for _, c := range rules {
+		size += len(c)
+	}
+	writeFiles(t, lab, rules)
+	writeFiles(t, lab, map[string]string{"boards/gw/gw.tgz": strings.Repeat("x", 8192)})
+	// The cap holds the pack's files and not the folder, as 256 MB holds a project and not the
+	// boards beside it.
+	was := mounts.DefaultLimits
+	mounts.DefaultLimits.MaxBytes = int64(size + 4096)
+	t.Cleanup(func() { mounts.DefaultLimits = was })
+	dir := t.TempDir()
+	url := serveViewer(t, viewerOpts{
+		store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"),
+		extraMounts: []mounts.Mount{mountset.Folder("lab", lab)}, uploadMaxBytes: 1 << 26,
+	})
+	must := func(out string, err error) string {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("%v\n%s", err, out)
+		}
+		return out
+	}
+	// filesAndHash reads the file count and content hash off a pack's first printed line.
+	filesAndHash := func(out string) string {
+		f := strings.Split(strings.SplitN(out, "\n", 2)[0], "\t")
+		if len(f) < 4 {
+			t.Fatalf("pack line %q has no file count and hash", out)
+		}
+		return f[2] + " " + f[3]
+	}
+	linked := must(runPacks(t, url, "link", "house", "lab"))
+	pushed := must(runPacks(t, url, "push", lab, "--id", "pushed"))
+	if filesAndHash(linked) != filesAndHash(pushed) {
+		t.Errorf("packs link house lab =\n%s\npacks push =\n%s\nwant the same files and hash", linked, pushed)
+	}
+	if byDescriptor := must(runPacks(t, url, "link", "named", "lab/project.yaml")); filesAndHash(byDescriptor) != filesAndHash(pushed) {
+		t.Errorf("packs link named lab/project.yaml =\n%s\nwant the files and hash push sends", byDescriptor)
+	}
+
+	writeFiles(t, lab, map[string]string{"boards/gw/gw.tgz": strings.Repeat("y", 100)})
+	if out := must(runPacks(t, url, "sync", "house")); !strings.Contains(out, "packs/house\tunchanged\t") {
+		t.Errorf("packs sync house after a board edit = %q; want packs/house unchanged", out)
+	}
+	writeFiles(t, lab, map[string]string{"project.yaml": withStrictRule(t, rules["project.yaml"])})
+	if out := must(runPacks(t, url, "sync", "house")); !strings.Contains(out, "packs/house\tchanged\t") {
+		t.Errorf("packs sync house after a project.yaml edit = %q; want packs/house changed", out)
 	}
 }

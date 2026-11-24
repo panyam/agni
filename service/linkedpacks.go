@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 	"slices"
+	"strings"
 
 	"github.com/panyam/goapplib/storage/mounts"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -94,16 +96,73 @@ func (s *PackService) LinkPack(ctx context.Context, req *webapi.LinkPackRequest)
 // readLinked reads src's folder at src.version into the pack id, creating or replacing it, and
 // records src with the read's time and hash.
 func (s *PackService) readLinked(ctx context.Context, r MountReader, id, title string, src *webapi.ArtifactSource) (*webapi.Pack, error) {
-	files, _, err := readSource(ctx, s.blobs, r, src.GetVersion(), src.GetPath())
+	pid, pack, touched, err := s.importFolder(ctx, linkedFolder(ctx, r, src.GetVersion(), src.GetPath()))
 	if err != nil {
 		return nil, err
 	}
+	return s.keepLinked(ctx, id, title, pid, pack, touched, src)
+}
+
+// keepLinked keeps the pack importFolder read from src as id, recording src with the read's time and
+// the hash of the files the read touched.
+func (s *PackService) keepLinked(ctx context.Context, id, title, pid string, pack *webapi.Pack, touched []*webapi.SnapshotFile, src *webapi.ArtifactSource) (*webapi.Pack, error) {
 	src.ReadTime = timestamppb.New(s.clock())
-	src.ReadHash = manifestHash(files)
+	src.ReadHash = manifestHash(touched)
 	if s.sources != nil {
 		src.AccessSource = s.sources.Guarding(src.GetMount())
 	}
-	return s.keepFolder(ctx, id, title, files, src)
+	return s.keepPack(ctx, id, title, pid, pack, src)
+}
+
+// linkedFolder is the project folder at dir in r, at version. dir may name the folder or its
+// project.yaml. It lists only the paths the importer asks for, and fetches a file only when the
+// importer reads or keeps it, so the boards in a folder that also holds a project.yaml are neither
+// listed nor fetched, and the mount's size cap counts only the pack's files (agni issue 1871).
+func linkedFolder(ctx context.Context, r MountReader, version, dir string) packFolder {
+	if path.Base(dir) == ProjectDescriptorName {
+		if dir = path.Dir(dir); dir == "." {
+			dir = ""
+		}
+	}
+	listed := map[string]MountFile{}
+	got := map[string]*webapi.SnapshotFile{}
+	return packFolder{
+		list: func(rel string) ([]string, error) {
+			files, err := r.List(ctx, version, path.Join(dir, rel))
+			if errors.Is(err, ErrNotFound) {
+				return nil, nil
+			}
+			if err != nil {
+				return nil, err
+			}
+			out := make([]string, 0, len(files))
+			for _, f := range files {
+				p := f.Path
+				if dir != "" {
+					p = strings.TrimPrefix(p, dir+"/")
+				}
+				listed[p] = f
+				out = append(out, p)
+			}
+			return out, nil
+		},
+		file: func(p string) (*webapi.SnapshotFile, error) {
+			if sf, ok := got[p]; ok {
+				return sf, nil
+			}
+			f, ok := listed[p]
+			if !ok {
+				return nil, fmt.Errorf("%w: %s was never listed in %q", ErrNotFound, p, dir)
+			}
+			h, _, err := r.Fetch(ctx, version, f)
+			if err != nil {
+				return nil, err
+			}
+			sf := &webapi.SnapshotFile{Path: p, Sha256: h, Size: f.Size}
+			got[p] = sf
+			return sf, nil
+		},
+	}
 }
 
 // UnlinkPack makes a linked pack an uploaded one, keeping its config and files.
@@ -166,15 +225,27 @@ func (s *PackService) sync(ctx context.Context, cur *webapi.Pack, version string
 	}
 	id, _ := PackID(cur.GetName())
 	next := &webapi.ArtifactSource{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: true, Version: version}
-	files, _, err := readSource(ctx, s.blobs, r, version, src.GetPath())
+	pid, pack, touched, err := s.importFolder(ctx, linkedFolder(ctx, r, version, src.GetPath()))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", cur.GetName(), err)
 	}
-	// A mount with no history names no version, so the files say whether the pack moved.
-	if manifestHash(files) == src.GetReadHash() && version == src.GetVersion() {
+	// A pack whose own files read the same stays as it is, at the source's new version, so a board
+	// edited beside its project.yaml doesn't move it (agni issue 1871).
+	if manifestHash(touched) == src.GetReadHash() {
+		if version == src.GetVersion() {
+			return resp, nil
+		}
+		out, err := s.store.UpdatePack(ctx, id, func(p *webapi.Pack) error {
+			p.Source.Version = version
+			return nil
+		}, s.blobs)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", cur.GetName(), err)
+		}
+		resp.Pack = out
 		return resp, nil
 	}
-	out, err := s.readLinked(ctx, r, id, cur.GetTitle(), next)
+	out, err := s.keepLinked(ctx, id, cur.GetTitle(), pid, pack, touched, next)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", cur.GetName(), err)
 	}
