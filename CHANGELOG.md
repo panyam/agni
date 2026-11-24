@@ -10,6 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.11.9] - 2026-11-24
+
+`agnids` reads operator grants, and both servers take `--grants-file`, which the enterprise bundle
+fills from one `access.yaml` (PR 1898). A grant can name an OIDC group or a GitHub org, as
+`oidc:group:<id>` or `github:org:<org>`, matched against claims the sign-in records on the token (PR
+1899). agni moves to goapplib v0.7.39. It is a patch with no proto change, and `service.Caller`
+gains a `Claims` field. The full write-up is [RELEASES/v0.11.9.md](RELEASES/v0.11.9.md).
+
 ## [0.11.8] - 2026-11-24
 
 `agni serve --grant source=pattern,...` and serve.yaml `access` open a private source to people who
