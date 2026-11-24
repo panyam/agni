@@ -49,8 +49,10 @@ func (s *DesignService) WithMountFiles(propose DesignProposer, read FileReader) 
 // addedDesign is one design AddDesigns makes: its id and record, and the artifacts it writes with
 // the contents read for them, by hash.
 type addedDesign struct {
-	id       string
-	record   DesignRecord
+	id     string
+	record DesignRecord
+	// decl is what the folder's design.yaml declares, which an update applies to the kept record.
+	decl     declared
 	writes   []ArtifactWrite
 	contents map[string][]byte
 	// project is the project.yaml the design's descriptor extends, zero for none.
@@ -228,8 +230,8 @@ func (s *DesignService) planOne(ctx context.Context, mount string, req *webapi.A
 
 // holds reports whether the stored design a's id names already holds each artifact a would write,
 // with the same files, and what a's design.yaml declares, so an update can leave it alone. An
-// artifact a doesn't write is not compared, as an update leaves it. Nor is an intent a declares
-// none of, as an update keeps the stored one (agni issue 1864).
+// artifact a doesn't write is not compared, as an update leaves it. Nor is an intent or a
+// flatten_hierarchy a declares none of, as an update keeps the stored one (agni issues 1864, 1887).
 func (s *DesignService) holds(ctx context.Context, a addedDesign) (bool, error) {
 	name := StandaloneDesignName(a.id)
 	d, err := s.catalog.Design(ctx, name)
@@ -237,6 +239,9 @@ func (s *DesignService) holds(ctx context.Context, a addedDesign) (bool, error) 
 		return false, err
 	}
 	if a.record.Intent != nil && !proto.Equal(a.record.Intent, d.GetConfig().GetIntent()) {
+		return false, nil
+	}
+	if a.decl.flatten != nil && *a.decl.flatten != d.GetFlattenHierarchy() {
 		return false, nil
 	}
 	if a.record.Entry != "" && !strings.HasPrefix(d.GetEntryUri(), d.GetUri()+"/"+a.record.Entry+"/") {
@@ -349,13 +354,18 @@ func (s *DesignService) planAdd(ctx context.Context, mount string, p *webapi.Pro
 	if err != nil {
 		return addedDesign{}, err
 	}
-	// The folder's design.yaml declares the design's intent, which a stored design keeps as its own,
-	// as push and link keep it (agni issues 1697, 1854, 1864).
-	intent, err := declaredIntent(rels, read)
+	// The folder's design.yaml declares the design's intent and flatten_hierarchy, which a stored
+	// design keeps as its own, as push and link keep them (agni issues 1697, 1854, 1864, 1887).
+	decl, err := readDeclared(rels, read)
+	if err != nil {
+		return addedDesign{}, err
+	}
+	intent, err := decl.Intent()
 	if err != nil {
 		return addedDesign{}, fmt.Errorf("%s: %w", path.Join(folder, DesignDescriptorName), err)
 	}
-	add := addedDesign{id: id, record: DesignRecord{Title: title, Series: want.GetSeries(), Intent: intent}, contents: map[string][]byte{}}
+	add := addedDesign{id: id, record: DesignRecord{Title: title, Series: want.GetSeries(), Intent: intent}, decl: decl, contents: map[string][]byte{}}
+	decl.keep(&add.record, nil)
 	if plan.Declared {
 		add.record.Entry = plan.IDs[0]
 	}
@@ -388,13 +398,11 @@ func (s *DesignService) writeUpdated(ctx context.Context, a addedDesign) error {
 	if _, err := s.catalog.WriteArtifacts(ctx, StandaloneDesignName(a.id), a.writes, read); err != nil {
 		return err
 	}
-	// What the design.yaml declares now replaces what the record kept, as a push does. An intent it
-	// declares none of leaves the stored one, and an entry it names none of reads by type
-	// (agni issues 1858, 1864).
+	// What the design.yaml declares now replaces what the record kept, as a push does. An intent or
+	// flatten_hierarchy it declares none of leaves the stored one, and an entry it names none of reads
+	// by type (agni issues 1858, 1864, 1887).
 	_, err := s.catalog.UpdateDesign(ctx, StandaloneDesignName(a.id), func(r *DesignRecord) {
-		if a.record.Intent != nil {
-			r.Intent = a.record.Intent
-		}
+		a.decl.keep(r, a.record.Intent)
 		r.Entry = a.record.Entry
 	})
 	return err

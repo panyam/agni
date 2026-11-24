@@ -278,7 +278,9 @@ or `file:`, and never holds one, so the file can sit in a ConfigMap or in Git. I
 `gcp` or `entra`. A link reads `<mount>[/<path>][@<ref>]`, as `agni designs link` takes it. A
 branch is followed, and a tag or commit is pinned. When a board's folder has a `design.yaml`, the
 link can name its entry alone, as `board: boards/a/a.tgz@main`, and the companions it declares are
-linked with it.
+linked with it. A design entry's `flatten_hierarchy: true` reads its hierarchical netlist whole, for a
+board whose folder has no `design.yaml` saying so. Set on the entry, it wins over what a linked
+`design.yaml` declares (agni issue 1887).
 
 - With the compose bundle, put the file at `bootstrap/bootstrap.yaml` and set
   `AGNI_BOOTSTRAP=/etc/agni/bootstrap/bootstrap.yaml` in `.env`. Secret files go in

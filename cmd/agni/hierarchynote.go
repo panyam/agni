@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"io"
+
 	rpt "github.com/panyam/agni/core/report"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -23,4 +26,14 @@ func hierarchyNote(file string, blocks []*ir.UnexpandedHierarchy) string {
 		s += " Pass --flatten-hierarchy to read every block."
 	}
 	return "note: " + s + "\n"
+}
+
+// noteRemoteHierarchy writes hierarchyNote for a run a server answered, naming the design as the
+// command named it. A local run reads the design through localLoader, which writes the note as it
+// reads, so this writes nothing unless remote is set. A server's result carries the blocks its read
+// left out, so a remote run warns as a local one does (agni issue 1887).
+func noteRemoteHierarchy(w io.Writer, remote bool, design string, blocks []*ir.UnexpandedHierarchy) {
+	if remote {
+		fmt.Fprint(w, hierarchyNote(design, blocks))
+	}
 }

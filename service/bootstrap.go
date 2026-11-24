@@ -75,6 +75,10 @@ type BootstrapDesign struct {
 	Series string            `yaml:"series"`
 	Packs  []string          `yaml:"packs"`
 	Link   map[string]string `yaml:"link"`
+	// FlattenHierarchy reads the design's netlist whole, as flatten_hierarchy in a design.yaml does,
+	// for a design linked without one (agni issue 1887). Set, it wins over what a linked design.yaml
+	// declares. Absent, it leaves the design's own.
+	FlattenHierarchy *bool `yaml:"flatten_hierarchy"`
 }
 
 // BootstrapProject is a stored project grouping designs, with the packs its designs are read under.
@@ -380,8 +384,8 @@ func sameSource(have, want *webapi.ArtifactSource) bool {
 	return err == nil && have.GetMount() == want.GetMount() && have.GetPath() == p && have.GetRef() == want.GetRef()
 }
 
-// design makes d with its title, series and packs, and links each of its artifacts that reads from
-// somewhere else.
+// design makes d with its title, series and packs, links each of its artifacts that reads from
+// somewhere else, and then sets its flatten_hierarchy when d sets one.
 func (b *Bootstrap) design(ctx context.Context, d BootstrapDesign) (bool, error) {
 	if b.Designs == nil {
 		return false, fmt.Errorf("%w: this server keeps no designs; start it with --store and --uploads", ErrFailedPrecondition)
@@ -448,6 +452,20 @@ func (b *Bootstrap) design(ctx context.Context, d BootstrapDesign) (bool, error)
 			return changed, fmt.Errorf("artifact %s: %w", id, err)
 		}
 		changed = changed || stamped
+	}
+	// After the links, since a link applies what its design.yaml declares and the plan's value wins.
+	if d.FlattenHierarchy != nil {
+		have, err := b.Designs.GetDesign(ctx, &webapi.GetDesignRequest{Name: name})
+		if err != nil {
+			return changed, err
+		}
+		if have.GetFlattenHierarchy() != *d.FlattenHierarchy {
+			in := &webapi.Design{Name: name, FlattenHierarchy: *d.FlattenHierarchy}
+			if _, err := b.Designs.UpdateDesign(ctx, &webapi.UpdateDesignRequest{Design: in, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"flatten_hierarchy"}}}); err != nil {
+				return changed, err
+			}
+			changed = true
+		}
 	}
 	return changed, nil
 }

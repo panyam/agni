@@ -178,7 +178,7 @@ load error.
 
 `flatten_hierarchy: true` reads a hierarchical netlist whole. The read walks into every block,
 starting at the top level, and every surface that opens the design reads it this way: the CLI with no
-flag, a server, and the browser. Without the key a hierarchical EDIF reads as its top cell, and
+flag, a server, and the browser. A design pushed, added or linked to a server keeps it. Without the key a hierarchical EDIF reads as its top cell, and
 `--flatten-hierarchy` or the viewer's **Read every block** asks for the whole design one read at a
 time. [Ingestion and the IR](../../architecture/ingestion-and-ir/) gives the naming rules for what a
 walk reads. A release from before the key was added refuses a `design.yaml` that carries it, as it

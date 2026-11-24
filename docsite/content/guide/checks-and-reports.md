@@ -318,6 +318,8 @@ report saved later from the viewer says it as well. A flat design gets no such l
 `--flatten-hierarchy` (`Snapshot.flatten_hierarchy` on the wire), the read covers the whole schematic
 and the line goes away. The line remains if a block places itself, because the walk stops there. The
 markdown and text output carry no header band, so on those formats only the stderr note says it.
+A `--remote` check or review prints the same note from the server's result, naming the design as
+the command named it (agni issue 1887).
 
 The page needs no JavaScript and loads nothing from the network, so it survives being emailed,
 committed, or opened from a `file://` path.

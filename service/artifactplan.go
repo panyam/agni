@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/readers/formats"
@@ -66,7 +65,8 @@ func PlanArtifacts(files []string, read func(string) ([]byte, error)) (ArtifactP
 	resp := ProposeFromFiles("", kept, read)
 	designs := resp.GetDesigns()
 	var strays []string
-	decl := declaredDesign(files, read)
+	// A design.yaml that can't be read names no entry, and the folder is grouped by type.
+	decl, _ := readDeclared(files, read)
 	if decl.entry != "" && len(designs) > 1 {
 		// A folder often holds sheets its root never places, or views of the design no file name
 		// pairs, such as an ODB++ board and an EDIF schematic. Its design.yaml names the entry and
@@ -144,37 +144,6 @@ func PlanArtifacts(files []string, read func(string) ([]byte, error)) (ArtifactP
 	plan.Unread = append(plan.Unread, strays...)
 	slices.Sort(plan.Unread)
 	return plan, nil
-}
-
-// declared is what a top-level design.yaml names: its entry and its companions, as cleaned paths.
-type declared struct {
-	entry      string
-	companions []string
-}
-
-// declaredDesign reads the entry and companions a top-level design.yaml among the files names,
-// loosely, as ProposeDesigns reads a descriptor. None, or one that does not parse, gives no entry.
-func declaredDesign(files []string, read func(string) ([]byte, error)) declared {
-	if !slices.Contains(files, DesignDescriptorName) {
-		return declared{}
-	}
-	raw, err := read(DesignDescriptorName)
-	if err != nil {
-		return declared{}
-	}
-	var d struct {
-		Entry      string   `yaml:"entry"`
-		Companions []string `yaml:"companions"`
-	}
-	if yaml.Unmarshal(raw, &d) != nil || d.Entry == "" {
-		return declared{}
-	}
-	clean := func(p string) string { return path.Clean(strings.ReplaceAll(p, "\\", "/")) }
-	out := declared{entry: clean(d.Entry)}
-	for _, c := range d.Companions {
-		out.companions = append(out.companions, clean(c))
-	}
-	return out
 }
 
 // namedBy says whether a path a descriptor declares names the design read from entry. An ODB++ job
