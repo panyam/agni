@@ -85,6 +85,7 @@ bootstrap: {}
 #   serve:
 #     poll: 5m
 #     slow_request: 2s
+#     mount: {max_bytes: 1073741824}
 # The chart sets the address, store, uploads, sign-in and secrets itself, and its own value wins over
 # the same key here. A secret stays a file: or env: reference, never the secret itself.
 serve: {}

@@ -91,6 +91,8 @@ func serveCmd() *cobra.Command {
 	var auth, tlsCert, tlsKey, connectionsKey string
 	var webhookSecretRef, graphStateRef, uploadsCache string
 	var s3Endpoint, gcsEndpoint, graphAPI string
+	var mountMaxBytes int64
+	var mountMaxFiles int
 	var githubClientID, githubSecretRef, publicURL string
 	var githubAllow, trustedProxy []string
 	var oidcIssuer, oidcClientID, oidcSecretRef, oidcLabel string
@@ -206,9 +208,12 @@ func serveCmd() *cobra.Command {
 					oidcIn.clientSecret = string(secret)
 				}
 			}
+			if mountMaxBytes < 0 || mountMaxFiles < 0 {
+				return fmt.Errorf("--mount-max-bytes and --mount-max-files take 0 or more, got %d and %d", mountMaxBytes, mountMaxFiles)
+			}
 			return runViewer(cmd, viewerOpts{
 				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey, oidcSignIn: oidcIn,
-				webhookSecret: hookSecret, graphState: graphState, s3Endpoint: s3Endpoint, gcsEndpoint: gcsEndpoint, graphAPI: graphAPI, poll: pollEvery, bootstrap: plan, githubSignIn: signIn, publicURL: publicURL,
+				webhookSecret: hookSecret, graphState: graphState, s3Endpoint: s3Endpoint, gcsEndpoint: gcsEndpoint, graphAPI: graphAPI, mountLimits: mounts.Limits{MaxBytes: mountMaxBytes, MaxFiles: mountMaxFiles}, poll: pollEvery, bootstrap: plan, githubSignIn: signIn, publicURL: publicURL,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
@@ -275,6 +280,8 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&s3Endpoint, "s3-endpoint", "", "the S3 API an s3:// mount reads, for an S3-compatible store such as MinIO. Empty is AWS (agni issue 1730)")
 	c.Flags().StringVar(&gcsEndpoint, "gcs-endpoint", "", "the Cloud Storage API a gs:// mount reads. Empty is Google's (agni issue 1730)")
 	c.Flags().StringVar(&graphAPI, "graph-api", "", "the Microsoft Graph API a msgraph:// mount reads, for a national cloud. Empty is https://graph.microsoft.com/v1.0 (agni issue 1729)")
+	c.Flags().Int64Var(&mountMaxBytes, "mount-max-bytes", mounts.DefaultLimits.MaxBytes, "the most one read from a github://, s3://, gs:// or msgraph:// mount may download, in bytes, LFS objects counted at their own size (agni issue 1877). A GitHub mount fetches each folder as it is read, so this caps one board's folder, not the repo. A bucket or SharePoint mount downloads all of it when made, so this caps the whole mount. It also caps a file written through a mount. 0 takes the default")
+	c.Flags().IntVar(&mountMaxFiles, "mount-max-files", mounts.DefaultLimits.MaxFiles, "the most files one read from a github://, s3://, gs:// or msgraph:// mount may download, counted as --mount-max-bytes counts bytes (agni issue 1877). 0 takes the default")
 	c.Flags().StringVar(&bootstrapPath, "bootstrap", "", "a YAML file naming the connections, mounts, packs, designs and projects this server should hold (agni issue 1808). The server applies it at start and again until every entry applies, and /readyz answers 503 until then. An entry that already matches is left alone. A stored design, pack or project the file doesn't name is logged, and prune: true in the file deletes it. Needs --store and --uploads")
 	c.Flags().StringVar(&configPath, "config", "", "a YAML file that sets these flags (agni issue 1853). Each key is a flag's name, with underscores for dashes, and sections nest: github: {client_id: x} sets --github-client-id. A list sets a list flag. bootstrap: holds the --bootstrap resources inline, or names their file. A flag typed here wins over the file, and an unknown key stops the server before it listens. A value is passed as written, so a path resolves as the flag's would and a secret stays an env: or file: reference")
 	c.Flags().DurationVar(&pollEvery, "poll", 0, "ask every source a linked design follows whether it moved, this often, such as 5m (agni issue 1726). It resolves each branch or folder once per pass, one request to GitHub for a repo, and syncs or marks the designs behind it. 0 polls nothing. Needs --store and --uploads")
@@ -396,6 +403,8 @@ type viewerOpts struct {
 	graphState []byte
 	// s3Endpoint, gcsEndpoint and graphAPI are --s3-endpoint, --gcs-endpoint and --graph-api.
 	s3Endpoint, gcsEndpoint, graphAPI string
+	// mountLimits is --mount-max-bytes and --mount-max-files. A zero field takes goapplib's default.
+	mountLimits mounts.Limits
 	// poll is --poll, how often the server asks followed sources whether they moved. 0 never asks.
 	poll time.Duration
 	// bootstrap is --bootstrap read, the resources the server makes at start. Nil makes none.
@@ -517,7 +526,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// The table serves the fixed mounts and, with --store and --uploads, the GitHub mounts
 	// CreateMount made, read back from --store so they outlive a restart (agni issues 1735, 1759).
 	cfg := mountset.Config{Fixed: fixed, UploadsMount: uploadsMount, GitHubAPI: o.githubAPI, GitHubRaw: o.githubRaw, Log: cmd.ErrOrStderr(),
-		S3Endpoint: o.s3Endpoint, GCSEndpoint: o.gcsEndpoint, GraphAPI: o.graphAPI}
+		S3Endpoint: o.s3Endpoint, GCSEndpoint: o.gcsEndpoint, GraphAPI: o.graphAPI, Limits: o.mountLimits}
 	runtime := o.store != nil && o.uploadsDir != ""
 	if runtime {
 		cfg.Uploads, cfg.ConnectionsKey = o.uploadsDir, o.connectionsKey
@@ -979,13 +988,18 @@ func liveTrees(t *mountset.Table) func() []projects.Tree {
 		out := make([]projects.Tree, 0, len(ms))
 		next := make(map[string]projects.Tree, len(ms))
 		for _, m := range ms {
+			// A lazy mount is walked through its tree, and its archives are not opened as folders,
+			// since telling an archive from a file would fetch each one (agni issue 1877).
+			lazy := mountset.Lazy(m)
 			root := t.Root(m)
-			if root == "" {
+			if root == "" && !lazy {
 				continue
 			}
-			key := m.Name + "\x00" + root
+			key := m.Name + "\x00" + root + "\x00" + m.Version
 			tr, ok := byRoot[key]
-			if !ok {
+			if !ok && lazy {
+				tr = projects.Tree{Mount: m.Name, FS: t.FS(m)}
+			} else if !ok {
 				tr = projects.Tree{Mount: m.Name, FS: archivefs.Expand(os.DirFS(root))}
 			}
 			next[key] = tr

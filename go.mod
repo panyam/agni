@@ -14,7 +14,7 @@ require (
 	github.com/johannesboyne/gofakes3 v1.2.0
 	github.com/klauspost/compress v1.20.2
 	github.com/panyam/goapplib v0.7.34
-	github.com/panyam/goapplib/storage v0.7.34
+	github.com/panyam/goapplib/storage v0.7.35-0.20261124070300-6241b49ac816
 	github.com/panyam/goapplib/storage/backends/gae v0.7.34
 	github.com/panyam/goapplib/storage/backends/gorm v0.7.34
 	github.com/panyam/goapplib/storage/drivers/gcs v0.7.34
@@ -31,11 +31,11 @@ require (
 	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.21
 	github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.21
 	github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.21
-	github.com/panyam/oneauth v0.3.21
-	github.com/panyam/oneauth/grpc v0.3.21
-	github.com/panyam/oneauth/oauth2 v0.3.21
-	github.com/panyam/oneauth/stores/gae v0.3.21
-	github.com/panyam/oneauth/stores/gorm v0.3.21
+	github.com/panyam/oneauth v0.3.22
+	github.com/panyam/oneauth/grpc v0.3.22
+	github.com/panyam/oneauth/oauth2 v0.3.22
+	github.com/panyam/oneauth/stores/gae v0.3.22
+	github.com/panyam/oneauth/stores/gorm v0.3.22
 	github.com/panyam/servicekit v0.2.6
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10

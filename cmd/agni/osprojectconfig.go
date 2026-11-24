@@ -3,20 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-
-	"os"
 	"path/filepath"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // osProjectConfig is the OS-backed service.ConfigResolver: fshost.ConfigResolver over each mount's
-// os.DirFS, with symbol libraries spelled as host paths because the CLI's and the server's loaders
-// read the host filesystem.
+// files (mountset.Table.FS), with symbol libraries spelled as host paths because the CLI's and the
+// server's loaders read the host filesystem.
 type osProjectConfig struct {
 	mounts *mountset.Table
 }
@@ -26,7 +24,7 @@ func (c *osProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.Analysi
 	list := c.mounts.List()
 	ms := make([]fshost.Mount, 0, len(list))
 	for _, m := range list {
-		ms = append(ms, fshost.Mount{Name: m.Name, FS: os.DirFS(c.mounts.Root(m))})
+		ms = append(ms, fshost.Mount{Name: m.Name, FS: c.mounts.FS(m)})
 	}
 	r := &fshost.ConfigResolver{Mounts: ms, SymbolPath: func(u mounts.URI) (string, error) {
 		return c.mounts.Resolve(u)

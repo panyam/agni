@@ -63,6 +63,17 @@ func (t *Table) Info(m mounts.Mount) service.MountInfo {
 // service.ErrInvalidPath to InvalidArgument. It maps any other error to NotFound, including an
 // unknown mount or a missing directory.
 func (w *Workspace) ListDir(_ context.Context, uri mounts.URI) ([]service.DirEntry, error) {
+	// A lazy mount lists from its tree, so browsing it downloads nothing. A path that runs into an
+	// archive isn't in the tree, and resolves as on any other mount.
+	if m, ok := w.t.lazyMount(uri); ok {
+		if des, err := fs.ReadDir(w.t.FS(m), lazyPath(uri)); err == nil {
+			out := make([]service.DirEntry, 0, len(des))
+			for _, de := range des {
+				out = append(out, service.DirEntry{Name: de.Name(), IsDir: de.IsDir()})
+			}
+			return out, nil
+		}
+	}
 	abs, err := w.t.Resolve(uri)
 	if err != nil {
 		return nil, err
@@ -81,6 +92,12 @@ func (w *Workspace) ListDir(_ context.Context, uri mounts.URI) ([]service.DirEnt
 
 // ReadFile reads one file inside its mount, for service.FileReader. A directory is an error.
 func (w *Workspace) ReadFile(_ context.Context, uri mounts.URI) ([]byte, error) {
+	// A lazy mount fetches the one file, and not the folder around it as Resolve would.
+	if m, ok := w.t.lazyMount(uri); ok {
+		if b, err := fs.ReadFile(w.t.FS(m), lazyPath(uri)); err == nil || !errors.Is(err, fs.ErrNotExist) {
+			return b, byURI(uri, err)
+		}
+	}
 	abs, err := w.t.Resolve(uri)
 	if err != nil {
 		return nil, err
@@ -98,4 +115,12 @@ func byURI(uri mounts.URI, err error) error {
 		return err
 	}
 	return &fs.PathError{Op: pe.Op, Path: uri.String(), Err: pe.Err}
+}
+
+// lazyPath is uri's path in a lazy mount's FS, where the root is ".".
+func lazyPath(uri mounts.URI) string {
+	if uri.Path == "" {
+		return "."
+	}
+	return uri.Path
 }

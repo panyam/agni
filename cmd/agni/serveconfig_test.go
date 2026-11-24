@@ -216,3 +216,30 @@ func TestTheGuidesServeYAMLApplies(t *testing.T) {
 		}
 	}
 }
+
+// The mount cap is set from the file as mount: {max_bytes, max_files}, beside the --mount list the
+// file can't set (agni issue 1877).
+func TestServeConfigSetsTheMountCap(t *testing.T) {
+	cmd, _, err := configured(t, "mount:\n  max_bytes: 1073741824\n  max_files: 500000\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := flagString(t, cmd, "mount-max-bytes"); got != "1073741824" {
+		t.Errorf("--mount-max-bytes = %q; want 1073741824", got)
+	}
+	if got := flagString(t, cmd, "mount-max-files"); got != "500000" {
+		t.Errorf("--mount-max-files = %q; want 500000", got)
+	}
+}
+
+// A negative cap stops serve before it listens.
+func TestServeRefusesANegativeMountCap(t *testing.T) {
+	t.Setenv("AGNI_CONFIG_DIR", t.TempDir())
+	cmd := rootCmd()
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	cmd.SetArgs([]string{"serve", "--addr", "192.0.2.1:0", "--mount-max-bytes", "-1"})
+	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "--mount-max-bytes and --mount-max-files take 0 or more") {
+		t.Errorf("serve --mount-max-bytes -1 = %v; want it refused", err)
+	}
+}
