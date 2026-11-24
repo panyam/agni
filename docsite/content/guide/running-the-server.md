@@ -1050,6 +1050,36 @@ agni login --remote https://agni.example.com --with oidc
   lines of its `.env`, and the chart its `oidc` values, and both offer GitHub alone while the issuer
   is empty.
 
+### Signing in with a local account
+
+Say the server runs on a network with no way out, or the organisation won't approve an OAuth client,
+and the team still wants each person to sign in as themselves. The operator can make local accounts
+with a username and password instead (agni issue 1815). Nobody can sign themselves up.
+
+```bash
+printf '%s\n' "$ALICE_PASSWORD" | agni users add alice --store file:///srv/agni/meta --password-stdin
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth tokens \
+  --tls-cert /etc/agni/cert.pem --tls-key /etc/agni/key.pem --local-accounts
+```
+
+- `agni users` works on the `--store` directly, like `agni token`, so making an account takes access
+  to the server's machine. It takes the same store URLs, and `ls`, `rm` and `passwd` sit beside
+  `add`.
+- A password comes only through `--password-stdin`, so it stays out of the shell history. It needs at
+  least 8 characters, and the store keeps a bcrypt hash of it. A username is 3 to 20 letters, digits,
+  dashes or underscores, and case doesn't matter.
+- `/signin` shows a username and password form beside any GitHub or OIDC button, and the token form
+  stays under it. A person signed in this way is the caller `local:<username>`. The minted token
+  works for 30 days, and `agni token ls` lists it as "local sign-in".
+- A wrong password and an unknown username get the same answer and take as long, so the form
+  doesn't say which accounts exist. After 5 tries for one username, or 20 from one address, the form
+  asks the person to wait. The address is the one `--trusted-proxy` reports.
+- `agni users passwd` and `agni users rm` stop the next sign-in. A token minted at an earlier sign-in
+  keeps working until it expires, and `agni token revoke` ends it sooner.
+- `--local-accounts` needs `--auth tokens`, and in a `--config` file it's `local_accounts: true`.
+  `agni login` has no local sign-in yet, so a person who needs the CLI asks the operator for a token
+  from `agni token create`.
+
 ## Analysing in the visitor's browser
 
 The viewer's analysis can run in the visitor's browser instead of on the server. The engine is the

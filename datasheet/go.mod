@@ -7,7 +7,7 @@ require (
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/goapplib v0.7.34
 	github.com/panyam/goapplib/storage v0.7.34
-	github.com/panyam/oneauth v0.3.21
+	github.com/panyam/oneauth v0.3.22
 	github.com/panyam/servicekit v0.2.6
 	github.com/spf13/cobra v1.10.2
 	google.golang.org/protobuf v1.36.12
@@ -85,10 +85,10 @@ require (
 	github.com/panyam/gocurrent v0.1.3 // indirect
 	github.com/panyam/goutils v0.1.15 // indirect
 	github.com/panyam/jaala v0.1.101 // indirect
-	github.com/panyam/oneauth/grpc v0.3.21 // indirect
-	github.com/panyam/oneauth/oauth2 v0.3.21 // indirect
-	github.com/panyam/oneauth/stores/gae v0.3.21 // indirect
-	github.com/panyam/oneauth/stores/gorm v0.3.21 // indirect
+	github.com/panyam/oneauth/grpc v0.3.22 // indirect
+	github.com/panyam/oneauth/oauth2 v0.3.22 // indirect
+	github.com/panyam/oneauth/stores/gae v0.3.22 // indirect
+	github.com/panyam/oneauth/stores/gorm v0.3.22 // indirect
 	github.com/panyam/templar v0.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
