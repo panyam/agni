@@ -99,3 +99,67 @@ func TestLinkingTheDeclaredEntryReadsIt(t *testing.T) {
 		t.Errorf("check designs/gw = %d findings, check of its folder = %d; want the same set\nonly stored: %v\nonly on disk: %v", len(stored), len(local), minus(stored, local), minus(local, stored))
 	}
 }
+
+// Linking the entry a design.yaml declares links its companions too, from the same repo and ref, as
+// push keeps them. A companion the descriptor adds later arrives on the next sync, and a link of the
+// folder links its declared entry (agni issue 1873).
+func TestLinkingADeclaredEntryLinksItsCompanions(t *testing.T) {
+	folder := boardAndSchematic(t, true)
+	files := map[string]string{}
+	for _, f := range []string{"design.yaml", "odb.tgz", "gateway.eds"} {
+		b, err := os.ReadFile(filepath.Join(folder, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		files["hw/"+f] = string(b)
+	}
+	declared := files["hw/design.yaml"]
+	files["hw/design.yaml"] = "name: gw\nentry: odb.tgz\n"
+	gh, _ := privateGitHubRepo(t)
+	repo := gh.AddRepo("acme", "open", false, files)
+	dir := t.TempDir()
+	url := serveViewer(t, viewerOpts{store: testStore(t, filepath.Join(dir, "store")), uploadsDir: filepath.Join(dir, "uploads"), githubAPI: gh.URL, githubRaw: gh.RawURL()})
+	must := func(out string, err error) string {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("%v\n%s", err, out)
+		}
+		return out
+	}
+	types := func(design string) []string {
+		got := artifactTypes(t, url, design)
+		slices.Sort(got)
+		return got
+	}
+	must(runMounts(t, "add", "open", "github://acme/open", "--remote", url))
+	must(runDesigns(t, url, "create", "gw"))
+	must(runDesigns(t, url, "link", "gw", "board", "open/hw/odb.tgz@main"))
+	if got := types("designs/gw"); !slices.Equal(got, []string{"board"}) {
+		t.Fatalf("with no companions declared, designs/gw holds %v; want the board alone", got)
+	}
+
+	if _, err := repo.Push("main", map[string]string{"hw/design.yaml": declared}, nil); err != nil {
+		t.Fatal(err)
+	}
+	must(runDesigns(t, url, "sync", "gw"))
+	if got := types("designs/gw"); !slices.Equal(got, []string{"board", "schematic"}) {
+		t.Errorf("after design.yaml declares gateway.eds and a sync, designs/gw holds %v; want the board and the schematic", got)
+	}
+
+	must(runDesigns(t, url, "create", "entry"))
+	must(runDesigns(t, url, "link", "entry", "board", "open/hw/odb.tgz@main"))
+	if got := types("designs/entry"); !slices.Equal(got, []string{"board", "schematic"}) {
+		t.Errorf("linking the declared entry gives %v; want the board and its declared schematic", got)
+	}
+	stored := findingKeys(t, "check", "designs/entry", "--remote", url)
+	local := findingKeys(t, "check", folder)
+	if len(local) == 0 || !slices.Equal(stored, local) {
+		t.Errorf("check designs/entry = %d findings, check of its folder = %d; want the same set\nonly stored: %v\nonly on disk: %v", len(stored), len(local), minus(stored, local), minus(local, stored))
+	}
+
+	must(runDesigns(t, url, "create", "folder"))
+	must(runDesigns(t, url, "link", "folder", "board", "open/hw@main"))
+	if got := types("designs/folder"); !slices.Equal(got, []string{"board", "schematic"}) {
+		t.Errorf("linking the folder gives %v; want its declared entry and companion", got)
+	}
+}

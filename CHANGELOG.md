@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+### Fixed
+
+- Linking the entry a `design.yaml` declares links its companions too, from the same mount and ref,
+  as push and add keep them (issue 1873). A bootstrap `link:` needs only the entry, and a companion
+  added to `design.yaml` arrives on the next sync. A link of a folder whose `design.yaml` names an
+  entry links that entry, where it used to be refused for holding `design.yaml`.
+
 ## [0.11.4] - 2026-11-23
 
 A pack linked to a folder that also holds boards reads what `packs push` sends, so the boards no
