@@ -45,6 +45,7 @@ These hold the detail. Each loads when a session reads files in its directory.
 
 - `cmd/agni`: CLI flags, `agni.yaml`, output formats, `--server`, `--remote`, `-o`.
 - `service`, `internal/projects`: snapshots, tier resolution, caches, descriptors.
+- `mountset`: runtime mounts, lazy GitHub mounts past the cap, host paths.
 - `core/check`, `core/classify`, `core/ident`, `core/query`, `core/facts`, `core/report`,
   `core/timing`: engine rules, classes, identifiers, datalog, reports, measuring.
 - `readers` and each reader under it, `internal/sexpr`: per-format traps and oracles.

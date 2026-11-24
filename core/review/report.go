@@ -157,7 +157,7 @@ func RenderCoverageMarkdown(r Report) string {
 	// This writes two axes (WS10-014), coverage first and then the ratification breakdown among
 	// covered items. A provisional item awaits a datasheet value, and a needs-intent item awaits a
 	// declaration. Those two states are the HITL worklists.
-	fmt.Fprintf(&b, "**%d of %d covered**, **%d answered** — %d pass, %d fail, %d n/a; %d not-automated",
+	fmt.Fprintf(&b, "**%d of %d covered**, **%d answered** (%d pass, %d fail, %d n/a; %d not-automated)",
 		tot.Covered(), tot.Total, tot.Answered(), tot.Pass, tot.Fail, tot.NotApplicable, tot.NotAutomated)
 	if tot.Provisional > 0 || tot.NeedsDesignIntent > 0 || tot.NeedsData > 0 || tot.ComputedNA > 0 || tot.Inconclusive > 0 || tot.CoveredExternally > 0 {
 		fmt.Fprintf(&b, "\n\nOf the covered: %d provisional (awaiting datasheet data), %d needs-design-intent (awaiting a declaration), %d needs-data (awaiting a datasheet seed), %d inconclusive (the check ran and could not decide), %d computed-n/a",

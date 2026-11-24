@@ -7,5 +7,5 @@ steps:
   - script: agni check boards/jetson --results-out agni.results.json > /dev/null
   - script: |
       agni import-results reports/kicad-drc.json --design boards/jetson -o kicad.results.json > /dev/null
-      agni results agni.results.json --compare kicad.results.json | sed -E 's/agni [0-9a-f]+(\+dirty)? /agni <version> /'
+      agni results agni.results.json --compare kicad.results.json | sed -E 's/agni [0-9a-f]+(\+dirty)?,/agni <version>,/'
     show: agni results agni.results.json --compare kicad.results.json

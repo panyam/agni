@@ -385,7 +385,7 @@ func TestCoverageRollup(t *testing.T) {
 	for _, want := range []string{
 		// 2 covered, but only 1 ANSWERED, because the not-applicable item has a rule and no inputs.
 		// That is the gap between the two axes.
-		"**2 of 4 covered**, **1 answered** — 0 pass, 1 fail, 1 n/a; 2 not-automated",
+		"**2 of 4 covered**, **1 answered** (0 pass, 1 fail, 1 n/a; 2 not-automated)",
 		"| A | 2/4 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 2 |",
 		"| **Total** | 2/4 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 2 |",
 	} {

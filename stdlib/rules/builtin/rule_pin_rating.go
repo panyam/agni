@@ -231,7 +231,7 @@ func pinAbsMaxVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 		parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, "absolute-maximum", "absolute maximum",
 		func(r *parampb.Parameter) check.Bound { return check.Bound{Max: r.Value.Max} },
 		func(ev pinEvent, row *parampb.Parameter, _ check.Bound) *check.Finding {
-			return &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: ev.component.RefDes}, Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV exceeds that pin's absolute-maximum %s %gV — %s",
+			return &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: ev.component.RefDes}, Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV exceeds that pin's absolute-maximum %s %gV, per %s",
 				ev.designator, ev.pinName, ev.net, ev.volts, row.Symbol, row.Value.GetMax(),
 				check.Citation(ev.spec, row)), Prov: ev.component.Prov, DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, row)}, Context: pinContext(ev)}
 		})
@@ -249,7 +249,7 @@ func pinRecommendedVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 			if b.Min != nil && ev.volts < *b.Min {
 				rel = fmt.Sprintf("is below recommended minimum %gV", row.Value.GetMin())
 			}
-			return &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: ev.component.RefDes}, Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV %s for that pin (%s) — %s",
+			return &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: ev.component.RefDes}, Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV %s for that pin (%s), per %s",
 				ev.designator, ev.pinName, ev.net, ev.volts, rel, row.Symbol,
 				check.Citation(ev.spec, row)), Prov: ev.component.Prov, DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, row)}, Context: pinContext(ev)}
 		})

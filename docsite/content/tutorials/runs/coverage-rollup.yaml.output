@@ -3,7 +3,7 @@
 
 Design: `boards/jetson`
 
-**14 of 15 covered**, **13 answered** — 6 pass, 7 fail, 1 n/a; 1 not-automated
+**14 of 15 covered**, **13 answered** (6 pass, 7 fail, 1 n/a; 1 not-automated)
 
 | Area | Covered | Pass | Fail | Provisional | Needs-intent | Needs-data | Inconclusive | Computed-n/a | N/A | Not-automated |
 |------|---------|------|------|-------------|--------------|------------|--------------|--------------|-----|---------------|

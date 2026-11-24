@@ -35,7 +35,7 @@ var supplyExceedsAbsMax = &check.Rule{
 			func(ev aliasSupplyEvent, binding *parampb.Parameter, _ check.Bound) *check.Finding {
 				return &check.Finding{
 					Subject: check.Entity{Kind: check.KindComponent, Ref: ev.comp.RefDes},
-					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV exceeds absolute-maximum %s %gV — %s",
+					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV exceeds absolute-maximum %s %gV, per %s",
 						ev.pin, ev.net, ev.nominal, binding.Symbol, binding.Value.GetMax(), check.Citation(ev.spec, binding)),
 					Prov:          ev.comp.Prov,
 					DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, binding)},

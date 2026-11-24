@@ -21,7 +21,7 @@ var netclassTrackWidth = &check.Rule{
 	Name:               "netclass-track-width",
 	Severity:           "warning",
 	Summary:            "A net is routed narrower than the track width its own net class declares.",
-	Impact:             "The project states, per net class, the track width its nets are meant to route at. A net routed below its declared width is a silent departure from that intent: on a power class it is a current-density and heating risk, on a controlled-impedance class it shifts the impedance the class exists to hold. Unlike the fabrication-floor check, this can fire on a board that manufactures fine — the board is buildable, it is just not what the design asked for.",
+	Impact:             "The project states, per net class, the track width its nets are meant to route at. A net routed below its declared width is a silent departure from that intent: on a power class it is a current-density and heating risk, on a controlled-impedance class it shifts the impedance the class exists to hold. Unlike the fabrication-floor check, this can fire on a board that manufactures fine. The board is buildable, but it is not what the design asked for.",
 	Remedy:             "Widen the track to the width its class declares, or amend the class if the declaration is the half that is out of date. The board may build either way, so decide which of the two states the design's intent.",
 	Primitives:         []string{"select", "compare"},
 	Reads:              []string{"net.declared_track_width", "board.track_width"},

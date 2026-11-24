@@ -65,7 +65,7 @@ func overBroadSignals(netNames []string, p Profile) []string {
 			continue
 		}
 		out = append(out, fmt.Sprintf(
-			"profile %q: signal %q (%s) matches %d of %d nets (%.0f%%) — the matcher looks too broad to name one role; narrow it with a prefix, a glob, or an anchored regex",
+			"profile %q: signal %q (%s) matches %d of %d nets (%.0f%%). The matcher looks too broad to name one role; narrow it with a prefix, a glob, or an anchored regex",
 			p.Name, s.Name, matcherDesc(s), n, len(netNames), 100*float64(n)/float64(len(netNames))))
 	}
 	return out
@@ -106,7 +106,7 @@ func collidingSignals(netNames []string, p Profile) []string {
 	out := make([]string, 0, len(order))
 	for _, k := range order {
 		out = append(out, fmt.Sprintf(
-			"profile %q: signals %q and %q both match net %q — the profile cannot tell these two roles apart, so whichever rule runs first claims the net",
+			"profile %q: signals %q and %q both match net %q. The profile cannot tell these two roles apart, so whichever rule runs first claims the net",
 			p.Name, k.a, k.b, first[k]))
 	}
 	return out
