@@ -308,7 +308,7 @@ type LocalLoginError struct {
 // error saying so.
 func PasswordLogin(ctx context.Context, server, name, password string) (LocalToken, error) {
 	target := strings.TrimRight(server, "/") + LocalSignInPath
-	b, err := json.Marshal(LocalLogin{Username: name, Password: password})
+	b, err := json.Marshal(LocalLogin{Username: name, Password: password}) // #nosec G117 -- the request body that signs in, sent only to server
 	if err != nil {
 		return LocalToken{}, err
 	}
