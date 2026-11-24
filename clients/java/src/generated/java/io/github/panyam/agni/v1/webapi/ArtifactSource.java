@@ -39,6 +39,7 @@ private static final long serialVersionUID = 0L;
     readHash_ = "";
     accessSource_ = "";
     newerVersion_ = "";
+    companionOf_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -505,6 +506,59 @@ private static final long serialVersionUID = 0L;
     return newerTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : newerTime_;
   }
 
+  public static final int COMPANION_OF_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object companionOf_ = "";
+  /**
+   * <pre>
+   * companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+   * as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+   * artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+   * names its entry, so a prune keeps it. Only the server sets it. Output only.
+   * </pre>
+   *
+   * <code>string companion_of = 11 [json_name = "companionOf"];</code>
+   * @return The companionOf.
+   */
+  @java.lang.Override
+  public java.lang.String getCompanionOf() {
+    java.lang.Object ref = companionOf_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      companionOf_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+   * as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+   * artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+   * names its entry, so a prune keeps it. Only the server sets it. Output only.
+   * </pre>
+   *
+   * <code>string companion_of = 11 [json_name = "companionOf"];</code>
+   * @return The bytes for companionOf.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCompanionOfBytes() {
+    java.lang.Object ref = companionOf_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      companionOf_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -549,6 +603,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(10, getNewerTime());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(companionOf_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 11, companionOf_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -585,6 +642,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(10, getNewerTime());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(companionOf_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(11, companionOf_);
     }
     return size;
   }
@@ -636,6 +696,8 @@ private static final long serialVersionUID = 0L;
       if (!getNewerTime()
           .equals(other.getNewerTime())) return false;
     }
+    if (!getCompanionOf()
+        .equals(other.getCompanionOf())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -672,6 +734,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + NEWER_TIME_FIELD_NUMBER;
       hash = (53 * hash) + getNewerTime().hashCode();
     }
+    hash = (37 * hash) + COMPANION_OF_FIELD_NUMBER;
+    hash = (53 * hash) + getCompanionOf().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -832,6 +896,7 @@ private static final long serialVersionUID = 0L;
         newerTimeBuilder_.dispose();
         newerTimeBuilder_ = null;
       }
+      companionOf_ = "";
       return this;
     }
 
@@ -902,6 +967,9 @@ private static final long serialVersionUID = 0L;
             : newerTimeBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.companionOf_ = companionOf_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -960,6 +1028,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasNewerTime()) {
         mergeNewerTime(other.getNewerTime());
+      }
+      if (!other.getCompanionOf().isEmpty()) {
+        companionOf_ = other.companionOf_;
+        bitField0_ |= 0x00000400;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1039,6 +1112,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 90: {
+              companionOf_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2115,6 +2193,113 @@ private static final long serialVersionUID = 0L;
         newerTime_ = null;
       }
       return newerTimeBuilder_;
+    }
+
+    private java.lang.Object companionOf_ = "";
+    /**
+     * <pre>
+     * companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+     * as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+     * artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+     * names its entry, so a prune keeps it. Only the server sets it. Output only.
+     * </pre>
+     *
+     * <code>string companion_of = 11 [json_name = "companionOf"];</code>
+     * @return The companionOf.
+     */
+    public java.lang.String getCompanionOf() {
+      java.lang.Object ref = companionOf_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        companionOf_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+     * as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+     * artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+     * names its entry, so a prune keeps it. Only the server sets it. Output only.
+     * </pre>
+     *
+     * <code>string companion_of = 11 [json_name = "companionOf"];</code>
+     * @return The bytes for companionOf.
+     */
+    public com.google.protobuf.ByteString
+        getCompanionOfBytes() {
+      java.lang.Object ref = companionOf_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        companionOf_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+     * as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+     * artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+     * names its entry, so a prune keeps it. Only the server sets it. Output only.
+     * </pre>
+     *
+     * <code>string companion_of = 11 [json_name = "companionOf"];</code>
+     * @param value The companionOf to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCompanionOf(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      companionOf_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+     * as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+     * artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+     * names its entry, so a prune keeps it. Only the server sets it. Output only.
+     * </pre>
+     *
+     * <code>string companion_of = 11 [json_name = "companionOf"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCompanionOf() {
+      companionOf_ = getDefaultInstance().getCompanionOf();
+      bitField0_ = (bitField0_ & ~0x00000400);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+     * as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+     * artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+     * names its entry, so a prune keeps it. Only the server sets it. Output only.
+     * </pre>
+     *
+     * <code>string companion_of = 11 [json_name = "companionOf"];</code>
+     * @param value The bytes for companionOf to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCompanionOfBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      companionOf_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.ArtifactSource)

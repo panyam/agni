@@ -407,6 +407,11 @@ message ArtifactSource {
   string newer_version = 9;
   // newer_time is when the server saw newer_version. Output only.
   google.protobuf.Timestamp newer_time = 10;
+  // companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+  // as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+  // artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+  // names its entry, so a prune keeps it. Only the server sets it. Output only.
+  string companion_of = 11;
 }
 
 message AddDesignsRequest {

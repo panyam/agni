@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+### Fixed
+
+- A bootstrap no longer reports the companions that a link of a declared entry followed, and
+  `prune: true` no longer deletes them (issue 1890). The server records the entry on each companion
+  in the new output-only `ArtifactSource.companion_of`. A companion linked by v0.11.5 or v0.11.6
+  gets it on the next start, link or sync.
+
 ## [0.11.6] - 2026-11-24
 
 `agni login --with local` signs a local account in from a terminal, through a JSON answer from

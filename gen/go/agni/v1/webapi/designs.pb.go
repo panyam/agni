@@ -1509,7 +1509,12 @@ type ArtifactSource struct {
 	// a connection that is one person's own. A sync clears it. Output only.
 	NewerVersion string `protobuf:"bytes,9,opt,name=newer_version,json=newerVersion,proto3" json:"newer_version,omitempty"`
 	// newer_time is when the server saw newer_version. Output only.
-	NewerTime     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=newer_time,json=newerTime,proto3" json:"newer_time,omitempty"`
+	NewerTime *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=newer_time,json=newerTime,proto3" json:"newer_time,omitempty"`
+	// companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+	// as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+	// artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+	// names its entry, so a prune keeps it. Only the server sets it. Output only.
+	CompanionOf   string `protobuf:"bytes,11,opt,name=companion_of,json=companionOf,proto3" json:"companion_of,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1612,6 +1617,13 @@ func (x *ArtifactSource) GetNewerTime() *timestamppb.Timestamp {
 		return x.NewerTime
 	}
 	return nil
+}
+
+func (x *ArtifactSource) GetCompanionOf() string {
+	if x != nil {
+		return x.CompanionOf
+	}
+	return ""
 }
 
 type AddDesignsRequest struct {
@@ -2806,7 +2818,7 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x05entry\x18\x04 \x01(\tR\x05entry\x12;\n" +
 	"\vupdate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"updateTime\x126\n" +
-	"\x06source\x18\x06 \x01(\v2\x1e.agni.v1.webapi.ArtifactSourceR\x06source\"\xd9\x02\n" +
+	"\x06source\x18\x06 \x01(\v2\x1e.agni.v1.webapi.ArtifactSourceR\x06source\"\xfc\x02\n" +
 	"\x0eArtifactSource\x12\x14\n" +
 	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x10\n" +
@@ -2819,7 +2831,8 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\rnewer_version\x18\t \x01(\tR\fnewerVersion\x129\n" +
 	"\n" +
 	"newer_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tnewerTime\"\x83\x02\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tnewerTime\x12!\n" +
+	"\fcompanion_of\x18\v \x01(\tR\vcompanionOf\"\x83\x02\n" +
 	"\x11AddDesignsRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\x125\n" +
 	"\adesigns\x18\x02 \x03(\v2\x1b.agni.v1.webapi.DesignToAddR\adesigns\x12#\n" +
