@@ -280,7 +280,7 @@ func (t *tour) followPack(ctx context.Context) (linked, moved *webapi.Pack, err 
 	if err != nil {
 		return nil, nil, err
 	}
-	t.packs.WithImporter(projects.PackFromFiles).WithLinks(table.Readers, "uploads", table, table.MountsOf)
+	t.packs.WithImporter(projects.PackFromFolder).WithLinks(table.Readers, "uploads", table, table.MountsOf)
 	if linked, err = t.packs.LinkPack(ctx, &webapi.LinkPackRequest{PackId: "house-live", Source: &webapi.ArtifactSource{Mount: "rules"}}); err != nil {
 		return nil, nil, err
 	}

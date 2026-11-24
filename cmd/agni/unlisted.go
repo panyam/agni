@@ -9,6 +9,7 @@ import (
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/service"
 )
 
 // unlistedOut is where the CLI writes a note about a tier folder a descriptor doesn't list, as
@@ -54,16 +55,16 @@ func localUnlisted(descriptor string) string {
 	return projects.Unlisted{Tiers: tiers}.Note(descriptor)
 }
 
-// notingImporter is projects.PackFromFiles, writing to log the note for a project.yaml that leaves
+// notingImporter is projects.PackFromFolder, writing to log the note for a project.yaml that leaves
 // out a tier folder beside it. A pack linked by --bootstrap or pushed by a client reads through it,
 // so the server's log names the folder.
-func notingImporter(log io.Writer) func([]string, func(string) ([]byte, error)) (string, *webapi.Pack, []string, error) {
-	return func(files []string, read func(string) ([]byte, error)) (string, *webapi.Pack, []string, error) {
-		id, pack, kept, err := projects.PackFromFiles(files, read)
+func notingImporter(log io.Writer) service.PackImporter {
+	return func(list func(string) ([]string, error), read func(string) ([]byte, error)) (string, *webapi.Pack, []string, error) {
+		id, pack, kept, err := projects.PackFromFolder(list, read)
 		if err != nil || log == nil {
 			return id, pack, kept, err
 		}
-		if tiers, terr := projects.UnlistedInFiles(files, read); terr == nil && len(tiers) > 0 {
+		if tiers, terr := projects.UnlistedInFolder(list, read); terr == nil && len(tiers) > 0 {
 			fmt.Fprintln(log, projects.Unlisted{Tiers: tiers}.Note("the project.yaml of packs/"+id))
 		}
 		return id, pack, kept, err

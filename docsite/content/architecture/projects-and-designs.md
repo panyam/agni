@@ -512,7 +512,10 @@ it. The startup sweep removes each view no pack reads now, once it is an hour ol
 `agni packs push` and the packs page send a project folder through `ImportPackFiles`, and the server
 reads its `project.yaml` with `projects.PackFromFiles` (agni issue 1697). The server asks for
 `project.yaml`'s contents first, then for the files its tiers name, so a folder's designs are never
-uploaded. The CLI and the page read a folder one way, and so give one hash.
+uploaded. The CLI and the page read a folder one way, and so give one hash. A linked pack reads
+through `projects.PackFromFolder`, which lists `project.yaml` and then each path its tiers name,
+one at a time, so the server never lists or fetches the boards beside it (agni issue 1871). Its read
+hash covers only the files the read touched, and a sync whose files hash the same keeps the pack.
 
 `agni designs push` reads the `extends` of the folder's `design.yaml` too. When it names a
 `project.yaml`, push keeps that project as a pack under the project's name before it pushes the

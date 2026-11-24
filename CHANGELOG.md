@@ -10,6 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+### Fixed
+
+- A pack linked to a folder that also holds boards reads what `packs push` sends (issue 1871). It
+  lists only `project.yaml` and the files its tiers name, so the boards no longer push the folder
+  past the mount's 256 MB limit. A sync after a commit that changes none of the pack's files leaves
+  the pack unchanged. A link may name `project.yaml` itself.
+- servicekit moves to v0.2.6, which takes `gorilla/websocket` to the commit that fixes GO-2026-6278
+  (issue 1868). No tagged gorilla release has the fix yet.
+
 ## [0.11.3] - 2026-11-23
 
 `agni serve` waits for its background work before it exits, so a stop never leaves a store write

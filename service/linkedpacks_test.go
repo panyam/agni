@@ -50,7 +50,7 @@ func packsOver(t *testing.T, b blobs, readers map[string]*fakeMount, access serv
 		}
 		return nil, nil
 	}
-	return service.NewPackService(ps, b.source).WithImporter(projects.PackFromFiles).WithLinks(func(_ context.Context, name string) (service.MountReader, error) {
+	return service.NewPackService(ps, b.source).WithImporter(projects.PackFromFolder).WithLinks(func(_ context.Context, name string) (service.MountReader, error) {
 		if r, ok := readers[name]; ok {
 			return r, nil
 		}

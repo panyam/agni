@@ -74,13 +74,20 @@ func unlistedTiers(src Sources, isDir func(name string) bool) []string {
 	return out
 }
 
-// UnlistedInFiles reads the project.yaml among a project folder's files and returns the tier folders
-// among files it lists none of, for a pack read from files rather than a tree. files are relative
-// and slash-separated, as PackFromFiles takes them. A folder with no project.yaml returns nil, since
-// PackFromFiles refuses it on its own.
+// UnlistedInFiles is UnlistedInFolder over a folder whose paths are all of files, relative and
+// slash-separated, as PackFromFiles takes them.
 func UnlistedInFiles(files []string, read func(string) ([]byte, error)) ([]string, error) {
-	if !slices.Contains(files, ProjectDescriptor) {
-		return nil, nil
+	return UnlistedInFolder(ListFiles(files), read)
+}
+
+// UnlistedInFolder reads the project.yaml at the top of a project folder and returns the tier
+// folders in it that project.yaml lists none of, for a pack read through a lister rather than a
+// tree. list and read are PackFromFolder's. A folder with no project.yaml returns nil, since
+// PackFromFolder refuses it on its own.
+func UnlistedInFolder(list func(rel string) ([]string, error), read func(string) ([]byte, error)) ([]string, error) {
+	top, err := list(ProjectDescriptor)
+	if err != nil || !slices.Contains(top, ProjectDescriptor) {
+		return nil, err
 	}
 	raw, err := read(ProjectDescriptor)
 	if err != nil {
@@ -90,9 +97,15 @@ func UnlistedInFiles(files []string, read func(string) ([]byte, error)) ([]strin
 	if err != nil {
 		return nil, err
 	}
-	return unlistedTiers(src, func(name string) bool {
-		return slices.ContainsFunc(files, func(f string) bool { return strings.HasPrefix(f, name+"/") })
-	}), nil
+	var lerr error
+	tiers := unlistedTiers(src, func(name string) bool {
+		got, err := list(name)
+		if err != nil {
+			lerr = err
+		}
+		return slices.ContainsFunc(got, func(f string) bool { return strings.HasPrefix(f, name+"/") })
+	})
+	return tiers, lerr
 }
 
 // noteUnlisted tells the store's listener about the tier folders beside the descriptor in dir that
