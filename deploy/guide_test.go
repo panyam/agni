@@ -50,7 +50,7 @@ func TestTheEnterpriseGuideNamesSettingsThatExist(t *testing.T) {
 	for _, m := range regexp.MustCompile("`((?:oidc|github|datasheets|ingress|persistence)\\.[a-zA-Z.]+)`").FindAllStringSubmatch(string(page), -1) {
 		keys = append(keys, m[1])
 	}
-	for _, m := range regexp.MustCompile("`(trustedProxies|connectionSecrets|caConfigMap|secretName|store|uploads|publicURL|bootstrap|serve)`").FindAllStringSubmatch(string(page), -1) {
+	for _, m := range regexp.MustCompile("`(trustedProxies|connectionSecrets|caConfigMap|secretName|store|uploads|publicURL|bootstrap|serve|localAccounts)`").FindAllStringSubmatch(string(page), -1) {
 		keys = append(keys, m[1])
 	}
 	if len(keys) < 10 {

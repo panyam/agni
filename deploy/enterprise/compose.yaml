@@ -10,6 +10,10 @@
 #   agni connections add hw --seal --github-token env:HW_TOKEN --remote AGNI_PUBLIC_URL
 #                                  a connection the server reads repos through; the CLI reads the
 #                                  token where it runs, and the server seals it in the data volume
+#   printf '%s\n' "$PASSWORD" | docker compose exec -T agni agni users add carol \
+#     --store file:///var/lib/agni/meta --password-stdin
+#                                  a local account, with AGNI_LOCAL_ACCOUNTS=true in .env; carol
+#                                  signs in at /signin, or with agni login --with local
 #   docker compose --profile datasheets up -d
 #                                  also the datasheet workbench, on AGNI_DATASHEETS_PORT
 #
@@ -48,6 +52,9 @@ services:
       - --oidc-client-secret=${AGNI_OIDC_CLIENT_SECRET:-}
       - --oidc-allow=${AGNI_OIDC_ALLOW:-}
       - --oidc-label=${AGNI_OIDC_LABEL:-}
+      # Sign-in with a username and password that `agni users add` makes, beside GitHub, off unless
+      # AGNI_LOCAL_ACCOUNTS is true (agni issues 1815 and 1879).
+      - --local-accounts=${AGNI_LOCAL_ACCOUNTS:-false}
       # The connections, mounts, packs and designs the server holds, applied at every start (agni
       # issue 1808). Empty declares nothing.
       - --bootstrap=${AGNI_BOOTSTRAP:-}

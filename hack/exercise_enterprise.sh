@@ -272,6 +272,7 @@ AGNI_CONNECTION_SECRETS=$out/connection-secrets
 AGNI_CA_DIR=$out/ca-dir
 AGNI_BOOTSTRAP_DIR=$out/bootstrap
 AGNI_BOOTSTRAP=
+AGNI_LOCAL_ACCOUNTS=true
 ENV
 fi
 
@@ -297,6 +298,7 @@ github:
   clientID: Iv1.exercise
   allow: [org:acme, "user:alice", "user:mallory"]
 caConfigMap: agni-ca
+localAccounts: true
 ingress:
   host: localhost
 env:
@@ -625,30 +627,46 @@ refused "designs/bb after the restart" "$out/mallory-get-2.txt"
 
 # The operator makes carol a local account on the server's machine, and she signs in at the form
 # with no GitHub account (agni issue 1815). The binary runs with --local-accounts, from the flag at
-# first and from serve.yaml now. The bundle and the chart don't pass it yet.
-if [ "$mode" = binary ]; then
-  step "a local account signs in at the form, and its token reads the API"
-  printf '%s\n' 'carol local password' | "$agni" users add carol --store "file://$store" --password-stdin >"$out/users-add.txt" 2>&1 || true
-  "$agni" users ls --store "file://$store" >"$out/users-ls.txt" 2>&1 || true
-  if grep -q '^carol	local:carol	' "$out/users-ls.txt"; then
-    pass "agni users add made carol, and agni users ls lists her"
-  else
-    no "agni users ls doesn't list carol; see $out/users-add.txt and $out/users-ls.txt"
-  fi
-  code=$(curl -s -o /dev/null -w '%{http_code}' --cacert "$out/ca.pem" -X POST "$url/signin/local" --data-urlencode username=carol --data-urlencode 'password=not her password')
-  if [ "$code" = 401 ]; then
-    pass "a wrong password at the form is refused"
-  else
-    no "a wrong password at the form answered $code, want 401"
-  fi
-  curl -s -o /dev/null -D "$out/local-signin.headers" --cacert "$out/ca.pem" -X POST "$url/signin/local" --data-urlencode username=carol --data-urlencode 'password=carol local password'
-  carol=$(sed -n 's/^[Ss]et-[Cc]ookie: agni_session=\([^;]*\).*/\1/p' "$out/local-signin.headers" | tr -d '\r')
-  code=$(curl -s -o /dev/null -w '%{http_code}' --cacert "$out/ca.pem" -X POST "$url/agni.v1.webapi.WorkspaceService/ListMounts" -H 'content-type: application/json' -H "Authorization: Bearer $carol" -d '{}')
-  if [ -n "$carol" ] && [ "$code" = 200 ] && "$agni" token ls --store "file://$store" | grep -q '	local:carol	'; then
-    pass "carol signed in with her password, and her token for local:carol lists the mounts"
-  else
-    no "carol's sign-in: session '${carol:0:8}...', ListMounts $code; see $out/local-signin.headers"
-  fi
+# first and from serve.yaml now. The bundle sets AGNI_LOCAL_ACCOUNTS and the chart sets
+# localAccounts (agni issue 1879).
+# on_server runs an agni command against the server's store, where the server runs: the binary on
+# this machine, in the bundle's container, or in the chart's pod. Its stdin goes to the command.
+on_server() {
+  case "$mode" in
+    binary) "$agni" "$@" --store "file://$store" ;;
+    bundle) bundle exec -T agni agni "$@" --store file:///var/lib/agni/meta ;;
+    helm) kube exec -i deploy/agni -- agni "$@" --store file:///var/lib/agni/meta ;;
+  esac
+}
+step "a local account signs in at the form and from a terminal, and its tokens read the API"
+printf '%s\n' 'carol local password' | on_server users add carol --password-stdin >"$out/users-add.txt" 2>&1 || true
+on_server users ls >"$out/users-ls.txt" 2>&1 || true
+if grep -q '^carol	local:carol	' "$out/users-ls.txt"; then
+  pass "agni users add made carol on the server's machine, and agni users ls lists her"
+else
+  no "agni users ls doesn't list carol; see $out/users-add.txt and $out/users-ls.txt"
+fi
+code=$(curl -s -o /dev/null -w '%{http_code}' --cacert "$out/ca.pem" -X POST "$url/signin/local" --data-urlencode username=carol --data-urlencode 'password=not her password')
+if [ "$code" = 401 ]; then
+  pass "a wrong password at the form is refused"
+else
+  no "a wrong password at the form answered $code, want 401"
+fi
+curl -s -o /dev/null -D "$out/local-signin.headers" --cacert "$out/ca.pem" -X POST "$url/signin/local" --data-urlencode username=carol --data-urlencode 'password=carol local password'
+carol=$(sed -n 's/^[Ss]et-[Cc]ookie: agni_session=\([^;]*\).*/\1/p' "$out/local-signin.headers" | tr -d '\r')
+code=$(curl -s -o /dev/null -w '%{http_code}' --cacert "$out/ca.pem" -X POST "$url/agni.v1.webapi.WorkspaceService/ListMounts" -H 'content-type: application/json' -H "Authorization: Bearer $carol" -d '{}')
+if [ -n "$carol" ] && [ "$code" = 200 ] && on_server token ls 2>/dev/null | grep -q '	local:carol	'; then
+  pass "carol signed in with her password, and her token for local:carol lists the mounts"
+else
+  no "carol's sign-in: session '${carol:0:8}...', ListMounts $code; see $out/local-signin.headers"
+fi
+mkdir -p "$out/people/carol"
+printf '%s\n' 'carol local password' | HOME="$out/people/carol" XDG_CONFIG_HOME="$out/people/carol/.config" \
+  "$agni" login --remote "$url" --with local --user carol --password-stdin >"$out/login-carol.log" 2>&1 || true
+if grep -q "signed in to $url as local:carol" "$out/login-carol.log" && as carol mounts ls >"$out/carol-mounts.txt" 2>&1 && grep -q '^board' "$out/carol-mounts.txt"; then
+  pass "agni login --with local kept carol's token, and her next command lists the mounts with it"
+else
+  no "carol's agni login --with local; see $out/login-carol.log and $out/carol-mounts.txt"
 fi
 
 step "nothing reached a host other than the fake"
