@@ -28,7 +28,8 @@
 # the trap listen on the kind network's gateway on Linux, or this Mac's own address.
 #
 # Each step prints PASS, FAIL with its reason, or FAIL (waits on #N) when an open ticket is what's
-# missing. The script exits 1 on any FAIL. With EXERCISE_ALLOW_WAITS=1 it exits 0 when every FAIL
+# missing. A step one mode can't run yet prints SKIP (waits on #N) and fails nothing, since another
+# mode runs it. The script exits 1 on any FAIL. With EXERCISE_ALLOW_WAITS=1 it exits 0 when every FAIL
 # waits on a ticket. CI runs it that way, and a step that used to pass still fails the job. Once
 # #1799 is done, every step passes.
 #
@@ -113,6 +114,9 @@ waiting=0
 pass() { echo "PASS: $*"; }
 no() { echo "FAIL: $*" >&2; fail=1; }
 waits() { echo "FAIL (waits on #$1): ${*:2}" >&2; waiting=1; }
+# skips names a step this mode can't run until ticket $1 lands. It fails nothing, since the other
+# modes run the step.
+skips() { echo "SKIP (waits on #$1): ${*:2}"; }
 findings() { python3 -c 'import json,sys; print(len(json.load(sys.stdin)["findings"]))'; }
 wait_for() { for _ in $(seq 1 100); do curl -s -o /dev/null "$@" && return 0; sleep 0.1; done; return 1; }
 
@@ -696,7 +700,7 @@ opens() {
 }
 step "a grant opens hw/baseboard to local accounts, and removing it closes it again"
 if [ "$mode" = bundle ]; then
-  waits 1895 "the compose bundle passes no --grant, so a grant can't be set there"
+  skips 1895 "the compose bundle passes no --grant, so a grant can't be set there; the binary and the chart run this step"
 else
   if ! opens carol before && grep -q permission_denied "$out/carol-grant-before.txt"; then
     pass "carol, with no GitHub connection, can't open designs/bb before the grant"
