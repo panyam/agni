@@ -10,12 +10,8 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/yaml.v3"
 
-	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/stdlib/rules/intent"
-	"github.com/panyam/goapplib/storage/mounts"
 )
 
 // DesignService serves the design resource, "designs/{design}", over a DesignCatalog (agni issue
@@ -319,10 +315,14 @@ func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.Impor
 	if err != nil {
 		return nil, err
 	}
-	declared, err := declaredIntent(paths, func(p string) ([]byte, error) {
+	decl, err := readDeclared(paths, func(p string) ([]byte, error) {
 		b, _ := s.blobs(ctx, byPath[p].GetSha256())
 		return b, nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	declaredIntent, err := decl.Intent()
 	if err != nil {
 		return nil, err
 	}
@@ -330,13 +330,7 @@ func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.Impor
 	if err := s.refuseLinked(ctx, req.GetParent(), plan.IDs); err != nil {
 		return nil, err
 	}
-	symbols, err := declaredSymbols(paths, func(p string) ([]byte, error) {
-		b, _ := s.blobs(ctx, byPath[p].GetSha256())
-		return b, nil
-	})
-	if err != nil {
-		return nil, err
-	}
+	symbols := decl.symbols
 	inSymbols := func(f string) bool {
 		return slices.ContainsFunc(symbols, func(dir string) bool { return strings.HasPrefix(f, dir+"/") })
 	}
@@ -374,75 +368,21 @@ func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.Impor
 	if err != nil {
 		return nil, err
 	}
-	// The folder's design.yaml declares the design's intent, which a stored design keeps as its own
-	// (agni issue 1697). One with no intent leaves the kept intent as it was, as `designs push` does.
-	// The entry it names is the artifact analysis reads, and a folder naming none reads by type
-	// (agni issue 1858).
+	// The folder's design.yaml declares the design's intent and flatten_hierarchy, which a stored
+	// design keeps as its own (agni issues 1697, 1887). One with neither leaves the kept ones as they
+	// were, as `designs push` does. The entry it names is the artifact analysis reads, and a folder
+	// naming none reads by type (agni issue 1858).
 	entry := ""
 	if plan.Declared {
 		entry = plan.IDs[0]
 	}
 	if _, err := s.catalog.UpdateDesign(ctx, StandaloneDesignName(id), func(r *DesignRecord) {
-		if declared != nil {
-			r.Intent = declared
-		}
+		decl.keep(r, declaredIntent)
 		r.Entry = entry
 	}); err != nil {
 		return nil, err
 	}
 	return &webapi.ImportDesignFilesResponse{Artifacts: arts, Unread: plan.Unread}, nil
-}
-
-// declaredSymbols reads the symbol folders a top-level design.yaml among the files names under
-// `symbols:`, each cleaned and relative to the folder. A folder outside the files, such as
-// ../shared/symbols, can't be among them and is left out. No design.yaml names none.
-func declaredSymbols(files []string, read func(string) ([]byte, error)) ([]string, error) {
-	if !slices.Contains(files, DesignDescriptorName) {
-		return nil, nil
-	}
-	raw, err := read(DesignDescriptorName)
-	if err != nil {
-		return nil, err
-	}
-	var d struct {
-		Symbols []string `yaml:"symbols"`
-	}
-	if yaml.Unmarshal(raw, &d) != nil {
-		return nil, nil
-	}
-	var out []string
-	for _, dir := range d.Symbols {
-		c, err := mounts.CleanPath(dir)
-		if err != nil || c == "" {
-			continue
-		}
-		out = append(out, c)
-	}
-	return out, nil
-}
-
-// declaredIntent reads the intent a top-level design.yaml among the files declares, nil when there is
-// no design.yaml or it declares none. An intent section that does not bind is INVALID_ARGUMENT, since
-// keeping the design without it would check the board as if it declared nothing.
-func declaredIntent(files []string, read func(string) ([]byte, error)) (*configpb.DesignIntent, error) {
-	if !slices.Contains(files, DesignDescriptorName) {
-		return nil, nil
-	}
-	raw, err := read(DesignDescriptorName)
-	if err != nil {
-		return nil, err
-	}
-	var d struct {
-		Intent yaml.Node `yaml:"intent"`
-	}
-	if err := yaml.Unmarshal(raw, &d); err != nil || d.Intent.IsZero() || d.Intent.Tag == "!!null" {
-		return nil, nil
-	}
-	in, err := intent.DecodeSection(&d.Intent)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s's intent: %v", ErrInvalidArgument, DesignDescriptorName, err)
-	}
-	return in, nil
 }
 
 // DeleteArtifact removes one artifact of a stored design.

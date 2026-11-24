@@ -124,6 +124,42 @@ func TestBootstrapAppliesAPlanAndASecondApplyWritesNothing(t *testing.T) {
 	}
 }
 
+// A design entry's flatten_hierarchy is kept on the design, which has no descriptor to declare it.
+// A second apply writes nothing, an entry setting it false turns it off, and an entry without the
+// key leaves the design's own (agni issue 1887).
+func TestBootstrapKeepsADesignsFlattenHierarchy(t *testing.T) {
+	w := bootstrapWorld(t)
+	ctx := context.Background()
+	plan := func(line string) *service.BootstrapPlan {
+		t.Helper()
+		p, err := service.ParseBootstrap([]byte("designs:\n  - id: bb\n" + line + "    link:\n      schematic: board/hw/bb.kicad_sch@main\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	flatten := func() bool {
+		t.Helper()
+		d, err := w.designs.GetDesign(as("alice"), &webapi.GetDesignRequest{Name: "designs/bb"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d.GetFlattenHierarchy()
+	}
+	if r := w.boot.Apply(ctx, plan("    flatten_hierarchy: true\n")); !r.OK() || !flatten() {
+		t.Fatalf("an entry setting flatten_hierarchy made designs/bb with it %v, failed %v; want it on", flatten(), failures(r))
+	}
+	if r := w.boot.Apply(ctx, plan("    flatten_hierarchy: true\n")); !r.OK() || len(r.Applied) != 0 {
+		t.Errorf("a second apply = applied %v, failed %v; want nothing applied", r.Applied, failures(r))
+	}
+	if r := w.boot.Apply(ctx, plan("")); !r.OK() || !flatten() {
+		t.Errorf("an entry with no flatten_hierarchy left it %v, failed %v; want the design's own, on", flatten(), failures(r))
+	}
+	if r := w.boot.Apply(ctx, plan("    flatten_hierarchy: false\n")); !r.OK() || flatten() {
+		t.Errorf("an entry setting flatten_hierarchy: false left it %v, failed %v; want it off", flatten(), failures(r))
+	}
+}
+
 // A design whose link names another ref is linked again at it.
 func TestBootstrapLinksAgainWhenTheRefChanges(t *testing.T) {
 	w := bootstrapWorld(t)
@@ -207,6 +243,7 @@ func TestParseBootstrapRefusesWhatThePlanCannotMean(t *testing.T) {
 		{"connections:\n  - id: hw\n    kind: github-user\n", "kind \"github-user\" must be"},
 		{"mounts:\n  - id: board\n", "mounts/board names no source"},
 		{"designs:\n  - id: BB\n    link: {schematic: board}\n", "designs/BB: the id must be"},
+		{"designs:\n  - id: bb\n    flatten: true\n    link: {schematic: board}\n", "field flatten not found"},
 	} {
 		_, err := service.ParseBootstrap([]byte(tc.yaml))
 		if err == nil || !errors.Is(err, service.ErrInvalidArgument) || !strings.Contains(err.Error(), tc.want) {

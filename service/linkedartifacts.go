@@ -292,8 +292,9 @@ func (s *DesignService) stampCompanions(ctx context.Context, design, entryID str
 }
 
 // keepDeclared stores what a linked entry's design.yaml declares, as ImportDesignFiles does for a
-// pushed folder. The intent becomes the design's own (agni issue 1854), and a nil intent leaves the
-// kept one, so a descriptor with no intent: section never clears an intent set with UpdateDesign.
+// pushed folder. The intent and flatten_hierarchy become the design's own (agni issues 1854, 1887),
+// and a descriptor with no intent: section or flatten_hierarchy line leaves the kept one, so it
+// never clears a value set with UpdateDesign.
 // The artifact id becomes the design's Entry, so the design reads the entry the descriptor names
 // rather than a schematic linked beside a board (agni issue 1858). A nil decl changes nothing.
 func (s *DesignService) keepDeclared(ctx context.Context, design, id string, decl *entryDecl) error {
@@ -301,9 +302,7 @@ func (s *DesignService) keepDeclared(ctx context.Context, design, id string, dec
 		return nil
 	}
 	_, err := s.catalog.UpdateDesign(ctx, design, func(r *DesignRecord) {
-		if decl.Intent != nil {
-			r.Intent = decl.Intent
-		}
+		declared{flatten: decl.Flatten}.keep(r, decl.Intent)
 		r.Entry = id
 	})
 	return err
@@ -548,6 +547,8 @@ func (s *DesignService) readSource(ctx context.Context, r MountReader, version, 
 // entry. Intent is nil when it declares none.
 type entryDecl struct {
 	Intent *configpb.DesignIntent
+	// Flatten is the descriptor's flatten_hierarchy, nil when it has no such line (agni issue 1887).
+	Flatten *bool
 	// Companions are the files the descriptor's companions: names, each with the artifact id
 	// PlanArtifacts gives it, so a link of the entry links them as push keeps them (agni issue 1873).
 	Companions []declaredCompanion
@@ -688,24 +689,19 @@ func entryDeclared(files []string, read func(string) ([]byte, error), target str
 	if !slices.Contains(files, DesignDescriptorName) {
 		return nil, nil
 	}
-	raw, err := read(DesignDescriptorName)
+	d, err := readDeclared(files, read)
 	if err != nil {
 		return nil, err
 	}
-	var d struct {
-		Entry      string   `yaml:"entry"`
-		Companions []string `yaml:"companions"`
-	}
-	if yaml.Unmarshal(raw, &d) != nil || d.Entry == "" || path.Clean(d.Entry) != target {
+	if d.entry == "" || d.entry != target {
 		return nil, nil
 	}
-	intent, err := declaredIntent(files, read)
+	intent, err := d.Intent()
 	if err != nil {
 		return nil, err
 	}
-	decl := &entryDecl{Intent: intent}
-	for _, c := range d.Companions {
-		c = path.Clean(c)
+	decl := &entryDecl{Intent: intent, Flatten: d.flatten}
+	for _, c := range d.companions {
 		if c == target || !slices.Contains(files, c) {
 			continue
 		}
