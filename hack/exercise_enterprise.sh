@@ -562,6 +562,7 @@ packs:
 designs:
   - id: boot
     title: Baseboard from the bootstrap file
+    flatten_hierarchy: true
     link:
       schematic: board/gateway.kicad_sch@$revb
       board: board/gateway.kicad_pcb@$revb
@@ -615,6 +616,14 @@ if grep -q "$revb" "$out/artifacts-boot.txt" && [ "$(grep -c "$revb" "$out/artif
   pass "designs/boot, which only the bootstrap file names, links its schematic and board at rev-b"
 else
   no "designs/boot isn't linked at rev-b; see $out/artifacts-boot.txt"
+fi
+# A bootstrap entry can ask for a whole read itself, for a design linked without a descriptor that
+# asks (agni issue 1887). An older server refuses the key and never answers /readyz above.
+as alice designs get boot >"$out/get-boot.txt" 2>&1 || true
+if grep -q "reads every hierarchical block" "$out/get-boot.txt"; then
+  pass "designs/boot keeps the flatten_hierarchy its bootstrap entry sets"
+else
+  no "designs/boot doesn't read every block; see $out/get-boot.txt"
 fi
 as alice designs artifacts bb >"$out/artifacts-after.txt" 2>&1 || true
 if cmp -s "$out/artifacts-before.txt" "$out/artifacts-after.txt" && grep -q "$revb" "$out/artifacts-after.txt"; then

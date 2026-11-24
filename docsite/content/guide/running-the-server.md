@@ -267,9 +267,13 @@ agni check designs/memory_unit --remote http://localhost:8080
 agni diff designs/memory_unit designs/memory_unit-rev-b --remote http://localhost:8080 --format json
 ```
 
-A stored design keeps the `intent:` of the folder's `design.yaml`. The `entry:` and `companions:`
-decide which files become its artifacts and which one analysis reads, so an ODB++ board and an EDIF
-schematic export declared together stay one design. Nothing else from the descriptor is kept. The
+A stored design keeps the `intent:` and `flatten_hierarchy:` of the folder's `design.yaml`. The
+`entry:` and `companions:` decide which files become its artifacts and which one analysis reads, so
+an ODB++ board and an EDIF schematic export declared together stay one design. A later push, add or
+link replaces what the design kept, and a `design.yaml` without one of those keys leaves the design's
+own. So `flatten_hierarchy: false` turns a whole read off, and deleting the line does not (agni issue
+1887). `agni designs get` says "reads every hierarchical block" for a design that does. Nothing else
+from the descriptor is kept. The
 project's convention, checklists, profiles and params go up as a pack, `packs/<id>`, which `agni
 packs push` reads from a `project.yaml` (agni issue 1704). A check names the pack, and the server
 reads the design under it:
@@ -337,13 +341,13 @@ agni designs add boards/memory_unit --yes --series b200 --remote http://localhos
 
 The server copies each board's files, and each artifact records the mount and folder they came
 from. A board's `design.yaml` names its entry and companions, and its `intent:` becomes the
-design's own, as `agni designs push` keeps it.
+design's own, as `agni designs push` keeps it. Its `flatten_hierarchy:` is kept the same way.
 
 `add` keeps every board it can. A board the server refuses gets a `refused` line with its folder and
 the reason, and the command exits 1 once it has kept the rest. `--only` narrows what `--yes` keeps,
 so a broken board elsewhere in the folder doesn't stop the one you name. A board the server already
 keeps is refused too. Pass `--skip-existing` to leave it alone, or `--update` to rewrite it when its
-files or its `design.yaml` intent changed, and the command can run on every start (agni issues 1860
+files, its `design.yaml` intent or its `flatten_hierarchy:` changed, and the command can run on every start (agni issues 1860
 and 1864).
 
 Some schematics keep their parts' pins in separate symbol files: gEDA, Lepton and xschem read `.sym`

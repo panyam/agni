@@ -815,6 +815,7 @@ func checkCmd() *cobra.Command {
 					return rpcFailed(err)
 				}
 				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
+				noteRemoteHierarchy(cmd.ErrOrStderr(), remoteURL != "", args[0], resp.GetUnexpandedHierarchy())
 				// The viewer saves the same document (agni issue 127). The service writes it from this
 				// run, with provenance off the composed overlay and the deployment flags in the env. The
 				// terminal output is rendered back from the same bytes.
@@ -867,6 +868,7 @@ func checkCmd() *cobra.Command {
 					return rpcFailed(err)
 				}
 				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
+				noteRemoteHierarchy(cmd.ErrOrStderr(), remoteURL != "", args[0], resp.GetUnexpandedHierarchy())
 				noteDesignWide(cmd.ErrOrStderr(), resp.GetSkipped())
 				// --verdicts selects the CONSIDERED SET instead of the violations. The considered set holds
 				// what each rule concluded about every subject it looked at, passes included. --fail-on
@@ -1257,6 +1259,7 @@ func reviewCmd() *cobra.Command {
 				if err != nil {
 					return rpcFailed(err)
 				}
+				noteRemoteHierarchy(cmd.ErrOrStderr(), remote, design, rv.GetResults().GetDesign().GetUnexpandedHierarchy())
 				docs = append(docs, rv.GetResults())
 				// The CLI's store lives as long as the command, so the name it assigned means nothing
 				// once the command exits. The run is emitted unnamed, as `agni results` emits a document.
