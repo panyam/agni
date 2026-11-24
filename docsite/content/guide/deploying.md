@@ -329,12 +329,16 @@ github:
   allow: [org:acme]
   webhook_secret: file:/srv/agni/secrets/github-webhook-secret
 bootstrap: /srv/agni/bootstrap.yaml
+access:
+  - source: github://hw/baseboard
+    allow: ["local:*", "oidc:*"]
 ```
 
 Each key names a flag from `agni serve --help`, with underscores for dashes. Sections nest, so
 `github: {client_id: ...}` sets `--github-client-id`, as a flat `github_client_id` would. A list
 sets a flag that takes several values. `bootstrap` names the file from the section above, or holds
-its entries inline. A secret stays an `env:` or `file:` reference.
+its entries inline. A secret stays an `env:` or `file:` reference. `access` lists the private repos
+that people who sign in may read with no GitHub token of their own, as the next section shows.
 
 A flag typed on the command line wins over the file. A key that names no flag stops the server
 before it listens, so a typo can't slip by. A relative path resolves against the folder the server
@@ -350,6 +354,23 @@ Ask someone who can't read `hw/baseboard` on GitHub to sign in and open `designs
 them as `permission_denied`, naming the repo, whether they ask for the design by name, check it or
 fetch one of its files. `agni designs list` leaves it out for them. agni asks GitHub with their own
 token each time, and keeps the answer for a minute.
+
+Say the team signs in with local accounts or through Entra, and nobody holds a GitHub token. Each
+of them is refused the same way. When you have already chosen who may sign in, let the server's own
+access to the repo stand for them (agni issue 1889). Add an `access` list to `serve.yaml`, or pass
+`--grant 'github://hw/baseboard=local:*,oidc:*'`:
+
+```yaml
+access:
+  - source: github://hw/baseboard
+    allow: ["local:*", "oidc:*"]
+```
+
+A pattern is `*` for anyone signed in, a prefix such as `local:*`, `oidc:*` or `github:*`, or one
+person such as `local:carol`. A person a grant admits opens the repo's designs with no GitHub token.
+Anyone else still needs their own. A grant opens only its own repo. The server refuses a pattern it
+can't read, and names the entry before it listens. "Opening a private repo to everyone who signs
+in" in the server guide has the rest.
 
 ## What leaves the network
 

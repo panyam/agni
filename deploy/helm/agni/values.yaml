@@ -94,6 +94,10 @@ bootstrap: {}
 #     poll: 5m
 #     slow_request: 2s
 #     mount: {max_bytes: 1073741824}
+#     access:
+#       - {source: github://hw/baseboard, allow: ["local:*", "oidc:*"]}
+# access lets people who sign in read a private repo with no GitHub token of their own (agni issue
+# 1889). "Opening a private repo to everyone who signs in" in the server guide has the patterns.
 # The chart sets the address, store, uploads, sign-in and secrets itself, and its own value wins over
 # the same key here. A secret stays a file: or env: reference, never the secret itself.
 serve: {}

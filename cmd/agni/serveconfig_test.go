@@ -215,6 +215,9 @@ func TestTheGuidesServeYAMLApplies(t *testing.T) {
 			t.Errorf("the guide's serve.yaml sets --%s = %q; want %q", flag, got, want)
 		}
 	}
+	if got, _ := cmd.Flags().GetStringArray("grant"); len(got) != 1 || got[0] != "github://hw/baseboard=local:*,oidc:*" {
+		t.Errorf("the guide's serve.yaml sets --grant = %q; want its access entry", got)
+	}
 }
 
 // The mount cap is set from the file as mount: {max_bytes, max_files}, beside the --mount list the

@@ -985,6 +985,41 @@ A server without `--auth` checks nothing, since it doesn't know who is asking. I
 private repo on each artifact a link reads, so a design linked before `--auth` was on opens only for
 the repo's readers once it is (agni issue 1778).
 
+### Opening a private repo to everyone who signs in
+
+Say carol signs in with a local account and ada through Entra. Neither holds a GitHub token, so
+neither sees a design linked from `acme/board`. On a team's own server the operator has already
+chosen who may sign in. `--grant` lets the server's access to a repo stand for those people (agni
+issue 1889):
+
+```bash
+agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth tokens \
+  --connections-key env:AGNI_CONNECTIONS_KEY --local-accounts \
+  --grant 'github://acme/board=local:*,oidc:*'
+```
+
+- A grant names a source and the people who may read it. The source is a mount's `github://`
+  source, spelt as `agni mounts ls` shows it. It must match byte for byte, so
+  `github://Acme/board` names another source.
+- A pattern is `*` for anyone signed in, or a prefix and a final `*`, such as `local:*`, `oidc:*` or
+  `github:*`. Anything else names one person, such as `local:carol`, or a token's name from
+  `agni token create`.
+- The server checks the grants first. A caller a grant admits reads the repo's designs, files and
+  mount with no call to GitHub. Anyone else goes on to their own connection, as above.
+- A grant opens its source alone. A design linked from another private repo stays closed.
+- An unlinked design keeps the repo it recorded, so the grant still opens it.
+- `--grant` repeats, one source each. A `serve.yaml` gives the same as an `access` list, and a typed
+  `--grant` wins over it.
+- The server refuses a grant it can't read, such as a `*` in the middle of a pattern, and names it
+  before it listens. `--grant` needs `--auth tokens`, since a server without it opens everything.
+- `agnids` doesn't read grants yet, so it still checks each caller's own connection.
+
+```yaml
+access:
+  - source: github://acme/board
+    allow: ["local:*", "oidc:*"]
+```
+
 ### Signing in with GitHub
 
 Pasting tokens works, but each person needs a token from the operator and a GitHub token of their
