@@ -9,6 +9,11 @@ type Caller struct {
 	// Subject is the authenticated principal, such as the name a token was created for. It is
 	// empty on a server with no authentication.
 	Subject string
+	// Claims are what the caller's sign-in saw, such as "oidc:group:hw" for an OIDC group or
+	// "github:org:acme" for a GitHub org they were in (agni issue 1896). An operator's grant matches
+	// one as it matches Subject. A token from `agni token create` has none, and they are as old as
+	// the token, so a change to a group reaches the caller when they sign in again.
+	Claims []string
 }
 
 type callerKey struct{}

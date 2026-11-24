@@ -38,17 +38,18 @@ func (t *Table) privateMount(name string) bool {
 
 // CanRead asks GitHub, through the caller's own connections, whether the caller can read source. A
 // server connection never answers for a person, since it can read what the server can. An operator's
-// grant on source admits a signed-in caller it matches first, with no call to GitHub (Config.Grants,
-// agni issue 1889).
+// grant on source admits a signed-in caller it matches first, by subject or by a claim from their
+// sign-in, with no call to GitHub (Config.Grants, agni issues 1889 and 1896).
 func (t *Table) CanRead(ctx context.Context, source string) error {
-	subject := service.CallerFrom(ctx).Subject
+	caller := service.CallerFrom(ctx)
+	subject := caller.Subject
 	if subject == "" {
 		return fmt.Errorf("%w: %s is private, and this request has no caller to check it for", service.ErrPermissionDenied, source)
 	}
 	if t.svc == nil {
 		return fmt.Errorf("%w: %s is private, and this server keeps no connection of yours to check it with", service.ErrPermissionDenied, source)
 	}
-	_, err := t.svc.CanRead(connections.WithViewer(ctx, subject), source)
+	_, err := t.svc.CanRead(connections.WithViewerClaims(connections.WithViewer(ctx, subject), caller.Claims...), source)
 	switch {
 	case err == nil:
 		return nil

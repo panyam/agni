@@ -369,8 +369,9 @@ access:
     allow: ["local:*", "oidc:*"]
 ```
 
-A pattern is `*` for anyone signed in, a prefix such as `local:*`, `oidc:*` or `github:*`, or one
-person such as `local:carol`. A person a grant admits opens the repo's designs with no GitHub token.
+A pattern is `*` for anyone signed in, a prefix such as `local:*`, `oidc:*` or `github:*`, one
+person such as `local:carol`, or a group. `oidc:group:<id>` follows the OIDC groups claim, and
+`github:org:<org>` follows a GitHub org, each as the person's sign-in saw it (agni issue 1896). A person a grant admits opens the repo's designs with no GitHub token.
 Anyone else still needs their own. A grant opens only its own repo. The server refuses a pattern it
 can't read, and names the entry before it listens. "Opening a private repo to everyone who signs
 in" in the server guide has the rest.

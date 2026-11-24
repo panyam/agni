@@ -174,8 +174,8 @@ func (s *oidcSignIns) signedIn(_, _ string, _ *oauth2.Token, info map[string]any
 	http.Redirect(w, r, next, http.StatusSeeOther)                                                                                                                     // #nosec G710 -- next came through safeNext
 }
 
-// admit checks a verified ID token's claims against Allow and mints an agni token for "oidc:<sub>".
-// It returns the token and its subject.
+// admit checks a verified ID token's claims against Allow and mints an agni token for "oidc:<sub>",
+// carrying each value of the groups claim as a claim. It returns the token and its subject.
 func (s *oidcSignIns) admit(ctx context.Context, claims map[string]any) (string, string, error) {
 	sub, _ := claims["sub"].(string)
 	if sub == "" {
@@ -194,7 +194,13 @@ func (s *oidcSignIns) admit(ctx context.Context, claims map[string]any) (string,
 	}
 	subject := "oidc:" + sub
 	expires := time.Now().Add(s.cfg.TTL)
-	resp, err := s.keys.CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: subject, Name: "oidc sign-in " + who, ExpiresAt: &expires})
+	groupsClaim := s.allow.GroupsClaim
+	if groupsClaim == "" {
+		groupsClaim = "groups"
+	}
+	// The groups ride on the token, so a grant of oidc:group:<id> admits this person (agni issue
+	// 1896). A provider that left the claim out for overage gives none.
+	resp, err := s.keys.CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: subject, Name: "oidc sign-in " + who, Scopes: groupClaims(claims[groupsClaim]), ExpiresAt: &expires})
 	if err != nil {
 		return "", "", fmt.Errorf("minting a token for %s: %w", who, err)
 	}
