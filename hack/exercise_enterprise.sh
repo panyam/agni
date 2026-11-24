@@ -344,7 +344,7 @@ serve() {
     --connections-key env:AGNI_CONNECTIONS_KEY --public-url "$url" \
     --github-api "$ghes/api/v3" --github-raw "$ghes/raw" \
     --github-client-id Iv1.exercise --github-client-secret env:AGNI_GITHUB_CLIENT_SECRET --github-allow org:acme,user:alice,user:mallory \
-    --github-webhook-secret env:AGNI_WEBHOOK_SECRET ${bootstrap:+--bootstrap "$bootstrap"}) >>"$out/serve.log" 2>&1 &
+    --github-webhook-secret env:AGNI_WEBHOOK_SECRET --local-accounts ${bootstrap:+--bootstrap "$bootstrap"}) >>"$out/serve.log" 2>&1 &
   serve_pid=$!
   wait_for --cacert "$out/ca.pem" "$url/healthz" || { echo "agni serve didn't start; see $out/serve.log" >&2; exit 1; }
 }
@@ -578,6 +578,7 @@ auth: tokens
 tls: {cert: $out/server.pem, key: $out/server.key}
 connections_key: env:AGNI_CONNECTIONS_KEY
 public_url: $url
+local_accounts: true
 github:
   api: $ghes/api/v3
   raw: $ghes/raw
@@ -621,6 +622,34 @@ else
 fi
 as mallory designs get bb >"$out/mallory-get-2.txt" 2>&1 || true
 refused "designs/bb after the restart" "$out/mallory-get-2.txt"
+
+# The operator makes carol a local account on the server's machine, and she signs in at the form
+# with no GitHub account (agni issue 1815). The binary runs with --local-accounts, from the flag at
+# first and from serve.yaml now. The bundle and the chart don't pass it yet.
+if [ "$mode" = binary ]; then
+  step "a local account signs in at the form, and its token reads the API"
+  printf '%s\n' 'carol local password' | "$agni" users add carol --store "file://$store" --password-stdin >"$out/users-add.txt" 2>&1 || true
+  "$agni" users ls --store "file://$store" >"$out/users-ls.txt" 2>&1 || true
+  if grep -q '^carol	local:carol	' "$out/users-ls.txt"; then
+    pass "agni users add made carol, and agni users ls lists her"
+  else
+    no "agni users ls doesn't list carol; see $out/users-add.txt and $out/users-ls.txt"
+  fi
+  code=$(curl -s -o /dev/null -w '%{http_code}' --cacert "$out/ca.pem" -X POST "$url/signin/local" --data-urlencode username=carol --data-urlencode 'password=not her password')
+  if [ "$code" = 401 ]; then
+    pass "a wrong password at the form is refused"
+  else
+    no "a wrong password at the form answered $code, want 401"
+  fi
+  curl -s -o /dev/null -D "$out/local-signin.headers" --cacert "$out/ca.pem" -X POST "$url/signin/local" --data-urlencode username=carol --data-urlencode 'password=carol local password'
+  carol=$(sed -n 's/^[Ss]et-[Cc]ookie: agni_session=\([^;]*\).*/\1/p' "$out/local-signin.headers" | tr -d '\r')
+  code=$(curl -s -o /dev/null -w '%{http_code}' --cacert "$out/ca.pem" -X POST "$url/agni.v1.webapi.WorkspaceService/ListMounts" -H 'content-type: application/json' -H "Authorization: Bearer $carol" -d '{}')
+  if [ -n "$carol" ] && [ "$code" = 200 ] && "$agni" token ls --store "file://$store" | grep -q '	local:carol	'; then
+    pass "carol signed in with her password, and her token for local:carol lists the mounts"
+  else
+    no "carol's sign-in: session '${carol:0:8}...', ListMounts $code; see $out/local-signin.headers"
+  fi
+fi
 
 step "nothing reached a host other than the fake"
 if [ -s "$out/trap.log" ]; then

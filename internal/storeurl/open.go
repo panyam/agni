@@ -282,6 +282,18 @@ func (s *Store) Tokens() (authgate.Keys, error) {
 	return authgate.Store(s.Dir), nil
 }
 
+// Accounts is the store of the local accounts `agni serve --local-accounts` signs people in with
+// (agni issue 1815). It sits beside Tokens in the same --store.
+func (s *Store) Accounts() (authgate.Accounts, error) {
+	if s.Datastore != nil {
+		return authgate.GAEAccounts(s.Datastore, s.Namespace), nil
+	}
+	if s.DB != nil {
+		return authgate.SQLAccounts(s.DB)
+	}
+	return authgate.AccountsStore(s.Dir), nil
+}
+
 // TableStores returns the stores a mountset.Table keeps runtime mounts, connections and people's
 // tokens in: goapplib's and oneauth's GORM stores for a database, and their Datastore stores for
 // Datastore. A file:// store returns nil, and the table keeps them in folders under Dir as it

@@ -168,8 +168,8 @@ github.com/mattn/go-sqlite3 v1.14.22 h1:2gZY6PC6kBnID23Tichd1K+Z0oS6nE/XwU+Vz/5o
 github.com/mattn/go-sqlite3 v1.14.22/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
 github.com/panyam/goapplib v0.7.34 h1:rJA1fmocmEt9/z56bYpN/oJhqWi4LxkUlxCxI+PyudU=
 github.com/panyam/goapplib v0.7.34/go.mod h1:EZfOKnJHZ6elqE2wDJwYZVMWK/+2mXeG5TqzGIrBFw8=
-github.com/panyam/goapplib/storage v0.7.35-0.20261124070300-6241b49ac816 h1:RT1DQI+bmruCt4X8To3Rjixd0Pgye3l6S/4qMrScaPE=
-github.com/panyam/goapplib/storage v0.7.35-0.20261124070300-6241b49ac816/go.mod h1:eVUkBUkqjJEOo4MbT2cXkHe73O4OcFCN7pZ7lyV1mgU=
+github.com/panyam/goapplib/storage v0.7.35-0.20261124071208-074bbe15a617 h1:i1GywvwZQYNRokSRoQCIxmp9thxg+rpqA6Z4FhM3NOc=
+github.com/panyam/goapplib/storage v0.7.35-0.20261124071208-074bbe15a617/go.mod h1:eVUkBUkqjJEOo4MbT2cXkHe73O4OcFCN7pZ7lyV1mgU=
 github.com/panyam/goapplib/storage/backends/gae v0.7.34 h1:ykUMpXrbexHf0e+5kSenq3A/gPG3g7rA7CIC1uMDsc4=
 github.com/panyam/goapplib/storage/backends/gae v0.7.34/go.mod h1:UD2/bffVT1+C0fG81G9sXrCIv+lk6ZfM4PL5nMNjtcM=
 github.com/panyam/goapplib/storage/backends/gorm v0.7.34 h1:u0MTJ66DtZ+Srd7pNDygtAP584G+C4XmA3oyYFFnX50=

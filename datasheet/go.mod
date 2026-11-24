@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.21.1
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/goapplib v0.7.34
-	github.com/panyam/goapplib/storage v0.7.35-0.20261124070300-6241b49ac816
+	github.com/panyam/goapplib/storage v0.7.35-0.20261124071208-074bbe15a617
 	github.com/panyam/oneauth v0.3.22
 	github.com/panyam/servicekit v0.2.6
 	github.com/spf13/cobra v1.10.2

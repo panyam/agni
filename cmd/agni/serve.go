@@ -97,6 +97,7 @@ func serveCmd() *cobra.Command {
 	var githubAllow, trustedProxy []string
 	var oidcIssuer, oidcClientID, oidcSecretRef, oidcLabel string
 	var oidcAllow []string
+	var localAccounts bool
 	var pollEvery time.Duration
 	var bootstrapPath, configPath string
 	c := &cobra.Command{
@@ -208,11 +209,15 @@ func serveCmd() *cobra.Command {
 					oidcIn.clientSecret = string(secret)
 				}
 			}
+			if localAccounts && auth != authgate.Tokens {
+				return fmt.Errorf("--local-accounts mints a token when someone signs in, so it needs --auth %s", authgate.Tokens)
+			}
 			if mountMaxBytes < 0 || mountMaxFiles < 0 {
 				return fmt.Errorf("--mount-max-bytes and --mount-max-files take 0 or more, got %d and %d", mountMaxBytes, mountMaxFiles)
 			}
 			return runViewer(cmd, viewerOpts{
-				auth: auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey, oidcSignIn: oidcIn,
+				localAccounts: localAccounts,
+				auth:          auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey, oidcSignIn: oidcIn,
 				webhookSecret: hookSecret, graphState: graphState, s3Endpoint: s3Endpoint, gcsEndpoint: gcsEndpoint, graphAPI: graphAPI, mountLimits: mounts.Limits{MaxBytes: mountMaxBytes, MaxFiles: mountMaxFiles}, poll: pollEvery, bootstrap: plan, githubSignIn: signIn, publicURL: publicURL,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
@@ -275,6 +280,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&oidcSecretRef, "oidc-client-secret", "", "where that client's secret is, as env:NAME or file:/abs/path; empty for a public client")
 	c.Flags().StringSliceVar(&oidcAllow, "oidc-allow", nil, "who may sign in through --oidc-issuer, as domain:<domain> for a verified email in it, group:<id> for a value in the groups claim, sub:<sub> for one person, or hd:<domain> for a Google Workspace domain, comma-separated or repeated")
 	c.Flags().StringVar(&oidcLabel, "oidc-label", "", "the provider's name on the sign-in button, such as Okta. Empty is \"single sign-on\"")
+	c.Flags().BoolVar(&localAccounts, "local-accounts", false, "let people sign in at /signin with a username and password an operator made with agni users add (agni issue 1815). A person signs in as local:<username> and gets the same kind of token a GitHub or OIDC sign-in mints. Nobody can sign themselves up, and the form allows 5 tries per username and 20 per address before it asks them to wait. Needs --auth tokens")
 	c.Flags().StringVar(&publicURL, "public-url", "", "the server's URL as a browser reaches it, such as https://agni.example.com. GitHub sends a signed-in browser back to <public-url>/signin/github/callback/, which the GitHub App must list. Empty takes the address the server listens on, which works on localhost only")
 	c.Flags().StringVar(&graphStateRef, "msgraph-client-state", "", "where the secret Microsoft Graph echoes in each change notification is, as env:NAME or file:/abs/path (agni issue 1729). With it, the server takes notifications at "+graphHookPath+", agni mounts webhook subscribes a SharePoint mount's drive there, and the server renews each subscription before Graph ends it. A change in the drive syncs or marks the designs that follow a folder in it. Graph sends notifications only to a public https address. Needs --store and --uploads")
 	c.Flags().StringVar(&s3Endpoint, "s3-endpoint", "", "the S3 API an s3:// mount reads, for an S3-compatible store such as MinIO. Empty is AWS (agni issue 1730)")
@@ -393,6 +399,9 @@ type viewerOpts struct {
 	githubSignIn *githubSignIn
 	// oidcSignIn is the OpenID Connect provider people sign in through, nil for none (agni issue 1811).
 	oidcSignIn *oidcSignIn
+	// localAccounts is --local-accounts, which signs people in with the accounts agni users add makes
+	// (agni issue 1815).
+	localAccounts bool
 	// publicURL is --public-url, the server's URL as a browser reaches it. Empty takes the address it
 	// listens on.
 	publicURL string
@@ -867,6 +876,15 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 				Issuer: oi.issuer, ClientID: oi.clientID, ClientSecret: oi.clientSecret, PublicURL: pub, Allow: oi.allow, Label: oi.label,
 			})
 			if err != nil {
+				return err
+			}
+		}
+		if o.localAccounts {
+			accts, err := o.store.Accounts()
+			if err != nil {
+				return err
+			}
+			if gate, err = gate.WithLocalAccounts(authgate.LocalAccounts{Store: accts}); err != nil {
 				return err
 			}
 		}

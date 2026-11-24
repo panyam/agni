@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-23, at `3ede480a`.
+Last pruned 2026-11-24, at `afc681df`.
 
 ## At a glance
 
@@ -27,8 +27,11 @@ made `agni serve` wait for its poll, webhook, bootstrap, prune and sweep work be
 1870). v0.11.4 made a linked pack list only what its `project.yaml` names, so boards beside it count
 against no size limit, and took servicekit v0.2.6 for GO-2026-6278 (PR 1872). Since then, linking a
 declared entry, or its folder, links the companions its `design.yaml` declares (PR 1876).
+`make exercise-formats` prints one row per format and corpus file (PR 1874), and `agni serve
+--local-accounts` signs people in with a username and password that `agni users` keeps in `--store`
+(PR 1878). Its follow-ups are on #1176.
 
-- **agni is on goapplib v0.7.34, oneauth v0.3.21, servicekit v0.2.6 and ci-actions v0.1.5.**
+- **agni is on goapplib v0.7.34, oneauth v0.3.22, servicekit v0.2.6 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
   in through an OpenID Connect provider beside or instead of GitHub, and `agni login --with oidc`
   uses its device flow (PR 1842). The exercise signs in through the App only. Its App lacks the
@@ -42,14 +45,16 @@ declared entry, or its folder, links the companions its `design.yaml` declares (
 - **`--store` takes `file://`, `sqlite://`, `postgres://` and `datastore://`** (PRs 1822 and 1825),
   and two servers can share one store. `--uploads` takes `s3://` and `gs://` with a local
   `--uploads-cache` (PR 1834). The Helm chart takes either in place of its claim.
-  `internal/authgate/keys.go` reads API keys through oneauth's `APIKeyAdmin`.
+  `internal/authgate/keys.go` reads API keys through oneauth's `APIKeyAdmin`, and `agni users ls`
+  and `rm` read accounts through its `ChannelAdmin` (oneauth v0.3.22).
 - **Parked work lives in each mission's `## Later` list.** The 62 `waiting` issues were closed into
   those lists on 2026-11-21. Anything that fits no mission is on #1806, and
   `is:closed label:waiting reason:"not planned"` finds them all. A mission moves its Later lines
   before it closes.
 - **Missions to pick from.** #1611 (markup, starts at #1612 and #1613), and four whose first
-  ticket writes the exercise: #1708 (#1712), #1709 (#1713), #1710 (#1714) and #1711 (#1715, which
-  needs a datasheet PDF agni-samples may carry). #1176 holds only Later lines.
+  ticket writes the exercise: #1708 (#1712), #1709 (#1713) and #1711 (#1715, which needs a
+  datasheet PDF agni-samples may carry). #1710 has its exercise now, at 1 of 11, next #134.
+  `make exercise-formats` exits 1 at `b8ba5401`, because royalblue54L-feather does not read (#681). #1176 holds only Later lines.
 
 ## Open, ranked
 

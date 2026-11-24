@@ -14,7 +14,7 @@ require (
 	github.com/johannesboyne/gofakes3 v1.2.0
 	github.com/klauspost/compress v1.20.2
 	github.com/panyam/goapplib v0.7.34
-	github.com/panyam/goapplib/storage v0.7.35-0.20261124070300-6241b49ac816
+	github.com/panyam/goapplib/storage v0.7.35-0.20261124071208-074bbe15a617
 	github.com/panyam/goapplib/storage/backends/gae v0.7.34
 	github.com/panyam/goapplib/storage/backends/gorm v0.7.34
 	github.com/panyam/goapplib/storage/drivers/gcs v0.7.34
