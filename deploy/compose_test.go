@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/panyam/agni/internal/grants"
 )
 
 type composeFile struct {
@@ -298,5 +300,38 @@ func TestTheEnterpriseBundleTurnsOnLocalAccountsFromItsEnv(t *testing.T) {
 	}
 	if !regexp.MustCompile(`(?m)^AGNI_LOCAL_ACCOUNTS=false$`).Match(b) {
 		t.Error("env.example doesn't set AGNI_LOCAL_ACCOUNTS=false")
+	}
+}
+
+// agni and the workbench both read the operator's grants from one access.yaml, so a person a grant
+// admits on agni sees the same mount on the workbench. The bundle ships the file granting nothing,
+// and the release packs it beside compose.yaml (agni issue 1895).
+func TestTheEnterpriseBundleGrantsFromOneFileForBothServers(t *testing.T) {
+	c := readComposeAt(t, "enterprise/compose.yaml")
+	for _, service := range []string{"agni", "datasheets"} {
+		svc := c.Services[service]
+		if v, _ := flagValue(svc.Command, "--grants-file"); v != "/etc/agni/access.yaml" {
+			t.Errorf("%s's --grants-file = %q; want /etc/agni/access.yaml", service, v)
+		}
+		mounted := false
+		for _, v := range svc.Volumes {
+			rest, mode, _ := cutLast(v, ":")
+			src, target, _ := cutLast(rest, ":")
+			mounted = mounted || target == "/etc/agni/access.yaml" && mode == "ro" && src == "${AGNI_ACCESS_FILE:-./access.yaml}"
+		}
+		if !mounted {
+			t.Errorf("%s mounts no read-only access.yaml that AGNI_ACCESS_FILE names (volumes %v)", service, svc.Volumes)
+		}
+	}
+	got, err := grants.ReadFile("enterprise/access.yaml")
+	if err != nil || len(got) != 0 {
+		t.Errorf("enterprise/access.yaml = %v, %v; want a file that grants nothing", got, err)
+	}
+	mk, err := os.ReadFile("../Makefile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(mk), "cp deploy/enterprise/access.yaml dist/agni-enterprise/access.yaml") {
+		t.Error("make compose-release doesn't pack enterprise/access.yaml beside compose.yaml")
 	}
 }

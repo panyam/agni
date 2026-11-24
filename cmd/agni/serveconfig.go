@@ -9,6 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/internal/flagfile"
+	"github.com/panyam/agni/internal/grants"
 	"github.com/panyam/agni/service"
 )
 
@@ -60,7 +61,7 @@ func applyServeConfig(cmd *cobra.Command, path string) (*service.BootstrapPlan, 
 		}
 	}
 	if access != nil && !cmd.Flags().Changed("grant") {
-		grants, err := accessGrants(access.Raw)
+		grants, err := grants.Access(access.Raw)
 		if err != nil {
 			return nil, fmt.Errorf("--config %s: %w", path, err)
 		}

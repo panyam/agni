@@ -1016,7 +1016,12 @@ agni serve --store file:///srv/agni/meta --uploads file:///srv/agni/files --auth
   `--grant` wins over it.
 - The server refuses a grant it can't read, such as a `*` in the middle of a pattern, and names it
   before it listens. `--grant` needs `--auth tokens`, since a server without it opens everything.
-- `agnids` doesn't read grants yet, so it still checks each caller's own connection.
+- `--grants-file` reads the grants from a file holding only an `access` list, the shape below. An
+  empty list grants nothing. It refuses to run beside `--grant` or a `serve.yaml`'s `access`.
+- `agnids` takes the same `--grant` and `--grants-file` (agni issue 1895). Give it the grants agni
+  serve has, or a person opens a mount on the viewer and is refused it on the workbench. On agnids a
+  grant needs `--auth tokens` and `--connections-key`, since agnids checks a caller only through
+  agni serve's connections.
 
 ```yaml
 access:

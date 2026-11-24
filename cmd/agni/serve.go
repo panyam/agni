@@ -21,6 +21,7 @@ import (
 
 	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/internal/authgate"
+	"github.com/panyam/agni/internal/grants"
 	"github.com/panyam/agni/internal/wasmengine"
 	"github.com/panyam/goapplib/storage/connections"
 	"github.com/panyam/goapplib/storage/mounts"
@@ -100,6 +101,7 @@ func serveCmd() *cobra.Command {
 	var oidcAllow []string
 	var localAccounts bool
 	var grantFlags []string
+	var grantsFile string
 	var pollEvery time.Duration
 	var bootstrapPath, configPath string
 	c := &cobra.Command{
@@ -214,11 +216,19 @@ func serveCmd() *cobra.Command {
 			if localAccounts && auth != authgate.Tokens {
 				return fmt.Errorf("--local-accounts mints a token when someone signs in, so it needs --auth %s", authgate.Tokens)
 			}
-			grants, err := parseGrants(grantFlags)
+			granted, err := grants.ParseAll(grantFlags)
 			if err != nil {
 				return err
 			}
-			if len(grants) > 0 && auth == "" {
+			if grantsFile != "" {
+				if len(grantFlags) > 0 {
+					return errors.New("--grants-file and --grant, or a serve.yaml's access:, both set grants; keep one")
+				}
+				if granted, err = grants.ReadFile(grantsFile); err != nil {
+					return err
+				}
+			}
+			if len(granted) > 0 && auth == "" {
 				return fmt.Errorf("--grant opens a private source to people who sign in, so it needs --auth %s; without --auth every caller reads everything", authgate.Tokens)
 			}
 			if mountMaxBytes < 0 || mountMaxFiles < 0 {
@@ -226,7 +236,7 @@ func serveCmd() *cobra.Command {
 			}
 			return runViewer(cmd, viewerOpts{
 				localAccounts: localAccounts,
-				grants:        grants,
+				grants:        granted,
 				auth:          auth, tlsCert: tlsCert, tlsKey: tlsKey, trustedProxies: proxies, connectionsKey: connectionsKey, oidcSignIn: oidcIn,
 				webhookSecret: hookSecret, graphState: graphState, s3Endpoint: s3Endpoint, gcsEndpoint: gcsEndpoint, graphAPI: graphAPI, mountLimits: mounts.Limits{MaxBytes: mountMaxBytes, MaxFiles: mountMaxFiles}, poll: pollEvery, bootstrap: plan, githubSignIn: signIn, publicURL: publicURL,
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
@@ -286,6 +296,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&githubSecretRef, "github-client-secret", "", "where the GitHub App's client secret is, as env:NAME or file:/abs/path; with --github-client-id")
 	c.Flags().StringSliceVar(&githubAllow, "github-allow", nil, "who may sign in with GitHub, as org:<org> for an org's members or user:<login>, comma-separated or repeated; with --github-client-id")
 	c.Flags().StringVar(&oidcIssuer, "oidc-issuer", "", "the issuer URL of an OpenID Connect provider people sign in through, such as https://login.microsoftonline.com/<tenant>/v2.0 for Entra ID (agni issue 1811). With --oidc-client-id and --oidc-allow, /signin offers it beside any GitHub sign-in, and agni login --with oidc signs in from a terminal through its device flow. A person signs in as oidc:<sub> and keeps no connection. Needs --auth tokens")
+	c.Flags().StringVar(&grantsFile, "grants-file", "", "read --grant from a YAML file holding only access: [{source, allow: [pattern]}], a serve.yaml's shape, so agnids can read the same file (agni issue 1895). An empty list grants nothing. Not with --grant or a serve.yaml's access:")
 	c.Flags().StringVar(&oidcClientID, "oidc-client-id", "", "the client id registered with the --oidc-issuer provider, whose redirect URI is <public-url>/signin/oidc/callback/")
 	c.Flags().StringVar(&oidcSecretRef, "oidc-client-secret", "", "where that client's secret is, as env:NAME or file:/abs/path; empty for a public client")
 	c.Flags().StringSliceVar(&oidcAllow, "oidc-allow", nil, "who may sign in through --oidc-issuer, as domain:<domain> for a verified email in it, group:<id> for a value in the groups claim, sub:<sub> for one person, or hd:<domain> for a Google Workspace domain, comma-separated or repeated")

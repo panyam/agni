@@ -1237,8 +1237,8 @@ tag:
 #   make tag-push V=v0.1.0
 # The compose bundles a release attaches, with the release's version as their default: the trial
 # bundle (agni issue 1057), deploy/compose.yaml and its env example, and the enterprise bundle (agni
-# issue 1802), deploy/enterprise/ as dist/agni-enterprise-V.tar.gz, so its compose.yaml and
-# env.example unpack into a folder of their own.
+# issue 1802), deploy/enterprise/ as dist/agni-enterprise-V.tar.gz, so its compose.yaml, env.example
+# and access.yaml unpack into a folder of their own.
 #   make compose-release V=v0.2.4
 compose-release:
 	@$(check_semver)
@@ -1248,6 +1248,7 @@ compose-release:
 	@grep -q 'AGNI_VERSION:-$(V)' dist/compose.yaml || { echo "dist/compose.yaml was not pinned to $(V)"; exit 1; }
 	sed 's/$${AGNI_VERSION:-latest}/$${AGNI_VERSION:-$(V)}/' deploy/enterprise/compose.yaml > dist/agni-enterprise/compose.yaml
 	sed 's/^AGNI_VERSION=latest/AGNI_VERSION=$(V)/' deploy/enterprise/env.example > dist/agni-enterprise/env.example
+	cp deploy/enterprise/access.yaml dist/agni-enterprise/access.yaml
 	@[ "$$(grep -c 'AGNI_VERSION:-$(V)' dist/agni-enterprise/compose.yaml)" = 2 ] || { echo "dist/agni-enterprise/compose.yaml was not pinned to $(V) for both images"; exit 1; }
 	tar -czf dist/agni-enterprise-$(V).tar.gz -C dist agni-enterprise
 

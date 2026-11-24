@@ -58,6 +58,9 @@ services:
       # The connections, mounts, packs and designs the server holds, applied at every start (agni
       # issue 1808). Empty declares nothing.
       - --bootstrap=${AGNI_BOOTSTRAP:-}
+      # Who may read a private source with no GitHub connection of their own, from access.yaml
+      # (agni issues 1889 and 1895). The workbench reads the same file.
+      - --grants-file=/etc/agni/access.yaml
     ports:
       - "${AGNI_PORT:-8443}:8443"
     volumes:
@@ -70,6 +73,8 @@ services:
       - ${AGNI_CA_DIR:-./ca}:/etc/agni/ca:ro
       # The folder holding bootstrap.yaml, which AGNI_BOOTSTRAP names inside the container.
       - ${AGNI_BOOTSTRAP_DIR:-./bootstrap}:/etc/agni/bootstrap:ro
+      # The operator's grants. The bundle ships it granting nothing.
+      - ${AGNI_ACCESS_FILE:-./access.yaml}:/etc/agni/access.yaml:ro
     environment:
       SSL_CERT_DIR: /etc/ssl/certs:/etc/agni/ca
     secrets:
@@ -103,12 +108,14 @@ services:
       - --connections-key=file:/run/secrets/connections_key
       - --github-api=${AGNI_GITHUB_API:-https://api.github.com}
       - --viewer-url=${AGNI_PUBLIC_URL:?set AGNI_PUBLIC_URL in .env}
+      - --grants-file=/etc/agni/access.yaml
     ports:
       - "${AGNI_DATASHEETS_PORT:-8090}:8090"
     volumes:
       - corpus:/corpus
       - data:/var/lib/agni:ro
       - ${AGNI_CA_DIR:-./ca}:/etc/agni/ca:ro
+      - ${AGNI_ACCESS_FILE:-./access.yaml}:/etc/agni/access.yaml:ro
     environment:
       SSL_CERT_DIR: /etc/ssl/certs:/etc/agni/ca
     secrets:

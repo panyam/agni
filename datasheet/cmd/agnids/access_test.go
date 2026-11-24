@@ -173,3 +173,120 @@ func TestAgnidsWithAuthServesAPrivateMountToItsReaders(t *testing.T) {
 		t.Error("agnids wrote to agni serve's connections, sealed tokens or mount records while checking its callers")
 	}
 }
+
+// A grant of local:* on a private mount's repo lets agnids serve it to a person signed in with a
+// local account and no connection of their own, as agni serve does. A token's subject stays
+// refused, and agnids without the grant refuses both (agni issue 1895).
+func TestAgnidsReadsAgniServesGrants(t *testing.T) {
+	gh := githubtest.New(t)
+	repo := gh.AddRepo("acme", "sheets", true, map[string]string{"ti/TPS62.pdf": "%PDF-1.4"})
+	repo.Grant("ghp_server")
+	t.Setenv("AGNI_TEST_SERVER_GITHUB", "ghp_server")
+	t.Setenv("AGNI_TEST_CONNECTIONS_KEY", strings.Repeat("c4", 32))
+	store, uploads := t.TempDir(), t.TempDir()
+	ctx := context.Background()
+	serve, err := mountset.Open(serveConfig(t, openStore(t, store), mountset.Config{
+		Uploads: uploads, ConnectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", GitHubAPI: gh.URL, GitHubRaw: gh.RawURL(),
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := serve.Connections().PutConnection(ctx, connections.Connection{ID: "acme", Kind: connections.KindGitHubToken, Scope: connections.ScopeServer,
+		TokenRef: "env:AGNI_TEST_SERVER_GITHUB", BaseURL: gh.URL, Status: connections.StatusOK}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := serve.CreateMount(service.WithCaller(ctx, service.Caller{Subject: "ops"}), "sheets", "github://acme/sheets", "", "acme"); err != nil {
+		t.Fatal(err)
+	}
+	tokens := map[string]string{}
+	for _, who := range []string{"local:carol", "dave"} {
+		made, err := storeTokens(t, store).CreateAPIKey(ctx, &core.CreateAPIKeyRequest{Subject: who, Name: who})
+		if err != nil {
+			t.Fatal(err)
+		}
+		tokens[who] = made.FullKey
+	}
+	grantsFile := filepath.Join(t.TempDir(), "access.yaml")
+	if err := os.WriteFile(grantsFile, []byte("access:\n  - {source: github://acme/sheets, allow: [\"local:*\"]}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	granted, err := readGrants(nil, grantsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	workbench := func(g []connections.SourceGrant) *httptest.Server {
+		table, err := serveTable(nil, "", openStore(t, store), uploads,
+			tableAccess{auth: true, connectionsKey: "env:AGNI_TEST_CONNECTIONS_KEY", githubAPI: gh.URL, grants: g})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := 0; i < 40; i++ {
+			if _, ok := table.Find("sheets"); ok {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		srv := httptest.NewServer(guard(newWorkbenchMux(table, workbenchAccess{guard: service.NewAccessGuard(table, ""), hideRoots: true}, "", nil, "", "", nil), storeTokens(t, store), nil))
+		t.Cleanup(srv.Close)
+		return srv
+	}
+	opens := func(srv *httptest.Server, who string) bool {
+		t.Helper()
+		req, _ := http.NewRequest("POST", srv.URL+"/agni.v1.webapi.WorkspaceService/ListDir", strings.NewReader(`{"uri":"mount://sheets/ti"}`))
+		req.Header.Set("Authorization", "Bearer "+tokens[who])
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		if strings.Contains(string(b), "TPS62.pdf") {
+			return true
+		}
+		if !strings.Contains(string(b), "permission_denied") {
+			t.Errorf("%s's ListDir = %s; want the PDF or permission_denied", who, b)
+		}
+		return false
+	}
+
+	withGrant, without := workbench(granted), workbench(nil)
+	want := map[string]bool{"local:carol": true, "dave": false}
+	for who, ok := range want {
+		if got := opens(withGrant, who); got != ok {
+			t.Errorf("%s opens sheets under a grant of local:* = %v; want %v", who, got, ok)
+		}
+		if opens(without, who) {
+			t.Errorf("%s opens sheets on agnids with no grant", who)
+		}
+	}
+	if len(want) != len(tokens) {
+		t.Fatalf("checked %d people; want %d", len(want), len(tokens))
+	}
+}
+
+// agnids refuses a grant it can't check, and a grant given two ways.
+func TestAgnidsRefusesAGrantItCantCheck(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "access.yaml")
+	if err := os.WriteFile(file, []byte("access: []\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--grant", "github://acme/sheets=*"}, "needs --auth tokens and --connections-key"},
+		{[]string{"--grant", "github://acme/sheets=*", "--grants-file", file}, "--grants-file and --grant both set grants"},
+		{[]string{"--grant", "github://acme/sheets"}, "want source=pattern,pattern"},
+	} {
+		cmd := serveCmd()
+		cmd.SetOut(io.Discard)
+		cmd.SetErr(io.Discard)
+		cmd.SetArgs(append([]string{"--addr", "192.0.2.1:0"}, c.args...))
+		if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("agnids serve %q = %v; want one saying %q", c.args, err, c.want)
+		}
+	}
+}

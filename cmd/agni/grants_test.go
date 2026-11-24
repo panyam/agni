@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/panyam/oneauth/oauth2/oidc/oidctest"
 
 	"github.com/panyam/agni/internal/authgate"
+	"github.com/panyam/agni/internal/grants"
 )
 
 // grantStore is a store holding two private repos' mounts and a design linked from each, and a
@@ -100,9 +102,9 @@ func newGrantStore(t *testing.T) *grantStore {
 	return g
 }
 
-// opts serves the store, once the caller opens it, under --auth tokens with grants as --grant values.
-func (g *grantStore) opts(grants ...string) viewerOpts {
-	parsed, err := parseGrants(grants)
+// opts serves the store, once the caller opens it, under --auth tokens with vs as --grant values.
+func (g *grantStore) opts(vs ...string) viewerOpts {
+	parsed, err := grants.ParseAll(vs)
 	if err != nil {
 		panic(err)
 	}
@@ -263,6 +265,13 @@ func TestServeRefusesAMalformedGrant(t *testing.T) {
 	}
 
 	t.Setenv("AGNI_CONFIG_DIR", t.TempDir())
+	grantsFile, badFile := filepath.Join(t.TempDir(), "access.yaml"), filepath.Join(t.TempDir(), "bad.yaml")
+	if err := os.WriteFile(grantsFile, []byte("access:\n  - {source: github://acme/board, allow: [\"*\"]}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(badFile, []byte("grant: [\"github://acme/board=*\"]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	for _, c := range []struct {
 		args []string
 		want string
@@ -270,6 +279,9 @@ func TestServeRefusesAMalformedGrant(t *testing.T) {
 		{[]string{"--grant", "github://acme/board"}, `--grant "github://acme/board": want source=pattern,pattern`},
 		{[]string{"--grant", "github://acme/board=local:*,"}, `--grant "github://acme/board=local:*,": connections: invalid source grant: viewer pattern ""`},
 		{[]string{"--grant", "github://acme/board=*"}, "--grant opens a private source to people who sign in, so it needs --auth tokens"},
+		{[]string{"--grants-file", grantsFile}, "--grant opens a private source to people who sign in, so it needs --auth tokens"},
+		{[]string{"--grants-file", grantsFile, "--grant", "github://acme/board=*"}, "--grants-file and --grant, or a serve.yaml's access:, both set grants"},
+		{[]string{"--grants-file", badFile}, `--grants-file ` + badFile + `: want only access:`},
 	} {
 		cmd := rootCmd()
 		cmd.SetOut(io.Discard)
