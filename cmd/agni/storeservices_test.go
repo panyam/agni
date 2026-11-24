@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,6 +30,21 @@ import (
 
 // storeServer serves the project, design and snapshot services `agni serve --store --uploads`
 // builds over dir/store and dir/uploads, with the tutorial project mounted beside them.
+
+// spawnFor runs storeServices' background goroutines for a test, and waits for them in the test's
+// cleanup, after t.Context() ends, so none outlives the test's temp folders.
+func spawnFor(t *testing.T) func(func()) {
+	var wg sync.WaitGroup
+	t.Cleanup(wg.Wait)
+	return func(run func()) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			run()
+		}()
+	}
+}
+
 func storeServer(t *testing.T, dir string) *httptest.Server {
 	t.Helper()
 	ms, err := withUploadsMount([]mounts.Mount{mountset.Folder("tut", "../../examples/tutorial-project")}, filepath.Join(dir, "uploads"))
@@ -37,7 +53,7 @@ func storeServer(t *testing.T, dir string) *httptest.Server {
 	}
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
 	resolver := &service.ProjectResolver{Store: projectStore, Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
-	projectSvc, designSvc, _, err := storeServices(t.Context(), tableOf(ms), testStore(t, filepath.Join(dir, "store")), filepath.Join(dir, "uploads"), nil, projectStore, resolver, nil, nil, io.Discard)
+	projectSvc, designSvc, _, err := storeServices(t.Context(), spawnFor(t), tableOf(ms), testStore(t, filepath.Join(dir, "store")), filepath.Join(dir, "uploads"), nil, projectStore, resolver, nil, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +176,7 @@ func TestARunningServerSweepsAReplacedArtifactsFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	resolver := &service.ProjectResolver{Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
-	_, designSvc, _, err := storeServices(t.Context(), tableOf(ms), testStore(t, store), uploads, nil, nil, resolver, nil, nil, io.Discard)
+	_, designSvc, _, err := storeServices(t.Context(), spawnFor(t), tableOf(ms), testStore(t, store), uploads, nil, nil, resolver, nil, nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

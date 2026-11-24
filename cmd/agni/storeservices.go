@@ -33,8 +33,9 @@ var sweepInterval = time.Hour
 // files too, by hash under uploadsDir, and serves each design's view as the mount "uploads". Uploaded
 // blobs go to the same folder, so they outlive a restart, and a sweep at startup and every hour
 // after removes what nothing names. The sweep stops when ctx ends. With --store it keeps packs too, and a pack's files go to --uploads beside the designs'.
-// With --store and checks, it keeps each design's reports, each run by checks.
-func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, uploadsDir string, upBlobs blobs.Linker, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, guard *service.AccessGuard, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
+// With --store and checks, it keeps each design's reports, each run by checks. spawn starts each
+// goroutine it leaves running, so the caller can wait for them once ctx ends (agni issue 1869).
+func storeServices(ctx context.Context, spawn func(func()), ms *mountset.Table, st *storeurl.Store, uploadsDir string, upBlobs blobs.Linker, projectStore service.ProjectStore, resolver *service.ProjectResolver, checks *service.CheckService, guard *service.AccessGuard, log io.Writer) (*service.ProjectService, *service.DesignService, *service.PackService, error) {
 	projectSvc := service.NewProjectService(projectStore)
 	var store service.DesignStore
 	var packStore service.PackStore
@@ -90,7 +91,7 @@ func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, 
 		// A Datastore store can strand a large record's parts when a server dies mid-write, and sweeps
 		// them as the uploads are swept (agni issue 1823).
 		if sw, ok := st.Records.(records.Sweeper); ok {
-			go sweepRecords(ctx, sw, log)
+			spawn(func() { sweepRecords(ctx, sw, log) })
 		}
 		projectSvc.WithRecords(projectRecs)
 		if blobs := dirStore.Blobs(); blobs != nil && resolver != nil {
@@ -103,7 +104,7 @@ func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, 
 			if err := sweep(); err != nil {
 				return nil, nil, nil, err
 			}
-			go func() {
+			spawn(func() {
 				tick := time.NewTicker(sweepInterval)
 				defer tick.Stop()
 				for {
@@ -116,7 +117,7 @@ func storeServices(ctx context.Context, ms *mountset.Table, st *storeurl.Store, 
 						}
 					}
 				}
-			}()
+			})
 		}
 	}
 	// The designs are the store's records alone. A folder in a mount becomes a design only when a

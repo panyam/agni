@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+### Fixed
+
+- `agni serve` waits for a running poll pass or webhook sync before it exits, and for the bootstrap
+  retries, the token prune, Graph renewals and the uploads and records sweeps (issues 1867 and
+  1869). So it never stops with a write half-done in its store. A poll test flaked on Windows over
+  it.
+
 ## [0.11.2] - 2026-11-23
 
 `agni serve --bootstrap` declares the connections, mounts, packs, designs and projects a server
