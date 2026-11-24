@@ -1,12 +1,10 @@
 package authgate
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"mime"
 	"net/http"
 	"path/filepath"
@@ -307,39 +305,25 @@ type LocalLoginError struct {
 // A refusal is an error carrying the server's message, and a server without local accounts is an
 // error saying so.
 func PasswordLogin(ctx context.Context, server, name, password string) (LocalToken, error) {
-	target := strings.TrimRight(server, "/") + LocalSignInPath
-	b, err := json.Marshal(LocalLogin{Username: name, Password: password}) // #nosec G117 -- the request body that signs in, sent only to server
-	if err != nil {
-		return LocalToken{}, err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, bytes.NewReader(b))
-	if err != nil {
-		return LocalToken{}, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client, err := loginClient()
-	if err != nil {
-		return LocalToken{}, err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return LocalToken{}, fmt.Errorf("could not reach %s: %w", target, err)
-	}
-	defer resp.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
-	if resp.StatusCode == http.StatusNotFound {
+	var got LocalToken
+	err := postJSON(ctx, strings.TrimRight(server, "/")+LocalSignInPath, LocalLogin{Username: name, Password: password}, &got)
+	if errors.Is(err, errNoSignIn) {
 		return LocalToken{}, fmt.Errorf("%s doesn't sign people in with local accounts; its operator starts it with --local-accounts", server)
 	}
-	if resp.StatusCode != http.StatusOK {
+	var se *statusError
+	if errors.As(err, &se) {
+		// The server's refusal is a LocalLoginError. Its message replaces the raw JSON.
 		var e LocalLoginError
-		if json.Unmarshal(raw, &e) != nil || e.Error == "" {
-			e.Error = strings.TrimSpace(string(raw))
+		if json.Unmarshal([]byte(se.text), &e) == nil && e.Error != "" {
+			se.text = e.Error
 		}
-		return LocalToken{}, &statusError{target: target, code: resp.StatusCode, text: e.Error}
+		return LocalToken{}, se
 	}
-	var got LocalToken
-	if err := json.Unmarshal(raw, &got); err != nil || got.Token == "" {
-		return LocalToken{}, fmt.Errorf("%s answered no token: %s", target, strings.TrimSpace(string(raw)))
+	if err != nil {
+		return LocalToken{}, err
+	}
+	if got.Token == "" {
+		return LocalToken{}, fmt.Errorf("%s answered no token", server)
 	}
 	return got, nil
 }
