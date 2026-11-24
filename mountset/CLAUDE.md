@@ -16,3 +16,7 @@ registry holds, and the host paths the engine reads through.
   lazy to avoid, so `CreateMount` and startup skip it.
 - **agnids sees only what agni serve fetched** from a lazy mount, since it opens the uploads
   read-only (#1880).
+- **`Table.CanRead` is the one place a grant is checked** (agni 1889, 1896). It hands goapplib the
+  caller's subject and `Caller.Claims`. The claims are `oidc:group:` and `github:org:` values that
+  sign-in wrote into the token's scopes, and `authgate.Claims` drops any other scope. agnids passes
+  grants only with `--connections-key`, since it builds no connections service without one.

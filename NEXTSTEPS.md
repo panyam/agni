@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-24, at `9d5c90c6`.
+Last pruned 2026-11-24, at `fe04e00e`.
 
 ## At a glance
 
@@ -30,9 +30,9 @@ declared entry, or its folder, links the companions its `design.yaml` declares (
 `make exercise-formats` prints one row per format and corpus file (PR 1874), and `agni serve
 --local-accounts` signs people in with a username and password that `agni users` keeps in `--store`
 (PR 1878). `agni login --with local` gets a CLI token, and the compose bundle (`AGNI_LOCAL_ACCOUNTS`) and
-Helm chart (`localAccounts`) turn it on (PR 1886). Email reset waits on #1884. A GitHub repo past the mount cap now mounts lazily, listing its tree and fetching what a read names, and `--mount-max-bytes` and `--mount-max-files` set the cap (PR 1881). Its follow-ups are on #1880. Rule messages, impact text and help lost their last em-dashes, and the KiCad item separator changed (PR 1882). v0.11.6 shipped PRs 1874 to 1886 on 2026-11-24. Since then, a companion that a link followed records its entry in `companion_of`, so bootstrap counts it as named and `prune: true` keeps it (PR 1892). Its gaps are on #1893. v0.11.7 shipped PRs 1891 (a stored design keeps `flatten_hierarchy`), 1892 and 1894 (checklist item files keep a team's own fields). Since then, `agni serve --grant source=pattern,...` and serve.yaml `access:` open a private source to signed-in people by subject pattern, through goapplib v0.7.38's `connections.WithSourceGrants` (PR 1897). The compose bundle and `agnids` wait on #1895, and claim patterns on #1896.
+Helm chart (`localAccounts`) turn it on (PR 1886). Email reset waits on #1884. A GitHub repo past the mount cap now mounts lazily, listing its tree and fetching what a read names, and `--mount-max-bytes` and `--mount-max-files` set the cap (PR 1881). Its follow-ups are on #1880. Rule messages, impact text and help lost their last em-dashes, and the KiCad item separator changed (PR 1882). v0.11.6 shipped PRs 1874 to 1886 on 2026-11-24. Since then, a companion that a link followed records its entry in `companion_of`, so bootstrap counts it as named and `prune: true` keeps it (PR 1892). Its gaps are on #1893. v0.11.7 shipped PRs 1891 (a stored design keeps `flatten_hierarchy`), 1892 and 1894 (checklist item files keep a team's own fields). Since then, `agni serve --grant source=pattern,...` and serve.yaml `access:` open a private source to signed-in people by subject pattern, through goapplib v0.7.38's `connections.WithSourceGrants` (PR 1897). `agnids` takes `--grant` and `--grants-file`, and the enterprise bundle mounts one `access.yaml` into both services (PR 1898). `oidc:group:<id>` and `github:org:<org>` patterns follow claims a sign-in writes on the token, through goapplib v0.7.39's `WithViewerClaims` (PR 1899). Nothing of the grants work is released yet.
 
-- **agni is on goapplib v0.7.38, oneauth v0.3.22, servicekit v0.2.6 and ci-actions v0.1.5.**
+- **agni is on goapplib v0.7.39, oneauth v0.3.22, servicekit v0.2.6 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
   in through an OpenID Connect provider beside or instead of GitHub, and `agni login --with oidc`
   uses its device flow (PR 1842). The exercise signs in through the App only. Its App lacks the

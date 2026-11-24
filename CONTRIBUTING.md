@@ -369,6 +369,9 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   binaries produce byte-different json for identical data (one measured diff of 1478 lines was
   entirely `"k":  v` against `"k": v`). Never byte-compare it. Parse both sides and compare the
   decoded values, or compare `check --verdicts` instead, which is stable.
+- **`git apply --3way` stages what it applies.** A later `git add <some files> && git commit`
+  takes those too, so one bump commit once swept in a whole feature. Run `git reset` after the
+  apply, or check `git show --stat` before pushing.
 - **Use `git worktree add <tmp> main`, never `git stash`, to reconstruct a whole BEFORE state** such
   as a "before" binary. Stash leaves untracked new files on disk referencing stashed-away code.
   Stashing ONE tracked file is a different move and a good one
