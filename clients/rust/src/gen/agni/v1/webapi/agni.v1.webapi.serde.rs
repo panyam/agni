@@ -1200,6 +1200,9 @@ impl serde::Serialize for ArtifactSource {
         if self.newer_time.is_some() {
             len += 1;
         }
+        if !self.companion_of.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.ArtifactSource", len)?;
         if !self.mount.is_empty() {
             struct_ser.serialize_field("mount", &self.mount)?;
@@ -1231,6 +1234,9 @@ impl serde::Serialize for ArtifactSource {
         if let Some(v) = self.newer_time.as_ref() {
             struct_ser.serialize_field("newerTime", v)?;
         }
+        if !self.companion_of.is_empty() {
+            struct_ser.serialize_field("companionOf", &self.companion_of)?;
+        }
         struct_ser.end()
     }
 }
@@ -1256,6 +1262,8 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
             "newerVersion",
             "newer_time",
             "newerTime",
+            "companion_of",
+            "companionOf",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -1270,6 +1278,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
             AccessSource,
             NewerVersion,
             NewerTime,
+            CompanionOf,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -1301,6 +1310,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
                             "accessSource" | "access_source" => Ok(GeneratedField::AccessSource),
                             "newerVersion" | "newer_version" => Ok(GeneratedField::NewerVersion),
                             "newerTime" | "newer_time" => Ok(GeneratedField::NewerTime),
+                            "companionOf" | "companion_of" => Ok(GeneratedField::CompanionOf),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -1330,6 +1340,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
                 let mut access_source__ = None;
                 let mut newer_version__ = None;
                 let mut newer_time__ = None;
+                let mut companion_of__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Mount => {
@@ -1392,6 +1403,12 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
                             }
                             newer_time__ = map_.next_value()?;
                         }
+                        GeneratedField::CompanionOf => {
+                            if companion_of__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("companionOf"));
+                            }
+                            companion_of__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(ArtifactSource {
@@ -1405,6 +1422,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactSource {
                     access_source: access_source__.unwrap_or_default(),
                     newer_version: newer_version__.unwrap_or_default(),
                     newer_time: newer_time__,
+                    companion_of: companion_of__.unwrap_or_default(),
                 })
             }
         }

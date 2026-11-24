@@ -302,7 +302,9 @@ bootstrap: designs/alice-test, designs/psu are in the store but not in bootstrap
 ```
 
 With `prune: true` at the top of the file, the next start deletes them. Prune covers designs, their
-artifacts, packs and projects, and never a connection or a mount. Bootstrap makes no reports, so
+artifacts, packs and projects, and never a connection or a mount. A companion that a link of a named
+entry brought in counts as named, so a prune keeps it. Its source names that entry as
+`companion_of` (agni issue 1890). Bootstrap makes no reports, so
 `agni reports create` still makes one when someone asks.
 
 ## Keep the server's settings in one file

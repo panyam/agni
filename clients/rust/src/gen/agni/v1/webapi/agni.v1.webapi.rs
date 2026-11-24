@@ -3120,6 +3120,12 @@ pub struct ArtifactSource {
     /// newer_time is when the server saw newer_version. Output only.
     #[prost(message, optional, tag="10")]
     pub newer_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    /// companion_of is the id of the artifact whose design.yaml declared this one as a companion, such
+    /// as "netlist", when a link or sync of that entry linked it (agni issue 1890). Empty is an
+    /// artifact linked or uploaded on its own. A bootstrap counts a companion as named when the plan
+    /// names its entry, so a prune keeps it. Only the server sets it. Output only.
+    #[prost(string, tag="11")]
+    pub companion_of: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AddDesignsRequest {

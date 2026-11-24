@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/yaml.v3"
 
@@ -114,7 +115,7 @@ func (s *DesignService) LinkArtifact(ctx context.Context, req *webapi.LinkArtifa
 		if err != nil && !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
-		more, err := s.companionWrites(ctx, r, at, decl, have, writes)
+		more, err := s.companionWrites(ctx, r, at, id, decl, have, writes)
 		if err != nil {
 			return nil, err
 		}
@@ -165,15 +166,14 @@ func (s *DesignService) entryOf(ctx context.Context, r MountReader, version, p s
 }
 
 // companionWrites links each companion decl declares beside the entry linked at entry, on the same
-// mount and ref, as an artifact of its own with the id push gives it (agni issue 1873). A companion
-// is left out when the design already has an artifact of its id, or one linked to its path, or when
-// pending writes take its id, so a link a person made, or an upload, is never replaced. Each write
-// creates its artifact.
-func (s *DesignService) companionWrites(ctx context.Context, r MountReader, entry *webapi.ArtifactSource, decl *entryDecl, have []*webapi.Artifact, pending []ArtifactWrite) ([]ArtifactWrite, error) {
-	dir := path.Dir(entry.GetPath())
-	if dir == "." {
-		dir = ""
-	}
+// mount and ref, as an artifact of its own with the id push gives it (agni issue 1873). Each one
+// names entryID as its companion_of (agni issue 1890). A companion is left out when the design
+// already has an artifact of its id, or one linked to its path, or when pending writes take its id,
+// so a link a person made, or an upload, is never replaced. Each write creates its artifact, except
+// that an artifact linked to the companion's path and ref with no companion_of is stamped with it.
+// A pending write of that artifact gets the stamp in place, and otherwise a write keeps its files.
+func (s *DesignService) companionWrites(ctx context.Context, r MountReader, entry *webapi.ArtifactSource, entryID string, decl *entryDecl, have []*webapi.Artifact, pending []ArtifactWrite) ([]ArtifactWrite, error) {
+	dir := companionDir(entry)
 	taken := map[string]bool{}
 	for _, w := range pending {
 		taken[w.ID] = true
@@ -181,6 +181,18 @@ func (s *DesignService) companionWrites(ctx context.Context, r MountReader, entr
 	var out []ArtifactWrite
 	for _, c := range decl.Companions {
 		p := path.Join(dir, c.Path)
+		if a := s.unstamped(entry, entryID, p, have); a != nil {
+			_, id, _ := ArtifactID(a.GetName())
+			i := slices.IndexFunc(pending, func(w ArtifactWrite) bool { return w.ID == id })
+			switch {
+			case i >= 0 && pending[i].Source != nil:
+				pending[i].Source.CompanionOf = entryID
+			case i < 0:
+				out = append(out, stampWrite(a, entryID))
+				taken[id] = true
+			}
+			continue
+		}
 		held := slices.ContainsFunc(have, func(a *webapi.Artifact) bool {
 			_, id, _ := ArtifactID(a.GetName())
 			src := a.GetSource()
@@ -196,10 +208,87 @@ func (s *DesignService) companionWrites(ctx context.Context, r MountReader, entr
 		taken[c.ID] = true
 		out = append(out, ArtifactWrite{ID: c.ID, Files: files, AllowMissing: true, Source: &webapi.ArtifactSource{
 			Mount: entry.GetMount(), Path: p, Ref: entry.GetRef(), Follow: entry.GetFollow(), Version: entry.GetVersion(),
-			ReadTime: entry.GetReadTime(), ReadHash: manifestHash(files),
+			ReadTime: entry.GetReadTime(), ReadHash: manifestHash(files), CompanionOf: entryID,
 		}})
 	}
 	return out, nil
+}
+
+// companionDir is the folder of the entry linked at entry, "" at the mount's root. A design.yaml's
+// companion paths are relative to it.
+func companionDir(entry *webapi.ArtifactSource) string {
+	if dir := path.Dir(entry.GetPath()); dir != "." {
+		return dir
+	}
+	return ""
+}
+
+// unstamped returns the artifact of have linked to p on entry's mount and ref with no companion_of,
+// other than entryID itself, or nil. A link of a declared entry before agni issue 1890 left its
+// companions so.
+func (s *DesignService) unstamped(entry *webapi.ArtifactSource, entryID, p string, have []*webapi.Artifact) *webapi.Artifact {
+	for _, a := range have {
+		_, id, _ := ArtifactID(a.GetName())
+		src := a.GetSource()
+		if id != entryID && s.linked(a) && src.GetCompanionOf() == "" && src.GetMount() == entry.GetMount() && src.GetPath() == p && src.GetRef() == entry.GetRef() {
+			return a
+		}
+	}
+	return nil
+}
+
+// stampWrite writes a again with its files and source, naming entryID as its companion_of.
+func stampWrite(a *webapi.Artifact, entryID string) ArtifactWrite {
+	_, id, _ := ArtifactID(a.GetName())
+	src := proto.Clone(a.GetSource()).(*webapi.ArtifactSource)
+	src.CompanionOf = entryID
+	return ArtifactWrite{ID: id, Files: a.GetFiles(), AllowMissing: true, Source: src}
+}
+
+// stampCompanions names entryID as the companion_of of each artifact of design that a link of the
+// entry before agni issue 1890 followed, so a bootstrap after an upgrade counts it as named. It
+// reads the entry's design.yaml at the version the entry holds, and only when design has a linked
+// artifact in the entry's folder on its mount with no companion_of. It reports whether it wrote.
+func (s *DesignService) stampCompanions(ctx context.Context, design, entryID string) (bool, error) {
+	if s.readers == nil {
+		return false, nil
+	}
+	all, err := s.catalog.Artifacts(ctx, design)
+	if err != nil {
+		return false, err
+	}
+	i := slices.IndexFunc(all, func(a *webapi.Artifact) bool { _, id, _ := ArtifactID(a.GetName()); return id == entryID })
+	if i < 0 || !s.linked(all[i]) {
+		return false, nil
+	}
+	entry := all[i].GetSource()
+	dir := companionDir(entry)
+	candidate := slices.ContainsFunc(all, func(a *webapi.Artifact) bool {
+		p := a.GetSource().GetPath()
+		return a != all[i] && s.linked(a) && a.GetSource().GetCompanionOf() == "" && a.GetSource().GetMount() == entry.GetMount() && path.Dir(p) == path.Dir(entry.GetPath())
+	})
+	if !candidate {
+		return false, nil
+	}
+	r, err := s.readers(ctx, entry.GetMount())
+	if err != nil {
+		return false, err
+	}
+	_, _, decl, err := s.readEntry(ctx, r, entry.GetVersion(), entry.GetPath())
+	if err != nil || decl == nil {
+		return false, err
+	}
+	var writes []ArtifactWrite
+	for _, c := range decl.Companions {
+		if a := s.unstamped(entry, entryID, path.Join(dir, c.Path), all); a != nil {
+			writes = append(writes, stampWrite(a, entryID))
+		}
+	}
+	if len(writes) == 0 {
+		return false, nil
+	}
+	_, err = s.catalog.WriteArtifacts(ctx, design, writes, s.blobs)
+	return err == nil, err
 }
 
 // keepDeclared stores what a linked entry's design.yaml declares, as ImportDesignFiles does for a
@@ -345,7 +434,7 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 			continue
 		}
 		_, id, _ := ArtifactID(a.GetName())
-		next := &webapi.ArtifactSource{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: true, Version: version, ReadTime: now, ReadHash: hash}
+		next := &webapi.ArtifactSource{Mount: src.GetMount(), Path: src.GetPath(), Ref: src.GetRef(), Follow: true, Version: version, ReadTime: now, ReadHash: hash, CompanionOf: src.GetCompanionOf()}
 		writes = append(writes, ArtifactWrite{ID: id, Files: files, Source: next})
 		if declared != nil {
 			decl, entryID, entryReader, entrySrc = declared, id, r, next
@@ -365,7 +454,7 @@ func (s *DesignService) SyncDesign(ctx context.Context, req *webapi.SyncDesignRe
 	// A companion the descriptor declares now and the design lacks is linked with the entry, so a
 	// companion added to design.yaml reaches the server on the next sync (agni issue 1873).
 	if decl != nil && len(decl.Companions) > 0 {
-		more, err := s.companionWrites(ctx, entryReader, entrySrc, decl, all, writes)
+		more, err := s.companionWrites(ctx, entryReader, entrySrc, entryID, decl, all, writes)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", ArtifactName(strings.TrimPrefix(req.GetName(), designsNamePrefix), entryID), err)
 		}
