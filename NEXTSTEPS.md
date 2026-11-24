@@ -31,7 +31,7 @@ declared entry, or its folder, links the companions its `design.yaml` declares (
 --local-accounts` signs people in with a username and password that `agni users` keeps in `--store`
 (PR 1878). Its follow-ups are on #1176. A GitHub repo past the mount cap now mounts lazily, listing its tree and fetching what a read names, and `--mount-max-bytes` and `--mount-max-files` set the cap (PR 1881). Its follow-ups are on #1880.
 
-- **agni is on goapplib v0.7.36, oneauth v0.3.22, servicekit v0.2.6 and ci-actions v0.1.5.**
+- **agni is on goapplib v0.7.37, oneauth v0.3.22, servicekit v0.2.6 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
   in through an OpenID Connect provider beside or instead of GitHub, and `agni login --with oidc`
   uses its device flow (PR 1842). The exercise signs in through the App only. Its App lacks the
