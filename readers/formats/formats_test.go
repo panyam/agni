@@ -166,6 +166,10 @@ func TestFaithfulUnavailableSuggestsGrid(t *testing.T) {
 			t.Errorf("%s: want an error suggesting --layout=grid, got %v", ext, err)
 		}
 	}
+	// The error lists every extension that does carry geometry (agni issue 766).
+	if err := faithfulUnavailable(".foo"); !strings.Contains(err.Error(), ".kicad_sch") || !strings.Contains(err.Error(), ".eds") {
+		t.Errorf("want the geometry extensions listed, got %v", err)
+	}
 }
 
 func TestResolveGeometryRouting(t *testing.T) {

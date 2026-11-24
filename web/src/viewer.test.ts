@@ -1206,7 +1206,7 @@ describe("ViewerPresenter", () => {
 });
 
 describe("on-demand checks (WS9)", () => {
-  it("opening a file does not run checks — they wait for the Run button", async () => {
+  it("opening a file does not run checks, which wait for the Run button", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn");
     expect(h.checkDesign).not.toHaveBeenCalled();

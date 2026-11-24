@@ -195,7 +195,7 @@ describe("focusSpecs (WS9-006)", () => {
 });
 
 describe("ghostSpecs (WS9-007)", () => {
-  it("keeps only removed components and deleted nets — b draws everything else", () => {
+  it("keeps only removed components and deleted nets, since b draws everything else", () => {
     const specs = ghostSpecs(componentStatus, netStatus);
     expect(specs.flatMap((s) => s.components ?? [])).toEqual(["R2"]);
     expect(specs.flatMap((s) => s.nets ?? [])).toEqual(["OLD"]);

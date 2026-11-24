@@ -1,5 +1,5 @@
 #agni-run e2fb31b07da58eec
-# agni check — showcase.fires.kicad_pro
+# agni check of showcase.fires.kicad_pro
 
 | severity | findings |
 |---|---|
@@ -11,31 +11,52 @@
 
 ## error
 
-### i2c-pull-up — An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.
-- `/SCL` — I2C net has no pull-up resistor to a rail (showcase.fires.kicad_sch)
+### i2c-pull-up
+
+An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.
+
+- `/SCL`: I2C net has no pull-up resistor to a rail (showcase.fires.kicad_sch)
 
 ## warning
 
-### bulk-cap — A named power rail carries no capacitor at all (no bulk reservoir).
-- `+3V3` — power rail has no bulk capacitor (showcase.fires.kicad_sch)
-- `VBUS` — power rail has no bulk capacitor (showcase.fires.kicad_sch)
+### bulk-cap
 
-### decoupling-present — A power rail feeds power-input pins but has no decoupling capacitor on it.
-- `+3V3` — power rail has no decoupling capacitor (showcase.fires.kicad_sch)
-- `VBUS` — power rail has no decoupling capacitor (showcase.fires.kicad_sch)
+A named power rail carries no capacitor at all (no bulk reservoir).
 
-### input-protection — A connector feeds a power-input pin directly with no fuse or TVS in the path.
-- `VBUS` — connector feeds a power input with no fuse or TVS in the path (showcase.fires.kicad_sch)
+- `+3V3`: power rail has no bulk capacitor (showcase.fires.kicad_sch)
+- `VBUS`: power rail has no bulk capacitor (showcase.fires.kicad_sch)
 
-### reverse-blocking-absent — A connector feeds a power input with no directional element blocking reverse flow.
-- `VBUS` — connector feeds a power input with no reverse-blocking element in the path (showcase.fires.kicad_sch)
+### decoupling-present
+
+A power rail feeds power-input pins but has no decoupling capacitor on it.
+
+- `+3V3`: power rail has no decoupling capacitor (showcase.fires.kicad_sch)
+- `VBUS`: power rail has no decoupling capacitor (showcase.fires.kicad_sch)
+
+### input-protection
+
+A connector feeds a power-input pin directly with no fuse or TVS in the path.
+
+- `VBUS`: connector feeds a power input with no fuse or TVS in the path (showcase.fires.kicad_sch)
+
+### reverse-blocking-absent
+
+A connector feeds a power input with no directional element blocking reverse flow.
+
+- `VBUS`: connector feeds a power input with no reverse-blocking element in the path (showcase.fires.kicad_sch)
 
 ## info
 
-### esd-protection — An externally-exposed signal net (on a connector) has no TVS device.
-- `/USB_D+` — externally-exposed signal net has no ESD protection (showcase.fires.kicad_sch)
-- `/USB_D-` — externally-exposed signal net has no ESD protection (showcase.fires.kicad_sch)
+### esd-protection
 
-### test-point-coverage — A power rail or ground net has no test point, on a board that uses them.
-- `GND` — rail carries no test point; bring-up and factory test cannot probe it (showcase.fires.kicad_sch)
-- `VBUS` — rail carries no test point; bring-up and factory test cannot probe it (showcase.fires.kicad_sch)
+An externally-exposed signal net (on a connector) has no TVS device.
+
+- `/USB_D+`: externally-exposed signal net has no ESD protection (showcase.fires.kicad_sch)
+- `/USB_D-`: externally-exposed signal net has no ESD protection (showcase.fires.kicad_sch)
+
+### test-point-coverage
+
+A power rail or ground net has no test point, on a board that uses them.
+
+- `GND`: rail carries no test point; bring-up and factory test cannot probe it (showcase.fires.kicad_sch)
+- `VBUS`: rail carries no test point; bring-up and factory test cannot probe it (showcase.fires.kicad_sch)

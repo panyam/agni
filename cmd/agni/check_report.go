@@ -41,7 +41,7 @@ func reportFindings(rep *checkspb.CheckReport) []*checkspb.Finding {
 // rather than raw findings so it matches the web report panel.
 func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
 	rep = forDisplay(rep)
-	fmt.Fprintf(w, "# agni check — %s\n\n", rep.GetSource())
+	fmt.Fprintf(w, "# agni check of %s\n\n", rep.GetSource())
 	// An inconclusive finding is counted apart, as the viewer counts it, since it is not a defect
 	// (agni issue 1045).
 	total, unresolved := 0, 0
@@ -70,17 +70,16 @@ func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
 	for _, s := range rep.GetSections() {
 		fmt.Fprintf(w, "\n## %s\n", s.GetSeverity())
 		for _, g := range s.GetRules() {
-			heading := g.GetRule()
+			fmt.Fprintf(w, "\n### %s\n", g.GetRule())
 			if g.GetSummary() != "" {
-				heading += " — " + g.GetSummary()
+				fmt.Fprintf(w, "\n%s\n\n", g.GetSummary())
 			}
-			fmt.Fprintf(w, "\n### %s\n", heading)
 			for _, f := range g.GetFindings() {
 				src := ""
 				if f.GetProvenance().GetSourceFile() != "" {
 					src = " (" + f.GetProvenance().GetSourceFile() + ")"
 				}
-				fmt.Fprintf(w, "- `%s` — %s%s\n", f.GetSubject().GetRef(), f.GetMessage(), src)
+				fmt.Fprintf(w, "- `%s`: %s%s\n", f.GetSubject().GetRef(), f.GetMessage(), src)
 			}
 		}
 	}

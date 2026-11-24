@@ -38,8 +38,8 @@ func resultsCmd() *cobra.Command {
 			"A document from a check run renders as text | json | markdown | report; one from a review " +
 			"run renders as markdown | json, matching what each command emits live.\n\n" +
 			"--compare turns it into a differential harness: given another document (typically a vendor " +
-			"report brought in with `agni import-results`), it reports which entities each run flagged — " +
-			"ours only, theirs only, both — so a foreign checker becomes a gate rather than something a " +
+			"report brought in with `agni import-results`), it reports which entities each run flagged, " +
+			"ours only, theirs only or both, so a foreign checker becomes a gate rather than something a " +
 			"person reads side by side.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

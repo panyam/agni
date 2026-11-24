@@ -100,9 +100,9 @@ func nativeOpenCmd() *cobra.Command {
 func nativeHint(err error, abs string) error {
 	switch {
 	case errors.Is(err, native.ErrNoTool):
-		return fmt.Errorf("no native tool for %s files (EDIF/IPC-2581/ODB++ have none; see docs/NATIVE_VERIFICATION.md)", filepath.Ext(abs))
+		return fmt.Errorf("no native tool for %s files (EDIF/IPC-2581/ODB++ have none; see docsite/content/build/native-verification.md)", filepath.Ext(abs))
 	case errors.Is(err, native.ErrNotFound):
-		return fmt.Errorf("the native tool for %s is not installed / not on PATH; xschem and Lepton are Linux/X11 tools with no macOS build, so use Dockerfile.nattools (see docs/NATIVE_VERIFICATION.md)", filepath.Ext(abs))
+		return fmt.Errorf("the native tool for %s is not installed / not on PATH; xschem and Lepton are Linux/X11 tools with no macOS build, so use Dockerfile.nattools (see docsite/content/build/native-verification.md)", filepath.Ext(abs))
 	default:
 		return err
 	}

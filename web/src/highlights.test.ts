@@ -179,7 +179,7 @@ describe("withFocusShape (WS9-040)", () => {
     expect(withFocusShape([{ components: ["R1"], nets: [] }])[0].shape).toBe(HighlightShape.BOUNDING_RECT);
   });
 
-  it("keeps a bus focus at OUTLINE — recolor the thick trunk, not a PATH marker or a box (WS7-042b)", () => {
+  it("keeps a bus focus at OUTLINE, recoloring the thick trunk, not a PATH marker or a box (WS7-042b)", () => {
     expect(withFocusShape([{ busIds: ["bus-1"] }])).toEqual([{ busIds: ["bus-1"], shape: HighlightShape.OUTLINE }]);
   });
 

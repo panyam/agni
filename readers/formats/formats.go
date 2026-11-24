@@ -198,6 +198,6 @@ func faithfulUnavailable(ext string) error {
 	case ".kicad_pcb":
 		return fmt.Errorf(".kicad_pcb is a board layout, not a schematic; the physical board renders as the 'board' sheet (or plain `agni render` on the file); --layout=grid draws the netlist graph")
 	default:
-		return fmt.Errorf("no faithful schematic geometry for %q (have: .eds); use --layout=grid for an auto-layout", ext)
+		return fmt.Errorf("no faithful schematic geometry for %q (have: %s); use --layout=grid for an auto-layout", ext, strings.Join(DrawingExts(), ", "))
 	}
 }

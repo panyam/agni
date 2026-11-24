@@ -518,7 +518,7 @@ func runOne(spec runSpec, step runStep, work, dir, bin string, last bool) (strin
 		// A rung whose lesson IS the exit code shows no report.
 		body = ""
 	default:
-		return "", fmt.Errorf("unknown capture %q (want stdout, stderr or both)", spec.Capture)
+		return "", fmt.Errorf("unknown capture %q (want stdout, stderr, both or none)", spec.Capture)
 	}
 	// Imagine a step FAILED and captured nothing. It would render as an empty block. Regenerating it
 	// reproduces the emptiness, so the gate is still green over a page teaching from a blank space.

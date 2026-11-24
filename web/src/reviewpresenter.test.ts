@@ -159,7 +159,7 @@ function lastConvention(onConvention: ReturnType<typeof vi.fn>): ConventionState
   return calls[calls.length - 1][0] as ConventionState;
 }
 
-describe("review presenter — loading", () => {
+describe("review presenter, loading", () => {
   it("lists the stored runs for the open design and selects the newest", async () => {
     const h = harness();
     await h.presenter.openFile("m", "proj/board.edn");
@@ -240,7 +240,7 @@ describe("review presenter — loading", () => {
   });
 });
 
-describe("review presenter — creating", () => {
+describe("review presenter, creating", () => {
   it("resolves the checklist server-side, then creates, then shows the new run", async () => {
     const h = harness();
     await h.presenter.openFile("m", "proj/board.edn");
@@ -327,7 +327,7 @@ describe("review presenter — creating", () => {
   });
 });
 
-describe("review presenter — selection", () => {
+describe("review presenter, selection", () => {
   it("shows a chosen run without refetching it", async () => {
     const h = harness();
     await h.presenter.openFile("m", "proj/board.edn");
@@ -511,7 +511,7 @@ describe("saving a checklist run", () => {
 });
 
 // agni issue 918: a checklist run shares the jobs lane with a check run and can be stopped too.
-describe("review presenter — cancelling", () => {
+describe("review presenter, cancelling", () => {
   it("stops a checklist run and says so rather than reporting an error", async () => {
     const h = harness();
     await h.presenter.openFile("m", "proj/board.edn");
@@ -539,7 +539,7 @@ describe("review presenter — cancelling", () => {
 
 // agni issue 1132: a Review finding located on whatever sheet was shown, dropped a pin subject's pin,
 // and explained an undrawn subject in the Query panel.
-describe("review presenter — locating a finding", () => {
+describe("review presenter, locating a finding", () => {
   const finding = (over: Partial<FindingItem>): FindingItem =>
     ({ rule: "r", category: "", profile: "", severity: "error", kind: "pin", subject: "U1", pin: "3", netId: "", busId: "", message: "", inconclusive: false, context: [], sheets: [], locateReason: LocateReason.UNSPECIFIED, ...over }) as FindingItem;
 
@@ -579,7 +579,7 @@ describe("review presenter — locating a finding", () => {
 
 // agni issue 1166: an inline-query item's finding opens onto how it holds, by asking the item's own
 // query again with the finding's subject bound and witnesses on.
-describe("review presenter — explaining a finding", () => {
+describe("review presenter, explaining a finding", () => {
   const MATCH = "house.pmic_rail(?n), not house.pmic_probe_point(?n) => ?n";
 
   function queried() {

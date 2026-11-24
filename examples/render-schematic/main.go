@@ -73,8 +73,8 @@ func main() {
 		if err != nil {
 			return demokit.Errf("marshal packed sheet: %v", err)
 		}
-		// Write into web/ (where the viewer serves from) as a gitignored *.local.pb, so
-		// the printed URL loads it via the viewer's ?src= parameter.
+		// Write into web/ as a gitignored *.local.pb. The viewer packs each sheet itself when it
+		// opens a design, so the printed command serves the design rather than this file.
 		base := filepath.Base(design.Path())
 		name := strings.TrimSuffix(base, filepath.Ext(base)) + ".local.pb"
 		out := filepath.Join("..", "..", "web", name)
@@ -83,8 +83,9 @@ func main() {
 		}
 		fmt.Printf("PackedSheet: %d vertices, %d primitives, %d keys.\n",
 			len(ps.Vertices)/8, len(ps.Primitives)/12, len(render.PackedKeys(ps)))
-		fmt.Printf("Wrote web/%s. Start the viewer (cd ../../web && pnpm dev), then open:\n", name)
-		fmt.Printf("  http://localhost:5178/?src=%s\n", name)
+		fmt.Printf("Wrote web/%s. To see the sheet in the viewer, serve the design:\n", name)
+		fmt.Printf("  agni open %s\n", design.Path())
+		fmt.Println("It prints a URL of the form http://127.0.0.1:<port>/mounts/<mount>/<file>/view.")
 		return nil
 	})
 

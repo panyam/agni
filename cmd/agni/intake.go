@@ -19,7 +19,7 @@ func intakeCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "intake <file>",
 		Short: "Extract a SANITIZED design summary (parts, classes, rails-by-nominal, anomalies) safe to cross the confidentiality boundary",
-		Long: `Extract the deterministic, sanitized skeleton of a design — aggregates, a query-derived class
+		Long: `Extract the deterministic, sanitized skeleton of a design. It holds aggregates, a query-derived class
 summary, the AVL/BOM parts table, rail NOMINALS (net names withheld), and anomaly counts. The output
 holds no net name or topology by construction (the intake.Skeleton type has no field for one), so it is
 safe to commit and cross the confidentiality boundary (CONSTRAINTS C16). This is the deterministic first

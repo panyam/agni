@@ -143,7 +143,7 @@ export function resolveHighlights(keys: PrimitiveKey[], specs: HighlightSpec[]):
     const netIds = new Set(spec.netIds ?? []);
     const netIdNames = new Set(spec.netIdNames ?? []);
     const buses = new Set(spec.busIds ?? []);
-    const pins = new Set((spec.pins ?? []).map((p) => `${p.refDes} ${p.pin}`));
+    const pins = new Set((spec.pins ?? []).map((p) => `${p.refDes}\u0000${p.pin}`));
     const primitives = new Set<number>();
     const byEntity = new Map<string, number[]>();
     const subjects = new Set<string>();
@@ -151,19 +151,19 @@ export function resolveHighlights(keys: PrimitiveKey[], specs: HighlightSpec[]):
       let entity: string;
       let subject: string;
       if (k.refDes !== "" && comps.has(k.refDes)) {
-        entity = `c ${k.refDes} ${k.placement ?? 0}`;
+        entity = `c\u0000${k.refDes}\u0000${k.placement ?? 0}`;
         subject = `component:${k.refDes}`;
       } else if (k.netId !== "" && netIds.has(k.netId)) {
-        entity = `n ${k.netId}`; // per-instance: two same-named nets are two entities
+        entity = `n\u0000${k.netId}`; // per-instance: two same-named nets are two entities
         subject = `net:${k.net || k.netId}`;
       } else if (k.net !== "" && (nets.has(k.net) || (k.netId === "" && netIdNames.has(k.net)))) {
-        entity = `n ${k.net}`;
+        entity = `n\u0000${k.net}`;
         subject = `net:${k.net}`;
       } else if (k.busId !== "" && buses.has(k.busId)) {
-        entity = `b ${k.busId}`; // a bus joins by source id, having no net (WS7-042b)
+        entity = `b\u0000${k.busId}`; // a bus joins by source id, having no net (WS7-042b)
         subject = `bus:${k.busId}`;
-      } else if (k.pin !== "" && pins.has(`${k.refDes} ${k.pin}`)) {
-        entity = `p ${k.refDes} ${k.pin} ${k.placement ?? 0}`;
+      } else if (k.pin !== "" && pins.has(`${k.refDes}\u0000${k.pin}`)) {
+        entity = `p\u0000${k.refDes}\u0000${k.pin}\u0000${k.placement ?? 0}`;
         subject = `pin:${k.refDes}.${k.pin}`;
       } else {
         continue;

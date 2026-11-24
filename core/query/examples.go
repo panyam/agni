@@ -86,7 +86,7 @@ var examples = []ExampleQuery{
 		// 522).
 		Label:   "Nets with no test point on them",
 		Query:   `has_test_point(?n) :- component.net(?tp, ?n), component.class(?tp, "test_point"); entity(?n, "net"), not has_test_point(?n) => ?n`,
-		Teaches: "derived relation: `;` separates clauses and `:-` names one, which is how you negate a PAIR of relations — the shape of every \"X with no related Y\" question",
+		Teaches: "derived relation: `;` separates clauses and `:-` names one, which is how you negate a PAIR of relations, the shape of every \"X with no related Y\" question",
 	},
 	{
 		Label:   "Rails above a part's recommended maximum",

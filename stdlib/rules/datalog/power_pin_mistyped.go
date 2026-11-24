@@ -53,7 +53,7 @@ var powerPinMistypedQ = query.FindingQuery{
 	Kind:       check.KindPin,
 	SubjectVar: "ref",
 	PinVar:     "pin",
-	Message:    "pin {pin} is named like a power/ground pin but is typed as a plain signal, alone on net {net} — a mistyped supply pin power-input-not-driven cannot catch",
+	Message:    "pin {pin} is named like a power/ground pin but is typed as a plain signal, alone on net {net}, a mistyped supply pin that power-input-not-driven cannot catch",
 	// Only the net. KindPin makes the ref/pin pair the subject, so a {pin} chip would navigate to what
 	// the reader is already looking at (agni issue 349).
 	ContextVars: []query.ContextVar{{Var: "net", Kind: check.KindNet, Role: "net"}},
