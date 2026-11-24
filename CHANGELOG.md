@@ -10,14 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
-### Fixed
+## [0.11.4] - 2026-11-23
 
-- A pack linked to a folder that also holds boards reads what `packs push` sends (issue 1871). It
-  lists only `project.yaml` and the files its tiers name, so the boards no longer push the folder
-  past the mount's 256 MB limit. A sync after a commit that changes none of the pack's files leaves
-  the pack unchanged. A link may name `project.yaml` itself.
-- servicekit moves to v0.2.6, which takes `gorilla/websocket` to the commit that fixes GO-2026-6278
-  (issue 1868). No tagged gorilla release has the fix yet.
+A pack linked to a folder that also holds boards reads what `packs push` sends, so the boards no
+longer push it past the mount's size limit, and a board edit beside it leaves the pack unchanged on
+sync (PR 1872, issue 1871). servicekit v0.2.6 takes `gorilla/websocket` to the commit that fixes
+GO-2026-6278 (issue 1868). `service.PackImporter` now takes a lister, and `projects.PackFromFolder`
+is the drop-in. The full write-up is [RELEASES/v0.11.4.md](RELEASES/v0.11.4.md).
 
 ## [0.11.3] - 2026-11-23
 
