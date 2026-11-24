@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.11.8] - 2026-11-24
+
+`agni serve --grant source=pattern,...` and serve.yaml `access` open a private source to people who
+sign in, by subject pattern such as `local:*` or `oidc:*` (PR 1897). agni moves to goapplib
+v0.7.38. It is a patch with no change to an exported Go API or a proto field. The full write-up is
+[RELEASES/v0.11.8.md](RELEASES/v0.11.8.md).
+
 ## [0.11.7] - 2026-11-24
 
 A stored hierarchical design reads every block its `design.yaml` asks for (PR 1891), bootstrap
