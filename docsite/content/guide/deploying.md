@@ -348,7 +348,8 @@ starts in, as it does on the command line.
 
 The chart hands the server a file like this one. It writes its values into a `serve.yaml`
 ConfigMap and passes `--config` alone. `serve` in the values holds any setting the chart doesn't
-make itself, such as `poll: 5m`. The compose bundle still passes flags from `.env`.
+make itself, such as `poll: 5m`. The compose bundle still passes flags from `.env`, and reads its
+grants from `access.yaml` beside `compose.yaml`.
 
 ## Check who can open it
 
@@ -373,6 +374,11 @@ person such as `local:carol`. A person a grant admits opens the repo's designs w
 Anyone else still needs their own. A grant opens only its own repo. The server refuses a pattern it
 can't read, and names the entry before it listens. "Opening a private repo to everyone who signs
 in" in the server guide has the rest.
+
+The compose bundle keeps its grants in `access.yaml`, next to `compose.yaml`, in the same `access`
+shape (agni issue 1895). It ships granting nothing. Both agni and the datasheet workbench read it, so
+a person a grant admits sees the repo on both. Edit it, then restart both with
+`docker compose restart agni datasheets`. `AGNI_ACCESS_FILE` in `.env` names another file.
 
 ## What leaves the network
 

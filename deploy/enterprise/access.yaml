@@ -1,0 +1,12 @@
+# Who may read a private source with no GitHub connection of their own (agni issues 1889 and 1895).
+# agni and the datasheet workbench both read this file, so a person sees the same sources on each.
+# Restart both after a change: `docker compose restart agni datasheets`.
+#
+# Each entry names a mount's source, as `agni mounts ls` shows it, and the people it opens to:
+#   "*"           anyone signed in
+#   local:*       anyone signed in with a local account; oidc:* and github:* likewise
+#   local:carol   one person, by the subject `agni token ls` shows
+#
+# access:
+#   - {source: github://acme/board, allow: ["local:*", "oidc:*"]}
+access: []

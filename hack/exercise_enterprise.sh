@@ -28,8 +28,7 @@
 # the trap listen on the kind network's gateway on Linux, or this Mac's own address.
 #
 # Each step prints PASS, FAIL with its reason, or FAIL (waits on #N) when an open ticket is what's
-# missing. A step one mode can't run yet prints SKIP (waits on #N) and fails nothing, since another
-# mode runs it. The script exits 1 on any FAIL. With EXERCISE_ALLOW_WAITS=1 it exits 0 when every FAIL
+# missing. The script exits 1 on any FAIL. With EXERCISE_ALLOW_WAITS=1 it exits 0 when every FAIL
 # waits on a ticket. CI runs it that way, and a step that used to pass still fails the job. Once
 # #1799 is done, every step passes.
 #
@@ -114,9 +113,6 @@ waiting=0
 pass() { echo "PASS: $*"; }
 no() { echo "FAIL: $*" >&2; fail=1; }
 waits() { echo "FAIL (waits on #$1): ${*:2}" >&2; waiting=1; }
-# skips names a step this mode can't run until ticket $1 lands. It fails nothing, since the other
-# modes run the step.
-skips() { echo "SKIP (waits on #$1): ${*:2}"; }
 findings() { python3 -c 'import json,sys; print(len(json.load(sys.stdin)["findings"]))'; }
 wait_for() { for _ in $(seq 1 100); do curl -s -o /dev/null "$@" && return 0; sleep 0.1; done; return 1; }
 
@@ -256,6 +252,8 @@ if [ "$mode" = bundle ]; then
   # The bundle mounts the bootstrap folder from its first start, so it is made here, or docker makes
   # it owned by root and the restart step can't write the file into it.
   mkdir -p "$out/bootstrap" && chmod 0755 "$out/bootstrap"
+  # The grants file starts as the bundle ships it, and the grant step rewrites it.
+  cp "$root/deploy/enterprise/access.yaml" "$out/access.yaml" && chmod 0644 "$out/access.yaml"
   chmod 0644 "$out/secrets/"*
   cat >"$out/bundle.env" <<ENV
 AGNI_IMAGE=$AGNI_IMAGE
@@ -276,6 +274,7 @@ AGNI_CONNECTION_SECRETS=$out/connection-secrets
 AGNI_CA_DIR=$out/ca-dir
 AGNI_BOOTSTRAP_DIR=$out/bootstrap
 AGNI_BOOTSTRAP=
+AGNI_ACCESS_FILE=$out/access.yaml
 AGNI_LOCAL_ACCOUNTS=true
 ENV
 fi
@@ -685,10 +684,17 @@ fi
 # carol holds no GitHub connection, so designs/bb is closed to her. The operator grants
 # hw/baseboard to every local account and restarts, and carol opens it. mallory signed in with GitHub
 # and holds no grant. Taking the grant away closes it again (agni issue 1889).
-# grant_access restarts the server with serve.yaml's access list, or the chart's serve.access, set
-# to $1, or with none when $1 is empty.
+# grant_access restarts the server with serve.yaml's access list, the chart's serve.access, or the
+# bundle's access.yaml, set to $1, or with none when $1 is empty.
 grant_access() {
   case "$mode" in
+    bundle)
+      if [ -n "$1" ]; then
+        printf 'access:\n  - {source: github://hw/baseboard, allow: ["%s"]}\n' "$1" >"$out/access.yaml"
+      else
+        cp "$root/deploy/enterprise/access.yaml" "$out/access.yaml"
+      fi
+      ;;
     binary)
       [ -f "$config.nogrant" ] || cp "$config" "$config.nogrant"
       cp "$config.nogrant" "$config"
@@ -708,9 +714,7 @@ opens() {
   as "$1" designs get bb >"$out/$1-grant-$2.txt" 2>&1
 }
 step "a grant opens hw/baseboard to local accounts, and removing it closes it again"
-if [ "$mode" = bundle ]; then
-  skips 1895 "the compose bundle passes no --grant, so a grant can't be set there; the binary and the chart run this step"
-else
+{
   if ! opens carol before && grep -q permission_denied "$out/carol-grant-before.txt"; then
     pass "carol, with no GitHub connection, can't open designs/bb before the grant"
   else
@@ -730,7 +734,7 @@ else
   else
     no "carol still opens designs/bb with the grant gone; see $out/carol-grant-off.txt"
   fi
-fi
+}
 
 step "nothing reached a host other than the fake"
 if [ -s "$out/trap.log" ]; then

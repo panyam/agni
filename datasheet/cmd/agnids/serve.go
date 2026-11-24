@@ -24,11 +24,13 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/param/paramconnect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/authgate"
+	"github.com/panyam/agni/internal/grants"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/storeurl"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
+	"github.com/panyam/goapplib/storage/connections"
 	"github.com/panyam/goapplib/storage/mounts"
 	skhttp "github.com/panyam/servicekit/http"
 )
@@ -39,7 +41,8 @@ import (
 func serveCmd() *cobra.Command {
 	var addr, webDir, pdf2doc, viewerURL, mountRoot, corpusDir, storeURL, uploadsURL, uploadsCache string
 	var auth, tlsCert, tlsKey string
-	var trustedProxy []string
+	var trustedProxy, grantFlags []string
+	var grantsFile string
 	var access tableAccess
 	var specs []string
 	c := &cobra.Command{
@@ -53,6 +56,13 @@ func serveCmd() *cobra.Command {
 			access.auth = auth != ""
 			if access.connectionsKey != "" && (!access.auth || storeURL == "" || uploadsURL == "") {
 				return fmt.Errorf("--connections-key checks each caller's own connections, so it needs --auth %s, --store and --uploads", authgate.Tokens)
+			}
+			var err error
+			if access.grants, err = readGrants(grantFlags, grantsFile); err != nil {
+				return err
+			}
+			if len(access.grants) > 0 && !access.checks() {
+				return fmt.Errorf("--grant opens a private source to people who sign in, and agnids checks a caller only through agni serve's connections, so it needs --auth %s and --connections-key", authgate.Tokens)
 			}
 			st, uploadsDir, err := storeurl.Open(storeURL, uploadsURL, storeurl.WithUploadsCache(uploadsCache), storeurl.ReadOnly())
 			if err != nil {
@@ -127,6 +137,8 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "agni serve's --uploads, as a URL such as file:///srv/agni/files, where the runtime mounts' files are. Needs --store")
 	c.Flags().StringVar(&auth, "auth", "", "ask every caller who they are: \""+authgate.Tokens+"\" accepts the tokens `agni token create` keeps in --store, the same ones agni serve accepts, and refuses a call without one (agni issue 1765). A browser signs in at /signin. Needs --store, and --tls-cert and --tls-key unless --addr is on localhost or --trusted-proxy names the proxy that ends TLS")
 	c.Flags().StringVar(&access.connectionsKey, "connections-key", "", "agni serve's --connections-key, as env:NAME or file:/abs/path (agni issue 1778). With --auth, a caller sees a private mount when their own connection in --store reads its repo. agnids reads people's tokens and never refreshes or writes one, so a signed-in token that has expired reads as no until agni serve refreshes it. Without it, --auth hides every private mount. Needs --auth, --store and --uploads")
+	c.Flags().StringArrayVar(&grantFlags, "grant", nil, "agni serve's --grant: let people read a private source with no GitHub connection of their own, as source=pattern,pattern, such as github://acme/board=local:* (agni issue 1895); repeatable. Give agnids the grants agni serve has, or a person sees a mount there that the workbench refuses. Needs --auth tokens and --connections-key")
+	c.Flags().StringVar(&grantsFile, "grants-file", "", "agni serve's --grants-file: read --grant from a YAML file holding only access: [{source, allow: [pattern]}] (agni issue 1895). An empty list grants nothing. Not with --grant")
 	c.Flags().StringVar(&access.githubAPI, "github-api", "", "the GitHub REST API a caller's access is checked through, agni serve's --github-api, such as https://github.example.com/api/v3 for a GitHub Enterprise Server (agni issue 1802). Empty is api.github.com")
 	c.Flags().StringVar(&tlsCert, "tls-cert", "", "a PEM certificate file to serve HTTPS with; with --tls-key")
 	c.Flags().StringVar(&tlsKey, "tls-key", "", "the PEM private key file for --tls-cert")
@@ -277,7 +289,7 @@ func serveTable(specs []string, root string, st *storeurl.Store, uploadsDir stri
 	if err != nil {
 		return nil, err
 	}
-	cfg := mountset.Config{Fixed: ms, ReadOnly: true, HidePrivate: access.auth && !access.checks(), GitHubAPI: access.githubAPI}
+	cfg := mountset.Config{Fixed: ms, ReadOnly: true, HidePrivate: access.auth && !access.checks(), GitHubAPI: access.githubAPI, Grants: access.grants}
 	if st != nil && uploadsDir != "" {
 		cfg.Uploads = uploadsDir
 		// A sqlite store keeps the mounts, connections and tokens in its database (agni issue 1733).
@@ -311,10 +323,23 @@ type workbenchAccess struct {
 }
 
 // tableAccess is how serveTable decides who sees a private mount: auth is --auth, connectionsKey
-// is --connections-key, and githubAPI is the hidden --github-api.
+// is --connections-key, githubAPI is the hidden --github-api, and grants are --grant or
+// --grants-file (agni issue 1895).
 type tableAccess struct {
 	auth                      bool
 	connectionsKey, githubAPI string
+	grants                    []connections.SourceGrant
+}
+
+// readGrants reads --grant and --grants-file, and refuses both at once.
+func readGrants(flags []string, file string) ([]connections.SourceGrant, error) {
+	if file == "" {
+		return grants.ParseAll(flags)
+	}
+	if len(flags) > 0 {
+		return nil, errors.New("--grants-file and --grant both set grants; keep one")
+	}
+	return grants.ReadFile(file)
 }
 
 // checks reports whether the server checks each caller's own connections, rather than hiding every
