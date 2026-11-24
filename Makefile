@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise exercise-enterprise-bundle exercise-enterprise-helm kind-up image-present binaries-check fetch-remote-check exercise-formats-check exercise-formats samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise exercise-enterprise-bundle exercise-enterprise-helm kind-up image-present binaries-check fetch-remote-check nul-check exercise-formats-check exercise-formats samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -228,6 +228,12 @@ binaries-check:
 # The remote-board fetcher against a file:// upstream, so it needs no network.
 fetch-remote-check:
 	hack/fetch_remote_test.sh
+
+# nul-check fails on a tracked text file that holds a NUL byte, after its own self-test. grep reads
+# such a file as binary and finds nothing in it (agni issue 360).
+nul-check:
+	hack/check_no_nul_test.sh
+	hack/check_no_nul.sh
 
 # The table step of exercise-formats, over canned go test -json output, so it needs no corpus.
 exercise-formats-check:
@@ -902,7 +908,7 @@ testall-web: samples-oracle ui wasm-test web-test
 testall-dist: samples-oracle ui examples-test python-test python-dist-check dist-check
 
 # testall-scan is the static scanners. They read source alone, so they need no build and no corpus.
-testall-scan: vet lint seccheck secrets binaries-check fetch-remote-check exercise-formats-check
+testall-scan: vet lint seccheck secrets binaries-check fetch-remote-check nul-check exercise-formats-check
 
 # testall-docs regenerates what the docsite captures and draws, and checks the committed copies still
 # match. tutorial-runs-check is the slowest single step of the gate, which is why this is a job of its
