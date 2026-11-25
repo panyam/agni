@@ -10,6 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.11.10] - 2026-11-25
+
+Several people share one `agni serve --mcp --viewer-rooms`, and each person's agent drives only
+that person's tabs (PR 1906). A reader can pair another person's agent with their tab, and a
+refusal says whose tab it was (PR 1908). An agent answers in the tab with `viewer_show_answer`
+and proposes a step with `viewer_propose` (PR 1909). `make exercise-viewer-rooms` checks all of it
+(PR 1904). agni moves to mcpkit v0.8.23. It is a patch, and the proto change adds two methods to
+`ViewerPageService`. The full write-up is [RELEASES/v0.11.10.md](RELEASES/v0.11.10.md).
+
 ## [0.11.9] - 2026-11-24
 
 `agnids` reads operator grants, and both servers take `--grants-file`, which the enterprise bundle
