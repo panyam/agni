@@ -38,10 +38,6 @@ const DESIGN = "kicad/hier_numeric_root.kicad_sch";
 const PASSWORDS = { ada: "ada's long password", bob: "bob's long password" } as const;
 type Person = keyof typeof PASSWORDS;
 
-// The steps wait on two tickets. #1903 puts the bridge's pairing in front of the reader, and #1905
-// makes a refusal on another person's tab say so. closed_tickets.sh reads the numbers off each
-// waitsOn list.
-
 let browser: Browser;
 let shared: Server;
 let local: Server;
@@ -273,7 +269,7 @@ describe("two people on one server, each driving their own viewer tab", () => {
         return `refused: ${refusal}`;
       });
 
-      await step("refusal says why", { waitsOn: ["#1905"], needs: ["other's tab"] }, async () => {
+      await step("refusal says why", { needs: ["other's tab"] }, async () => {
         if (!/another person|someone else/i.test(refusal)) throw new Error(`the refusal does not say the tab is another person's: ${refusal}`);
         return refusal;
       });

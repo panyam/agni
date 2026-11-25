@@ -17,6 +17,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/authgate"
+	"github.com/panyam/agni/internal/viewerrooms"
 	"github.com/panyam/agni/mountset"
 	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/mcpkit/client"
@@ -98,6 +99,7 @@ func signInPerson(t *testing.T, srv, who, design string) person {
 	}
 	t.Cleanup(tab.Leave)
 	tab.SetAgentsAllowed(true)
+	offer(tab, "viewer_get_location", who+"'s tab")
 
 	agent := client.NewClient(srv+"/mcp", core.Implementation{Name: who + "-agent", Version: "0"}, client.WithClientBearerToken(tok.Token))
 	if err := agent.Connect(context.Background()); err != nil {
@@ -105,6 +107,17 @@ func signInPerson(t *testing.T, srv, who, design string) person {
 	}
 	t.Cleanup(func() { _ = agent.Close() })
 	return person{room: joined.Msg.GetRoom(), tab: tab, agent: agent}
+}
+
+// offer has tab offer the declared page tool name, answering with answer, so a call on it reaches the
+// bridge's agreement check. A tab that offers nothing gets "no page offering" whoever calls.
+func offer(tab *rooms.Page, name, answer string) {
+	for _, d := range viewerrooms.ToolDecls() {
+		if d.Name == name {
+			tab.RegisterTool(rooms.PageTool{Name: d.Name, Description: d.Description, InputSchema: d.InputSchema, ReadOnly: d.ReadOnly,
+				Execute: func(context.Context, rooms.PageCall) (core.ToolResult, error) { return core.TextResult(answer), nil }})
+		}
+	}
 }
 
 // agreed lists the pages in room that agreed to agent, asking until want of them have or a few
@@ -155,5 +168,37 @@ func TestEachSignedInPersonsAgentDrivesTheirOwnTab(t *testing.T) {
 		if len(got) != 1 || got[0] != string(c.own.ID()) {
 			t.Errorf("%s's agent is agreed to by %v; want %s's tab %s alone", c.name, got, c.name, c.own.ID())
 		}
+	}
+}
+
+// ada's agent calls a tool on bob's tab, whose switch is on. The bridge refuses, and the refusal says
+// the tab is another person's, so the agent knows to ask bob to pair rather than to turn on a switch
+// (agni issue 1905). The same call on ada's own tab runs.
+func TestARefusalOnAnotherPersonsTabSaysSo(t *testing.T) {
+	srv := peopleServer(t)
+	ada := signInPerson(t, srv, "ada", mcpGateway)
+	bob := signInPerson(t, srv, "bob", mcpGateway)
+	agreed(t, ada.agent, ada.room, 1)
+
+	call := func(tab *rooms.Page) (bool, string) {
+		res, err := ada.agent.ToolCallFull(t.Context(), "viewer_get_location", map[string]any{"design": mcpGateway, "page": string(tab.ID())})
+		if err != nil {
+			t.Fatalf("viewer_get_location: %v", err)
+		}
+		var b strings.Builder
+		for _, c := range res.Content {
+			b.WriteString(c.Text)
+		}
+		return !res.IsError, b.String()
+	}
+	if ok, out := call(ada.tab); !ok || out != "ada's tab" {
+		t.Fatalf("ada's agent on ada's tab: ok=%v %q; want ada's tab to answer", ok, out)
+	}
+	ok, out := call(bob.tab)
+	if ok {
+		t.Fatalf("ada's agent ran a tool on bob's tab: %q", out)
+	}
+	if !strings.Contains(out, "another person's tab") {
+		t.Errorf("the refusal on bob's tab does not say it is another person's: %q", out)
 	}
 }

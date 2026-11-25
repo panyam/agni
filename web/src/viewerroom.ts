@@ -299,7 +299,13 @@ export class ViewerRoomTab {
     const el = this.pairing?.code;
     if (!el) return;
     el.hidden = !code;
-    el.textContent = code ? `Give the agent code ${code}. It enters it with pair, once, within 10 minutes.` : "";
+    if (code) {
+      const shown = this.doc.createElement("code");
+      shown.textContent = code;
+      el.replaceChildren("Give the agent code ", shown, ". It enters it with pair, once, within 10 minutes.");
+    } else {
+      el.replaceChildren();
+    }
     el.dataset.pairCode = code;
     if (code) this.codeTimer = setTimeout(() => this.showCode(""), PAIR_CODE_TTL_MS);
   }
