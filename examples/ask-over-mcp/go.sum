@@ -100,8 +100,8 @@ github.com/panyam/goutils v0.1.15 h1:znjWI1jzAqeH2DRpxQid7GMrGCj296Wws7mWh7QPk7Y
 github.com/panyam/goutils v0.1.15/go.mod h1:lxEmbCJ04RY+KqFgo/+67bEdU2edpLYafMiJECTm3gQ=
 github.com/panyam/jaala v0.1.101 h1:cQTr2wxR0H9ki3i9xAiav4vOiZmIMd5QsGh0KmrzVEA=
 github.com/panyam/jaala v0.1.101/go.mod h1:A/dm6zBFvdjXavPfpGp0xP8BZAFHKMjQ5e3ASkzdaqE=
-github.com/panyam/mcpkit v0.8.21 h1:i1pJRSt2yI5dMkhmh++kcZsMfXpUjQTXuIJfdIUw+0g=
-github.com/panyam/mcpkit v0.8.21/go.mod h1:GYpx01kgsz3tf83/b5q15pVbtQ3j9yWMhepRINfYa5w=
+github.com/panyam/mcpkit v0.8.22 h1:74xv9+gq2cG92SpYvW9P5LuMVXSUMH3EvItTJuJH6mM=
+github.com/panyam/mcpkit v0.8.22/go.mod h1:zWSgBBxDmYdlvPnWwNqIv5G33+O5kjmFl2huMhE6daI=
 github.com/panyam/oneauth v0.3.22 h1:okKERztWqmbFnyQHvnFyKhmkt3QeKpMueRzo33l5rdw=
 github.com/panyam/oneauth v0.3.22/go.mod h1:KovKb74ntC7sroSeMafW/lZ6lzjuC/KI0uhxezRcN+8=
 github.com/panyam/servicekit v0.2.6 h1:FUQoObJI3zf6XKPbTGPsVw+SZv5cfcmd4SYPLnrZUig=
