@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/goapplib/storage/mounts"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -15,8 +15,11 @@ import (
 // runs the relay implements RoomTokens, since only that host holds the relay's key
 // (internal/viewerrooms).
 type RoomTokens interface {
-	// Mint returns a token admitting its holder to room alone, and the time it stops admitting a join.
-	Mint(room string) (token string, expires time.Time, err error)
+	// Mint returns a token admitting its holder to room alone, as subject, and the time it stops
+	// admitting a join. A page agrees to the agents of its own subject when its reader turns on the
+	// switch, so subject is the reader of the page. Empty is a server's one reader when it signs
+	// nobody in.
+	Mint(room, subject string) (token string, expires time.Time, err error)
 	// Bridges returns the relay subjects that the host's room bridges join as. A page answers these
 	// subjects alone.
 	Bridges() []string
@@ -57,14 +60,14 @@ func (s *ViewerRoomService) Room(ctx context.Context, design string) (string, er
 	return "design:" + p, nil
 }
 
-// JoinViewerRoom names the design's room, mints a token for it, and names the bridges the page
-// should answer. It stores nothing.
+// JoinViewerRoom names the design's room, mints a token for it as the caller, and names the bridges
+// the page should answer. It stores nothing.
 func (s *ViewerRoomService) JoinViewerRoom(ctx context.Context, req *webapi.JoinViewerRoomRequest) (*webapi.JoinViewerRoomResponse, error) {
 	room, err := s.Room(ctx, req.GetDesign())
 	if err != nil {
 		return nil, err
 	}
-	token, expires, err := s.tokens.Mint(room)
+	token, expires, err := s.tokens.Mint(room, CallerFrom(ctx).Subject)
 	if err != nil {
 		return nil, err
 	}

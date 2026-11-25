@@ -14,8 +14,8 @@
 //   sign in         ada and bob sign in and each draws the design, and each agent signs in on /mcp
 //   join            each tab joins the design's room and its reader lets agents in
 //   own tab         ada's agent lists and moves ada's tab, and bob's stays put
-//   other's tab     ada's agent is refused on bob's tab though bob's switch is on, and the refusal
-//                   says the tab is another person's
+//   other's tab     ada's agent is refused on bob's tab though bob's switch is on
+//   refusal says why  the refusal says the tab is another person's, apart from a switch left off
 //   pair            bob's tab offers a pairing code, ada's agent pairs with it and moves bob's tab,
 //                   bob revokes, and ada's agent's next call is refused
 //   ask             a question typed in ada's tab reaches ada's agent and not bob's
@@ -38,9 +38,9 @@ const DESIGN = "kicad/hier_numeric_root.kicad_sch";
 const PASSWORDS = { ada: "ada's long password", bob: "bob's long password" } as const;
 type Person = keyof typeof PASSWORDS;
 
-// The steps wait on three tickets. #1901 lets a signed-in tab join its room, with a relay token for
-// its reader. #1902 makes /mcp act for the person whose token it carries. #1903 puts the bridge's
-// pairing in front of the reader. closed_tickets.sh reads the numbers off each waitsOn list.
+// The steps wait on two tickets. #1903 puts the bridge's pairing in front of the reader, and #1905
+// makes a refusal on another person's tab say so. closed_tickets.sh reads the numbers off each
+// waitsOn list.
 
 let browser: Browser;
 let shared: Server;
@@ -211,6 +211,7 @@ describe("two people on one server, each driving their own viewer tab", () => {
     const agents = {} as Record<Person, Agent>;
     const ids = {} as Record<Person, string>;
     const said = {} as Record<Person, string[]>;
+    let refusal = "";
     try {
       await step("one reader", {}, async () => {
         const page = await contexts.ada.newPage();
@@ -241,7 +242,7 @@ describe("two people on one server, each driving their own viewer tab", () => {
         return "ada and bob signed in and each drew the design, and each agent signed in on /mcp";
       });
 
-      await step("join", { waitsOn: ["#1901"], needs: ["sign in"] }, async () => {
+      await step("join", { needs: ["sign in"] }, async () => {
         await letAgentsIn(tabs.ada, said.ada);
         ids.ada = (await agreedTabs(agents.ada, 1))[0] ?? "";
         if (!ids.ada) throw new Error("ada's agent lists no tab that agreed after ada turned the switch on");
@@ -251,7 +252,7 @@ describe("two people on one server, each driving their own viewer tab", () => {
         return "each tab joined the design's room and let agents in";
       });
 
-      await step("own tab", { waitsOn: ["#1902", "#1901"], needs: ["join"] }, async () => {
+      await step("own tab", { needs: ["join"] }, async () => {
         const seen = (await agreedTabs(agents.ada, 1)).sort();
         if (seen.join() !== ids.ada) throw new Error(`ada's agent lists ${seen.length} agreed tabs (${seen.join(", ")}), and should list ada's alone`);
         const bobBefore = await activeSheet(tabs.bob);
@@ -263,16 +264,21 @@ describe("two people on one server, each driving their own viewer tab", () => {
         return "ada's agent lists ada's tab alone and moves it, and bob's tab stays put";
       });
 
-      await step("other's tab", { waitsOn: ["#1902", "#1901"], needs: ["join"] }, async () => {
+      await step("other's tab", { needs: ["join"] }, async () => {
         const before = await activeSheet(tabs.bob);
         const r: CallResult = await agents.ada.call("viewer_show_sheet", { design: DESIGN, sheet: await otherSheet(tabs.bob), page: ids.bob });
         if (!r.isError) throw new Error("ada's agent moved bob's tab");
         if ((await activeSheet(tabs.bob)) !== before) throw new Error("bob's tab moved, though the call was refused");
-        if (!/another person|someone else/i.test(text(r))) throw new Error(`the refusal does not say the tab is another person's: ${text(r)}`);
-        return `refused: ${text(r)}`;
+        refusal = text(r);
+        return `refused: ${refusal}`;
       });
 
-      await step("pair", { waitsOn: ["#1902", "#1901", "#1903"], needs: ["join"] }, async () => {
+      await step("refusal says why", { waitsOn: ["#1905"], needs: ["other's tab"] }, async () => {
+        if (!/another person|someone else/i.test(refusal)) throw new Error(`the refusal does not say the tab is another person's: ${refusal}`);
+        return refusal;
+      });
+
+      await step("pair", { waitsOn: ["#1903"], needs: ["join"] }, async () => {
         const offer = tabs.bob.locator("#agents-switch button.agents-pair");
         await offer.click({ timeout: 5_000 });
         const code = (await tabs.bob.locator("#agents-switch [data-pair-code]").getAttribute("data-pair-code", { timeout: 5_000 })) ?? "";
@@ -288,7 +294,7 @@ describe("two people on one server, each driving their own viewer tab", () => {
         return "bob paired ada's agent by code, it moved bob's tab, and its next call after the revoke was refused";
       });
 
-      await step("ask", { waitsOn: ["#1902", "#1901"], needs: ["join"] }, async () => {
+      await step("ask", { needs: ["join"] }, async () => {
         const adaHears = agents.ada.call("next_request", { design: DESIGN, wait_seconds: 15 });
         const bobHears = agents.bob.call("next_request", { design: DESIGN, wait_seconds: 5 });
         await new Promise((r) => setTimeout(r, 500));

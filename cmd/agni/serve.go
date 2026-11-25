@@ -808,7 +808,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	}
 	if o.mcp != "" {
 		// The tools name designs by path, so they list the designs the mounted folders declare too.
-		mcpOpts := mcpserver.Options{Version: version.Version(), Budget: budget.Enforce, Folders: projects.NewMountedDesignsFunc(liveTrees(table))}
+		mcpOpts := mcpserver.Options{Version: version.Version(), Budget: budget.Enforce, Folders: projects.NewMountedDesignsFunc(liveTrees(table)), SignedIn: o.auth != "" && o.mcp == mcpHTTP}
 		switch {
 		case o.mcp == mcpStdio && o.mcpLinks != "":
 			mcpOpts.URLBase = o.mcpLinks
@@ -912,6 +912,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 			if gate, err = gate.WithLocalAccounts(authgate.LocalAccounts{Store: accts}); err != nil {
 				return err
 			}
+		}
+		if o.viewerRooms {
+			gate = gate.WithOwnAuth(relayPath)
 		}
 		handler = gate.Wrap(mux)
 	}

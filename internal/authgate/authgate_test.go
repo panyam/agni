@@ -147,6 +147,31 @@ func TestTheGateLetsAWebhookThroughWithNoToken(t *testing.T) {
 	}
 }
 
+// The viewer rooms' relay checks its own token, so the gate passes every request under its prefix
+// on unchecked, and copies no session cookie into the Authorization header the relay reads first
+// (agni issue 1901). A path beside the prefix still needs a token.
+func TestTheGateLeavesAPathWithItsOwnAuthToItsHandler(t *testing.T) {
+	var sawAuth string
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawAuth = r.Header.Get("Authorization")
+		w.WriteHeader(http.StatusAccepted)
+	})
+	h := New(testKeys(t), nil).WithOwnAuth("/relay/").Wrap(next)
+	for path, want := range map[string]int{"/relay/ws/v1/room/sync": http.StatusAccepted, "/relay/": http.StatusAccepted, "/relay": http.StatusUnauthorized, "/relayx/": http.StatusUnauthorized} {
+		sawAuth = ""
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		r.AddCookie(&http.Cookie{Name: SessionCookie, Value: "not-a-token"})
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != want {
+			t.Errorf("GET %s with only a session cookie = %d; want %d", path, w.Code, want)
+		}
+		if w.Code == http.StatusAccepted && sawAuth != "" {
+			t.Errorf("GET %s reached the handler with Authorization %q; want the cookie left out of it", path, sawAuth)
+		}
+	}
+}
+
 // Prune deletes the tokens that have expired, and keeps one with no expiry, one still valid and a
 // revoked one (agni issue 1778).
 func TestPruneDeletesOnlyExpiredTokens(t *testing.T) {
