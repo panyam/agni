@@ -44,6 +44,13 @@ service ViewerPageService {
   rpc OpenSheetView(OpenSheetViewRequest) returns (OpenSheetViewResponse);
   // CloseSheetView closes one sheet view.
   rpc CloseSheetView(CloseSheetViewRequest) returns (CloseSheetViewResponse);
+  // ShowAnswer shows an agent's answer to the reader, beside the box the reader asks in (agni issue
+  // 1907). It changes nothing in the design or the canvas.
+  rpc ShowAnswer(ShowAnswerRequest) returns (ShowAnswerResponse);
+  // Propose shows the reader a next step to accept or dismiss, and returns at once. The reader's
+  // choice comes back later as the page event page.proposal_answered, so a transport that carries
+  // no page events refuses it (agni issue 1907).
+  rpc Propose(ProposeRequest) returns (ProposeResponse);
 }
 
 // ViewerLocation is the page's URL-addressable state, the wire twin of router.ts's ViewerLocation,
@@ -205,4 +212,53 @@ message CloseSheetViewResponse {
   bool closed = 1;
   ViewerLocation location = 2;
   repeated SheetView views = 3;
+}
+
+// PageEntity is a net, part or pin an answer or a proposal points at. The reader clicks it to
+// highlight it, as clicking a query result cell does.
+message PageEntity {
+  // kind is "net", "component" or "pin"; pin is set only for a pin.
+  string kind = 1;
+  string subject = 2;
+  string pin = 3;
+}
+
+message ShowAnswerRequest {
+  // text is plain text, at most 2000 characters. The page never reads it as markup.
+  string text = 1;
+  // entities are at most 20 things the answer points at.
+  repeated PageEntity entities = 2;
+}
+
+message ShowAnswerResponse {
+  // answer names the shown answer for as long as the page is open, such as "answer-2".
+  string answer = 1;
+  ViewerLocation location = 2;
+}
+
+message ProposeRequest {
+  // action says the next step in plain text, at most 500 characters, such as "add a pull-up on
+  // SDA". What accepting it does is up to the agent, which hears the choice.
+  string action = 1;
+  // entities are at most 20 things the step touches.
+  repeated PageEntity entities = 2;
+}
+
+message ProposeResponse {
+  // proposal names the proposal, such as "proposal-3". The page event page.proposal_answered
+  // carries it with the reader's choice, "accepted" or "dismissed".
+  string proposal = 1;
+  ViewerLocation location = 2;
+}
+
+// ProposalAnswered is the data of the page event page.proposal_answered, which a page emits when
+// its reader accepts or dismisses a proposal (agni issue 1907). Agents hear it as they hear the
+// reader's question, through next_request or the room's events.
+message ProposalAnswered {
+  // proposal is the id Propose returned.
+  string proposal = 1;
+  // choice is "accepted" or "dismissed".
+  string choice = 2;
+  // action is the proposal's action, so an agent that kept no state still knows what was chosen.
+  string action = 3;
 }

@@ -277,6 +277,68 @@ public final class ViewerPageServiceGrpc {
     return getCloseSheetViewMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.viewer.ShowAnswerRequest,
+      io.github.panyam.agni.v1.viewer.ShowAnswerResponse> getShowAnswerMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ShowAnswer",
+      requestType = io.github.panyam.agni.v1.viewer.ShowAnswerRequest.class,
+      responseType = io.github.panyam.agni.v1.viewer.ShowAnswerResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.viewer.ShowAnswerRequest,
+      io.github.panyam.agni.v1.viewer.ShowAnswerResponse> getShowAnswerMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.viewer.ShowAnswerRequest, io.github.panyam.agni.v1.viewer.ShowAnswerResponse> getShowAnswerMethod;
+    if ((getShowAnswerMethod = ViewerPageServiceGrpc.getShowAnswerMethod) == null) {
+      synchronized (ViewerPageServiceGrpc.class) {
+        if ((getShowAnswerMethod = ViewerPageServiceGrpc.getShowAnswerMethod) == null) {
+          ViewerPageServiceGrpc.getShowAnswerMethod = getShowAnswerMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.viewer.ShowAnswerRequest, io.github.panyam.agni.v1.viewer.ShowAnswerResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ShowAnswer"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.viewer.ShowAnswerRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.viewer.ShowAnswerResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new ViewerPageServiceMethodDescriptorSupplier("ShowAnswer"))
+              .build();
+        }
+      }
+    }
+    return getShowAnswerMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.viewer.ProposeRequest,
+      io.github.panyam.agni.v1.viewer.ProposeResponse> getProposeMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "Propose",
+      requestType = io.github.panyam.agni.v1.viewer.ProposeRequest.class,
+      responseType = io.github.panyam.agni.v1.viewer.ProposeResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.viewer.ProposeRequest,
+      io.github.panyam.agni.v1.viewer.ProposeResponse> getProposeMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.viewer.ProposeRequest, io.github.panyam.agni.v1.viewer.ProposeResponse> getProposeMethod;
+    if ((getProposeMethod = ViewerPageServiceGrpc.getProposeMethod) == null) {
+      synchronized (ViewerPageServiceGrpc.class) {
+        if ((getProposeMethod = ViewerPageServiceGrpc.getProposeMethod) == null) {
+          ViewerPageServiceGrpc.getProposeMethod = getProposeMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.viewer.ProposeRequest, io.github.panyam.agni.v1.viewer.ProposeResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "Propose"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.viewer.ProposeRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.viewer.ProposeResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new ViewerPageServiceMethodDescriptorSupplier("Propose"))
+              .build();
+        }
+      }
+    }
+    return getProposeMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -439,6 +501,29 @@ public final class ViewerPageServiceGrpc {
         io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.viewer.CloseSheetViewResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCloseSheetViewMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * ShowAnswer shows an agent's answer to the reader, beside the box the reader asks in (agni issue
+     * 1907). It changes nothing in the design or the canvas.
+     * </pre>
+     */
+    default void showAnswer(io.github.panyam.agni.v1.viewer.ShowAnswerRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.viewer.ShowAnswerResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getShowAnswerMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Propose shows the reader a next step to accept or dismiss, and returns at once. The reader's
+     * choice comes back later as the page event page.proposal_answered, so a transport that carries
+     * no page events refuses it (agni issue 1907).
+     * </pre>
+     */
+    default void propose(io.github.panyam.agni.v1.viewer.ProposeRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.viewer.ProposeResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getProposeMethod(), responseObserver);
+    }
   }
 
   /**
@@ -591,6 +676,31 @@ public final class ViewerPageServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getCloseSheetViewMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * ShowAnswer shows an agent's answer to the reader, beside the box the reader asks in (agni issue
+     * 1907). It changes nothing in the design or the canvas.
+     * </pre>
+     */
+    public void showAnswer(io.github.panyam.agni.v1.viewer.ShowAnswerRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.viewer.ShowAnswerResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getShowAnswerMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Propose shows the reader a next step to accept or dismiss, and returns at once. The reader's
+     * choice comes back later as the page event page.proposal_answered, so a transport that carries
+     * no page events refuses it (agni issue 1907).
+     * </pre>
+     */
+    public void propose(io.github.panyam.agni.v1.viewer.ProposeRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.viewer.ProposeResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getProposeMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -708,6 +818,29 @@ public final class ViewerPageServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getCloseSheetViewMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * ShowAnswer shows an agent's answer to the reader, beside the box the reader asks in (agni issue
+     * 1907). It changes nothing in the design or the canvas.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.viewer.ShowAnswerResponse showAnswer(io.github.panyam.agni.v1.viewer.ShowAnswerRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getShowAnswerMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Propose shows the reader a next step to accept or dismiss, and returns at once. The reader's
+     * choice comes back later as the page event page.proposal_answered, so a transport that carries
+     * no page events refuses it (agni issue 1907).
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.viewer.ProposeResponse propose(io.github.panyam.agni.v1.viewer.ProposeRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getProposeMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -824,6 +957,29 @@ public final class ViewerPageServiceGrpc {
     public io.github.panyam.agni.v1.viewer.CloseSheetViewResponse closeSheetView(io.github.panyam.agni.v1.viewer.CloseSheetViewRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getCloseSheetViewMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ShowAnswer shows an agent's answer to the reader, beside the box the reader asks in (agni issue
+     * 1907). It changes nothing in the design or the canvas.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.viewer.ShowAnswerResponse showAnswer(io.github.panyam.agni.v1.viewer.ShowAnswerRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getShowAnswerMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Propose shows the reader a next step to accept or dismiss, and returns at once. The reader's
+     * choice comes back later as the page event page.proposal_answered, so a transport that carries
+     * no page events refuses it (agni issue 1907).
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.viewer.ProposeResponse propose(io.github.panyam.agni.v1.viewer.ProposeRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getProposeMethod(), getCallOptions(), request);
     }
   }
 
@@ -950,6 +1106,31 @@ public final class ViewerPageServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getCloseSheetViewMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * ShowAnswer shows an agent's answer to the reader, beside the box the reader asks in (agni issue
+     * 1907). It changes nothing in the design or the canvas.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.viewer.ShowAnswerResponse> showAnswer(
+        io.github.panyam.agni.v1.viewer.ShowAnswerRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getShowAnswerMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Propose shows the reader a next step to accept or dismiss, and returns at once. The reader's
+     * choice comes back later as the page event page.proposal_answered, so a transport that carries
+     * no page events refuses it (agni issue 1907).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.viewer.ProposeResponse> propose(
+        io.github.panyam.agni.v1.viewer.ProposeRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getProposeMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_GET_LOCATION = 0;
@@ -960,6 +1141,8 @@ public final class ViewerPageServiceGrpc {
   private static final int METHODID_SHOW_SHEET = 5;
   private static final int METHODID_OPEN_SHEET_VIEW = 6;
   private static final int METHODID_CLOSE_SHEET_VIEW = 7;
+  private static final int METHODID_SHOW_ANSWER = 8;
+  private static final int METHODID_PROPOSE = 9;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1009,6 +1192,14 @@ public final class ViewerPageServiceGrpc {
         case METHODID_CLOSE_SHEET_VIEW:
           serviceImpl.closeSheetView((io.github.panyam.agni.v1.viewer.CloseSheetViewRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.viewer.CloseSheetViewResponse>) responseObserver);
+          break;
+        case METHODID_SHOW_ANSWER:
+          serviceImpl.showAnswer((io.github.panyam.agni.v1.viewer.ShowAnswerRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.viewer.ShowAnswerResponse>) responseObserver);
+          break;
+        case METHODID_PROPOSE:
+          serviceImpl.propose((io.github.panyam.agni.v1.viewer.ProposeRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.viewer.ProposeResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -1084,6 +1275,20 @@ public final class ViewerPageServiceGrpc {
               io.github.panyam.agni.v1.viewer.CloseSheetViewRequest,
               io.github.panyam.agni.v1.viewer.CloseSheetViewResponse>(
                 service, METHODID_CLOSE_SHEET_VIEW)))
+        .addMethod(
+          getShowAnswerMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.viewer.ShowAnswerRequest,
+              io.github.panyam.agni.v1.viewer.ShowAnswerResponse>(
+                service, METHODID_SHOW_ANSWER)))
+        .addMethod(
+          getProposeMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.viewer.ProposeRequest,
+              io.github.panyam.agni.v1.viewer.ProposeResponse>(
+                service, METHODID_PROPOSE)))
         .build();
   }
 
@@ -1140,6 +1345,8 @@ public final class ViewerPageServiceGrpc {
               .addMethod(getShowSheetMethod())
               .addMethod(getOpenSheetViewMethod())
               .addMethod(getCloseSheetViewMethod())
+              .addMethod(getShowAnswerMethod())
+              .addMethod(getProposeMethod())
               .build();
         }
       }

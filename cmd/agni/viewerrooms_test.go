@@ -86,7 +86,7 @@ func TestViewerRoomsServesTheViewerToolsBesideAgnis(t *testing.T) {
 			got := toolNames(t, c)
 			want := slices.Concat(mcpTools, []string{"attach", "detach", "list_pages", "next_request", "pair",
 				"viewer_apply_location", "viewer_close_sheet_view", "viewer_get_location", "viewer_locate_entity", "viewer_locate_verdict",
-				"viewer_open_sheet_view", "viewer_select_finding", "viewer_show_sheet"})
+				"viewer_open_sheet_view", "viewer_propose", "viewer_select_finding", "viewer_show_answer", "viewer_show_sheet"})
 			slices.Sort(want)
 			if !slices.Equal(got, want) {
 				t.Errorf("tools %v, want %v", got, want)

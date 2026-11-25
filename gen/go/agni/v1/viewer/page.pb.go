@@ -1176,6 +1176,351 @@ func (x *CloseSheetViewResponse) GetViews() []*SheetView {
 	return nil
 }
 
+// PageEntity is a net, part or pin an answer or a proposal points at. The reader clicks it to
+// highlight it, as clicking a query result cell does.
+type PageEntity struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// kind is "net", "component" or "pin"; pin is set only for a pin.
+	Kind          string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Subject       string `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
+	Pin           string `protobuf:"bytes,3,opt,name=pin,proto3" json:"pin,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PageEntity) Reset() {
+	*x = PageEntity{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PageEntity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PageEntity) ProtoMessage() {}
+
+func (x *PageEntity) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PageEntity.ProtoReflect.Descriptor instead.
+func (*PageEntity) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *PageEntity) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *PageEntity) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *PageEntity) GetPin() string {
+	if x != nil {
+		return x.Pin
+	}
+	return ""
+}
+
+type ShowAnswerRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// text is plain text, at most 2000 characters. The page never reads it as markup.
+	Text string `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	// entities are at most 20 things the answer points at.
+	Entities      []*PageEntity `protobuf:"bytes,2,rep,name=entities,proto3" json:"entities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ShowAnswerRequest) Reset() {
+	*x = ShowAnswerRequest{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ShowAnswerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShowAnswerRequest) ProtoMessage() {}
+
+func (x *ShowAnswerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShowAnswerRequest.ProtoReflect.Descriptor instead.
+func (*ShowAnswerRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ShowAnswerRequest) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *ShowAnswerRequest) GetEntities() []*PageEntity {
+	if x != nil {
+		return x.Entities
+	}
+	return nil
+}
+
+type ShowAnswerResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// answer names the shown answer for as long as the page is open, such as "answer-2".
+	Answer        string          `protobuf:"bytes,1,opt,name=answer,proto3" json:"answer,omitempty"`
+	Location      *ViewerLocation `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ShowAnswerResponse) Reset() {
+	*x = ShowAnswerResponse{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ShowAnswerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShowAnswerResponse) ProtoMessage() {}
+
+func (x *ShowAnswerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShowAnswerResponse.ProtoReflect.Descriptor instead.
+func (*ShowAnswerResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ShowAnswerResponse) GetAnswer() string {
+	if x != nil {
+		return x.Answer
+	}
+	return ""
+}
+
+func (x *ShowAnswerResponse) GetLocation() *ViewerLocation {
+	if x != nil {
+		return x.Location
+	}
+	return nil
+}
+
+type ProposeRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// action says the next step in plain text, at most 500 characters, such as "add a pull-up on
+	// SDA". What accepting it does is up to the agent, which hears the choice.
+	Action string `protobuf:"bytes,1,opt,name=action,proto3" json:"action,omitempty"`
+	// entities are at most 20 things the step touches.
+	Entities      []*PageEntity `protobuf:"bytes,2,rep,name=entities,proto3" json:"entities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProposeRequest) Reset() {
+	*x = ProposeRequest{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProposeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProposeRequest) ProtoMessage() {}
+
+func (x *ProposeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProposeRequest.ProtoReflect.Descriptor instead.
+func (*ProposeRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ProposeRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *ProposeRequest) GetEntities() []*PageEntity {
+	if x != nil {
+		return x.Entities
+	}
+	return nil
+}
+
+type ProposeResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// proposal names the proposal, such as "proposal-3". The page event page.proposal_answered
+	// carries it with the reader's choice, "accepted" or "dismissed".
+	Proposal      string          `protobuf:"bytes,1,opt,name=proposal,proto3" json:"proposal,omitempty"`
+	Location      *ViewerLocation `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProposeResponse) Reset() {
+	*x = ProposeResponse{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProposeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProposeResponse) ProtoMessage() {}
+
+func (x *ProposeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProposeResponse.ProtoReflect.Descriptor instead.
+func (*ProposeResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ProposeResponse) GetProposal() string {
+	if x != nil {
+		return x.Proposal
+	}
+	return ""
+}
+
+func (x *ProposeResponse) GetLocation() *ViewerLocation {
+	if x != nil {
+		return x.Location
+	}
+	return nil
+}
+
+// ProposalAnswered is the data of the page event page.proposal_answered, which a page emits when
+// its reader accepts or dismisses a proposal (agni issue 1907). Agents hear it as they hear the
+// reader's question, through next_request or the room's events.
+type ProposalAnswered struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// proposal is the id Propose returned.
+	Proposal string `protobuf:"bytes,1,opt,name=proposal,proto3" json:"proposal,omitempty"`
+	// choice is "accepted" or "dismissed".
+	Choice string `protobuf:"bytes,2,opt,name=choice,proto3" json:"choice,omitempty"`
+	// action is the proposal's action, so an agent that kept no state still knows what was chosen.
+	Action        string `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProposalAnswered) Reset() {
+	*x = ProposalAnswered{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProposalAnswered) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProposalAnswered) ProtoMessage() {}
+
+func (x *ProposalAnswered) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProposalAnswered.ProtoReflect.Descriptor instead.
+func (*ProposalAnswered) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ProposalAnswered) GetProposal() string {
+	if x != nil {
+		return x.Proposal
+	}
+	return ""
+}
+
+func (x *ProposalAnswered) GetChoice() string {
+	if x != nil {
+		return x.Choice
+	}
+	return ""
+}
+
+func (x *ProposalAnswered) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
 var File_agni_v1_viewer_page_proto protoreflect.FileDescriptor
 
 const file_agni_v1_viewer_page_proto_rawDesc = "" +
@@ -1261,7 +1606,28 @@ const file_agni_v1_viewer_page_proto_rawDesc = "" +
 	"\x16CloseSheetViewResponse\x12\x16\n" +
 	"\x06closed\x18\x01 \x01(\bR\x06closed\x12:\n" +
 	"\blocation\x18\x02 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12/\n" +
-	"\x05views\x18\x03 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views2\xf6\x05\n" +
+	"\x05views\x18\x03 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views\"L\n" +
+	"\n" +
+	"PageEntity\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x18\n" +
+	"\asubject\x18\x02 \x01(\tR\asubject\x12\x10\n" +
+	"\x03pin\x18\x03 \x01(\tR\x03pin\"_\n" +
+	"\x11ShowAnswerRequest\x12\x12\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text\x126\n" +
+	"\bentities\x18\x02 \x03(\v2\x1a.agni.v1.viewer.PageEntityR\bentities\"h\n" +
+	"\x12ShowAnswerResponse\x12\x16\n" +
+	"\x06answer\x18\x01 \x01(\tR\x06answer\x12:\n" +
+	"\blocation\x18\x02 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\"`\n" +
+	"\x0eProposeRequest\x12\x16\n" +
+	"\x06action\x18\x01 \x01(\tR\x06action\x126\n" +
+	"\bentities\x18\x02 \x03(\v2\x1a.agni.v1.viewer.PageEntityR\bentities\"i\n" +
+	"\x0fProposeResponse\x12\x1a\n" +
+	"\bproposal\x18\x01 \x01(\tR\bproposal\x12:\n" +
+	"\blocation\x18\x02 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\"^\n" +
+	"\x10ProposalAnswered\x12\x1a\n" +
+	"\bproposal\x18\x01 \x01(\tR\bproposal\x12\x16\n" +
+	"\x06choice\x18\x02 \x01(\tR\x06choice\x12\x16\n" +
+	"\x06action\x18\x03 \x01(\tR\x06action2\x97\a\n" +
 	"\x11ViewerPageService\x12[\n" +
 	"\vGetLocation\x12\".agni.v1.viewer.GetLocationRequest\x1a#.agni.v1.viewer.GetLocationResponse\"\x03\x90\x02\x01\x12\\\n" +
 	"\rApplyLocation\x12$.agni.v1.viewer.ApplyLocationRequest\x1a%.agni.v1.viewer.ApplyLocationResponse\x12\\\n" +
@@ -1270,7 +1636,10 @@ const file_agni_v1_viewer_page_proto_rawDesc = "" +
 	"\fLocateEntity\x12#.agni.v1.viewer.LocateEntityRequest\x1a$.agni.v1.viewer.LocateEntityResponse\x12P\n" +
 	"\tShowSheet\x12 .agni.v1.viewer.ShowSheetRequest\x1a!.agni.v1.viewer.ShowSheetResponse\x12\\\n" +
 	"\rOpenSheetView\x12$.agni.v1.viewer.OpenSheetViewRequest\x1a%.agni.v1.viewer.OpenSheetViewResponse\x12_\n" +
-	"\x0eCloseSheetView\x12%.agni.v1.viewer.CloseSheetViewRequest\x1a&.agni.v1.viewer.CloseSheetViewResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/viewerb\x06proto3"
+	"\x0eCloseSheetView\x12%.agni.v1.viewer.CloseSheetViewRequest\x1a&.agni.v1.viewer.CloseSheetViewResponse\x12S\n" +
+	"\n" +
+	"ShowAnswer\x12!.agni.v1.viewer.ShowAnswerRequest\x1a\".agni.v1.viewer.ShowAnswerResponse\x12J\n" +
+	"\aPropose\x12\x1e.agni.v1.viewer.ProposeRequest\x1a\x1f.agni.v1.viewer.ProposeResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/viewerb\x06proto3"
 
 var (
 	file_agni_v1_viewer_page_proto_rawDescOnce sync.Once
@@ -1284,7 +1653,7 @@ func file_agni_v1_viewer_page_proto_rawDescGZIP() []byte {
 	return file_agni_v1_viewer_page_proto_rawDescData
 }
 
-var file_agni_v1_viewer_page_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_agni_v1_viewer_page_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_agni_v1_viewer_page_proto_goTypes = []any{
 	(*ViewerLocation)(nil),         // 0: agni.v1.viewer.ViewerLocation
 	(*GetLocationRequest)(nil),     // 1: agni.v1.viewer.GetLocationRequest
@@ -1304,6 +1673,12 @@ var file_agni_v1_viewer_page_proto_goTypes = []any{
 	(*OpenSheetViewResponse)(nil),  // 15: agni.v1.viewer.OpenSheetViewResponse
 	(*CloseSheetViewRequest)(nil),  // 16: agni.v1.viewer.CloseSheetViewRequest
 	(*CloseSheetViewResponse)(nil), // 17: agni.v1.viewer.CloseSheetViewResponse
+	(*PageEntity)(nil),             // 18: agni.v1.viewer.PageEntity
+	(*ShowAnswerRequest)(nil),      // 19: agni.v1.viewer.ShowAnswerRequest
+	(*ShowAnswerResponse)(nil),     // 20: agni.v1.viewer.ShowAnswerResponse
+	(*ProposeRequest)(nil),         // 21: agni.v1.viewer.ProposeRequest
+	(*ProposeResponse)(nil),        // 22: agni.v1.viewer.ProposeResponse
+	(*ProposalAnswered)(nil),       // 23: agni.v1.viewer.ProposalAnswered
 }
 var file_agni_v1_viewer_page_proto_depIdxs = []int32{
 	0,  // 0: agni.v1.viewer.GetLocationResponse.location:type_name -> agni.v1.viewer.ViewerLocation
@@ -1320,27 +1695,35 @@ var file_agni_v1_viewer_page_proto_depIdxs = []int32{
 	3,  // 11: agni.v1.viewer.OpenSheetViewResponse.views:type_name -> agni.v1.viewer.SheetView
 	0,  // 12: agni.v1.viewer.CloseSheetViewResponse.location:type_name -> agni.v1.viewer.ViewerLocation
 	3,  // 13: agni.v1.viewer.CloseSheetViewResponse.views:type_name -> agni.v1.viewer.SheetView
-	1,  // 14: agni.v1.viewer.ViewerPageService.GetLocation:input_type -> agni.v1.viewer.GetLocationRequest
-	4,  // 15: agni.v1.viewer.ViewerPageService.ApplyLocation:input_type -> agni.v1.viewer.ApplyLocationRequest
-	6,  // 16: agni.v1.viewer.ViewerPageService.LocateVerdict:input_type -> agni.v1.viewer.LocateVerdictRequest
-	8,  // 17: agni.v1.viewer.ViewerPageService.SelectFinding:input_type -> agni.v1.viewer.SelectFindingRequest
-	10, // 18: agni.v1.viewer.ViewerPageService.LocateEntity:input_type -> agni.v1.viewer.LocateEntityRequest
-	12, // 19: agni.v1.viewer.ViewerPageService.ShowSheet:input_type -> agni.v1.viewer.ShowSheetRequest
-	14, // 20: agni.v1.viewer.ViewerPageService.OpenSheetView:input_type -> agni.v1.viewer.OpenSheetViewRequest
-	16, // 21: agni.v1.viewer.ViewerPageService.CloseSheetView:input_type -> agni.v1.viewer.CloseSheetViewRequest
-	2,  // 22: agni.v1.viewer.ViewerPageService.GetLocation:output_type -> agni.v1.viewer.GetLocationResponse
-	5,  // 23: agni.v1.viewer.ViewerPageService.ApplyLocation:output_type -> agni.v1.viewer.ApplyLocationResponse
-	7,  // 24: agni.v1.viewer.ViewerPageService.LocateVerdict:output_type -> agni.v1.viewer.LocateVerdictResponse
-	9,  // 25: agni.v1.viewer.ViewerPageService.SelectFinding:output_type -> agni.v1.viewer.SelectFindingResponse
-	11, // 26: agni.v1.viewer.ViewerPageService.LocateEntity:output_type -> agni.v1.viewer.LocateEntityResponse
-	13, // 27: agni.v1.viewer.ViewerPageService.ShowSheet:output_type -> agni.v1.viewer.ShowSheetResponse
-	15, // 28: agni.v1.viewer.ViewerPageService.OpenSheetView:output_type -> agni.v1.viewer.OpenSheetViewResponse
-	17, // 29: agni.v1.viewer.ViewerPageService.CloseSheetView:output_type -> agni.v1.viewer.CloseSheetViewResponse
-	22, // [22:30] is the sub-list for method output_type
-	14, // [14:22] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	18, // 14: agni.v1.viewer.ShowAnswerRequest.entities:type_name -> agni.v1.viewer.PageEntity
+	0,  // 15: agni.v1.viewer.ShowAnswerResponse.location:type_name -> agni.v1.viewer.ViewerLocation
+	18, // 16: agni.v1.viewer.ProposeRequest.entities:type_name -> agni.v1.viewer.PageEntity
+	0,  // 17: agni.v1.viewer.ProposeResponse.location:type_name -> agni.v1.viewer.ViewerLocation
+	1,  // 18: agni.v1.viewer.ViewerPageService.GetLocation:input_type -> agni.v1.viewer.GetLocationRequest
+	4,  // 19: agni.v1.viewer.ViewerPageService.ApplyLocation:input_type -> agni.v1.viewer.ApplyLocationRequest
+	6,  // 20: agni.v1.viewer.ViewerPageService.LocateVerdict:input_type -> agni.v1.viewer.LocateVerdictRequest
+	8,  // 21: agni.v1.viewer.ViewerPageService.SelectFinding:input_type -> agni.v1.viewer.SelectFindingRequest
+	10, // 22: agni.v1.viewer.ViewerPageService.LocateEntity:input_type -> agni.v1.viewer.LocateEntityRequest
+	12, // 23: agni.v1.viewer.ViewerPageService.ShowSheet:input_type -> agni.v1.viewer.ShowSheetRequest
+	14, // 24: agni.v1.viewer.ViewerPageService.OpenSheetView:input_type -> agni.v1.viewer.OpenSheetViewRequest
+	16, // 25: agni.v1.viewer.ViewerPageService.CloseSheetView:input_type -> agni.v1.viewer.CloseSheetViewRequest
+	19, // 26: agni.v1.viewer.ViewerPageService.ShowAnswer:input_type -> agni.v1.viewer.ShowAnswerRequest
+	21, // 27: agni.v1.viewer.ViewerPageService.Propose:input_type -> agni.v1.viewer.ProposeRequest
+	2,  // 28: agni.v1.viewer.ViewerPageService.GetLocation:output_type -> agni.v1.viewer.GetLocationResponse
+	5,  // 29: agni.v1.viewer.ViewerPageService.ApplyLocation:output_type -> agni.v1.viewer.ApplyLocationResponse
+	7,  // 30: agni.v1.viewer.ViewerPageService.LocateVerdict:output_type -> agni.v1.viewer.LocateVerdictResponse
+	9,  // 31: agni.v1.viewer.ViewerPageService.SelectFinding:output_type -> agni.v1.viewer.SelectFindingResponse
+	11, // 32: agni.v1.viewer.ViewerPageService.LocateEntity:output_type -> agni.v1.viewer.LocateEntityResponse
+	13, // 33: agni.v1.viewer.ViewerPageService.ShowSheet:output_type -> agni.v1.viewer.ShowSheetResponse
+	15, // 34: agni.v1.viewer.ViewerPageService.OpenSheetView:output_type -> agni.v1.viewer.OpenSheetViewResponse
+	17, // 35: agni.v1.viewer.ViewerPageService.CloseSheetView:output_type -> agni.v1.viewer.CloseSheetViewResponse
+	20, // 36: agni.v1.viewer.ViewerPageService.ShowAnswer:output_type -> agni.v1.viewer.ShowAnswerResponse
+	22, // 37: agni.v1.viewer.ViewerPageService.Propose:output_type -> agni.v1.viewer.ProposeResponse
+	28, // [28:38] is the sub-list for method output_type
+	18, // [18:28] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_viewer_page_proto_init() }
@@ -1355,7 +1738,7 @@ func file_agni_v1_viewer_page_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_viewer_page_proto_rawDesc), len(file_agni_v1_viewer_page_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

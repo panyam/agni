@@ -57,6 +57,12 @@ const (
 	// ViewerPageServiceCloseSheetViewProcedure is the fully-qualified name of the ViewerPageService's
 	// CloseSheetView RPC.
 	ViewerPageServiceCloseSheetViewProcedure = "/agni.v1.viewer.ViewerPageService/CloseSheetView"
+	// ViewerPageServiceShowAnswerProcedure is the fully-qualified name of the ViewerPageService's
+	// ShowAnswer RPC.
+	ViewerPageServiceShowAnswerProcedure = "/agni.v1.viewer.ViewerPageService/ShowAnswer"
+	// ViewerPageServiceProposeProcedure is the fully-qualified name of the ViewerPageService's Propose
+	// RPC.
+	ViewerPageServiceProposeProcedure = "/agni.v1.viewer.ViewerPageService/Propose"
 )
 
 // ViewerPageServiceClient is a client for the agni.v1.viewer.ViewerPageService service.
@@ -81,6 +87,13 @@ type ViewerPageServiceClient interface {
 	OpenSheetView(context.Context, *connect.Request[viewer.OpenSheetViewRequest]) (*connect.Response[viewer.OpenSheetViewResponse], error)
 	// CloseSheetView closes one sheet view.
 	CloseSheetView(context.Context, *connect.Request[viewer.CloseSheetViewRequest]) (*connect.Response[viewer.CloseSheetViewResponse], error)
+	// ShowAnswer shows an agent's answer to the reader, beside the box the reader asks in (agni issue
+	// 1907). It changes nothing in the design or the canvas.
+	ShowAnswer(context.Context, *connect.Request[viewer.ShowAnswerRequest]) (*connect.Response[viewer.ShowAnswerResponse], error)
+	// Propose shows the reader a next step to accept or dismiss, and returns at once. The reader's
+	// choice comes back later as the page event page.proposal_answered, so a transport that carries
+	// no page events refuses it (agni issue 1907).
+	Propose(context.Context, *connect.Request[viewer.ProposeRequest]) (*connect.Response[viewer.ProposeResponse], error)
 }
 
 // NewViewerPageServiceClient constructs a client for the agni.v1.viewer.ViewerPageService service.
@@ -143,6 +156,18 @@ func NewViewerPageServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(viewerPageServiceMethods.ByName("CloseSheetView")),
 			connect.WithClientOptions(opts...),
 		),
+		showAnswer: connect.NewClient[viewer.ShowAnswerRequest, viewer.ShowAnswerResponse](
+			httpClient,
+			baseURL+ViewerPageServiceShowAnswerProcedure,
+			connect.WithSchema(viewerPageServiceMethods.ByName("ShowAnswer")),
+			connect.WithClientOptions(opts...),
+		),
+		propose: connect.NewClient[viewer.ProposeRequest, viewer.ProposeResponse](
+			httpClient,
+			baseURL+ViewerPageServiceProposeProcedure,
+			connect.WithSchema(viewerPageServiceMethods.ByName("Propose")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -156,6 +181,8 @@ type viewerPageServiceClient struct {
 	showSheet      *connect.Client[viewer.ShowSheetRequest, viewer.ShowSheetResponse]
 	openSheetView  *connect.Client[viewer.OpenSheetViewRequest, viewer.OpenSheetViewResponse]
 	closeSheetView *connect.Client[viewer.CloseSheetViewRequest, viewer.CloseSheetViewResponse]
+	showAnswer     *connect.Client[viewer.ShowAnswerRequest, viewer.ShowAnswerResponse]
+	propose        *connect.Client[viewer.ProposeRequest, viewer.ProposeResponse]
 }
 
 // GetLocation calls agni.v1.viewer.ViewerPageService.GetLocation.
@@ -198,6 +225,16 @@ func (c *viewerPageServiceClient) CloseSheetView(ctx context.Context, req *conne
 	return c.closeSheetView.CallUnary(ctx, req)
 }
 
+// ShowAnswer calls agni.v1.viewer.ViewerPageService.ShowAnswer.
+func (c *viewerPageServiceClient) ShowAnswer(ctx context.Context, req *connect.Request[viewer.ShowAnswerRequest]) (*connect.Response[viewer.ShowAnswerResponse], error) {
+	return c.showAnswer.CallUnary(ctx, req)
+}
+
+// Propose calls agni.v1.viewer.ViewerPageService.Propose.
+func (c *viewerPageServiceClient) Propose(ctx context.Context, req *connect.Request[viewer.ProposeRequest]) (*connect.Response[viewer.ProposeResponse], error) {
+	return c.propose.CallUnary(ctx, req)
+}
+
 // ViewerPageServiceHandler is an implementation of the agni.v1.viewer.ViewerPageService service.
 type ViewerPageServiceHandler interface {
 	// GetLocation returns where the page is now. It changes nothing. NO_SIDE_EFFECTS records that, so
@@ -220,6 +257,13 @@ type ViewerPageServiceHandler interface {
 	OpenSheetView(context.Context, *connect.Request[viewer.OpenSheetViewRequest]) (*connect.Response[viewer.OpenSheetViewResponse], error)
 	// CloseSheetView closes one sheet view.
 	CloseSheetView(context.Context, *connect.Request[viewer.CloseSheetViewRequest]) (*connect.Response[viewer.CloseSheetViewResponse], error)
+	// ShowAnswer shows an agent's answer to the reader, beside the box the reader asks in (agni issue
+	// 1907). It changes nothing in the design or the canvas.
+	ShowAnswer(context.Context, *connect.Request[viewer.ShowAnswerRequest]) (*connect.Response[viewer.ShowAnswerResponse], error)
+	// Propose shows the reader a next step to accept or dismiss, and returns at once. The reader's
+	// choice comes back later as the page event page.proposal_answered, so a transport that carries
+	// no page events refuses it (agni issue 1907).
+	Propose(context.Context, *connect.Request[viewer.ProposeRequest]) (*connect.Response[viewer.ProposeResponse], error)
 }
 
 // NewViewerPageServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -278,6 +322,18 @@ func NewViewerPageServiceHandler(svc ViewerPageServiceHandler, opts ...connect.H
 		connect.WithSchema(viewerPageServiceMethods.ByName("CloseSheetView")),
 		connect.WithHandlerOptions(opts...),
 	)
+	viewerPageServiceShowAnswerHandler := connect.NewUnaryHandler(
+		ViewerPageServiceShowAnswerProcedure,
+		svc.ShowAnswer,
+		connect.WithSchema(viewerPageServiceMethods.ByName("ShowAnswer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	viewerPageServiceProposeHandler := connect.NewUnaryHandler(
+		ViewerPageServiceProposeProcedure,
+		svc.Propose,
+		connect.WithSchema(viewerPageServiceMethods.ByName("Propose")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.viewer.ViewerPageService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ViewerPageServiceGetLocationProcedure:
@@ -296,6 +352,10 @@ func NewViewerPageServiceHandler(svc ViewerPageServiceHandler, opts ...connect.H
 			viewerPageServiceOpenSheetViewHandler.ServeHTTP(w, r)
 		case ViewerPageServiceCloseSheetViewProcedure:
 			viewerPageServiceCloseSheetViewHandler.ServeHTTP(w, r)
+		case ViewerPageServiceShowAnswerProcedure:
+			viewerPageServiceShowAnswerHandler.ServeHTTP(w, r)
+		case ViewerPageServiceProposeProcedure:
+			viewerPageServiceProposeHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -335,4 +395,12 @@ func (UnimplementedViewerPageServiceHandler) OpenSheetView(context.Context, *con
 
 func (UnimplementedViewerPageServiceHandler) CloseSheetView(context.Context, *connect.Request[viewer.CloseSheetViewRequest]) (*connect.Response[viewer.CloseSheetViewResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.viewer.ViewerPageService.CloseSheetView is not implemented"))
+}
+
+func (UnimplementedViewerPageServiceHandler) ShowAnswer(context.Context, *connect.Request[viewer.ShowAnswerRequest]) (*connect.Response[viewer.ShowAnswerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.viewer.ViewerPageService.ShowAnswer is not implemented"))
+}
+
+func (UnimplementedViewerPageServiceHandler) Propose(context.Context, *connect.Request[viewer.ProposeRequest]) (*connect.Response[viewer.ProposeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.viewer.ViewerPageService.Propose is not implemented"))
 }

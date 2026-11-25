@@ -146,6 +146,12 @@ hears it by calling `next_request` with the design, which waits up to two minute
 question or selection from a tab that let it in. So "wait for my question in the viewer" is a
 reasonable thing to tell it. A tab with its switch off sends nothing, whatever you type.
 
+The model can answer in the tab too. `viewer_show_answer` puts its words under the Ask box, with a
+button for each net or part it names, which you click to highlight. `viewer_propose` offers you a
+next step with Accept and Dismiss. Your choice reaches the model through `next_request` as
+`page.proposal_answered`, and the model then does the step, or doesn't. `examples/viewer-agent`
+shows the whole round with a scripted agent.
+
 In Claude Code a question can arrive as a turn of its own, so the model needn't sit waiting.
 mcpkit's `rooms-channel` is a channel server that Claude Code starts beside the session, and it
 pushes each question from a tab into the conversation as a message. Install it and register it

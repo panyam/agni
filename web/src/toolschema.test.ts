@@ -5,11 +5,12 @@ import { describe, expect, it } from "vitest";
 import type { DescMessage } from "@bufbuild/protobuf";
 import { BytesValueSchema, DescriptorProtoSchema, FieldSchema, Int64ValueSchema, SourceCodeInfoSchema, StructSchema, UninterpretedOptionSchema, ValueSchema } from "@bufbuild/protobuf/wkt";
 import { ViewerLocationSchema, ViewerPageService } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
-import { messageSchema, readOnly, toolName, toolSchema } from "./toolschema.js";
+import { messageSchema, pageEventDecls, readOnly, toolName, toolSchema } from "./toolschema.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = JSON.parse(readFileSync(join(here, "..", "..", "internal", "viewerrooms", "testdata", "viewer_tools.json"), "utf8")) as {
   tools: { name: string; readOnly: boolean; inputSchema: unknown }[];
+  events: { name: string; payloadSchema: unknown }[];
   messages: Record<string, unknown>;
 };
 
@@ -21,6 +22,12 @@ describe("tool schemas, twinned with internal/viewerrooms via viewer_tools.json"
     const built = ViewerPageService.methods.map((m) => ({ name: toolName(m), readOnly: readOnly(m), inputSchema: toolSchema(m) }));
     expect(built.length).toBeGreaterThan(0);
     expect(built).toEqual(fixture.tools);
+  });
+
+  it("declares every page event the bridge declares, with the same payload schema", () => {
+    const built = pageEventDecls().map(({ name, payloadSchema }) => ({ name, payloadSchema }));
+    expect(built.length).toBeGreaterThan(0);
+    expect(built).toEqual(fixture.events);
   });
 
   it("maps the kinds the viewer's messages do not use as the Go walk does", () => {

@@ -1,5 +1,7 @@
 import { ScalarType, type DescField, type DescMessage, type DescMethod } from "@bufbuild/protobuf";
 import { MethodOptions_IdempotencyLevel } from "@bufbuild/protobuf/wkt";
+import type { PageEventDecl } from "@panyam/mcpkit-rooms";
+import { ProposalAnsweredSchema } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 
 // toolschema.ts turns a proto service's methods into the tools an agent calls, as
 // internal/viewerrooms/tools.go does in Go (agni issue 1154). The bridge declares the Go walk's tools.
@@ -28,6 +30,24 @@ export function toolSchema(method: DescMethod): JSONSchema {
   (s.properties as JSONSchema).design = { type: "string" };
   s.required = ["design"];
   return s;
+}
+
+// EVENT_PROPOSAL_ANSWERED is the page event a tab emits when its reader accepts or dismisses an
+// agent's proposal (agni issue 1907). Its data is a ProposalAnswered.
+export const EVENT_PROPOSAL_ANSWERED = "page.proposal_answered";
+
+// pageEventDecls are the events a tab declares, the same as internal/viewerrooms's EventDecls. The
+// bridge declares those, and refuses a tab's declaration whose payload schema differs.
+export function pageEventDecls(): PageEventDecl[] {
+  return [
+    {
+      name: EVENT_PROPOSAL_ANSWERED,
+      description:
+        "The reader accepted or dismissed a proposal an agent made with viewer_propose. proposal is its id, " +
+        "choice is accepted or dismissed, and action is what the proposal said.",
+      payloadSchema: messageSchema(ProposalAnsweredSchema),
+    },
+  ];
 }
 
 // messageSchema is the JSON Schema of a message as protojson writes it. Properties go under their

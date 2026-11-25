@@ -241,6 +241,95 @@
         ],
         "type": "object"
       }
+    },
+    {
+      "name": "viewer_show_answer",
+      "readOnly": false,
+      "inputSchema": {
+        "properties": {
+          "design": {
+            "type": "string"
+          },
+          "entities": {
+            "items": {
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "pin": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "viewer_propose",
+      "readOnly": false,
+      "inputSchema": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "design": {
+            "type": "string"
+          },
+          "entities": {
+            "items": {
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "pin": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "page.proposal_answered",
+      "payloadSchema": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "choice": {
+            "type": "string"
+          },
+          "proposal": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
     }
   ],
   "messages": {

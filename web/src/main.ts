@@ -1381,12 +1381,13 @@ void admitted()
     const dispatch = pageDispatcher(page);
     const shell = document.querySelector<HTMLElement>(".app")?.dataset;
     listenForHosts(window, dispatch, embedOrigins(shell?.embedOrigins));
-    // Under --viewer-rooms the tab also joins its design's room, where an agent reaches the same
-    // dispatcher (agni issue 1154). The server answers ViewerRoomService whichever engine the page
+    // Under --viewer-rooms the tab also joins its design's room, where an agent reaches the same page
+    // through a dispatcher of its own (agni issue 1154). That one also shows an agent's answers and
+    // proposals, which only a room can report back on (agni issue 1907). The server answers ViewerRoomService whichever engine the page
     // runs, so it is asked directly rather than through the engine's transport.
     if (shell?.viewerRooms === "on") {
       const client = createClient(ViewerRoomService, createConnectTransport({ baseUrl: new URL(appBase(), window.location.href).href }));
-      roomTab = new ViewerRoomTab({ client, dispatch, host: document.getElementById("agents-switch") });
+      roomTab = new ViewerRoomTab({ client, dispatcher: (answers) => pageDispatcher(page, answers), host: document.getElementById("agents-switch") });
       void roomTab.follow(page.location());
     }
     // ?devpage exposes the contract to the console for trying it by hand. Nothing in the app reads it.

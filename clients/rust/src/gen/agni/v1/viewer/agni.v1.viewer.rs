@@ -219,6 +219,69 @@ pub struct CloseSheetViewResponse {
     #[prost(message, repeated, tag="3")]
     pub views: ::prost::alloc::vec::Vec<SheetView>,
 }
+/// PageEntity is a net, part or pin an answer or a proposal points at. The reader clicks it to
+/// highlight it, as clicking a query result cell does.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PageEntity {
+    /// kind is "net", "component" or "pin"; pin is set only for a pin.
+    #[prost(string, tag="1")]
+    pub kind: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub subject: ::prost::alloc::string::String,
+    #[prost(string, tag="3")]
+    pub pin: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ShowAnswerRequest {
+    /// text is plain text, at most 2000 characters. The page never reads it as markup.
+    #[prost(string, tag="1")]
+    pub text: ::prost::alloc::string::String,
+    /// entities are at most 20 things the answer points at.
+    #[prost(message, repeated, tag="2")]
+    pub entities: ::prost::alloc::vec::Vec<PageEntity>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ShowAnswerResponse {
+    /// answer names the shown answer for as long as the page is open, such as "answer-2".
+    #[prost(string, tag="1")]
+    pub answer: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="2")]
+    pub location: ::core::option::Option<ViewerLocation>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProposeRequest {
+    /// action says the next step in plain text, at most 500 characters, such as "add a pull-up on
+    /// SDA". What accepting it does is up to the agent, which hears the choice.
+    #[prost(string, tag="1")]
+    pub action: ::prost::alloc::string::String,
+    /// entities are at most 20 things the step touches.
+    #[prost(message, repeated, tag="2")]
+    pub entities: ::prost::alloc::vec::Vec<PageEntity>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ProposeResponse {
+    /// proposal names the proposal, such as "proposal-3". The page event page.proposal_answered
+    /// carries it with the reader's choice, "accepted" or "dismissed".
+    #[prost(string, tag="1")]
+    pub proposal: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="2")]
+    pub location: ::core::option::Option<ViewerLocation>,
+}
+/// ProposalAnswered is the data of the page event page.proposal_answered, which a page emits when
+/// its reader accepts or dismisses a proposal (agni issue 1907). Agents hear it as they hear the
+/// reader's question, through next_request or the room's events.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ProposalAnswered {
+    /// proposal is the id Propose returned.
+    #[prost(string, tag="1")]
+    pub proposal: ::prost::alloc::string::String,
+    /// choice is "accepted" or "dismissed".
+    #[prost(string, tag="2")]
+    pub choice: ::prost::alloc::string::String,
+    /// action is the proposal's action, so an agent that kept no state still knows what was chosen.
+    #[prost(string, tag="3")]
+    pub action: ::prost::alloc::string::String,
+}
 include!("agni.v1.viewer.serde.rs");
 include!("agni.v1.viewer.tonic.rs");
 // @@protoc_insertion_point(module)

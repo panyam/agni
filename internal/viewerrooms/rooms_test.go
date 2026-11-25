@@ -408,3 +408,59 @@ func TestAnAgentHearsAReadersQuestionAsAnEvent(t *testing.T) {
 	case <-time.After(300 * time.Millisecond):
 	}
 }
+
+// TestAnAgentHearsAReadersChoiceOnAProposal covers the way back from viewer_propose (agni issue
+// 1907). A tab declares page.proposal_answered as EventDecls does, and its reader's choice reaches
+// an agent through next_request. The bridge holds the declaration to its own, so a tab from another
+// build that declares the event with other fields is refused.
+func TestAnAgentHearsAReadersChoiceOnAProposal(t *testing.T) {
+	st := newStack(t)
+	a := st.agent(t, "session")
+
+	// A tab from another build declares the event first, with other fields. Without a declaration of
+	// its own, the bridge would take the first one it saw.
+	other := st.tab(t, "A0", "m/a", &calls{})
+	refused := make(chan string, 1)
+	other.OnEventRefused(func(name, reason string) { refused <- name + ": " + reason })
+	other.DeclareEvent(rooms.PageEventDecl{Name: EventProposalAnswered, PayloadSchema: map[string]any{"type": "object", "properties": map[string]any{"id": map[string]any{"type": "string"}}}})
+	if ok, out := call(t, a, "list_pages", map[string]any{"design": "m/a"}); !ok {
+		t.Fatalf("list_pages: %s", out)
+	}
+	select {
+	case r := <-refused:
+		if !strings.HasPrefix(r, EventProposalAnswered) {
+			t.Fatalf("refused %s", r)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("the bridge took a declaration of page.proposal_answered with other fields")
+	}
+
+	tab := st.tab(t, "A1", "m/a", &calls{})
+	tab.SetAgentsAllowed(true)
+	for _, d := range EventDecls() {
+		tab.DeclareEvent(d)
+	}
+	if ok, out := call(t, a, "list_pages", map[string]any{"design": "m/a"}); !ok {
+		t.Fatalf("list_pages: %s", out)
+	}
+	got := make(chan string, 1)
+	go func() {
+		res, err := a.ToolCallFull(t.Context(), "next_request", map[string]any{"design": "m/a", "wait_seconds": 3})
+		if err != nil {
+			got <- "error: " + err.Error()
+			return
+		}
+		b, _ := json.Marshal(res.StructuredContent)
+		got <- string(b)
+	}()
+	time.Sleep(300 * time.Millisecond)
+	if err := tab.Emit(EventProposalAnswered, map[string]any{"proposal": "proposal-1", "choice": "accepted", "action": "open sheet IO/1"}); err != nil {
+		t.Fatal(err)
+	}
+	out := <-got
+	for _, want := range []string{`"name":"page.proposal_answered"`, `"proposal":"proposal-1"`, `"choice":"accepted"`} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("the agent did not hear the choice (no %s): %s", want, out)
+		}
+	}
+}
