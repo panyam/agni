@@ -102,7 +102,7 @@ from any other peer in the room goes unanswered (agni issue 1173). No token the 
 the bridge's subject, so no page can join as the bridge. A page that holds a genuine token for the
 room still cannot call a tab directly and skip the bridge's check of the switch.
 
-The bridge declares the eight tools up front (`rooms.WithPageTools`), so `tools/list` answers the same
+The bridge declares the ten tools up front (`rooms.WithPageTools`), so `tools/list` answers the same
 for every caller and the bridge serves the stateless 2026-07-28 MCP wire as well as the session one.
 It also refuses a tab's tool whose schema differs from the declaration by a byte. The declaration is
 built in Go from the service's descriptor (`internal/viewerrooms/tools.go`) and the tab builds its
@@ -160,6 +160,36 @@ it watched nothing, and a question asked by design never arrived.
 `pair` take the design the way the page tools do, resolved through the same `ViewerRoomService.Room`
 (mcpkit#1633). Before that they took only the resolved room name, and no answer told the agent that
 name.
+
+## An agent answering in the tab
+
+ada asks "what parts are on this board?" in her tab's Ask box. Her agent queries the design and
+calls `viewer_show_answer` with its words and the parts it found. The answer shows under the Ask
+box, with a button per part that highlights it. The agent then calls `viewer_propose` with a next
+step, "Highlight R1 on the canvas", and ada sees a card with Accept and Dismiss (agni issue 1907).
+
+- `ShowAnswer` and `Propose` are `ViewerPageService` methods, so their tools come from the proto like
+  the others. The page puts the words on screen as text, never as markup, and refuses more than 2,000
+  characters of answer, 500 of action, or 20 entities.
+- `Propose` returns a proposal id at once. A tool call that waited on a person would run into the
+  bridge's call timeout. ada's click goes back as the page event `page.proposal_answered`, carrying
+  the proposal id, `accepted` or `dismissed`, and the action. Agents hear it as they hear her
+  question, through `next_request` or the room's events. Accepting does nothing on the page by
+  itself, and the agent does the step.
+- The bridge declares `page.proposal_answered` up front (`rooms.WithPageEventCatalog`), from the
+  `ProposalAnswered` message, and the tab declares the same. The tools' fixture holds both walks to
+  one payload schema. A tab from another build that declares other fields is refused, and an agent
+  never reads a choice in a shape it did not expect.
+- Every agent the tab agreed to hears the choice, not only the agent that proposed. The proposal id
+  tells an agent whether the choice answers its own proposal.
+- The answers live in the room's dispatcher. An embedding page drives the same `ViewerPageService`
+  over postMessage, and there both methods are refused with `failed_precondition`. That transport
+  has no way to report a choice back, and an embedding page draws its own answers.
+- Moving the tab to another design clears its answers and proposals.
+
+`examples/viewer-agent` is a scripted agent that does this round. The "answer" row of
+`make exercise-viewer-rooms` runs it as ada's agent against her real tab, and checks that bob's tab
+shows nothing.
 
 ## Several people on one server
 

@@ -4,8 +4,10 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import type { JoinToolRoomOptions, PageTool, PairedByCode, Principal, ToolRefusal, ToolRoom } from "@panyam/mcpkit-rooms";
 import { ViewerPageService } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 import type { JoinViewerRoomResponse } from "@panyam/agni-client/gen/agni/v1/webapi/viewerroom_pb";
-import type { PageDispatch } from "./pageservice.js";
-import { AGENTS_KEY, ViewerRoomTab, type RoomClient } from "./viewerroom.js";
+import { pageDispatcher, type PageAnswers, type PageDispatch } from "./pageservice.js";
+import { AGENTS_KEY, MAX_SHOWN, ViewerRoomTab, type RoomClient } from "./viewerroom.js";
+import type { ViewerPageAPI } from "./pageapi.js";
+import { emptyLocation } from "./router.js";
 import { toolSchema } from "./toolschema.js";
 
 // FakeRoom records what the tab does with its room.
@@ -36,6 +38,11 @@ class FakeRoom {
   }
   onToolRefused(fn: (r: ToolRefusal) => void) {
     this.refuse = fn;
+  }
+  events: string[] = [];
+  registerEvent(d: { name: string }) {
+    this.events.push(d.name);
+    return { unregister: () => {} };
   }
   emit(name: string, data?: unknown) {
     this.emits.push({ name, data });
@@ -69,7 +76,7 @@ class FakeRoom {
   }
 }
 
-function harness(opts: { stored?: string; joinFails?: boolean; dispatch?: PageDispatch } = {}) {
+function harness(opts: { stored?: string; joinFails?: boolean; dispatch?: PageDispatch; dispatcher?: (a: PageAnswers) => PageDispatch } = {}) {
   const rooms: FakeRoom[] = [];
   const asked: string[] = [];
   const client: RoomClient = {
@@ -88,7 +95,7 @@ function harness(opts: { stored?: string; joinFails?: boolean; dispatch?: PageDi
   const dispatch = opts.dispatch ?? vi.fn(async (method: string, body: unknown) => ({ method, body }) as never);
   const tab = new ViewerRoomTab({
     client,
-    dispatch,
+    dispatcher: opts.dispatcher ?? (() => dispatch),
     host,
     storage,
     win: win as never,
@@ -100,6 +107,66 @@ function harness(opts: { stored?: string; joinFails?: boolean; dispatch?: PageDi
   });
   return { tab, rooms, asked, store, host, dispatch, winListeners };
 }
+
+// answering builds a harness whose tab answers agents with the real dispatcher, over a page that
+// records what it was asked to highlight.
+function answering() {
+  const located: unknown[][] = [];
+  const api = {
+    location: () => ({ ...emptyLocation(), mount: "m", path: "a", sheet: "s1" }),
+    locateEntity: async (...args: unknown[]) => void located.push(args),
+  } as unknown as ViewerPageAPI;
+  const h = harness({ dispatcher: (answers) => pageDispatcher(api, answers) });
+  const call = (tool: string, args: Record<string, unknown>) => h.rooms[0].tools.get(tool)!.execute({ design: "m/a", ...args }, {});
+  const box = () => h.host.querySelector<HTMLElement>(".agents-answers")!;
+  return { ...h, located, call, box };
+}
+
+describe("an agent's answers on the tab", () => {
+  it("shows an answer as text, with a button per entity that highlights it", async () => {
+    const h = answering();
+    await h.tab.follow({ mount: "m", path: "a" });
+    expect(h.box().hidden).toBe(true);
+    const out = await h.call("viewer_show_answer", { text: "<b>SDA</b> has no pull-up", entities: [{ kind: "net", subject: "SDA" }, { kind: "pin", subject: "U1", pin: "3" }] });
+    expect(out).toMatchObject({ answer: "answer-1" });
+    expect(h.box().hidden).toBe(false);
+    const item = h.box().querySelector<HTMLElement>('[data-answer="answer-1"]')!;
+    expect(item.querySelector(".agents-words")!.textContent).toBe("<b>SDA</b> has no pull-up");
+    expect(item.querySelector("b")).toBeNull();
+    const entities = [...item.querySelectorAll<HTMLButtonElement>("button.agents-entity")];
+    expect(entities.map((b) => b.textContent)).toEqual(["SDA", "U1.3"]);
+    entities[1].click();
+    await vi.waitFor(() => expect(h.located).toEqual([["pin", "U1", { pin: "3", sheet: undefined }]]));
+  });
+
+  it("declares the choice event, and sends the reader's choice on a proposal once", async () => {
+    const h = answering();
+    await h.tab.follow({ mount: "m", path: "a" });
+    expect(h.rooms[0].events).toEqual(["page.proposal_answered"]);
+    const out = await h.call("viewer_propose", { action: "open sheet IO/1", entities: [{ kind: "net", subject: "SDA" }] });
+    expect(out).toMatchObject({ proposal: "proposal-1" });
+    const card = h.box().querySelector<HTMLElement>('[data-proposal="proposal-1"]')!;
+    card.querySelector<HTMLButtonElement>("button.agents-accept")!.click();
+    expect(h.rooms[0].emits).toEqual([{ name: "page.proposal_answered", data: { proposal: "proposal-1", choice: "accepted", action: "open sheet IO/1" } }]);
+    expect(card.dataset.choice).toBe("accepted");
+    expect(card.querySelector("button.agents-accept, button.agents-dismiss")).toBeNull();
+    expect(card.querySelector(".agents-choices")!.textContent).toBe("Accepted");
+  });
+
+  it("keeps the newest answers on screen and clears them when the tab moves to another design's room", async () => {
+    const h = answering();
+    await h.tab.follow({ mount: "m", path: "a" });
+    for (let i = 1; i <= MAX_SHOWN + 2; i++) await h.call("viewer_show_answer", { text: `answer ${i}` });
+    await h.call("viewer_propose", { action: "go" });
+    const words = [...h.box().querySelectorAll(".agents-words")].map((p) => p.textContent);
+    expect(words).toHaveLength(MAX_SHOWN);
+    expect(words[0]).toBe("go");
+    expect(words[1]).toBe(`answer ${MAX_SHOWN + 2}`);
+    await h.tab.follow({ mount: "m", path: "b" });
+    expect(h.box().childElementCount).toBe(0);
+    expect(h.box().hidden).toBe(true);
+  });
+});
 
 describe("ViewerRoomTab", () => {
   it("joins its design's room with the server's token and offers every page method as a tool", async () => {
@@ -114,7 +181,7 @@ describe("ViewerRoomTab", () => {
     expect(r.opts.trustBridges).toEqual(["agni-bridge"]);
     expect([...r.tools.keys()].sort()).toEqual([
       "viewer_apply_location", "viewer_close_sheet_view", "viewer_get_location", "viewer_locate_entity", "viewer_locate_verdict",
-      "viewer_open_sheet_view", "viewer_select_finding", "viewer_show_sheet",
+      "viewer_open_sheet_view", "viewer_propose", "viewer_select_finding", "viewer_show_answer", "viewer_show_sheet",
     ]);
     expect(r.tools.get("viewer_show_sheet")?.inputSchema).toEqual(toolSchema(ViewerPageService.method.showSheet));
     expect(r.tools.get("viewer_get_location")?.annotations?.readOnlyHint).toBe(true);

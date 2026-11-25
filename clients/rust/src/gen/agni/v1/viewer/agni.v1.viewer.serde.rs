@@ -1310,6 +1310,472 @@ impl<'de> serde::Deserialize<'de> for OpenSheetViewResponse {
         deserializer.deserialize_struct("agni.v1.viewer.OpenSheetViewResponse", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for PageEntity {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.kind.is_empty() {
+            len += 1;
+        }
+        if !self.subject.is_empty() {
+            len += 1;
+        }
+        if !self.pin.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.viewer.PageEntity", len)?;
+        if !self.kind.is_empty() {
+            struct_ser.serialize_field("kind", &self.kind)?;
+        }
+        if !self.subject.is_empty() {
+            struct_ser.serialize_field("subject", &self.subject)?;
+        }
+        if !self.pin.is_empty() {
+            struct_ser.serialize_field("pin", &self.pin)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for PageEntity {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "kind",
+            "subject",
+            "pin",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Kind,
+            Subject,
+            Pin,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "kind" => Ok(GeneratedField::Kind),
+                            "subject" => Ok(GeneratedField::Subject),
+                            "pin" => Ok(GeneratedField::Pin),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = PageEntity;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.viewer.PageEntity")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<PageEntity, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut kind__ = None;
+                let mut subject__ = None;
+                let mut pin__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Kind => {
+                            if kind__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("kind"));
+                            }
+                            kind__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Subject => {
+                            if subject__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("subject"));
+                            }
+                            subject__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Pin => {
+                            if pin__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("pin"));
+                            }
+                            pin__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(PageEntity {
+                    kind: kind__.unwrap_or_default(),
+                    subject: subject__.unwrap_or_default(),
+                    pin: pin__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.viewer.PageEntity", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ProposalAnswered {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.proposal.is_empty() {
+            len += 1;
+        }
+        if !self.choice.is_empty() {
+            len += 1;
+        }
+        if !self.action.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.viewer.ProposalAnswered", len)?;
+        if !self.proposal.is_empty() {
+            struct_ser.serialize_field("proposal", &self.proposal)?;
+        }
+        if !self.choice.is_empty() {
+            struct_ser.serialize_field("choice", &self.choice)?;
+        }
+        if !self.action.is_empty() {
+            struct_ser.serialize_field("action", &self.action)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ProposalAnswered {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "proposal",
+            "choice",
+            "action",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Proposal,
+            Choice,
+            Action,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "proposal" => Ok(GeneratedField::Proposal),
+                            "choice" => Ok(GeneratedField::Choice),
+                            "action" => Ok(GeneratedField::Action),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ProposalAnswered;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.viewer.ProposalAnswered")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ProposalAnswered, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut proposal__ = None;
+                let mut choice__ = None;
+                let mut action__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Proposal => {
+                            if proposal__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("proposal"));
+                            }
+                            proposal__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Choice => {
+                            if choice__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("choice"));
+                            }
+                            choice__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Action => {
+                            if action__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("action"));
+                            }
+                            action__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(ProposalAnswered {
+                    proposal: proposal__.unwrap_or_default(),
+                    choice: choice__.unwrap_or_default(),
+                    action: action__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.viewer.ProposalAnswered", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ProposeRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.action.is_empty() {
+            len += 1;
+        }
+        if !self.entities.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.viewer.ProposeRequest", len)?;
+        if !self.action.is_empty() {
+            struct_ser.serialize_field("action", &self.action)?;
+        }
+        if !self.entities.is_empty() {
+            struct_ser.serialize_field("entities", &self.entities)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ProposeRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "action",
+            "entities",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Action,
+            Entities,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "action" => Ok(GeneratedField::Action),
+                            "entities" => Ok(GeneratedField::Entities),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ProposeRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.viewer.ProposeRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ProposeRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut action__ = None;
+                let mut entities__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Action => {
+                            if action__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("action"));
+                            }
+                            action__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Entities => {
+                            if entities__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("entities"));
+                            }
+                            entities__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(ProposeRequest {
+                    action: action__.unwrap_or_default(),
+                    entities: entities__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.viewer.ProposeRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ProposeResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.proposal.is_empty() {
+            len += 1;
+        }
+        if self.location.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.viewer.ProposeResponse", len)?;
+        if !self.proposal.is_empty() {
+            struct_ser.serialize_field("proposal", &self.proposal)?;
+        }
+        if let Some(v) = self.location.as_ref() {
+            struct_ser.serialize_field("location", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ProposeResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "proposal",
+            "location",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Proposal,
+            Location,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "proposal" => Ok(GeneratedField::Proposal),
+                            "location" => Ok(GeneratedField::Location),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ProposeResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.viewer.ProposeResponse")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ProposeResponse, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut proposal__ = None;
+                let mut location__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Proposal => {
+                            if proposal__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("proposal"));
+                            }
+                            proposal__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Location => {
+                            if location__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("location"));
+                            }
+                            location__ = map_.next_value()?;
+                        }
+                    }
+                }
+                Ok(ProposeResponse {
+                    proposal: proposal__.unwrap_or_default(),
+                    location: location__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.viewer.ProposeResponse", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for SelectFindingRequest {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -1667,6 +2133,222 @@ impl<'de> serde::Deserialize<'de> for SheetView {
             }
         }
         deserializer.deserialize_struct("agni.v1.viewer.SheetView", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ShowAnswerRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.text.is_empty() {
+            len += 1;
+        }
+        if !self.entities.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.viewer.ShowAnswerRequest", len)?;
+        if !self.text.is_empty() {
+            struct_ser.serialize_field("text", &self.text)?;
+        }
+        if !self.entities.is_empty() {
+            struct_ser.serialize_field("entities", &self.entities)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ShowAnswerRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "text",
+            "entities",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Text,
+            Entities,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "text" => Ok(GeneratedField::Text),
+                            "entities" => Ok(GeneratedField::Entities),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ShowAnswerRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.viewer.ShowAnswerRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ShowAnswerRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut text__ = None;
+                let mut entities__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Text => {
+                            if text__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("text"));
+                            }
+                            text__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Entities => {
+                            if entities__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("entities"));
+                            }
+                            entities__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(ShowAnswerRequest {
+                    text: text__.unwrap_or_default(),
+                    entities: entities__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.viewer.ShowAnswerRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ShowAnswerResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.answer.is_empty() {
+            len += 1;
+        }
+        if self.location.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.viewer.ShowAnswerResponse", len)?;
+        if !self.answer.is_empty() {
+            struct_ser.serialize_field("answer", &self.answer)?;
+        }
+        if let Some(v) = self.location.as_ref() {
+            struct_ser.serialize_field("location", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ShowAnswerResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "answer",
+            "location",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Answer,
+            Location,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "answer" => Ok(GeneratedField::Answer),
+                            "location" => Ok(GeneratedField::Location),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ShowAnswerResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.viewer.ShowAnswerResponse")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ShowAnswerResponse, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut answer__ = None;
+                let mut location__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Answer => {
+                            if answer__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("answer"));
+                            }
+                            answer__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Location => {
+                            if location__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("location"));
+                            }
+                            location__ = map_.next_value()?;
+                        }
+                    }
+                }
+                Ok(ShowAnswerResponse {
+                    answer: answer__.unwrap_or_default(),
+                    location: location__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.viewer.ShowAnswerResponse", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for ShowSheetRequest {

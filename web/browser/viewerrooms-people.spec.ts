@@ -19,10 +19,12 @@
 //   pair            bob's tab offers a pairing code, ada's agent pairs with it and moves bob's tab,
 //                   bob revokes, and ada's agent's next call is refused
 //   ask             a question typed in ada's tab reaches ada's agent and not bob's
+//   answer          examples/viewer-agent, signed in as ada, answers ada's question in ada's tab and
+//                   proposes a step; bob's tab shows nothing, and ada's accept reaches her agent
 
 import { afterAll, beforeAll, describe, expect, it, inject } from "vitest";
 import type { Browser, BrowserContext, Page } from "playwright-core";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -122,15 +124,20 @@ async function signIn(ctx: BrowserContext, who: Person, said: string[]): Promise
   return page;
 }
 
-// agentFor signs an agent in as who, the way `agni login --with local` does.
-async function agentFor(who: Person): Promise<Agent> {
+// tokenFor signs an agent in as who, the way `agni login --with local` does, and returns its token.
+async function tokenFor(who: Person): Promise<string> {
   const res = await fetch(`${shared.base}/signin/local`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ username: who, password: PASSWORDS[who] }),
   });
   if (!res.ok) throw new Error(`${who}'s agent could not sign in: HTTP ${res.status} ${await res.text()}`);
-  const { token } = (await res.json()) as { token: string };
+  return ((await res.json()) as { token: string }).token;
+}
+
+// agentFor connects an agent signed in as who to /mcp.
+async function agentFor(who: Person): Promise<Agent> {
+  const token = await tokenFor(who);
   const agent = new Agent(`${shared.base}/mcp`, "session", token);
   await agent.connect();
   return agent;
@@ -152,6 +159,26 @@ async function agreedTabs(agent: Agent, want: number): Promise<string[]> {
     if (ids.length >= want) break;
   }
   return ids;
+}
+
+// scriptedAgent builds examples/viewer-agent and starts it as who's agent on DESIGN, answering one
+// question. It resolves once the agent is listening. done resolves with its exit code and what it
+// printed.
+async function scriptedAgent(who: Person): Promise<{ done: Promise<{ code: number | null; said: string }>; stop: () => void }> {
+  const bin = join(mkdtempSync(join(tmpdir(), "viewer-agent-")), "viewer-agent");
+  execFileSync("go", ["build", "-o", bin, "."], { cwd: join(repoRoot, "examples", "viewer-agent"), stdio: "inherit" });
+  const proc = spawn(bin, ["--server", shared.base, "--design", DESIGN, "--token", await tokenFor(who), "--once"], { stdio: ["ignore", "pipe", "pipe"] });
+  let said = "";
+  proc.stdout.on("data", (b: Buffer) => (said += b.toString()));
+  proc.stderr.on("data", (b: Buffer) => (said += b.toString()));
+  const done = new Promise<{ code: number | null; said: string }>((ok) => proc.on("exit", (code) => ok({ code, said })));
+  for (const deadline = Date.now() + 30_000; !said.includes("listening"); await new Promise((r) => setTimeout(r, 100))) {
+    if (proc.exitCode !== null || Date.now() > deadline) {
+      proc.kill();
+      throw new Error(`the viewer-agent example did not start listening: ${said.trim()}`);
+    }
+  }
+  return { done, stop: () => proc.kill() };
 }
 
 // sheets holds two sheet ids of the design, its root and IO/1, read once off a tab by hand.
@@ -302,6 +329,32 @@ describe("two people on one server, each driving their own viewer tab", () => {
         if (a.structuredContent?.event?.data.text !== "which sheet holds the IO block?") throw new Error(`ada's agent did not hear ada's question: ${text(a)}`);
         if (b.structuredContent?.event) throw new Error(`bob's agent heard ada's question: ${b.structuredContent.event.data.text}`);
         return "ada's question reached ada's agent, and bob's agent heard nothing";
+      });
+
+      await step("answer", { needs: ["join"] }, async () => {
+        const agent = await scriptedAgent("ada");
+        try {
+          const form = tabs.ada.locator("form.agents-ask");
+          await form.locator("input[type=text]").fill("what parts are on this board?");
+          await form.locator("button[type=submit]").click();
+          const answer = tabs.ada.locator("#agents-switch .agents-answers [data-answer]");
+          await answer.first().waitFor({ state: "visible", timeout: 20_000 }).catch(async () => {
+            throw new Error(`no answer showed in ada's tab; the agent said: ${(await Promise.race([agent.done, new Promise<{ said: string }>((r) => setTimeout(() => r({ said: "(still running)" }), 100))])).said.trim()}`);
+          });
+          const words = (await answer.first().locator(".agents-words").textContent()) ?? "";
+          if (!words.includes("has 4 parts")) throw new Error(`ada's tab shows the answer "${words}"`);
+          const parts = await answer.first().locator("button.agents-entity").allTextContents();
+          if (parts.join(",") !== "R1,R2,R3,R4") throw new Error(`the answer points at ${parts.join(",")}`);
+          const card = tabs.ada.locator("#agents-switch .agents-answers [data-proposal]");
+          await card.first().waitFor({ state: "visible", timeout: 10_000 });
+          if ((await tabs.bob.locator("#agents-switch .agents-answers > *").count()) > 0) throw new Error("bob's tab shows ada's agent's answer");
+          await card.first().locator("button.agents-accept").click();
+          const { code, said } = await agent.done;
+          if (code !== 0 || !/accepted: highlighted R1/.test(said)) throw new Error(`ada's agent exited ${code}: ${said.trim()}`);
+          return "ada's agent answered in ada's tab and proposed a step, bob's tab showed nothing, and ada's accept reached her agent, which highlighted R1";
+        } finally {
+          agent.stop();
+        }
       });
     } finally {
       const report = `## Shared viewer rooms, mission #1176\n\n${table(rows)}\n`;

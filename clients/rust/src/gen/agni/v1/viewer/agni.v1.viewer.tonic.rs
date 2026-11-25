@@ -298,5 +298,55 @@ pub mod viewer_page_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn show_answer(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ShowAnswerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ShowAnswerResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.viewer.ViewerPageService/ShowAnswer",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("agni.v1.viewer.ViewerPageService", "ShowAnswer"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn propose(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ProposeRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ProposeResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.viewer.ViewerPageService/Propose",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.viewer.ViewerPageService", "Propose"));
+            self.inner.unary(req, path, codec).await
+        }
     }
 }

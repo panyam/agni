@@ -6,7 +6,7 @@ require (
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/agni/examples/common v0.0.0
 	github.com/panyam/demokit v0.0.33
-	github.com/panyam/mcpkit v0.8.22
+	github.com/panyam/mcpkit v0.8.23
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 )

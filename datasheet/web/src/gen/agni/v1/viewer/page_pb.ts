@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/viewer/page.proto.
  */
 export const file_agni_v1_viewer_page: GenFile = /*@__PURE__*/
-  fileDesc("ChlhZ25pL3YxL3ZpZXdlci9wYWdlLnByb3RvEg5hZ25pLnYxLnZpZXdlciLtAgoOVmlld2VyTG9jYXRpb24SDQoFbW91bnQYASABKAkSDAoEcGF0aBgCIAEoCRINCgVzaGVldBgDIAEoCRIMCgRtb2RlGAQgASgJEg4KBmxheW91dBgFIAEoCRIUCgdzeW1ib2xzGAYgASgISACIAQESFAoHZmxhdHRlbhgHIAEoCEgBiAEBEg8KB3ZlcmRpY3QYCCABKAkSDAoEaGFzaBgJIAEoCRIMCgRydWxlGAogASgJEhAKCHN1YmplY3RzGAsgAygJEg0KBXRyYWNlGAwgASgJEhIKCnRyYWNlX2hvcHMYDSABKAUSDQoFcXVlcnkYDiABKAkSDQoFdGl0bGUYDyABKAkSDQoFYmluZHMYECADKAkSCwoDc2V0GBEgASgJEgkKAXEYEiABKAkSDwoHYWdhaW5zdBgTIAEoCRIVCg1yZW5hbWVfYXBwcm94GBQgASgIQgoKCF9zeW1ib2xzQgoKCF9mbGF0dGVuIhQKEkdldExvY2F0aW9uUmVxdWVzdCJxChNHZXRMb2NhdGlvblJlc3BvbnNlEjAKCGxvY2F0aW9uGAEgASgLMh4uYWduaS52MS52aWV3ZXIuVmlld2VyTG9jYXRpb24SKAoFdmlld3MYAiADKAsyGS5hZ25pLnYxLnZpZXdlci5TaGVldFZpZXciOAoJU2hlZXRWaWV3EgoKAmlkGAEgASgJEg0KBXNoZWV0GAIgASgJEhAKCHJlbmRlcmVyGAMgASgJIlUKFEFwcGx5TG9jYXRpb25SZXF1ZXN0EjAKCGxvY2F0aW9uGAEgASgLMh4uYWduaS52MS52aWV3ZXIuVmlld2VyTG9jYXRpb24SCwoDdXJsGAIgASgJImMKFUFwcGx5TG9jYXRpb25SZXNwb25zZRIwCghsb2NhdGlvbhgBIAEoCzIeLmFnbmkudjEudmlld2VyLlZpZXdlckxvY2F0aW9uEhgKEHZlcmRpY3RfcmVzb2x2ZWQYAiABKAgiQgoUTG9jYXRlVmVyZGljdFJlcXVlc3QSCgoCaWQYASABKAkSDAoEcnVsZRgCIAEoCRIQCghzdWJqZWN0cxgDIAMoCSJbChVMb2NhdGVWZXJkaWN0UmVzcG9uc2USEAoIcmVzb2x2ZWQYASABKAgSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbiJGChRTZWxlY3RGaW5kaW5nUmVxdWVzdBIPCgdzdWJqZWN0GAEgASgJEg4KBm5ldF9pZBgCIAEoCRINCgVzaGVldBgDIAEoCSJbChVTZWxlY3RGaW5kaW5nUmVzcG9uc2USEAoIc2VsZWN0ZWQYASABKAgSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbiJQChNMb2NhdGVFbnRpdHlSZXF1ZXN0EgwKBGtpbmQYASABKAkSDwoHc3ViamVjdBgCIAEoCRILCgNwaW4YAyABKAkSDQoFc2hlZXQYBCABKAkiSAoUTG9jYXRlRW50aXR5UmVzcG9uc2USMAoIbG9jYXRpb24YASABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbiIvChBTaG93U2hlZXRSZXF1ZXN0Eg0KBXNoZWV0GAEgASgJEgwKBHZpZXcYAiABKAkibwoRU2hvd1NoZWV0UmVzcG9uc2USMAoIbG9jYXRpb24YASABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhIoCgV2aWV3cxgCIAMoCzIZLmFnbmkudjEudmlld2VyLlNoZWV0VmlldyI3ChRPcGVuU2hlZXRWaWV3UmVxdWVzdBINCgVzaGVldBgBIAEoCRIQCghyZW5kZXJlchgCIAEoCSKcAQoVT3BlblNoZWV0Vmlld1Jlc3BvbnNlEicKBHZpZXcYASABKAsyGS5hZ25pLnYxLnZpZXdlci5TaGVldFZpZXcSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhIoCgV2aWV3cxgDIAMoCzIZLmFnbmkudjEudmlld2VyLlNoZWV0VmlldyIlChVDbG9zZVNoZWV0Vmlld1JlcXVlc3QSDAoEdmlldxgBIAEoCSKEAQoWQ2xvc2VTaGVldFZpZXdSZXNwb25zZRIOCgZjbG9zZWQYASABKAgSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhIoCgV2aWV3cxgDIAMoCzIZLmFnbmkudjEudmlld2VyLlNoZWV0VmlldzL2BQoRVmlld2VyUGFnZVNlcnZpY2USWwoLR2V0TG9jYXRpb24SIi5hZ25pLnYxLnZpZXdlci5HZXRMb2NhdGlvblJlcXVlc3QaIy5hZ25pLnYxLnZpZXdlci5HZXRMb2NhdGlvblJlc3BvbnNlIgOQAgESXAoNQXBwbHlMb2NhdGlvbhIkLmFnbmkudjEudmlld2VyLkFwcGx5TG9jYXRpb25SZXF1ZXN0GiUuYWduaS52MS52aWV3ZXIuQXBwbHlMb2NhdGlvblJlc3BvbnNlElwKDUxvY2F0ZVZlcmRpY3QSJC5hZ25pLnYxLnZpZXdlci5Mb2NhdGVWZXJkaWN0UmVxdWVzdBolLmFnbmkudjEudmlld2VyLkxvY2F0ZVZlcmRpY3RSZXNwb25zZRJcCg1TZWxlY3RGaW5kaW5nEiQuYWduaS52MS52aWV3ZXIuU2VsZWN0RmluZGluZ1JlcXVlc3QaJS5hZ25pLnYxLnZpZXdlci5TZWxlY3RGaW5kaW5nUmVzcG9uc2USWQoMTG9jYXRlRW50aXR5EiMuYWduaS52MS52aWV3ZXIuTG9jYXRlRW50aXR5UmVxdWVzdBokLmFnbmkudjEudmlld2VyLkxvY2F0ZUVudGl0eVJlc3BvbnNlElAKCVNob3dTaGVldBIgLmFnbmkudjEudmlld2VyLlNob3dTaGVldFJlcXVlc3QaIS5hZ25pLnYxLnZpZXdlci5TaG93U2hlZXRSZXNwb25zZRJcCg1PcGVuU2hlZXRWaWV3EiQuYWduaS52MS52aWV3ZXIuT3BlblNoZWV0Vmlld1JlcXVlc3QaJS5hZ25pLnYxLnZpZXdlci5PcGVuU2hlZXRWaWV3UmVzcG9uc2USXwoOQ2xvc2VTaGVldFZpZXcSJS5hZ25pLnYxLnZpZXdlci5DbG9zZVNoZWV0Vmlld1JlcXVlc3QaJi5hZ25pLnYxLnZpZXdlci5DbG9zZVNoZWV0Vmlld1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvdmlld2VyYgZwcm90bzM");
+  fileDesc("ChlhZ25pL3YxL3ZpZXdlci9wYWdlLnByb3RvEg5hZ25pLnYxLnZpZXdlciLtAgoOVmlld2VyTG9jYXRpb24SDQoFbW91bnQYASABKAkSDAoEcGF0aBgCIAEoCRINCgVzaGVldBgDIAEoCRIMCgRtb2RlGAQgASgJEg4KBmxheW91dBgFIAEoCRIUCgdzeW1ib2xzGAYgASgISACIAQESFAoHZmxhdHRlbhgHIAEoCEgBiAEBEg8KB3ZlcmRpY3QYCCABKAkSDAoEaGFzaBgJIAEoCRIMCgRydWxlGAogASgJEhAKCHN1YmplY3RzGAsgAygJEg0KBXRyYWNlGAwgASgJEhIKCnRyYWNlX2hvcHMYDSABKAUSDQoFcXVlcnkYDiABKAkSDQoFdGl0bGUYDyABKAkSDQoFYmluZHMYECADKAkSCwoDc2V0GBEgASgJEgkKAXEYEiABKAkSDwoHYWdhaW5zdBgTIAEoCRIVCg1yZW5hbWVfYXBwcm94GBQgASgIQgoKCF9zeW1ib2xzQgoKCF9mbGF0dGVuIhQKEkdldExvY2F0aW9uUmVxdWVzdCJxChNHZXRMb2NhdGlvblJlc3BvbnNlEjAKCGxvY2F0aW9uGAEgASgLMh4uYWduaS52MS52aWV3ZXIuVmlld2VyTG9jYXRpb24SKAoFdmlld3MYAiADKAsyGS5hZ25pLnYxLnZpZXdlci5TaGVldFZpZXciOAoJU2hlZXRWaWV3EgoKAmlkGAEgASgJEg0KBXNoZWV0GAIgASgJEhAKCHJlbmRlcmVyGAMgASgJIlUKFEFwcGx5TG9jYXRpb25SZXF1ZXN0EjAKCGxvY2F0aW9uGAEgASgLMh4uYWduaS52MS52aWV3ZXIuVmlld2VyTG9jYXRpb24SCwoDdXJsGAIgASgJImMKFUFwcGx5TG9jYXRpb25SZXNwb25zZRIwCghsb2NhdGlvbhgBIAEoCzIeLmFnbmkudjEudmlld2VyLlZpZXdlckxvY2F0aW9uEhgKEHZlcmRpY3RfcmVzb2x2ZWQYAiABKAgiQgoUTG9jYXRlVmVyZGljdFJlcXVlc3QSCgoCaWQYASABKAkSDAoEcnVsZRgCIAEoCRIQCghzdWJqZWN0cxgDIAMoCSJbChVMb2NhdGVWZXJkaWN0UmVzcG9uc2USEAoIcmVzb2x2ZWQYASABKAgSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbiJGChRTZWxlY3RGaW5kaW5nUmVxdWVzdBIPCgdzdWJqZWN0GAEgASgJEg4KBm5ldF9pZBgCIAEoCRINCgVzaGVldBgDIAEoCSJbChVTZWxlY3RGaW5kaW5nUmVzcG9uc2USEAoIc2VsZWN0ZWQYASABKAgSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbiJQChNMb2NhdGVFbnRpdHlSZXF1ZXN0EgwKBGtpbmQYASABKAkSDwoHc3ViamVjdBgCIAEoCRILCgNwaW4YAyABKAkSDQoFc2hlZXQYBCABKAkiSAoUTG9jYXRlRW50aXR5UmVzcG9uc2USMAoIbG9jYXRpb24YASABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbiIvChBTaG93U2hlZXRSZXF1ZXN0Eg0KBXNoZWV0GAEgASgJEgwKBHZpZXcYAiABKAkibwoRU2hvd1NoZWV0UmVzcG9uc2USMAoIbG9jYXRpb24YASABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhIoCgV2aWV3cxgCIAMoCzIZLmFnbmkudjEudmlld2VyLlNoZWV0VmlldyI3ChRPcGVuU2hlZXRWaWV3UmVxdWVzdBINCgVzaGVldBgBIAEoCRIQCghyZW5kZXJlchgCIAEoCSKcAQoVT3BlblNoZWV0Vmlld1Jlc3BvbnNlEicKBHZpZXcYASABKAsyGS5hZ25pLnYxLnZpZXdlci5TaGVldFZpZXcSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhIoCgV2aWV3cxgDIAMoCzIZLmFnbmkudjEudmlld2VyLlNoZWV0VmlldyIlChVDbG9zZVNoZWV0Vmlld1JlcXVlc3QSDAoEdmlldxgBIAEoCSKEAQoWQ2xvc2VTaGVldFZpZXdSZXNwb25zZRIOCgZjbG9zZWQYASABKAgSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhIoCgV2aWV3cxgDIAMoCzIZLmFnbmkudjEudmlld2VyLlNoZWV0VmlldyI4CgpQYWdlRW50aXR5EgwKBGtpbmQYASABKAkSDwoHc3ViamVjdBgCIAEoCRILCgNwaW4YAyABKAkiTwoRU2hvd0Fuc3dlclJlcXVlc3QSDAoEdGV4dBgBIAEoCRIsCghlbnRpdGllcxgCIAMoCzIaLmFnbmkudjEudmlld2VyLlBhZ2VFbnRpdHkiVgoSU2hvd0Fuc3dlclJlc3BvbnNlEg4KBmFuc3dlchgBIAEoCRIwCghsb2NhdGlvbhgCIAEoCzIeLmFnbmkudjEudmlld2VyLlZpZXdlckxvY2F0aW9uIk4KDlByb3Bvc2VSZXF1ZXN0Eg4KBmFjdGlvbhgBIAEoCRIsCghlbnRpdGllcxgCIAMoCzIaLmFnbmkudjEudmlld2VyLlBhZ2VFbnRpdHkiVQoPUHJvcG9zZVJlc3BvbnNlEhAKCHByb3Bvc2FsGAEgASgJEjAKCGxvY2F0aW9uGAIgASgLMh4uYWduaS52MS52aWV3ZXIuVmlld2VyTG9jYXRpb24iRAoQUHJvcG9zYWxBbnN3ZXJlZBIQCghwcm9wb3NhbBgBIAEoCRIOCgZjaG9pY2UYAiABKAkSDgoGYWN0aW9uGAMgASgJMpcHChFWaWV3ZXJQYWdlU2VydmljZRJbCgtHZXRMb2NhdGlvbhIiLmFnbmkudjEudmlld2VyLkdldExvY2F0aW9uUmVxdWVzdBojLmFnbmkudjEudmlld2VyLkdldExvY2F0aW9uUmVzcG9uc2UiA5ACARJcCg1BcHBseUxvY2F0aW9uEiQuYWduaS52MS52aWV3ZXIuQXBwbHlMb2NhdGlvblJlcXVlc3QaJS5hZ25pLnYxLnZpZXdlci5BcHBseUxvY2F0aW9uUmVzcG9uc2USXAoNTG9jYXRlVmVyZGljdBIkLmFnbmkudjEudmlld2VyLkxvY2F0ZVZlcmRpY3RSZXF1ZXN0GiUuYWduaS52MS52aWV3ZXIuTG9jYXRlVmVyZGljdFJlc3BvbnNlElwKDVNlbGVjdEZpbmRpbmcSJC5hZ25pLnYxLnZpZXdlci5TZWxlY3RGaW5kaW5nUmVxdWVzdBolLmFnbmkudjEudmlld2VyLlNlbGVjdEZpbmRpbmdSZXNwb25zZRJZCgxMb2NhdGVFbnRpdHkSIy5hZ25pLnYxLnZpZXdlci5Mb2NhdGVFbnRpdHlSZXF1ZXN0GiQuYWduaS52MS52aWV3ZXIuTG9jYXRlRW50aXR5UmVzcG9uc2USUAoJU2hvd1NoZWV0EiAuYWduaS52MS52aWV3ZXIuU2hvd1NoZWV0UmVxdWVzdBohLmFnbmkudjEudmlld2VyLlNob3dTaGVldFJlc3BvbnNlElwKDU9wZW5TaGVldFZpZXcSJC5hZ25pLnYxLnZpZXdlci5PcGVuU2hlZXRWaWV3UmVxdWVzdBolLmFnbmkudjEudmlld2VyLk9wZW5TaGVldFZpZXdSZXNwb25zZRJfCg5DbG9zZVNoZWV0VmlldxIlLmFnbmkudjEudmlld2VyLkNsb3NlU2hlZXRWaWV3UmVxdWVzdBomLmFnbmkudjEudmlld2VyLkNsb3NlU2hlZXRWaWV3UmVzcG9uc2USUwoKU2hvd0Fuc3dlchIhLmFnbmkudjEudmlld2VyLlNob3dBbnN3ZXJSZXF1ZXN0GiIuYWduaS52MS52aWV3ZXIuU2hvd0Fuc3dlclJlc3BvbnNlEkoKB1Byb3Bvc2USHi5hZ25pLnYxLnZpZXdlci5Qcm9wb3NlUmVxdWVzdBofLmFnbmkudjEudmlld2VyLlByb3Bvc2VSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3ZpZXdlcmIGcHJvdG8z");
 
 /**
  * ViewerLocation is the page's URL-addressable state, the wire twin of router.ts's ViewerLocation,
@@ -591,6 +591,177 @@ export const CloseSheetViewResponseSchema: GenMessage<CloseSheetViewResponse> = 
   messageDesc(file_agni_v1_viewer_page, 17);
 
 /**
+ * PageEntity is a net, part or pin an answer or a proposal points at. The reader clicks it to
+ * highlight it, as clicking a query result cell does.
+ *
+ * @generated from message agni.v1.viewer.PageEntity
+ */
+export type PageEntity = Message<"agni.v1.viewer.PageEntity"> & {
+  /**
+   * kind is "net", "component" or "pin"; pin is set only for a pin.
+   *
+   * @generated from field: string kind = 1;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: string subject = 2;
+   */
+  subject: string;
+
+  /**
+   * @generated from field: string pin = 3;
+   */
+  pin: string;
+};
+
+/**
+ * Describes the message agni.v1.viewer.PageEntity.
+ * Use `create(PageEntitySchema)` to create a new message.
+ */
+export const PageEntitySchema: GenMessage<PageEntity> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 18);
+
+/**
+ * @generated from message agni.v1.viewer.ShowAnswerRequest
+ */
+export type ShowAnswerRequest = Message<"agni.v1.viewer.ShowAnswerRequest"> & {
+  /**
+   * text is plain text, at most 2000 characters. The page never reads it as markup.
+   *
+   * @generated from field: string text = 1;
+   */
+  text: string;
+
+  /**
+   * entities are at most 20 things the answer points at.
+   *
+   * @generated from field: repeated agni.v1.viewer.PageEntity entities = 2;
+   */
+  entities: PageEntity[];
+};
+
+/**
+ * Describes the message agni.v1.viewer.ShowAnswerRequest.
+ * Use `create(ShowAnswerRequestSchema)` to create a new message.
+ */
+export const ShowAnswerRequestSchema: GenMessage<ShowAnswerRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 19);
+
+/**
+ * @generated from message agni.v1.viewer.ShowAnswerResponse
+ */
+export type ShowAnswerResponse = Message<"agni.v1.viewer.ShowAnswerResponse"> & {
+  /**
+   * answer names the shown answer for as long as the page is open, such as "answer-2".
+   *
+   * @generated from field: string answer = 1;
+   */
+  answer: string;
+
+  /**
+   * @generated from field: agni.v1.viewer.ViewerLocation location = 2;
+   */
+  location?: ViewerLocation | undefined;
+};
+
+/**
+ * Describes the message agni.v1.viewer.ShowAnswerResponse.
+ * Use `create(ShowAnswerResponseSchema)` to create a new message.
+ */
+export const ShowAnswerResponseSchema: GenMessage<ShowAnswerResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 20);
+
+/**
+ * @generated from message agni.v1.viewer.ProposeRequest
+ */
+export type ProposeRequest = Message<"agni.v1.viewer.ProposeRequest"> & {
+  /**
+   * action says the next step in plain text, at most 500 characters, such as "add a pull-up on
+   * SDA". What accepting it does is up to the agent, which hears the choice.
+   *
+   * @generated from field: string action = 1;
+   */
+  action: string;
+
+  /**
+   * entities are at most 20 things the step touches.
+   *
+   * @generated from field: repeated agni.v1.viewer.PageEntity entities = 2;
+   */
+  entities: PageEntity[];
+};
+
+/**
+ * Describes the message agni.v1.viewer.ProposeRequest.
+ * Use `create(ProposeRequestSchema)` to create a new message.
+ */
+export const ProposeRequestSchema: GenMessage<ProposeRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 21);
+
+/**
+ * @generated from message agni.v1.viewer.ProposeResponse
+ */
+export type ProposeResponse = Message<"agni.v1.viewer.ProposeResponse"> & {
+  /**
+   * proposal names the proposal, such as "proposal-3". The page event page.proposal_answered
+   * carries it with the reader's choice, "accepted" or "dismissed".
+   *
+   * @generated from field: string proposal = 1;
+   */
+  proposal: string;
+
+  /**
+   * @generated from field: agni.v1.viewer.ViewerLocation location = 2;
+   */
+  location?: ViewerLocation | undefined;
+};
+
+/**
+ * Describes the message agni.v1.viewer.ProposeResponse.
+ * Use `create(ProposeResponseSchema)` to create a new message.
+ */
+export const ProposeResponseSchema: GenMessage<ProposeResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 22);
+
+/**
+ * ProposalAnswered is the data of the page event page.proposal_answered, which a page emits when
+ * its reader accepts or dismisses a proposal (agni issue 1907). Agents hear it as they hear the
+ * reader's question, through next_request or the room's events.
+ *
+ * @generated from message agni.v1.viewer.ProposalAnswered
+ */
+export type ProposalAnswered = Message<"agni.v1.viewer.ProposalAnswered"> & {
+  /**
+   * proposal is the id Propose returned.
+   *
+   * @generated from field: string proposal = 1;
+   */
+  proposal: string;
+
+  /**
+   * choice is "accepted" or "dismissed".
+   *
+   * @generated from field: string choice = 2;
+   */
+  choice: string;
+
+  /**
+   * action is the proposal's action, so an agent that kept no state still knows what was chosen.
+   *
+   * @generated from field: string action = 3;
+   */
+  action: string;
+};
+
+/**
+ * Describes the message agni.v1.viewer.ProposalAnswered.
+ * Use `create(ProposalAnsweredSchema)` to create a new message.
+ */
+export const ProposalAnsweredSchema: GenMessage<ProposalAnswered> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 23);
+
+/**
  * This file defines ViewerPageService, the contract a LIVE viewer page answers (agni issues 1150,
  * 1152).
  *
@@ -695,6 +866,29 @@ export const ViewerPageService: GenService<{
     methodKind: "unary";
     input: typeof CloseSheetViewRequestSchema;
     output: typeof CloseSheetViewResponseSchema;
+  },
+  /**
+   * ShowAnswer shows an agent's answer to the reader, beside the box the reader asks in (agni issue
+   * 1907). It changes nothing in the design or the canvas.
+   *
+   * @generated from rpc agni.v1.viewer.ViewerPageService.ShowAnswer
+   */
+  showAnswer: {
+    methodKind: "unary";
+    input: typeof ShowAnswerRequestSchema;
+    output: typeof ShowAnswerResponseSchema;
+  },
+  /**
+   * Propose shows the reader a next step to accept or dismiss, and returns at once. The reader's
+   * choice comes back later as the page event page.proposal_answered, so a transport that carries
+   * no page events refuses it (agni issue 1907).
+   *
+   * @generated from rpc agni.v1.viewer.ViewerPageService.Propose
+   */
+  propose: {
+    methodKind: "unary";
+    input: typeof ProposeRequestSchema;
+    output: typeof ProposeResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_viewer_page, 0);

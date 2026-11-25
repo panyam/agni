@@ -17,6 +17,32 @@ import type { RenderMode } from "./viewer.js";
 // for a body that does not parse or a request the page cannot act on.
 export type PageDispatch = (method: string, body: JsonValue | undefined) => Promise<JsonValue>;
 
+// PageEntityRef is a net, part or pin that an answer or a proposal points at. kind is "net",
+// "component" or "pin", and pin is set only for a pin.
+export interface PageEntityRef {
+  kind: string;
+  subject: string;
+  pin: string;
+}
+
+// PageAnswers is where a page shows an agent's words to its reader (agni issue 1907). viewerroom.ts
+// draws them under the Ask box. showAnswer returns the answer's id and propose the proposal's id,
+// each unique for as long as the page is open. The reader's choice on a proposal goes back to the
+// agents as the page event page.proposal_answered, so only a transport that carries page events
+// gives the dispatcher a PageAnswers.
+export interface PageAnswers {
+  showAnswer(text: string, entities: PageEntityRef[]): string;
+  propose(action: string, entities: PageEntityRef[]): string;
+}
+
+// The most an answer or a proposal may carry. An agent's words go on the reader's screen, so a call
+// that would fill it is refused rather than cut.
+export const MAX_ANSWER_CHARS = 2000;
+export const MAX_ACTION_CHARS = 500;
+export const MAX_ENTITIES = 20;
+
+const ENTITY_KINDS = new Set(["net", "component", "pin"]);
+
 type Methods = typeof ViewerPageService.method;
 // PageImpl is one handler per rpc, so a new method in the service is a compile error here until it
 // has a handler.
@@ -26,9 +52,15 @@ type PageImpl = {
 
 const MODES: readonly RenderMode[] = ["svg", "webgl", "native"];
 
-// pageDispatcher builds the dispatch for one page.
-export function pageDispatcher(api: ViewerPageAPI): PageDispatch {
+// pageDispatcher builds the dispatch for one page. Without answers, ShowAnswer and Propose are
+// refused with failed_precondition, since that transport has nowhere to show them and no way to
+// report a choice back.
+export function pageDispatcher(api: ViewerPageAPI, answers?: PageAnswers): PageDispatch {
   const here = () => locationToWire(api.location());
+  const shown = () => {
+    if (!answers) throw new ConnectError("this page shows an agent's answers only to an agent in its design's room", Code.FailedPrecondition);
+    return answers;
+  };
   const impl: PageImpl = {
     getLocation: async () => ({ location: here(), views: api.sheetViews() }),
     applyLocation: async (req) => {
@@ -51,6 +83,16 @@ export function pageDispatcher(api: ViewerPageAPI): PageDispatch {
       return { view, location: here(), views: api.sheetViews() };
     },
     closeSheetView: async (req) => ({ closed: api.closeSheetView(req.view), location: here(), views: api.sheetViews() }),
+    showAnswer: async (req) => {
+      const to = shown();
+      const text = words("text", req.text, MAX_ANSWER_CHARS);
+      return { answer: to.showAnswer(text, entityRefs(req.entities)), location: here() };
+    },
+    propose: async (req) => {
+      const to = shown();
+      const action = words("action", req.action, MAX_ACTION_CHARS);
+      return { proposal: to.propose(action, entityRefs(req.entities)), location: here() };
+    },
   };
   return async (method, body) => {
     const m = findMethod(method);
@@ -70,6 +112,22 @@ export function pageDispatcher(api: ViewerPageAPI): PageDispatch {
     }
     return toJson(m.output, create(m.output, res));
   };
+}
+
+function words(field: string, text: string, max: number): string {
+  const t = text.trim();
+  if (!t) throw new ConnectError(`${field} is empty`, Code.InvalidArgument);
+  if (t.length > max) throw new ConnectError(`${field} is ${t.length} characters, over ${max}`, Code.InvalidArgument);
+  return t;
+}
+
+function entityRefs(es: readonly { kind: string; subject: string; pin: string }[]): PageEntityRef[] {
+  if (es.length > MAX_ENTITIES) throw new ConnectError(`${es.length} entities, over ${MAX_ENTITIES}`, Code.InvalidArgument);
+  return es.map(({ kind, subject, pin }) => {
+    if (!ENTITY_KINDS.has(kind)) throw new ConnectError(`entity kind "${kind}" is not net, component or pin`, Code.InvalidArgument);
+    if (!subject) throw new ConnectError(`a ${kind} entity names no subject`, Code.InvalidArgument);
+    return { kind, subject, pin: kind === "pin" ? pin : "" };
+  });
 }
 
 // isLinkOnly says whether a call is ApplyLocation carrying a url and nothing else. The page takes

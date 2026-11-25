@@ -28,6 +28,11 @@ var descriptions = map[string]string{
 		"view names an open sheet view to show it in, as GetLocation lists them; empty shows it on the canvas.",
 	"OpenSheetView": "Open a sheet view beside the canvas of an open viewer tab, showing one sheet, such as the board beside the schematic. " +
 		"Returns the new view's id. A view follows what the reader selects, and a selection event names the view it was made in.",
+	"ShowAnswer": "Show your answer to the reader of an open viewer tab, under the box they ask in. text is plain text, at most 2000 characters. " +
+		"entities (kind net, component or pin) are at most 20 things the answer points at, which the reader clicks to highlight. Moves nothing.",
+	"Propose": "Offer the reader of an open viewer tab a next step to accept or dismiss, such as adding a pull-up. action says the step in plain text. " +
+		"Returns a proposal id at once. The reader's choice arrives later as the event page.proposal_answered, with proposal, choice (accepted or dismissed) and action, " +
+		"through next_request or the room's events. Accepting does nothing by itself; act on the choice.",
 	"CloseSheetView": "Close one sheet view of an open viewer tab. view is its id, as OpenSheetView returned it or GetLocation lists it. Returns closed false for an id that names no open view.",
 }
 
@@ -53,6 +58,22 @@ func ToolDecls() []rooms.PageToolDecl {
 		})
 	}
 	return out
+}
+
+// EventProposalAnswered is the page event a tab emits when its reader accepts or dismisses a
+// proposal that an agent made with viewer_propose. Its data is a ProposalAnswered.
+const EventProposalAnswered = "page.proposal_answered"
+
+// EventDecls returns the page events for the bridge to declare, beside the bridge's own room.ask and
+// page.selection_changed. A tab declares the same, with its payload schema built by
+// web/src/toolschema.ts, and the bridge refuses a declaration that differs.
+func EventDecls() []rooms.PageEventDecl {
+	return []rooms.PageEventDecl{{
+		Name: EventProposalAnswered,
+		Description: "The reader accepted or dismissed a proposal an agent made with viewer_propose. proposal is its id, " +
+			"choice is accepted or dismissed, and action is what the proposal said.",
+		PayloadSchema: MessageSchema((&viewerpb.ProposalAnswered{}).ProtoReflect().Descriptor()),
+	}}
 }
 
 // ToolName is a method's tool: GetLocation is viewer_get_location.

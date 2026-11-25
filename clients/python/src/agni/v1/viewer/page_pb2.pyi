@@ -191,3 +191,55 @@ class CloseSheetViewResponse(_message.Message):
     location: ViewerLocation
     views: _containers.RepeatedCompositeFieldContainer[SheetView]
     def __init__(self, closed: _Optional[bool] = ..., location: _Optional[_Union[ViewerLocation, _Mapping]] = ..., views: _Optional[_Iterable[_Union[SheetView, _Mapping]]] = ...) -> None: ...
+
+class PageEntity(_message.Message):
+    __slots__ = ("kind", "subject", "pin")
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_FIELD_NUMBER: _ClassVar[int]
+    PIN_FIELD_NUMBER: _ClassVar[int]
+    kind: str
+    subject: str
+    pin: str
+    def __init__(self, kind: _Optional[str] = ..., subject: _Optional[str] = ..., pin: _Optional[str] = ...) -> None: ...
+
+class ShowAnswerRequest(_message.Message):
+    __slots__ = ("text", "entities")
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    ENTITIES_FIELD_NUMBER: _ClassVar[int]
+    text: str
+    entities: _containers.RepeatedCompositeFieldContainer[PageEntity]
+    def __init__(self, text: _Optional[str] = ..., entities: _Optional[_Iterable[_Union[PageEntity, _Mapping]]] = ...) -> None: ...
+
+class ShowAnswerResponse(_message.Message):
+    __slots__ = ("answer", "location")
+    ANSWER_FIELD_NUMBER: _ClassVar[int]
+    LOCATION_FIELD_NUMBER: _ClassVar[int]
+    answer: str
+    location: ViewerLocation
+    def __init__(self, answer: _Optional[str] = ..., location: _Optional[_Union[ViewerLocation, _Mapping]] = ...) -> None: ...
+
+class ProposeRequest(_message.Message):
+    __slots__ = ("action", "entities")
+    ACTION_FIELD_NUMBER: _ClassVar[int]
+    ENTITIES_FIELD_NUMBER: _ClassVar[int]
+    action: str
+    entities: _containers.RepeatedCompositeFieldContainer[PageEntity]
+    def __init__(self, action: _Optional[str] = ..., entities: _Optional[_Iterable[_Union[PageEntity, _Mapping]]] = ...) -> None: ...
+
+class ProposeResponse(_message.Message):
+    __slots__ = ("proposal", "location")
+    PROPOSAL_FIELD_NUMBER: _ClassVar[int]
+    LOCATION_FIELD_NUMBER: _ClassVar[int]
+    proposal: str
+    location: ViewerLocation
+    def __init__(self, proposal: _Optional[str] = ..., location: _Optional[_Union[ViewerLocation, _Mapping]] = ...) -> None: ...
+
+class ProposalAnswered(_message.Message):
+    __slots__ = ("proposal", "choice", "action")
+    PROPOSAL_FIELD_NUMBER: _ClassVar[int]
+    CHOICE_FIELD_NUMBER: _ClassVar[int]
+    ACTION_FIELD_NUMBER: _ClassVar[int]
+    proposal: str
+    choice: str
+    action: str
+    def __init__(self, proposal: _Optional[str] = ..., choice: _Optional[str] = ..., action: _Optional[str] = ...) -> None: ...

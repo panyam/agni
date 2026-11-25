@@ -74,6 +74,13 @@ extend the engine from outside, with their own format reader and rules, rather t
 walkthroughs. `extension` is the worked example and `extension-template` is the bare scaffold to
 copy. The docsite page `docsite/content/build/extending.md` walks through both.
 
+## `viewer-agent/`, also off the ladder
+
+[`viewer-agent/`](viewer-agent/) is an agent rather than a walkthrough. It answers a question asked
+in a viewer tab's Ask box, shows the answer in that tab, proposes a next step, and does the step the
+reader accepts (`viewer_show_answer`, `viewer_propose`, agni issue 1907). Its thinking is scripted,
+and its README shows the same loop with Claude Code.
+
 ## `embed-viewer/`, also off the ladder
 
 [`embed-viewer/`](embed-viewer/) is a parent page that frames the viewer and drives it over

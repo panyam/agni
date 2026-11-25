@@ -3,10 +3,10 @@ import type { JsonValue } from "@bufbuild/protobuf";
 import { EVENT_ASK, joinToolRoom, type JoinToolRoomOptions, type Principal, type ToolRefusal, type ToolRoom } from "@panyam/mcpkit-rooms";
 import { ViewerPageService } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 import type { JoinViewerRoomRequest, JoinViewerRoomResponse } from "@panyam/agni-client/gen/agni/v1/webapi/viewerroom_pb";
-import type { PageDispatch } from "./pageservice.js";
+import type { PageAnswers, PageDispatch, PageEntityRef } from "./pageservice.js";
 import type { Focus } from "./properties.js";
 import type { ViewerLocation } from "./router.js";
-import { readOnly, toolName, toolSchema } from "./toolschema.js";
+import { EVENT_PROPOSAL_ANSWERED, pageEventDecls, readOnly, toolName, toolSchema } from "./toolschema.js";
 
 // viewerroom.ts lets an agent drive this tab (agni issue 1154). Under `agni serve --mcp
 // --viewer-rooms` the tab joins its design's relay room and offers each ViewerPageService method
@@ -25,6 +25,11 @@ import { readOnly, toolName, toolSchema } from "./toolschema.js";
 // tab shows a code, and the agent enters it with the bridge's pair tool. Each paired agent gets a row
 // with a Revoke button. The tab holds its pairings in memory, so a reload or a move to another
 // design ends them.
+//
+// An agent answers on the page (agni issue 1907). viewer_show_answer puts its words under the Ask
+// box, with a button for each entity they point at. viewer_propose adds a card with Accept and
+// Dismiss, and the reader's click goes back to the agents as the event page.proposal_answered. The
+// tab clears both when it moves to another design.
 
 // RoomClient holds the one ViewerRoomService call that the tab makes to the server.
 export interface RoomClient {
@@ -33,7 +38,9 @@ export interface RoomClient {
 
 export interface ViewerRoomDeps {
   client: RoomClient;
-  dispatch: PageDispatch;
+  // dispatcher builds the dispatch that answers agents' calls, given where the tab shows their
+  // answers. main.ts passes pageDispatcher bound to the page.
+  dispatcher: (answers: PageAnswers) => PageDispatch;
   // host is where the switch renders, hidden until the tab is in a room.
   host: HTMLElement | null;
   join?: (opts: JoinToolRoomOptions) => Promise<ToolRoom>;
@@ -54,6 +61,10 @@ export const CANVAS_VIEW = "canvas";
 // PAIR_CODE_TTL_MS is how long a pairing code works, the most a bridge honours.
 export const PAIR_CODE_TTL_MS = 10 * 60_000;
 
+// MAX_SHOWN is how many answers and proposals the tab keeps on screen. A new one past it drops the
+// oldest.
+export const MAX_SHOWN = 10;
+
 // RoomSelection is a selection as agents hear it, with the view it was made in.
 export type RoomSelection = Focus & { view: string };
 
@@ -72,6 +83,10 @@ export class ViewerRoomTab {
   // pairing holds the pair button, the code it offered and the agents paired with the tab.
   private readonly pairing: { code: HTMLElement; grants: HTMLUListElement } | undefined;
   private codeTimer: ReturnType<typeof setTimeout> | undefined;
+  // answers holds the agents' answers and proposals, newest first.
+  private readonly answers: HTMLElement | undefined;
+  private shownCount = 0;
+  private readonly dispatch: PageDispatch;
   // focus is what the reader last selected. An ask sends it along.
   private focus: RoomSelection | undefined;
   private readonly join: (opts: JoinToolRoomOptions) => Promise<ToolRoom>;
@@ -88,6 +103,11 @@ export class ViewerRoomTab {
     this.askForm = this.renderAsk();
     this.refusedNote = this.renderRefused();
     this.pairing = this.renderPairing();
+    this.answers = this.renderAnswers();
+    this.dispatch = deps.dispatcher({
+      showAnswer: (text, entities) => this.showAnswer(text, entities),
+      propose: (action, entities) => this.propose(action, entities),
+    });
     // When a call names no tab, the bridge sends it to the tab its reader looked at last.
     this.win.addEventListener("focus", () => this.room?.focus());
     this.doc.addEventListener("visibilitychange", () => {
@@ -108,7 +128,7 @@ export class ViewerRoomTab {
     if (!room || !this.agentsAllowed() || !text.trim()) return false;
     let location: unknown = null;
     try {
-      location = await this.deps.dispatch("GetLocation", {});
+      location = await this.dispatch("GetLocation", {});
     } catch {
       // An ask still goes without a location. The agent can read the location with
       // viewer_get_location.
@@ -154,6 +174,8 @@ export class ViewerRoomTab {
     this.showRefused();
     this.showCode("");
     this.showGrants();
+    this.answers?.replaceChildren();
+    if (this.answers) this.answers.hidden = true;
     this.showSwitch(false);
     if (!design || design !== this.design) return;
     try {
@@ -184,13 +206,14 @@ export class ViewerRoomTab {
             // The bridge passes the design through to name the room; the request has no such field.
             const { design: _design, ...body } = args;
             try {
-              return await this.deps.dispatch(m.name, body as JsonValue);
+              return await this.dispatch(m.name, body as JsonValue);
             } catch (e) {
               throw e instanceof ConnectError ? new Error(`${Code[e.code]}: ${e.rawMessage}`) : e;
             }
           },
         });
       }
+      for (const decl of pageEventDecls()) room.registerEvent(decl);
       room.onPaired(() => {
         this.showCode("");
         this.showGrants();
@@ -334,6 +357,101 @@ export class ViewerRoomTab {
         return row;
       }),
     );
+  }
+
+  // renderAnswers draws the box that holds the agents' answers and proposals, hidden while empty.
+  private renderAnswers(): HTMLElement | undefined {
+    const host = this.deps.host;
+    if (!host) return undefined;
+    const box = this.doc.createElement("div");
+    box.className = "agents-answers";
+    box.hidden = true;
+    host.append(box);
+    return box;
+  }
+
+  // showAnswer shows an agent's answer and returns its id. The text goes in as text, never as markup.
+  private showAnswer(text: string, entities: PageEntityRef[]): string {
+    if (!this.answers) throw new Error("this page has nowhere to show an answer");
+    const id = `answer-${++this.shownCount}`;
+    const item = this.shownItem("agents-answer", text, entities);
+    item.dataset.answer = id;
+    this.addShown(item);
+    return id;
+  }
+
+  // propose shows an agent's proposal with Accept and Dismiss, and returns its id. The first click
+  // tells the agents and replaces both buttons with the choice.
+  private propose(action: string, entities: PageEntityRef[]): string {
+    if (!this.answers) throw new Error("this page has nowhere to show an answer");
+    const id = `proposal-${++this.shownCount}`;
+    const item = this.shownItem("agents-proposal", action, entities);
+    item.dataset.proposal = id;
+    const buttons = this.doc.createElement("span");
+    buttons.className = "agents-choices";
+    for (const [choice, label] of [["accepted", "Accept"], ["dismissed", "Dismiss"]] as const) {
+      const b = this.doc.createElement("button");
+      b.type = "button";
+      b.className = choice === "accepted" ? "agents-accept" : "agents-dismiss";
+      b.textContent = label;
+      b.addEventListener("click", () => {
+        this.room?.emit(EVENT_PROPOSAL_ANSWERED, { proposal: id, choice, action });
+        item.dataset.choice = choice;
+        buttons.replaceChildren(label === "Accept" ? "Accepted" : "Dismissed");
+      });
+      buttons.append(b);
+    }
+    item.append(buttons);
+    this.addShown(item);
+    return id;
+  }
+
+  // shownItem draws one answer or proposal: its words, a button per entity that highlights it, and a
+  // close button.
+  private shownItem(className: string, words: string, entities: PageEntityRef[]): HTMLElement {
+    const item = this.doc.createElement("div");
+    item.className = className;
+    const close = this.doc.createElement("button");
+    close.type = "button";
+    close.className = "agents-close";
+    close.textContent = "\u00d7";
+    close.title = "Remove";
+    close.addEventListener("click", () => {
+      item.remove();
+      if (this.answers) this.answers.hidden = this.answers.childElementCount === 0;
+    });
+    const p = this.doc.createElement("p");
+    p.className = "agents-words";
+    p.textContent = words;
+    item.append(close, p);
+    if (entities.length > 0) {
+      const list = this.doc.createElement("span");
+      list.className = "agents-entities";
+      for (const e of entities) {
+        const b = this.doc.createElement("button");
+        b.type = "button";
+        b.className = "agents-entity";
+        b.dataset.kind = e.kind;
+        b.textContent = e.kind === "pin" ? `${e.subject}.${e.pin}` : e.subject;
+        b.title = `Highlight ${e.kind} ${b.textContent}`;
+        b.addEventListener("click", () => {
+          void this.dispatch("LocateEntity", { kind: e.kind, subject: e.subject, pin: e.pin }).catch((err: unknown) =>
+            console.warn(`agni: could not highlight ${e.kind} ${e.subject}: ${err instanceof Error ? err.message : String(err)}`),
+          );
+        });
+        list.append(b);
+      }
+      item.append(list);
+    }
+    return item;
+  }
+
+  private addShown(item: HTMLElement): void {
+    const box = this.answers;
+    if (!box) return;
+    box.prepend(item);
+    while (box.childElementCount > MAX_SHOWN) box.lastElementChild?.remove();
+    box.hidden = false;
   }
 
   private toolRefused(r: ToolRefusal): void {

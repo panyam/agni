@@ -111,6 +111,7 @@ func New(o Options) (*Rooms, error) {
 	opts := []rooms.Option{
 		rooms.WithLocalSubject(LocalSubject),
 		rooms.WithPageTools(ToolDecls()),
+		rooms.WithPageEventCatalog(EventDecls()),
 		// The bridge's own tools (list_pages, attach, pair, next_request) take design too, so an agent
 		// names a room the same way for every tool (agni issue 1173, mcpkit#1633).
 		rooms.WithRoomOf(func(args map[string]any) (string, error) {

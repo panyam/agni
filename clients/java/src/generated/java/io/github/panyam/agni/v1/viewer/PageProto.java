@@ -116,6 +116,36 @@ public final class PageProto extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_agni_v1_viewer_CloseSheetViewResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_viewer_PageEntity_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_viewer_PageEntity_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_viewer_ShowAnswerRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_viewer_ShowAnswerRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_viewer_ShowAnswerResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_viewer_ShowAnswerResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_viewer_ProposeRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_viewer_ProposeRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_viewer_ProposeResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_viewer_ProposeResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_viewer_ProposalAnswered_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_viewer_ProposalAnswered_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -182,30 +212,49 @@ public final class PageProto extends com.google.protobuf.GeneratedFile {
       "d\030\001 \001(\010R\006closed\022:\n\010location\030\002 \001(\0132\036.agni" +
       ".v1.viewer.ViewerLocationR\010location\022/\n\005v" +
       "iews\030\003 \003(\0132\031.agni.v1.viewer.SheetViewR\005v" +
-      "iews2\366\005\n\021ViewerPageService\022[\n\013GetLocatio" +
-      "n\022\".agni.v1.viewer.GetLocationRequest\032#." +
-      "agni.v1.viewer.GetLocationResponse\"\003\220\002\001\022" +
-      "\\\n\rApplyLocation\022$.agni.v1.viewer.ApplyL" +
-      "ocationRequest\032%.agni.v1.viewer.ApplyLoc" +
-      "ationResponse\022\\\n\rLocateVerdict\022$.agni.v1" +
-      ".viewer.LocateVerdictRequest\032%.agni.v1.v" +
-      "iewer.LocateVerdictResponse\022\\\n\rSelectFin" +
-      "ding\022$.agni.v1.viewer.SelectFindingReque" +
-      "st\032%.agni.v1.viewer.SelectFindingRespons" +
-      "e\022Y\n\014LocateEntity\022#.agni.v1.viewer.Locat" +
-      "eEntityRequest\032$.agni.v1.viewer.LocateEn" +
-      "tityResponse\022P\n\tShowSheet\022 .agni.v1.view" +
-      "er.ShowSheetRequest\032!.agni.v1.viewer.Sho" +
-      "wSheetResponse\022\\\n\rOpenSheetView\022$.agni.v" +
-      "1.viewer.OpenSheetViewRequest\032%.agni.v1." +
-      "viewer.OpenSheetViewResponse\022_\n\016CloseShe" +
-      "etView\022%.agni.v1.viewer.CloseSheetViewRe" +
-      "quest\032&.agni.v1.viewer.CloseSheetViewRes" +
-      "ponseB\264\001\n\037io.github.panyam.agni.v1.viewe" +
-      "rB\tPageProtoP\001Z,github.com/panyam/agni/g" +
-      "en/go/agni/v1/viewer\242\002\003AVV\252\002\016Agni.V1.Vie" +
-      "wer\312\002\016Agni\\V1\\Viewer\342\002\032Agni\\V1\\Viewer\\GP" +
-      "BMetadata\352\002\020Agni::V1::Viewerb\006proto3"
+      "iews\"L\n\nPageEntity\022\022\n\004kind\030\001 \001(\tR\004kind\022\030" +
+      "\n\007subject\030\002 \001(\tR\007subject\022\020\n\003pin\030\003 \001(\tR\003p" +
+      "in\"_\n\021ShowAnswerRequest\022\022\n\004text\030\001 \001(\tR\004t" +
+      "ext\0226\n\010entities\030\002 \003(\0132\032.agni.v1.viewer.P" +
+      "ageEntityR\010entities\"h\n\022ShowAnswerRespons" +
+      "e\022\026\n\006answer\030\001 \001(\tR\006answer\022:\n\010location\030\002 " +
+      "\001(\0132\036.agni.v1.viewer.ViewerLocationR\010loc" +
+      "ation\"`\n\016ProposeRequest\022\026\n\006action\030\001 \001(\tR" +
+      "\006action\0226\n\010entities\030\002 \003(\0132\032.agni.v1.view" +
+      "er.PageEntityR\010entities\"i\n\017ProposeRespon" +
+      "se\022\032\n\010proposal\030\001 \001(\tR\010proposal\022:\n\010locati" +
+      "on\030\002 \001(\0132\036.agni.v1.viewer.ViewerLocation" +
+      "R\010location\"^\n\020ProposalAnswered\022\032\n\010propos" +
+      "al\030\001 \001(\tR\010proposal\022\026\n\006choice\030\002 \001(\tR\006choi" +
+      "ce\022\026\n\006action\030\003 \001(\tR\006action2\227\007\n\021ViewerPag" +
+      "eService\022[\n\013GetLocation\022\".agni.v1.viewer" +
+      ".GetLocationRequest\032#.agni.v1.viewer.Get" +
+      "LocationResponse\"\003\220\002\001\022\\\n\rApplyLocation\022$" +
+      ".agni.v1.viewer.ApplyLocationRequest\032%.a" +
+      "gni.v1.viewer.ApplyLocationResponse\022\\\n\rL" +
+      "ocateVerdict\022$.agni.v1.viewer.LocateVerd" +
+      "ictRequest\032%.agni.v1.viewer.LocateVerdic" +
+      "tResponse\022\\\n\rSelectFinding\022$.agni.v1.vie" +
+      "wer.SelectFindingRequest\032%.agni.v1.viewe" +
+      "r.SelectFindingResponse\022Y\n\014LocateEntity\022" +
+      "#.agni.v1.viewer.LocateEntityRequest\032$.a" +
+      "gni.v1.viewer.LocateEntityResponse\022P\n\tSh" +
+      "owSheet\022 .agni.v1.viewer.ShowSheetReques" +
+      "t\032!.agni.v1.viewer.ShowSheetResponse\022\\\n\r" +
+      "OpenSheetView\022$.agni.v1.viewer.OpenSheet" +
+      "ViewRequest\032%.agni.v1.viewer.OpenSheetVi" +
+      "ewResponse\022_\n\016CloseSheetView\022%.agni.v1.v" +
+      "iewer.CloseSheetViewRequest\032&.agni.v1.vi" +
+      "ewer.CloseSheetViewResponse\022S\n\nShowAnswe" +
+      "r\022!.agni.v1.viewer.ShowAnswerRequest\032\".a" +
+      "gni.v1.viewer.ShowAnswerResponse\022J\n\007Prop" +
+      "ose\022\036.agni.v1.viewer.ProposeRequest\032\037.ag" +
+      "ni.v1.viewer.ProposeResponseB\264\001\n\037io.gith" +
+      "ub.panyam.agni.v1.viewerB\tPageProtoP\001Z,g" +
+      "ithub.com/panyam/agni/gen/go/agni/v1/vie" +
+      "wer\242\002\003AVV\252\002\016Agni.V1.Viewer\312\002\016Agni\\V1\\Vie" +
+      "wer\342\002\032Agni\\V1\\Viewer\\GPBMetadata\352\002\020Agni:" +
+      ":V1::Viewerb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -319,6 +368,42 @@ public final class PageProto extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_viewer_CloseSheetViewResponse_descriptor,
         new java.lang.String[] { "Closed", "Location", "Views", });
+    internal_static_agni_v1_viewer_PageEntity_descriptor =
+      getDescriptor().getMessageType(18);
+    internal_static_agni_v1_viewer_PageEntity_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_viewer_PageEntity_descriptor,
+        new java.lang.String[] { "Kind", "Subject", "Pin", });
+    internal_static_agni_v1_viewer_ShowAnswerRequest_descriptor =
+      getDescriptor().getMessageType(19);
+    internal_static_agni_v1_viewer_ShowAnswerRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_viewer_ShowAnswerRequest_descriptor,
+        new java.lang.String[] { "Text", "Entities", });
+    internal_static_agni_v1_viewer_ShowAnswerResponse_descriptor =
+      getDescriptor().getMessageType(20);
+    internal_static_agni_v1_viewer_ShowAnswerResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_viewer_ShowAnswerResponse_descriptor,
+        new java.lang.String[] { "Answer", "Location", });
+    internal_static_agni_v1_viewer_ProposeRequest_descriptor =
+      getDescriptor().getMessageType(21);
+    internal_static_agni_v1_viewer_ProposeRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_viewer_ProposeRequest_descriptor,
+        new java.lang.String[] { "Action", "Entities", });
+    internal_static_agni_v1_viewer_ProposeResponse_descriptor =
+      getDescriptor().getMessageType(22);
+    internal_static_agni_v1_viewer_ProposeResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_viewer_ProposeResponse_descriptor,
+        new java.lang.String[] { "Proposal", "Location", });
+    internal_static_agni_v1_viewer_ProposalAnswered_descriptor =
+      getDescriptor().getMessageType(23);
+    internal_static_agni_v1_viewer_ProposalAnswered_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_viewer_ProposalAnswered_descriptor,
+        new java.lang.String[] { "Proposal", "Choice", "Action", });
     descriptor.resolveAllFeaturesImmutable();
   }
 

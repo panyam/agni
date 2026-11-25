@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import type { JsonValue } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { ViewerLocationSchema } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 import { pageApi, type SheetViewsHost, type ViewerPageAPI } from "./pageapi.js";
-import { isLinkOnly, locationFromLink, locationFromWire, locationToWire, pageDispatcher } from "./pageservice.js";
+import { isLinkOnly, locationFromLink, locationFromWire, locationToWire, MAX_ANSWER_CHARS, MAX_ENTITIES, pageDispatcher, type PageAnswers } from "./pageservice.js";
 import { emptyLocation, type ViewerLocation } from "./router.js";
 import type { ViewerPresenter } from "./viewer.js";
 
@@ -106,6 +107,59 @@ describe("pageDispatcher", () => {
     await expect(pageDispatcher(refuse)("ShowSheet", { sheet: "s9" })).rejects.toMatchObject({ code: Code.InvalidArgument, rawMessage: 'the open design has no sheet "s9"' });
     const busy = fakeApi({ showSheet: async () => Promise.reject(new ConnectError("busy", Code.Unavailable)) });
     await expect(pageDispatcher(busy)("ShowSheet", { sheet: "s1" })).rejects.toMatchObject({ code: Code.Unavailable });
+  });
+});
+
+describe("an agent's answers and proposals", () => {
+  const answers = (): PageAnswers & { shown: unknown[] } => {
+    const shown: unknown[] = [];
+    return {
+      shown,
+      showAnswer: (text, entities) => (shown.push({ text, entities }), `answer-${shown.length}`),
+      propose: (action, entities) => (shown.push({ action, entities }), `proposal-${shown.length}`),
+    };
+  };
+
+  it("shows an answer with the entities it points at, and returns its id", async () => {
+    const a = answers();
+    const res = (await pageDispatcher(fakeApi(), a)("ShowAnswer", {
+      text: "  SDA has no pull-up. ",
+      entities: [{ kind: "net", subject: "SDA" }, { kind: "pin", subject: "U1", pin: "3" }],
+    })) as { answer: string; location: { sheet: string } };
+    expect(res).toMatchObject({ answer: "answer-1", location: { sheet: "s-root" } });
+    expect(a.shown).toEqual([{ text: "SDA has no pull-up.", entities: [{ kind: "net", subject: "SDA", pin: "" }, { kind: "pin", subject: "U1", pin: "3" }] }]);
+  });
+
+  it("shows a proposal and returns its id at once", async () => {
+    const a = answers();
+    const res = (await pageDispatcher(fakeApi(), a)("Propose", { action: "add a pull-up on SDA", entities: [{ kind: "net", subject: "SDA" }] })) as { proposal: string };
+    expect(res.proposal).toBe("proposal-1");
+    expect(a.shown).toEqual([{ action: "add a pull-up on SDA", entities: [{ kind: "net", subject: "SDA", pin: "" }] }]);
+  });
+
+  it("refuses both over a transport with nowhere to show them", async () => {
+    for (const [m, body] of [["ShowAnswer", { text: "hi" }], ["Propose", { action: "go" }]] as const) {
+      await expect(pageDispatcher(fakeApi())(m, body), m).rejects.toMatchObject({ code: Code.FailedPrecondition });
+    }
+  });
+
+  it("refuses empty or oversized words, too many entities, and an unknown kind", async () => {
+    const a = answers();
+    const d = pageDispatcher(fakeApi(), a);
+    const net = { kind: "net", subject: "N" };
+    const bodies: JsonValue[] = [
+      { text: "  " },
+      { text: "x".repeat(MAX_ANSWER_CHARS + 1) },
+      { text: "ok", entities: Array(MAX_ENTITIES + 1).fill(net) },
+      { text: "ok", entities: [{ kind: "sheet", subject: "s1" }] },
+      { text: "ok", entities: [{ kind: "net" }] },
+    ];
+    const said = [/text is empty/, /text is 2001 characters, over 2000/, /21 entities, over 20/, /entity kind "sheet"/, /a net entity names no subject/];
+    for (const [i, body] of bodies.entries()) {
+      await expect(d("ShowAnswer", body), JSON.stringify(body).slice(0, 60)).rejects.toMatchObject({ code: Code.InvalidArgument, rawMessage: expect.stringMatching(said[i]) });
+    }
+    await expect(d("Propose", { action: "" })).rejects.toMatchObject({ code: Code.InvalidArgument, rawMessage: "action is empty" });
+    expect(a.shown).toEqual([]);
   });
 });
 

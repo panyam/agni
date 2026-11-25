@@ -26,8 +26,14 @@ type twinTool struct {
 	InputSchema map[string]any `json:"inputSchema"`
 }
 
+type twinEvent struct {
+	Name          string         `json:"name"`
+	PayloadSchema map[string]any `json:"payloadSchema"`
+}
+
 type twin struct {
-	Tools []twinTool `json:"tools"`
+	Tools  []twinTool  `json:"tools"`
+	Events []twinEvent `json:"events"`
 	// Messages are types that both runtimes ship. They cover what ViewerPageService does not use,
 	// such as the well-known types' own JSON forms, enums, 64-bit integers, a double and bytes.
 	// None uses descriptor.proto's options, whose FeatureSet differs between protobuf releases.
@@ -49,6 +55,9 @@ func built() twin {
 	var t twin
 	for _, d := range ToolDecls() {
 		t.Tools = append(t.Tools, twinTool{Name: d.Name, ReadOnly: d.ReadOnly, InputSchema: d.InputSchema})
+	}
+	for _, d := range EventDecls() {
+		t.Events = append(t.Events, twinEvent{Name: d.Name, PayloadSchema: d.PayloadSchema})
 	}
 	t.Messages = map[string]map[string]any{}
 	for _, md := range twinMessages {
@@ -132,6 +141,8 @@ func TestToolNamesAndReadOnly(t *testing.T) {
 		"viewer_show_sheet":       false,
 		"viewer_open_sheet_view":  false,
 		"viewer_close_sheet_view": false,
+		"viewer_show_answer":      false,
+		"viewer_propose":          false,
 	}
 	got := map[string]bool{}
 	for _, d := range ToolDecls() {
