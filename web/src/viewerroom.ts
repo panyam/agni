@@ -1,6 +1,6 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { JsonValue } from "@bufbuild/protobuf";
-import { EVENT_ASK, joinToolRoom, type JoinToolRoomOptions, type ToolRefusal, type ToolRoom } from "@panyam/mcpkit-rooms";
+import { EVENT_ASK, joinToolRoom, type JoinToolRoomOptions, type Principal, type ToolRefusal, type ToolRoom } from "@panyam/mcpkit-rooms";
 import { ViewerPageService } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 import type { JoinViewerRoomRequest, JoinViewerRoomResponse } from "@panyam/agni-client/gen/agni/v1/webapi/viewerroom_pb";
 import type { PageDispatch } from "./pageservice.js";
@@ -20,6 +20,11 @@ import { readOnly, toolName, toolSchema } from "./toolschema.js";
 // tells the room what the reader selected, and the Ask box beside the switch sends the reader's
 // question with the tab's location and selection. The bridge passes both to the agents that the tab
 // agreed to. Those agents hear them through next_request or the room's events resource.
+//
+// Another person's agent gets in by pairing (agni issue 1903). The reader clicks "Pair an agent", the
+// tab shows a code, and the agent enters it with the bridge's pair tool. Each paired agent gets a row
+// with a Revoke button. The tab holds its pairings in memory, so a reload or a move to another
+// design ends them.
 
 // RoomClient holds the one ViewerRoomService call that the tab makes to the server.
 export interface RoomClient {
@@ -46,6 +51,9 @@ export const AGENTS_KEY = "agni.viewerRooms.agentsAllowed";
 // same id the page contract's OpenSheetView returns (agni issue 1370).
 export const CANVAS_VIEW = "canvas";
 
+// PAIR_CODE_TTL_MS is how long a pairing code works, the most a bridge honours.
+export const PAIR_CODE_TTL_MS = 10 * 60_000;
+
 // RoomSelection is a selection as agents hear it, with the view it was made in.
 export type RoomSelection = Focus & { view: string };
 
@@ -61,6 +69,9 @@ export class ViewerRoomTab {
   // refusedNote names the tools a bridge refused to offer agents, hidden while it refused none.
   private readonly refusedNote: HTMLElement | undefined;
   private refused = new Map<string, string>();
+  // pairing holds the pair button, the code it offered and the agents paired with the tab.
+  private readonly pairing: { code: HTMLElement; grants: HTMLUListElement } | undefined;
+  private codeTimer: ReturnType<typeof setTimeout> | undefined;
   // focus is what the reader last selected. An ask sends it along.
   private focus: RoomSelection | undefined;
   private readonly join: (opts: JoinToolRoomOptions) => Promise<ToolRoom>;
@@ -76,6 +87,7 @@ export class ViewerRoomTab {
     this.checkbox = this.renderSwitch();
     this.askForm = this.renderAsk();
     this.refusedNote = this.renderRefused();
+    this.pairing = this.renderPairing();
     // When a call names no tab, the bridge sends it to the tab its reader looked at last.
     this.win.addEventListener("focus", () => this.room?.focus());
     this.doc.addEventListener("visibilitychange", () => {
@@ -140,6 +152,8 @@ export class ViewerRoomTab {
     this.room = undefined;
     this.refused.clear();
     this.showRefused();
+    this.showCode("");
+    this.showGrants();
     this.showSwitch(false);
     if (!design || design !== this.design) return;
     try {
@@ -177,6 +191,10 @@ export class ViewerRoomTab {
           },
         });
       }
+      room.onPaired(() => {
+        this.showCode("");
+        this.showGrants();
+      });
       room.setLabel(design);
       room.setAgentsAllowed(this.agentsAllowed());
       if (this.doc.hasFocus()) room.focus();
@@ -246,6 +264,72 @@ export class ViewerRoomTab {
     return note;
   }
 
+  // renderPairing draws the pair button, the code it offers, and the list of agents paired with the
+  // tab. They show whatever the switch says, since the switch lets in the reader's own agents and
+  // pairing lets in another person's.
+  private renderPairing(): { code: HTMLElement; grants: HTMLUListElement } | undefined {
+    const host = this.deps.host;
+    if (!host) return undefined;
+    const box = this.doc.createElement("span");
+    box.className = "agents-pairing";
+    const pair = this.doc.createElement("button");
+    pair.type = "button";
+    pair.className = "agents-pair";
+    pair.textContent = "Pair an agent";
+    pair.title = "Shows a code for another person's agent. It enters the code with the pair tool and can then drive this tab until you revoke it.";
+    pair.addEventListener("click", () => {
+      if (this.room) this.showCode(this.room.offerPairingCode({ ttlMs: PAIR_CODE_TTL_MS }));
+    });
+    const code = this.doc.createElement("span");
+    code.className = "agents-pair-code";
+    code.hidden = true;
+    code.dataset.pairCode = "";
+    const grants = this.doc.createElement("ul");
+    grants.className = "agents-grants";
+    box.append(pair, code, grants);
+    host.append(box);
+    return { code, grants };
+  }
+
+  // showCode shows the code the tab offered, or hides it when code is empty. A shown code hides
+  // itself once it stops working.
+  private showCode(code: string): void {
+    if (this.codeTimer !== undefined) clearTimeout(this.codeTimer);
+    this.codeTimer = undefined;
+    const el = this.pairing?.code;
+    if (!el) return;
+    el.hidden = !code;
+    el.textContent = code ? `Give the agent code ${code}. It enters it with pair, once, within 10 minutes.` : "";
+    el.dataset.pairCode = code;
+    if (code) this.codeTimer = setTimeout(() => this.showCode(""), PAIR_CODE_TTL_MS);
+  }
+
+  // showGrants lists the agents paired with the tab, each with a button that revokes it. A revoked
+  // agent's next call is refused.
+  private showGrants(): void {
+    const list = this.pairing?.grants;
+    if (!list) return;
+    const room = this.room;
+    list.replaceChildren(
+      ...(room?.grants() ?? []).map((g) => {
+        const row = this.doc.createElement("li");
+        const name = this.doc.createElement("span");
+        name.className = "agents-grant-name";
+        name.textContent = grantName(g);
+        const revoke = this.doc.createElement("button");
+        revoke.type = "button";
+        revoke.className = "agents-revoke";
+        revoke.textContent = "Revoke";
+        revoke.addEventListener("click", () => {
+          room?.revoke(g);
+          this.showGrants();
+        });
+        row.append(name, " ", revoke);
+        return row;
+      }),
+    );
+  }
+
   private toolRefused(r: ToolRefusal): void {
     console.warn(`agni: the server will not offer agents ${r.name}: ${r.reason}`);
     this.refused.set(r.name, r.reason);
@@ -266,6 +350,11 @@ export class ViewerRoomTab {
     if (this.checkbox) this.checkbox.checked = this.agentsAllowed();
     if (this.askForm) this.askForm.hidden = !this.agentsAllowed();
   }
+}
+
+// grantName names a paired agent by the subject its token carries, and its client when it gave one.
+function grantName(g: Principal): string {
+  return g.client ? `${g.subject} (${g.client})` : g.subject;
 }
 
 function safeSessionStorage(): Storage | undefined {

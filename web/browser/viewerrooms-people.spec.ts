@@ -278,10 +278,10 @@ describe("two people on one server, each driving their own viewer tab", () => {
         return refusal;
       });
 
-      await step("pair", { waitsOn: ["#1903"], needs: ["join"] }, async () => {
+      await step("pair", { needs: ["join"] }, async () => {
         const offer = tabs.bob.locator("#agents-switch button.agents-pair");
         await offer.click({ timeout: 5_000 });
-        const code = (await tabs.bob.locator("#agents-switch [data-pair-code]").getAttribute("data-pair-code", { timeout: 5_000 })) ?? "";
+        const code = (await tabs.bob.locator('#agents-switch [data-pair-code]:not([data-pair-code=""])').getAttribute("data-pair-code", { timeout: 5_000 })) ?? "";
         const paired = await agents.ada.call("pair", { design: DESIGN, code });
         if (paired.isError) throw new Error(`pair: ${text(paired)}`);
         const to = await otherSheet(tabs.bob);

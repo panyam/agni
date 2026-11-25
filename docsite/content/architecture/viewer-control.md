@@ -181,11 +181,19 @@ with their own agent. ada turns on the switch in her tab. Her agent may drive it
 - A server that signs nobody in keeps one local subject, `local`, for every relay token and every
   MCP session, and the switch is the only agreement there is.
 
-## What is not here yet
+## Letting another person's agent in
 
-The viewer has no pairing UI, so bob can't let ada's agent into his tab (agni issue 1903). A
-refusal on another person's tab reads the same as one on a tab whose switch is off (agni issue
-1905).
+bob wants ada's agent to walk his tab through a review. He clicks "Pair an agent" beside the switch,
+and the tab shows a code. ada gives the code to her agent, which enters it with the bridge's `pair`
+tool, and from then on its calls reach bob's tab (agni issue 1903). The tab lists each paired agent
+by its subject and client, with a Revoke button. A revoke refuses the agent's next call, and its MCP
+session stays open.
+
+- A code works once, for ten minutes, the most a bridge honours. Pairing again replaces the code.
+- The tab holds its pairings in memory, so a reload or a move to another design ends them. The
+  switch survives a reload and pairings do not, so a stale pairing never outlives the page.
+- A refusal on a tab that has not agreed says whose tab it is. Another person's tab opens only by
+  pairing, and the caller's own tab opens when its switch is on (agni issue 1905, mcpkit#1756).
 
 ## Running it
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
-import type { JoinToolRoomOptions, PageTool, ToolRefusal, ToolRoom } from "@panyam/mcpkit-rooms";
+import type { JoinToolRoomOptions, PageTool, PairedByCode, Principal, ToolRefusal, ToolRoom } from "@panyam/mcpkit-rooms";
 import { ViewerPageService } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 import type { JoinViewerRoomResponse } from "@panyam/agni-client/gen/agni/v1/webapi/viewerroom_pb";
 import type { PageDispatch } from "./pageservice.js";
@@ -45,6 +45,27 @@ class FakeRoom {
   }
   selectionChanged(selection: unknown) {
     this.emit("page.selection_changed", { selection });
+  }
+  offers: { ttlMs?: number }[] = [];
+  paired: ((p: PairedByCode) => void) | undefined;
+  grantList: Principal[] = [];
+  offerPairingCode(opts: { ttlMs?: number } = {}) {
+    this.offers.push(opts);
+    return `CODE${this.offers.length}`;
+  }
+  onPaired(fn: (p: PairedByCode) => void) {
+    this.paired = fn;
+  }
+  // pair is an agent entering the code: the page grants it and says so, as the rooms client does.
+  pair(p: Principal, code: string) {
+    this.grantList.push(p);
+    this.paired!({ ...p, code, sameSubject: false });
+  }
+  grants() {
+    return this.grantList.map((g) => ({ ...g }));
+  }
+  revoke(who: Principal) {
+    this.grantList = this.grantList.filter((g) => !(g.subject === who.subject && (!who.client || g.client === who.client)));
   }
 }
 
@@ -244,5 +265,42 @@ describe("ViewerRoomTab", () => {
     expect(h.rooms[0].emits).toEqual([
       { name: "page.selection_changed", data: { selection: { level: "entity", sel: { kind: "component", ref: "U7" }, sheetId: "board", view: "sheetview-3" } } },
     ]);
+  });
+  it("offers a pairing code on a click, and shows it for the reader to give an agent", async () => {
+    const h = harness();
+    await h.tab.follow({ mount: "m", path: "a" });
+    const code = h.host.querySelector<HTMLElement>("[data-pair-code]")!;
+    expect(code.hidden).toBe(true);
+    h.host.querySelector<HTMLButtonElement>("button.agents-pair")!.click();
+    expect(h.rooms[0].offers).toEqual([{ ttlMs: 10 * 60_000 }]);
+    expect(code.hidden).toBe(false);
+    expect(code.dataset.pairCode).toBe("CODE1");
+    expect(code.textContent).toContain("CODE1");
+    expect(code.textContent).toContain("pair");
+  });
+
+  it("lists an agent that paired by the code, and revokes it from its row", async () => {
+    const h = harness();
+    await h.tab.follow({ mount: "m", path: "a" });
+    h.host.querySelector<HTMLButtonElement>("button.agents-pair")!.click();
+    const rows = () => [...h.host.querySelectorAll<HTMLElement>(".agents-grants li")];
+    expect(rows()).toHaveLength(0);
+    h.rooms[0].pair({ subject: "local:ada", client: "ada-agent" }, "CODE1");
+    expect(h.host.querySelector<HTMLElement>("[data-pair-code]")!.hidden).toBe(true);
+    expect(rows().map((r) => r.querySelector(".agents-grant-name")!.textContent)).toEqual(["local:ada (ada-agent)"]);
+    rows()[0].querySelector<HTMLButtonElement>("button.agents-revoke")!.click();
+    expect(h.rooms[0].grantList).toEqual([]);
+    expect(rows()).toHaveLength(0);
+  });
+
+  it("forgets the code and the paired agents when the tab moves to another design's room", async () => {
+    const h = harness();
+    await h.tab.follow({ mount: "m", path: "a" });
+    h.host.querySelector<HTMLButtonElement>("button.agents-pair")!.click();
+    h.rooms[0].pair({ subject: "local:ada" }, "CODE1");
+    h.host.querySelector<HTMLButtonElement>("button.agents-pair")!.click();
+    await h.tab.follow({ mount: "m", path: "b" });
+    expect(h.host.querySelector<HTMLElement>("[data-pair-code]")!.hidden).toBe(true);
+    expect(h.host.querySelectorAll(".agents-grants li")).toHaveLength(0);
   });
 });
