@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise exercise-enterprise-bundle exercise-enterprise-helm kind-up image-present binaries-check fetch-remote-check nul-check exercise-formats-check exercise-formats samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise exercise-enterprise-bundle exercise-enterprise-helm kind-up image-present binaries-check fetch-remote-check nul-check exercise-formats-check exercise-formats samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page exercise-viewer-rooms agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -571,6 +571,18 @@ hooks:
 # every push. HEADED=1 shows them in a visible Chrome.
 exercise-viewer-page: ui
 	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm exec vitest run -c vitest.browser.config.ts browser/embed.spec.ts browser/viewerroom.spec.ts
+
+# Mission #1176's exercise (agni issue 1900): two people, ada and bob, sign in to one `agni serve
+# --mcp --viewer-rooms --auth tokens --local-accounts`, each with their own agent and their own tab on
+# one design. It prints one row per check in the mission body and writes them to
+# $(EXERCISE_OUT)/viewer-rooms.md. A step waiting on an open ticket reads "not available", and a step
+# waiting only on closed tickets (hack/closed_tickets.sh) must pass. It runs in browser-test on every
+# push, where the waits stand. HEADED=1 shows it in a visible Chrome.
+#   make exercise-viewer-rooms
+exercise-viewer-rooms: agni ui
+	mkdir -p $(EXERCISE_OUT)
+	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/viewerrooms-people.spec.ts) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/viewerrooms-people.spec.ts; \
+		status=$$?; cat $(EXERCISE_OUT)/viewer-rooms.md 2>/dev/null; exit $$status
 
 # The browser-review walk, mission #845's exercise (agni issue 1118): the gated spec
 # web/browser/review-walk.spec.ts run on its own, printing one row per step and writing them as
