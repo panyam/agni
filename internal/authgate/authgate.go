@@ -62,6 +62,20 @@ type Gate struct {
 	// local signs people in with a local username and password, and is set by WithLocalAccounts (agni
 	// issue 1815).
 	local *localSignIns
+	// ownAuth are path prefixes whose handler checks a token of its own, and is set by WithOwnAuth
+	// (agni issue 1901).
+	ownAuth []string
+}
+
+// WithOwnAuth passes every request under each prefix to the wrapped handler unchecked, and copies no
+// session cookie into its Authorization header. Use it only for a handler that refuses a request
+// without a credential of its own. The viewer rooms' relay is one: it admits a page by the relay
+// token that ViewerRoomService minted, and that service sits behind the gate. The relay reads an
+// Authorization header before its own token, so the copied session cookie would replace the relay
+// token and the relay would refuse every signed-in tab.
+func (g *Gate) WithOwnAuth(prefixes ...string) *Gate {
+	g.ownAuth = append(g.ownAuth, prefixes...)
+	return g
 }
 
 // New checks tokens against store. proxies are the proxies that end TLS in front of the server, as
@@ -124,6 +138,12 @@ func (g *Gate) Wrap(next http.Handler) http.Handler {
 			// checks the delivery's signature instead (agni issue 1726).
 			next.ServeHTTP(w, r)
 			return
+		}
+		for _, p := range g.ownAuth {
+			if strings.HasPrefix(r.URL.Path, p) {
+				next.ServeHTTP(w, r)
+				return
+			}
 		}
 		if r.Header.Get("Authorization") == "" {
 			if c, err := r.Cookie(SessionCookie); err == nil && c.Value != "" {

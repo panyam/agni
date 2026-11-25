@@ -98,8 +98,8 @@ session storage, so a reload keeps it and a new tab starts with it off.
 
 A tab answers the bridge alone. The bridge joins the relay under a subject, and `JoinViewerRoom`
 names that subject to the tab. The tab passes it to the rooms client's `trustBridges`, so a message
-from any other peer in the room goes unanswered (agni issue 1173). Every token the server signs is
-for the local subject, so no page can join as the bridge. A page that holds a genuine token for the
+from any other peer in the room goes unanswered (agni issue 1173). No token the server signs is for
+the bridge's subject, so no page can join as the bridge. A page that holds a genuine token for the
 room still cannot call a tab directly and skip the bridge's check of the switch.
 
 The bridge declares the eight tools up front (`rooms.WithPageTools`), so `tools/list` answers the same
@@ -148,8 +148,8 @@ wire.
 `room.ask`, `page.selection_changed` and `page.event`, each taking the room as its `resource`
 argument. A session may subscribe only while it is attached to that room, and it hears only the
 tabs that agreed to it, the same rule as `next_request`. Attachment lasts as long as an MCP session,
-so the events need the session wire, and with no identity provider they act for the local subject
-(`events.Config.UnsafeAnonymousPrincipal`). `rooms-channel` builds on these events to put a reader's
+so the events need the session wire. A signed-in caller's events act for the caller, and on a server
+that signs nobody in they act for the local subject (`events.Config.UnsafeAnonymousPrincipal`). `rooms-channel` builds on these events to put a reader's
 question in front of a Claude Code session as a turn. `TestARoomsChannelHearsATabsQuestion` runs
 that front end over a pipe against agni's `/mcp`, attaching by `design` as an agent does and by
 `resource`. Attaching by design names no room, so the front end watches the room named in
@@ -161,12 +161,31 @@ it watched nothing, and a question asked by design never arrived.
 (mcpkit#1633). Before that they took only the resolved room name, and no answer told the agent that
 name.
 
+## Several people on one server
+
+ada and bob sign in to one `agni serve --mcp --viewer-rooms --auth tokens`, each in their own browser
+with their own agent. ada turns on the switch in her tab. Her agent may drive it, and bob's may not
+(agni issues 1901 and 1902).
+
+- `JoinViewerRoom` mints a tab's relay token for its signed-in reader, such as `local:ada`. A tab's
+  switch agrees to agents acting for the tab's own subject, so it agrees to its reader's agents
+  alone.
+- An agent sends its agni token on `/mcp`. The gate checks it, and `mcpserver`'s `callerAuth` hands
+  the gate's caller to mcpkit as the call's claims. The bridge's tools and the room events act for
+  that subject. Every signed-in caller gets the bridge's scopes (`rooms:attach`, `pages:read`,
+  `pages:act`), since agni grants no scopes of its own and each tab's agreement decides which tabs
+  a caller reaches.
+- The gate passes `/relay/` on unchecked (`Gate.WithOwnAuth`). The relay admits a page by its own
+  relay token, which only the gated `JoinViewerRoom` mints. The gate would otherwise copy the
+  session cookie into the `Authorization` header, which the relay reads before its own token.
+- A server that signs nobody in keeps one local subject, `local`, for every relay token and every
+  MCP session, and the switch is the only agreement there is.
+
 ## What is not here yet
 
-The server has no identity provider, so every relay token and every MCP session acts for one local
-subject, and the switch is the only agreement there is. Before several people can share one server,
-each with an agent, the server needs OAuth on `/mcp` and a relay token per user. An agent driving
-someone else's tab also needs mcpkit's pairing codes.
+The viewer has no pairing UI, so bob can't let ada's agent into his tab (agni issue 1903). A
+refusal on another person's tab reads the same as one on a tab whose switch is off (agni issue
+1905).
 
 ## Running it
 
@@ -174,5 +193,7 @@ someone else's tab also needs mcpkit's pairing codes.
 page. `make exercise-viewer-page` drives a framed viewer from a parent on another origin, moves a
 viewer from a saved report beside it, and has an agent on each MCP wire drive tabs on two designs
 under `--viewer-rooms`. A tab that kept agents out is still where its reader left it.
+`make exercise-viewer-rooms` signs ada and bob in to one server and prints a row per check of mission
+#1176.
 [Driving an embedded viewer](../../build/embedding-the-viewer/) is the guide for a page that wants to
 do either.

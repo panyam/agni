@@ -13,7 +13,7 @@ import (
 // fixedTokens mints a token naming its room, so a test sees which room it was minted for.
 type fixedTokens struct{}
 
-func (fixedTokens) Mint(room string) (string, time.Time, error) {
+func (fixedTokens) Mint(room, _ string) (string, time.Time, error) {
 	return "token-for-" + room, time.Unix(1_800_000_000, 0), nil
 }
 

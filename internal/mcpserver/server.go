@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/server"
+	"github.com/panyam/goapplib/storage/mounts"
 	"github.com/panyam/jaala/datalog"
 	"github.com/panyam/jaala/frontends/mcp"
 	"github.com/panyam/jaala/frontends/nl"
@@ -55,6 +55,11 @@ type Options struct {
 	// its path, and a read by path honours the folder's design.yaml, so the designs tool lists these
 	// beside the server's stored designs (agni issue 1736). Nil lists none.
 	Folders FolderDesigns
+	// SignedIn says agni's gate wraps /mcp, as it does under `agni serve --auth`. Each call then acts
+	// for the gate's caller, and the room bridge and room events act for that person. It stays off
+	// without the gate, since mcpkit lets a request carrying a bearer header past its Origin check
+	// once the server checks callers.
+	SignedIn bool
 }
 
 // FolderDesigns lists the designs mounted folders declare, as internal/projects.MountedDesigns does.
@@ -85,7 +90,7 @@ func New(api server.API, o Options) (*mcpkit.Server, error) {
 		Vocabulary: func(ctx context.Context) (*ns.Vocabulary, error) { return api.Query.Vocabulary(ctx, "") },
 		MaxWork:    o.Budget,
 		Timeout:    o.Timeout,
-		Server:     []mcpkit.Option{mcpkit.WithListTTLMs(listTTLMs)},
+		Server:     serverOptions(o),
 	}, mcp.Extension[designArg]{Prepare: s.prepare})
 	if err != nil {
 		return nil, err
@@ -93,6 +98,15 @@ func New(api server.API, o Options) (*mcpkit.Server, error) {
 	s.registerTools(srv)
 	s.registerResources(srv)
 	return srv, nil
+}
+
+// serverOptions are the mcpkit options o asks for.
+func serverOptions(o Options) []mcpkit.Option {
+	opts := []mcpkit.Option{mcpkit.WithListTTLMs(listTTLMs)}
+	if o.SignedIn {
+		opts = append(opts, mcpkit.WithAuth(callerAuth{}))
+	}
+	return opts
 }
 
 // HTTPHandler serves srv over streamable HTTP at prefix, the path where a mux mounts it. Only a

@@ -5,10 +5,10 @@
 // names its design. A tab takes calls only after its reader turns on "let my agents drive this
 // tab".
 //
-// It is single-user local mode. The server has no identity provider. Every relay token it mints and
-// every MCP session it serves act for one local subject, and the tab's switch is the only agreement
-// there is. Serving several people is a later step, with OAuth on /mcp, a relay token per user and
-// pairing codes. mcpkit's bridge already supports it.
+// A server that signs people in mints each tab's relay token for its reader, and the gate's caller
+// reaches the bridge as the MCP call's claims, so a tab's switch agrees to its own reader's agents
+// alone (agni issues 1901 and 1902). A server that signs nobody in is single-user local mode, where
+// every relay token and every MCP session act for LocalSubject.
 //
 // The bridge declares its page tools up front (rooms.WithPageTools). ToolDecls builds them from
 // ViewerPageService's descriptor. So tools/list is the same for every caller, and the bridge serves
@@ -42,8 +42,8 @@ import (
 )
 
 const (
-	// LocalSubject is the one reader of a local server. Every relay token and every MCP session
-	// acts for this subject. A tab's agents switch agrees to agents acting for it.
+	// LocalSubject is the one reader of a server that signs nobody in. Every relay token and every
+	// MCP session there acts for this subject, so a tab's agents switch agrees to every agent.
 	LocalSubject = "local"
 	// clientID names the app that the relay tokens are minted for. The relay looks up the signing
 	// key by this name.
@@ -139,16 +139,19 @@ func (r *Rooms) Relay() http.Handler { return r.relay }
 // Register adds the bridge's tools to an MCP server, along with the room events for an attached
 // session to subscribe to. The tools are attach, list_pages, pair and the declared viewer_* tools.
 // On a call with no authenticated caller, the events act for LocalSubject, as the bridge's tools
-// do. Otherwise events/stream would refuse the call.
+// do. Otherwise events/stream would refuse the call. A signed-in caller's events act for the caller.
 func (r *Rooms) Register(srv *mcpkit.Server) {
 	r.bridge.Register(srv)
 	r.events.Register(srv, r.bridge, events.Config{UnsafeAnonymousPrincipal: LocalSubject})
 }
 
-// Mint returns a relay token for the local subject. The token admits its holder to room alone, and
-// service.ViewerRoomService hands it to a page.
-func (r *Rooms) Mint(room string) (string, time.Time, error) {
-	tok, exp, err := r.signer.Mint(LocalSubject, []string{room})
+// Mint returns a relay token for subject, or for LocalSubject when subject is empty. The token admits
+// its holder to room alone, and service.ViewerRoomService hands it to a page.
+func (r *Rooms) Mint(room, subject string) (string, time.Time, error) {
+	if subject == "" {
+		subject = LocalSubject
+	}
+	tok, exp, err := r.signer.Mint(subject, []string{room})
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("viewerrooms: minting a relay token: %w", err)
 	}
@@ -156,8 +159,8 @@ func (r *Rooms) Mint(room string) (string, time.Time, error) {
 }
 
 // Bridges lists the relay subjects that the bridge joins as. A page can answer only these subjects
-// (trustBridges). Then another page holding a token for its room cannot call it, since every token
-// from Mint is for LocalSubject.
+// (trustBridges). Then another page holding a token for its room cannot call it, since no token
+// from Mint is for bridgeSubject.
 func (r *Rooms) Bridges() []string { return []string{bridgeSubject} }
 
 // Close leaves every room the bridge joined.

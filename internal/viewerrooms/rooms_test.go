@@ -81,7 +81,7 @@ func (st *stack) tab(t *testing.T, name, design string, rec *calls, opts ...room
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, _, err := st.rooms.Mint(room)
+	tok, _, err := st.rooms.Mint(room, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +218,7 @@ func TestACallWithNoDesignSaysToNameOne(t *testing.T) {
 // another design's room with it, and a token signed by another process is refused.
 func TestATokenAdmitsItsOwnRoomAlone(t *testing.T) {
 	st := newStack(t)
-	tok, _, err := st.rooms.Mint("design:m/a.sch")
+	tok, _, err := st.rooms.Mint("design:m/a.sch", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +230,7 @@ func TestATokenAdmitsItsOwnRoomAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer other.Close()
-	forged, _, _ := other.Mint("design:m/a.sch")
+	forged, _, _ := other.Mint("design:m/a.sch", "")
 	if _, err := rooms.JoinPage(t.Context(), massrelay.Dial(st.url+"/relay", forged), "design:m/a.sch"); err == nil {
 		t.Fatal("a token signed by another process joined")
 	}
@@ -260,7 +260,7 @@ func TestATabTrustingTheBridgesAnswersNoOtherPeer(t *testing.T) {
 		t.Fatalf("tab ran %v", got)
 	}
 
-	tok, _, err := st.rooms.Mint("design:m/a.sch")
+	tok, _, err := st.rooms.Mint("design:m/a.sch", "")
 	if err != nil {
 		t.Fatal(err)
 	}
