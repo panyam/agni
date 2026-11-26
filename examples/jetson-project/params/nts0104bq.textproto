@@ -1,0 +1,100 @@
+# The NTS0104 four-bit level translator, transcribed by hand from NXP's datasheet. Eight of them sit
+# between the module's 1.8 V I2C buses and the board's 3.3 V side, and each bus's own 2k2 pull-up is
+# fitted DNP. The board relies on the 10 kOhm pull-up the part carries on every A and B port, so
+# i2c-pull-up credits it from the row below (agni issues 1298, 1911).
+#
+# The datasheet states the pull-up in prose, in section 14.7, and prints no symbol or tolerance for
+# it. So the row carries the typical value alone, and its name is what the rule matches. The pins are
+# declared under the names Table 3 prints, with no package pinout, as nts0102gt.textproto does.
+mpn: "NTS0104BQ"
+manufacturer: "NXP Semiconductors"
+
+pins {
+  id: "a1"
+  name: "A1"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  prov { doc_ref: "nts0104-rev-3" page: 5 table_or_figure: "Table 3. Pin description" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "a2"
+  name: "A2"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  prov { doc_ref: "nts0104-rev-3" page: 5 table_or_figure: "Table 3. Pin description" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "a3"
+  name: "A3"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  prov { doc_ref: "nts0104-rev-3" page: 5 table_or_figure: "Table 3. Pin description" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "a4"
+  name: "A4"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  prov { doc_ref: "nts0104-rev-3" page: 5 table_or_figure: "Table 3. Pin description" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "b1"
+  name: "B1"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  prov { doc_ref: "nts0104-rev-3" page: 5 table_or_figure: "Table 3. Pin description" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "b2"
+  name: "B2"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  prov { doc_ref: "nts0104-rev-3" page: 5 table_or_figure: "Table 3. Pin description" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "b3"
+  name: "B3"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  prov { doc_ref: "nts0104-rev-3" page: 5 table_or_figure: "Table 3. Pin description" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "b4"
+  name: "B4"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  prov { doc_ref: "nts0104-rev-3" page: 5 table_or_figure: "Table 3. Pin description" method: "hand" confidence: 1 }
+}
+
+docs {
+  id: "nts0104-rev-3"
+  title: "NTS0104 Dual supply translating transceiver; open drain; auto direction sensing, Rev. 3, 3 January 2012"
+  vendor: "NXP Semiconductors"
+}
+
+parameters {
+  name: "Internal pull-up resistance, A port to VCC(A)"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { typ: 10 }
+  unit: "kΩ"
+  conditions { raw: "OE HIGH; the pull-ups are disabled while OE is LOW" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  pin_refs: "a1"
+  pin_refs: "a2"
+  pin_refs: "a3"
+  pin_refs: "a4"
+  prov { doc_ref: "nts0104-rev-3" page: 17 table_or_figure: "14.7 Pull-up or pull-down resistors on I/Os lines" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Internal pull-up resistance, B port to VCC(B)"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { typ: 10 }
+  unit: "kΩ"
+  conditions { raw: "OE HIGH; the pull-ups are disabled while OE is LOW" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  pin_refs: "b1"
+  pin_refs: "b2"
+  pin_refs: "b3"
+  pin_refs: "b4"
+  prov { doc_ref: "nts0104-rev-3" page: 17 table_or_figure: "14.7 Pull-up or pull-down resistors on I/Os lines" method: "hand" confidence: 1 }
+}

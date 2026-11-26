@@ -1,4 +1,5 @@
 # Hand-audited verdicts for the Jetson AGX Thor baseboard, checked against kicad-cli's netlist and ERC (KiCad 10.0.6).
+# agni checks the board with examples/jetson-project/params, the datasheet specs that project reviews it with.
 # Columns: verdict id, the outcome a reader reached, the issue that explains a disagreement, what was checked.
 # Outcomes: pass, fail, not-considered, or none when the rule should not judge the subject at all.
 bulk-cap:(net:Net-%28D1-C%29)	none	#1914	a Schottky and R6 2k2 feed the module's backup-battery pin; a current-limited feed is not a rail that wants bulk capacitance
@@ -99,36 +100,36 @@ floating-input:(net:Net-%28Q24-G%29)	pass		a driving pin, or a connector pin tha
 floating-input:(net:Net-%28Q25-G%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:Net-%28U21-XTALI%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:Net-%28U72-~{MR}%29)	pass		passes on SW2's pin; the verdict holds because TPS3840's MR has an internal pull-up
-i2c-pull-up:(net:/CSI/I2C_MUX_SCL)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/CSI/I2C_MUX_SDA)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/CSI/I2C_{CAM}.SCL)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/CSI/I2C_{CAM}.SDA)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/CSI/MUX_I2C_4_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
-i2c-pull-up:(net:/CSI/MUX_I2C_4_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
-i2c-pull-up:(net:/CSI/MUX_I2C_5_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
-i2c-pull-up:(net:/CSI/MUX_I2C_5_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
-i2c-pull-up:(net:/CSI/MUX_I2C_6_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
-i2c-pull-up:(net:/CSI/MUX_I2C_6_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
-i2c-pull-up:(net:/CSI/MUX_I2C_7_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
-i2c-pull-up:(net:/CSI/MUX_I2C_7_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
-i2c-pull-up:(net:/Expansion connector/I2C7.SCL)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/Expansion connector/I2C7.SDA)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/Expansion connector/I2C8.SCL)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/Expansion connector/I2C8.SDA)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/SoM_IO/I2C0_SCL_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
-i2c-pull-up:(net:/SoM_IO/I2C0_SDA_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
-i2c-pull-up:(net:/SoM_IO/I2C1_SCL_1V8)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/SoM_IO/I2C1_SDA_1V8)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
-i2c-pull-up:(net:/SoM_IO/I2C2_SCL_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
-i2c-pull-up:(net:/SoM_IO/I2C2_SDA_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
-i2c-pull-up:(net:/SoM_IO/I2C3_SCL_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
-i2c-pull-up:(net:/SoM_IO/I2C3_SDA_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
-i2c-pull-up:(net:/SoM_IO/I2C5_SCL_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
-i2c-pull-up:(net:/SoM_IO/I2C5_SDA_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
-i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS0{slash}SDA)	pass	#1919	R113 or R114, 1k, pulls it to FTDI_3V3, which agni does not stamp as a rail
-i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS3{slash}SCL)	pass	#1919	R113 or R114, 1k, pulls it to FTDI_3V3, which agni does not stamp as a rail
-i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C3_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
-i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C3_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/I2C_MUX_SCL)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/CSI/I2C_MUX_SDA)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/CSI/I2C_{CAM}.SCL)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/CSI/I2C_{CAM}.SDA)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/CSI/MUX_I2C_4_SCL)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_4_SDA)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_5_SCL)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_5_SDA)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_6_SCL)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_6_SDA)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_7_SCL)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_7_SDA)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/Expansion connector/I2C7.SCL)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/Expansion connector/I2C7.SDA)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/Expansion connector/I2C8.SCL)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/Expansion connector/I2C8.SDA)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/SoM_IO/I2C0_SCL_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C0_SDA_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C1_SCL_1V8)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/SoM_IO/I2C1_SDA_1V8)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/SoM_IO/I2C2_SCL_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C2_SDA_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C3_SCL_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C3_SDA_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C5_SCL_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C5_SDA_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS0{slash}SDA)	pass		R113 or R114, 1k, pulls it to FTDI_3V3, which the NTS0102 spec's supply pins mark as a rail
+i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS3{slash}SCL)	pass		R113 or R114, 1k, pulls it to FTDI_3V3, which the NTS0102 spec's supply pins mark as a rail
+i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C3_SCL)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C3_SDA)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
 i2c-redundant-pull-up:(net:/I2C_{SYS}.SCL)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
 i2c-redundant-pull-up:(net:/I2C_{SYS}.SDA)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
 i2c-redundant-pull-up:(net:/USB Debug%2C PD/DEBUG_SCL)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
@@ -167,7 +168,7 @@ led-polarity:(component:D52)	pass		C toward GND or a sink and A toward a rail, b
 led-polarity:(component:D6)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
 led-polarity:(component:D61)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
 led-polarity:(component:D63)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
-rail-not-classified:(net:/USB Debug%2C PD/FTDI_3V3)	fail		FTDI_3V3 feeds U31 and U34 supply pins and carries the regulator's output, so it is a 3.3 V rail
+rail-not-classified:(net:/USB Debug%2C PD/FTDI_3V3)	pass		FTDI_3V3 feeds U31 and U34 supply pins and carries the regulator's output; with the project's NTS0102 spec agni stamps it a 3.3 V rail
 reverse-blocking-absent:(net:VCC_IN)	pass	#1920	U6 LTC4412 drives P-FET Q2 between VCC_IN and VCC as an ideal diode, which blocks reverse current
 single-pin-net:(net:unconnected-%28J18-PadB24%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
 single-pin-net:(net:unconnected-%28J18-PadB25%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
