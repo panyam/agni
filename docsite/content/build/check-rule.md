@@ -528,8 +528,8 @@ third is the issue that explains why agni disagrees, and it is empty when agni a
 says what the reader checked. A verdict with no row counts as not yet audited.
 
 Audit against the board's own tool, not against agni. `kicad-cli sch export netlist`, `kicad-cli sch
-erc` and `kicad-cli pcb drc` give a reading that shares no code with ours. Each of them writes a `.kicad_prl` beside the board,
-and the tutorial capture counts that file as one more skipped, so delete it after. Audit a rule's fails
+erc` and `kicad-cli pcb drc` give a reading that shares no code with ours. The netlist export writes a `.kicad_prl` beside the
+board, and the Jetson tutorial capture counts that file as one more skipped, so delete it after. Audit a rule's fails
 first, because false positives live there. Then audit any pass the rule may have reached without
 classifying its subject.
 
