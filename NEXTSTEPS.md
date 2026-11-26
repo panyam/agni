@@ -13,7 +13,12 @@ Last pruned 2026-11-24, at `fe04e00e`.
 
 ## At a glance
 
-**No mission is active.** #1799 (run agni inside an enterprise against its own GitHub Enterprise
+**Mission #1708 is active**, to run agni check on a real board and trust every verdict. Its
+exercise is `make exercise-checks` (#1712). The exercise holds Glasgow revC3's and Jetson's verdicts
+to the hand-audited files in `cmd/agni/testdata/verdict-audit`, and each disagreement names its
+issue. The next ticket is the one clearing the most rows.
+
+#1799 (run agni inside an enterprise against its own GitHub Enterprise
 Server) closed on 2026-11-23 at 17 of 17, with `make exercise-enterprise` passing 24 of 24 at
 `a394e384`. CI keeps running it, plus `make exercise-enterprise-bundle` (compose) and
 `make kind-up exercise-enterprise-helm` (Helm on kind). Its Later lines moved to #1708 (#1227) and
@@ -59,7 +64,8 @@ Helm chart (`localAccounts`) turn it on (PR 1886). Email reset waits on #1884. A
 
 ## Open, ranked
 
-Nothing is ranked until a mission is picked. `~/.claude/skills/retriage/queue.sh` lists them.
+Mission #1708's queue, by `~/.claude/skills/retriage/queue.sh`. The bugs the audit found go first,
+ranked by how many audited rows each clears.
 
 Later work is #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language

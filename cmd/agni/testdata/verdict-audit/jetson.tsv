@@ -1,2 +1,200 @@
-# Hand-audited verdicts for the Jetson AGX Thor baseboard. Not yet audited.
+# Hand-audited verdicts for the Jetson AGX Thor baseboard, checked against kicad-cli's netlist and ERC (KiCad 10.0.6).
 # Columns: verdict id, the outcome a reader reached, the issue that explains a disagreement, what was checked.
+# Outcomes: pass, fail, not-considered, or none when the rule should not judge the subject at all.
+bulk-cap:(net:Net-%28D1-C%29)	none	#1914	a Schottky and R6 2k2 feed the module's backup-battery pin; a current-limited feed is not a rail that wants bulk capacitance
+esd-protection:(net:/SFP/SFI_CONN_RX_N)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
+esd-protection:(net:/SFP/SFI_CONN_RX_P)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
+esd-protection:(net:/SFP/SFI_CONN_TX_N)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
+esd-protection:(net:/SFP/SFI_CONN_TX_P)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
+esd-protection:(net:/SFP/SH)	none	#1913	the SFP cage shield J19, to GND through capacitors and R200; a shield net is not a signal
+esd-protection:(net:Net-%28J12-RS0%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+esd-protection:(net:Net-%28J12-RS1%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+esd-protection:(net:Net-%28J12-RX_{LOS}%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+esd-protection:(net:Net-%28J12-TX_{DISABLE}%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+esd-protection:(net:Net-%28J12-TX_{FAULT}%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+floating-input:(net:/CSI/CAM0.CSI2_CLK+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM0.CSI2_CLK-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM0.CSI2_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM0.CSI2_D0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM0.CSI2_D1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM0.CSI2_D1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM0.CSI3_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM0.CSI3_D0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM0.CSI3_D1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM0.CSI3_D1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI0_CLK+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI0_CLK-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI0_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI0_D0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI0_D1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI0_D1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI1_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI1_D0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI1_D1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM1.CSI1_D1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI4_CLK+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI4_CLK-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI4_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI4_D0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI4_D1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI4_D1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI5_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI5_D0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI5_D1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM2.CSI5_D1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI6_CLK+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI6_CLK-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI6_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI6_D0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI6_D1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI6_D1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI7_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI7_D0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI7_D1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/CSI/CAM3.CSI7_D1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/ADDR0)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/ADDR1)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/CAN0.DIN)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/CAN1.DIN)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/CAN2.DIN)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/CAN3.DIN)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/I2S2.SDIN)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/PCIe_{C3x2}.RX0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/PCIe_{C3x2}.RX0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/PCIe_{C3x2}.RX1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/PCIe_{C3x2}.RX1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/UART2.CTS)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/UART2.RX)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/UART5.CTS)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/Expansion connector/UART5.RX)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C1x1}.CLK+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C1x1}.CLK-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C1x1}.RX0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C1x1}.RX0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.CLK+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.CLK-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.RX0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.RX0-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.RX1+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.RX1-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.RX2+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.RX2-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.RX3+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/M.2/PCIe_{C5x4}.RX3-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/SoM_IO/UART3_DEBUG_RX_1V8)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/USB DP Alt mode/USBC1_CTL0)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/USB DP Alt mode/USBC1_CTL1)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/USB DP Alt mode/USBC1_DPEQ0)	pass	#1916	a TUSB1046 EQ strap with both straps DNP; the pin is a four-level input and floating selects a level
+floating-input:(net:/USB DP Alt mode/USBC1_EQ0)	pass	#1916	a TUSB1046 EQ strap with both straps DNP; the pin is a four-level input and floating selects a level
+floating-input:(net:/USB DP Alt mode/USBC1_FLIP)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/USB DP Alt mode/USBC1_RX1_N)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/USB DP Alt mode/USBC1_RX1_P)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/USB DP Alt mode/USBC1_RX2_N)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/USB DP Alt mode/USBC1_RX2_P)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:/USB DP Alt mode/USBC1_SSEQ0)	pass	#1916	a TUSB1046 EQ strap with both straps DNP; the pin is a four-level input and floating selects a level
+floating-input:(net:/USB Debug%2C PD/FTDI_LED_RX)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:Net-%28Q2-G%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:Net-%28Q22-G%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:Net-%28Q24-G%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:Net-%28Q25-G%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:Net-%28U21-XTALI%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
+floating-input:(net:Net-%28U72-~{MR}%29)	pass		passes on SW2's pin; the verdict holds because TPS3840's MR has an internal pull-up
+i2c-pull-up:(net:/CSI/I2C_MUX_SCL)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/CSI/I2C_MUX_SDA)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/CSI/I2C_{CAM}.SCL)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/CSI/I2C_{CAM}.SDA)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/CSI/MUX_I2C_4_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_4_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_5_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_5_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_6_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_6_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_7_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/MUX_I2C_7_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/Expansion connector/I2C7.SCL)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/Expansion connector/I2C7.SDA)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/Expansion connector/I2C8.SCL)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/Expansion connector/I2C8.SDA)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/SoM_IO/I2C0_SCL_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C0_SDA_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C1_SCL_1V8)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/SoM_IO/I2C1_SDA_1V8)	not-considered	#1911	the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/SoM_IO/I2C2_SCL_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C2_SDA_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C3_SCL_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C3_SDA_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C5_SCL_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/SoM_IO/I2C5_SDA_1V8)	pass	#1911	its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS0{slash}SDA)	pass	#1919	R113 or R114, 1k, pulls it to FTDI_3V3, which agni does not stamp as a rail
+i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS3{slash}SCL)	pass	#1919	R113 or R114, 1k, pulls it to FTDI_3V3, which agni does not stamp as a rail
+i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C3_SCL)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C3_SDA)	none	#1911	an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-redundant-pull-up:(net:/I2C_{SYS}.SCL)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
+i2c-redundant-pull-up:(net:/I2C_{SYS}.SDA)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
+i2c-redundant-pull-up:(net:/USB Debug%2C PD/DEBUG_SCL)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
+i2c-redundant-pull-up:(net:/USB Debug%2C PD/DEBUG_SDA)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
+led-polarity:(component:D10)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D12)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D14)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D18)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D19)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D20)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D21)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D24)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D25)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D26)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D27)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D28)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D29)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D3)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D30)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D31)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D32)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D33)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D34)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D35)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D36)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D4)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D40)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D41)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D42)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D43)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D44)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D47)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D49)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D51)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D52)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D6)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D61)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+led-polarity:(component:D63)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+rail-not-classified:(net:/USB Debug%2C PD/FTDI_3V3)	fail		FTDI_3V3 feeds U31 and U34 supply pins and carries the regulator's output, so it is a 3.3 V rail
+reverse-blocking-absent:(net:VCC_IN)	pass	#1920	U6 LTC4412 drives P-FET Q2 between VCC_IN and VCC as an ideal diode, which blocks reverse current
+single-pin-net:(net:unconnected-%28J18-PadB24%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
+single-pin-net:(net:unconnected-%28J18-PadB25%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
+test-point-coverage:(net:/DCDC/12V_OUT)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/DCDC/12V_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/16V_OUT)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/DCDC/16V_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/1V15_OUT)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/DCDC/1V8_OUT)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/DCDC/20V_OUT)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/DCDC/20V_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/3V3_OUT)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/DCDC/3V3_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/5V_OUT)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/DCDC/5V_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/5V_{AON}_OUT)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/DCDC/5V_{AON}_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/VIN_PWR_ON)	none	#1914	drives the gates of Q6, Q7 and Q20; a control net, not a rail
+test-point-coverage:(net:/Expansion connector/+12V_FMC)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/Expansion connector/+3V3_AUX)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/Expansion connector/+3V3_FMC)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/Expansion connector/+5V_FMC)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/Expansion connector/+VCC_FMC)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/Expansion connector/+V_{ADJ})	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/M.2/3V3_M2)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/Power/3V3_LDO)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/SoM_IO2/TC_VCC)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:/USB Debug%2C PD/FTDI_3V3)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:FLASH_PWR)	fail		no test point on the rail in KiCad's netlist
+test-point-coverage:(net:VCC_IN)	fail		no test point on the rail in KiCad's netlist
