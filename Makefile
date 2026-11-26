@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise exercise-enterprise-bundle exercise-enterprise-helm kind-up image-present binaries-check fetch-remote-check nul-check exercise-formats-check exercise-formats samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page exercise-viewer-rooms agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: test-stores testall-stores exercise-design-store exercise-mounts exercise-linked-sources exercise-enterprise exercise-enterprise-bundle exercise-enterprise-helm kind-up image-present binaries-check fetch-remote-check nul-check exercise-formats-check exercise-formats samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-checks exercise-naming exercise-viewer-page exercise-viewer-rooms agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -763,6 +763,13 @@ exercise-pin-functions: agni
 	mkdir -p $(EXERCISE_OUT)
 	bin/agni check --format html -o $(EXERCISE_OUT)/pin-functions.html $(PIN_DESIGN)
 	bin/agni check --verdicts --format csv --table pin_map $(PIN_DESIGN)
+
+# Mission #1708's exercise (agni issue 1712). It runs check --verdicts on Glasgow revC3 and Jetson's
+# baseboard and holds each verdict to the hand-audited file in cmd/agni/testdata/verdict-audit. It
+# prints one row per rule and every audited verdict agni disagrees with, and it fails while any
+# remain. The gate runs the same test as a ratchet, where each disagreement must name its bug.
+exercise-checks: samples-oracle
+	AGNI_EXERCISE_CHECKS=1 $(GO) test ./cmd/agni -run '^TestVerdictAudit$$' -count=1
 
 # Mission #1264's exercise, steps 1 to 3, over the MNT Reform motherboard 3.0 from the oracle corpus
 # (agni issue 1266): the effective vocabulary with each pattern's source, why LPC_VCC is a rail, and

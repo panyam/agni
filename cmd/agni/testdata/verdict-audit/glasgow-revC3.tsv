@@ -1,0 +1,141 @@
+# Hand-audited verdicts for Glasgow revC3, checked against kicad-cli's netlist, ERC and DRC (KiCad 10.0.6).
+# Columns: verdict id, the outcome a reader reached, the issue that explains a disagreement, what was checked.
+# Outcomes: pass, fail, not-considered, or none when the rule should not judge the subject at all.
+bulk-cap:(net:/xVBUS)	fail		USB-C VBUS before FB1 carries no capacitor; the bulk sits after the bead on /VUSB
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-protection:(net:/CC1)	none	#1913	USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
+esd-protection:(net:/CC2)	none	#1913	USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
+esd-protection:(net:/IO_Banks/IO_Buffer_A/P0)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_A/P1)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_A/P2)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_A/P3)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_A/P4)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_A/P5)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_A/P6)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_A/P7)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_A/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-protection:(net:/IO_Banks/IO_Buffer_B/P0)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_B/P1)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_B/P2)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_B/P3)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_B/P4)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_B/P5)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_B/P6)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_B/P7)	none	#1912	only connector is J8 or J9, a 1x08 socket marked DNP by its DNP property and _DNP footprint, so the net is not exposed
+esd-protection:(net:/IO_Banks/IO_Buffer_B/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-protection:(net:/IO_Banks/Z0_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z0_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z10_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z10_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z11_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z11_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z12_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z12_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z1_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z1_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z2_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z2_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z3_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z3_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z4_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z4_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z5_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z5_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z6_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z6_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z7_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z7_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z8_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z8_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z9_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/IO_Banks/Z9_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
+esd-protection:(net:/SHLD)	none	#1913	the USB-C shell, tied to GND through C13 and R3; a shield net is not a signal
+esd-protection:(net:/USB_N)	pass	#1918	U15 TPD3S014 sits on the net (D1/D2) and its two-channel ESD clamp protects D+ and D-
+esd-protection:(net:/USB_P)	pass	#1918	U15 TPD3S014 sits on the net (D1/D2) and its two-channel ESD clamp protects D+ and D-
+esd-protection:(net:Net-%28D12-K%29)	pass	#1917	ESD5Z5.0T1G on the net, K to it and A to GND; agni classes it tvs yet finds no clamp on the escaped net id
+esd-protection:(net:Net-%28D13-K%29)	pass	#1917	ESD5Z5.0T1G on the net, K to it and A to GND; agni classes it tvs yet finds no clamp on the escaped net id
+floating-input:(net:/IO_Banks/DA0)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DA1)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DA2)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DA3)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DA4)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DA5)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DA6)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DA7)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DB0)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DB1)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DB2)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DB3)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DB4)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DB5)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DB6)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/IO_Banks/DB7)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/RD)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:/WR)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+floating-input:(net:Net-%28U3-A1%29)	fail		EEPROM U3 A1 goes only to R40, valued DNP; a fitted strap or the part's internal pull-down decides it
+floating-input:(net:Net-%28U7-~{RESET}%29)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+input-protection:(net:/IO_Banks/VIO_AUX)	fail		J5 pin 44 feeds the FPGA bank supply directly, with no fuse, clamp or diode
+led-polarity:(component:D1)	pass		K on GND and A through its resistor
+led-polarity:(component:D10)	pass		K on GND and A through its resistor
+led-polarity:(component:D14)	pass		K on GND and A through its resistor
+led-polarity:(component:D15)	pass		K on GND and A through its resistor
+led-polarity:(component:D2)	pass		K on GND and A through its resistor
+led-polarity:(component:D3)	pass		K on GND and A through its resistor
+led-polarity:(component:D4)	pass		K on GND and A through its resistor
+led-polarity:(component:D5)	pass		K on GND and A through its resistor
+led-polarity:(component:D6)	pass		K on GND and A through its resistor
+led-polarity:(component:D7)	pass		K on GND and A through its resistor
+led-polarity:(component:D8)	pass		K on GND and A through its resistor
+led-polarity:(component:D9)	pass		K on GND and A through its resistor
+netclass-track-width:(net:/IO_Banks/VIOA)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-track-width:(net:/IO_Banks/VIOB)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-track-width:(net:/IO_Banks/VIO_AUX)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-track-width:(net:/VUSB)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-track-width:(net:GND)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:+1V2)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:+3V3)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/CLKREF)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/D0)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/D1)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/D2)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/FLAGD)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/GNDPLL1)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/DA0)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/DA1)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/DA2)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/U1)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/U2)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/U3)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/U4)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/U5)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/VIO_AUX)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z12_N)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z12_P)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z1_N)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z1_P)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z4_N)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z4_P)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z5_N)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z5_P)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z7_N)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z7_P)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z9_N)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/IO_Banks/Z9_P)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/RD)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/SCL)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/SDA)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/VCCPLL0)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/VCCPLL1)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:/WR)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+netclass-via-drill:(net:GND)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+reverse-blocking-absent:(net:/IO_Banks/VIO_AUX)	fail		J5 pin 44 feeds the FPGA bank supply directly, with no fuse, clamp or diode
+single-pin-net:(net:/SWSH)	fail		SW1's shield pin carries only the SWSH label; KiCad's ERC accepts the label as a connection, but the pin floats
+test-point-coverage:(net:/GNDPLL0)	fail		no TestPoint part on the rail in KiCad's netlist
+test-point-coverage:(net:/GNDPLL1)	fail		no TestPoint part on the rail in KiCad's netlist
+test-point-coverage:(net:/IO_Banks/VIOA)	fail		no TestPoint part on the rail in KiCad's netlist
+test-point-coverage:(net:/IO_Banks/VIOB)	fail		no TestPoint part on the rail in KiCad's netlist
+test-point-coverage:(net:/IO_Banks/VIO_AUX)	fail		no TestPoint part on the rail in KiCad's netlist
+test-point-coverage:(net:/VCCPLL0)	fail		no TestPoint part on the rail in KiCad's netlist
+test-point-coverage:(net:/VCCPLL1)	fail		no TestPoint part on the rail in KiCad's netlist
+test-point-coverage:(net:/VUSB)	fail		no TestPoint part on the rail in KiCad's netlist

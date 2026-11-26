@@ -513,6 +513,32 @@ Hand-trace what fires at level 3. The example's five real-board findings decompo
 gaps and two policy-edge feedback nodes, and that decomposition set the severity. Design-for-test has no
 open reference implementation, so say that in the PR.
 
+## The audited verdicts on two real boards
+
+Suppose a change to a classifier makes esd-protection pass a USB data line on Glasgow. Nothing in
+the conformance fixtures covers that net, so no test moves. `TestVerdictAudit` in
+`cmd/agni/check_audit_test.go` catches it, because a person has read that net against the schematic
+and written down the outcome (agni issue 1712).
+
+`cmd/agni/testdata/verdict-audit` holds one file per board, for Glasgow revC3 and the Jetson AGX Thor
+baseboard from the samples corpus. Each row has four tab-separated columns. The first is a verdict id
+as `check --verdicts --format json` prints it. The second is the outcome a reader reached, which is
+`pass`, `fail`, `not-considered`, or `none` when the rule should not judge that subject at all. The
+third is the issue that explains why agni disagrees, and it is empty when agni agrees. The fourth
+says what the reader checked. A verdict with no row counts as not yet audited.
+
+Audit against the board's own tool, not against agni. `kicad-cli sch export netlist`, `kicad-cli sch
+erc` and `kicad-cli pcb drc` give a reading that shares no code with ours. The netlist export writes a `.kicad_prl` beside the
+board, and the Jetson tutorial capture counts that file as one more skipped, so delete it after. Audit a rule's fails
+first, because false positives live there. Then audit any pass the rule may have reached without
+classifying its subject.
+
+The gate runs the test as a ratchet. A row that disagrees must name its issue, and a row that names
+an issue must still disagree. A fix therefore fails the test until its PR clears the issue from its
+rows, so the fix and the evidence for it land together. `make exercise-checks` is mission 1708's
+exercise. It prints one row per rule with its matches, false positives, false negatives, passes on
+an unclassified subject and missed judgments, lists every disagreement, and fails while any remain.
+
 ## Ship it
 
 The PR carries the reviewer's guide, the hardware-context primer, the before/after transcript, and a
