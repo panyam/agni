@@ -5,9 +5,24 @@
 #
 # The datasheet states the pull-up in prose, in section 14.7, and prints no symbol or tolerance for
 # it. So the row carries the typical value alone, and its name is what the rule matches. The pins are
-# declared under the names Table 3 prints, with no package pinout, as nts0102gt.textproto does.
+# declared under the names Table 3 prints, with no package pinout, as nts0102gt.textproto does. The
+# supply rows match the NTS0102's, and each is bound to its own supply pin.
 mpn: "NTS0104BQ"
 manufacturer: "NXP Semiconductors"
+
+pins {
+  id: "vcca"
+  name: "VCC(A)"
+  function: PIN_FUNCTION_POWER_INPUT
+  prov { doc_ref: "nts0104-rev-3" page: 6 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "vccb"
+  name: "VCC(B)"
+  function: PIN_FUNCTION_POWER_INPUT
+  prov { doc_ref: "nts0104-rev-3" page: 6 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
+}
 
 pins {
   id: "a1"
@@ -97,4 +112,48 @@ parameters {
   pin_refs: "b3"
   pin_refs: "b4"
   prov { doc_ref: "nts0104-rev-3" page: 17 table_or_figure: "14.7 Pull-up or pull-down resistors on I/Os lines" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Supply voltage A, VCC(A)"
+  symbol: "VCC(A)"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { min: -0.5 max: 6.5 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "vcca"
+  prov { doc_ref: "nts0104-rev-3" page: 6 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Supply voltage B, VCC(B)"
+  symbol: "VCC(B)"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { min: -0.5 max: 6.5 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "vccb"
+  prov { doc_ref: "nts0104-rev-3" page: 6 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Supply voltage A, VCC(A)"
+  symbol: "VCC(A)"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 1.65 max: 3.6 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "vcca"
+  prov { doc_ref: "nts0104-rev-3" page: 6 table_or_figure: "Table 6. Recommended operating conditions" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Supply voltage B, VCC(B)"
+  symbol: "VCC(B)"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 2.3 max: 5.5 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "vccb"
+  prov { doc_ref: "nts0104-rev-3" page: 6 table_or_figure: "Table 6. Recommended operating conditions" method: "hand" confidence: 1 }
 }
