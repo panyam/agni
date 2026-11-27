@@ -188,6 +188,34 @@ func Unpopulated(m Model, n *ir.Net) bool {
 	return real
 }
 
+// UnfittedConnectors returns the exposed connectors on n, sorted, when every one of them is marked
+// do-not-populate, and nil when any is fitted or the net has none (agni issue 1912). A board can
+// carry a socket footprint it never fits, as Glasgow's J6 to J9 are, while the IC behind the socket's
+// nets is fitted. Unpopulated misses that net, since a fitted part sits on it. The assembled board has
+// no way in through an unfitted socket, so an ESD rule leaves the net unjudged.
+func UnfittedConnectors(m Model, n *ir.Net) []string {
+	var refs []string
+	for _, c := range n.Connections {
+		ref := c.ComponentRef
+		if !m.ExposedConnector(ref) {
+			continue
+		}
+		if m.IsFitted(ref) {
+			return nil
+		}
+		if !slices.Contains(refs, ref) {
+			refs = append(refs, ref)
+		}
+	}
+	slices.SortFunc(refs, ident.CompareNatural)
+	return refs
+}
+
+// UnfittedConnectorsReason is the reason an ESD rule gives when UnfittedConnectors names refs.
+func UnfittedConnectorsReason(refs []string) string {
+	return "the net leaves the board only through " + joinRefs(refs) + ", marked do-not-populate, so the assembled board exposes nothing here"
+}
+
 // PowerPinReachable reports a power-direction pin on the net or on any net in its 2-hop
 // series reach (WS3-011), so the split between esd and input-protection does not depend on
 // whether a bead sits between the connector and the regulator.

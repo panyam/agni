@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -209,5 +210,34 @@ func TestTheRatingRulesJudgeFittedPartsOnly(t *testing.T) {
 		if r.JudgesFittedParts() != want[r.Name] {
 			t.Errorf("%s judges fitted parts only = %v, want %v", r.Name, r.JudgesFittedParts(), want[r.Name])
 		}
+	}
+}
+
+// A socket footprint the board never fits exposes nothing, even when the IC behind it is fitted
+// (agni issue 1912). Glasgow's J6 to J9 are 1x08 sockets marked DNP on its IO buffer nets. Both ESD
+// rules leave such a net unjudged and name the connector, and the twin reports nothing.
+func TestAnUnfittedConnectorExposesNothing(t *testing.T) {
+	line := func() *ir.Design {
+		return pinDesign(map[string][]supplyPin{
+			"J1": twoPin(), "R1": twoPin(), "U1": {{"P0", "1", ir.PinDirection_PIN_DIRECTION_INOUT}},
+		}, map[string][]string{"IO_P0": {"J1.1", "R1.1", "U1.1"}, "+3V3": {"R1.2"}})
+	}
+	m := check.NewModel(markDNP(line(), "J1"))
+	for _, r := range []*check.Rule{esdProtection, esdClampNotTVS} {
+		var got *check.Verdict
+		for _, v := range r.Eval(context.Background(), m) {
+			if v.Subjects[0].Ref == "IO_P0" {
+				got = &v
+			}
+		}
+		if got == nil || got.Outcome != check.NotConsidered || !strings.Contains(got.Reason, "only through J1, marked do-not-populate") {
+			t.Errorf("%s on a net behind an unfitted socket = %+v, want not-considered naming J1", r.Name, got)
+		}
+	}
+	if fs := esdProtectionSpec.Eval(context.Background(), m); len(fs) != 0 {
+		t.Errorf("the esd-protection twin fires %d times behind an unfitted socket, want none", len(fs))
+	}
+	if got := verdictOn(t, esdProtection, line(), "IO_P0"); got != string(check.Fail) {
+		t.Errorf("esd-protection with the socket fitted = %q, want fail", got)
 	}
 }

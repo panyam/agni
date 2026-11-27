@@ -16,7 +16,7 @@ var esdClampNotTVS = &check.Rule{
 	Impact:     "A Zener clamps slower and at higher energy than a TVS designed for ESD (IEC 61000-4-2 is ns-scale). It gives transient / load-dump protection, but a review targeting ESD specifically may still want a dedicated TVS on the exposed pin. This is informational: the net is not unprotected, it is protected by the wrong device class for ESD.",
 	Remedy:     "Replace the Zener with an ESD-rated TVS where the review targets ESD, or record that the Zener is there for transient clamping and that ESD is covered elsewhere.",
 	Primitives: []string{"reach", "select", "traverse", "exists", "pin-role", "pattern", "param-join"},
-	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net", "pin.electrical_type", "pin.no_connect", "param.esd_rating"},
+	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "pin.electrical_type", "pin.no_connect", "param.esd_rating"},
 	// The IC-ESD credit is an exemption rather than the finding basis, as on esd-protection, so the
 	// rule is still applicable over external nets with no --params.
 	OptionalReads: []string{"param.esd_rating"},
@@ -50,6 +50,9 @@ func esdClampNotTVSVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 		rated, ratedWitness := check.ICESDCredit(m, n)
 		zener := check.ReachableOfClass(m, n, check.ClassZener)
 		switch {
+		case len(check.UnfittedConnectors(m, n)) > 0:
+			v.Outcome = check.NotConsidered
+			v.Reason = check.UnfittedConnectorsReason(check.UnfittedConnectors(m, n))
 		case tvs != "":
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
@@ -85,6 +88,7 @@ var esdClampNotTVSSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
+		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.connectors_unfitted"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.global"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.power_driven"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
