@@ -2,7 +2,105 @@
 # agni checks the board with examples/jetson-project/params, the datasheet specs that project reviews it with.
 # Columns: verdict id, the outcome a reader reached, the issue that explains a disagreement, what was checked.
 # Outcomes: pass, fail, not-considered, or none when the rule should not judge the subject at all.
+bulk-cap:(net:+12V)	pass		no cap on +12V itself, but fitted 0R link R22 joins it to /DCDC/12V_OUT, U8 SIC431 output, with C222 C235 C306 C307 22u
+bulk-cap:(net:+1V15)	pass		USB7252C U21 VCORE rail carries C311 22u and nine 100n caps
+bulk-cap:(net:+1V8)	pass		carries eight fitted 100n caps (C1 C9 C155 C162 C163 C202 C216 C354), C238 is DNP; fitted 0R R10 also joins /DCDC/1V8_OUT
+bulk-cap:(net:+20V)	pass		feeds U63 U64 LTC4412 IN and carries C263 C264 100n
+bulk-cap:(net:+3V3)	pass		carries 43 fitted caps including C118 C124 10u
+bulk-cap:(net:+3V3_AON)	pass		carries nine 100n caps (C36 C40 C197 C209 C217 C225 C272 C304 C387); fitted 0R R63 also joins /Power/3V3_LDO
+bulk-cap:(net:+5V)	pass		carries 16 fitted caps including C31 22u and C139 C147 C231 10u
+bulk-cap:(net:+5V_AON)	pass		carries C62 22u and C223 100n
+bulk-cap:(net:+5V_SOM)	pass		module 5V feed into J1 carries 17 fitted caps, C19 to C23 22u and C12 to C16 10u
+bulk-cap:(net:/Expansion connector/+3V3_AUX)	pass		R320 0R from +3V3 is DNP so J18 D32 supplies it; U2 AT24CS01 VCC carries C5 100n
+bulk-cap:(net:/M.2/3V3_M2)	pass		M.2 slot J13 3V3 pins carry C190 to C193 22u, fed from +3V3 by fitted 0R R213
+bulk-cap:(net:/Power/USBPD1_HV)	pass		carries C136 100n, C138 4u7, C265 1u fitted (C38 DNP), beside U63 SENSE
+bulk-cap:(net:/Power/USBPD2_HV)	pass		carries C143 100n, C146 4u7, C266 1u fitted (C240 DNP), beside U64 SENSE
+bulk-cap:(net:/SoM_IO2/TC_VCC)	none		every part on the net is DNP: J20 Tag-Connect, U59 TXU0304, R341 0R from +3V3, R342 10k and C237; the assembled board has no rail here
+bulk-cap:(net:/USB Debug%2C PD/FTDI_3V3)	pass		U34 FT230X and U31 NTS0102 supply carries C135 10u and five 100n caps
+bulk-cap:(net:FLASH_PWR)	pass		diode-OR of D15 D17 into U29 W25Q80 VCC carries C111 C122 100n (U52 DNP)
 bulk-cap:(net:Net-%28D1-C%29)	none		a Schottky and R6 2k2 feed the module's backup-battery pin; a current-limited feed is not a rail that wants bulk capacitance
+bulk-cap:(net:SYS_VIN_HV)	pass		module HV input across J1 carries C26 C27 22u 25V and C84 C359 C365 C366 1u
+bulk-cap:(net:VCC)	pass		main input bus into the SIC431 bucks carries 24 fitted caps, mostly 22u 25V 0805 (C261 C262 DNP)
+bulk-cap:(net:VCC_IN)	pass		J2 Mini-Fit input into U6 and U65 carries C269 C274 C276 C277 22u and C30 C278 100n
+decoupling-present:(net:+20V)	pass		U63 U64 LTC4412 IN pins carry C263 C264 100n
+decoupling-present:(net:+3V3)	pass		U21 USB7252C, U30, U33, the level shifters, oscillators and load switches share 43 fitted caps
+decoupling-present:(net:+3V3_AON)	pass		the INA219s, U54, U72, U74 carry nine 100n caps
+decoupling-present:(net:+5V)	pass		AP22615A switches, U7 U69 TPS564247 VIN, U30 PP_CABLE and U51 carry 16 caps including C31 22u
+decoupling-present:(net:+5V_AON)	pass		U70 MAX16150 VCC carries C62 22u and C223 100n
+decoupling-present:(net:/Expansion connector/+3V3_AUX)	pass		U2 AT24CS01 VCC carries C5 100n
+decoupling-present:(net:/USB Debug%2C PD/FTDI_3V3)	pass		U34 FT230X VCC and VCCIO and U31 NTS0102 carry C135 10u and five 100n caps
+decoupling-present:(net:FLASH_PWR)	pass		U29 W25Q80 VCC carries C111 C122 100n
+decoupling-present:(net:VCC)	pass		SIC431 VIN pins U8 U11 U12 U13 U75 carry 24 fitted caps, mostly 22u
+decoupling-present:(net:VCC_IN)	pass		U6 LTC4412 IN and U65 SIC431 VIN carry four 22u and two 100n caps
+esd-clamp-not-tvs:(net:/Peripherals/I2C_{CONN}.SCL)	pass		JST-SH I2C ports J16/J17 SCL, clamped by TVS arrays U67 and U68 TPD4E05U06QDQ, with U80 NTS0104 and R pull-up behind; no Zener
+esd-clamp-not-tvs:(net:/Peripherals/I2C_{CONN}.SDA)	pass		JST-SH I2C ports J16/J17 SDA, clamped by TVS arrays U67 and U68 TPD4E05U06QDQ, with U80 NTS0104 and R pull-up behind; no Zener
+esd-clamp-not-tvs:(net:/Recovery USB/USB0.D+)	pass		USB-C J3 USB0.D+ with module socket J1 also on the net, clamped by TVS array U58 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USB0.D-)	pass		USB-C J3 USB0.D- with module socket J1 also on the net, clamped by TVS array U58 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_CC1)	pass		USB-C J3 USBC2_CC1, clamped by TVS array U58 TPD4E05U06QDQ; U56 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_CC2)	pass		USB-C J3 USBC2_CC2, clamped by TVS array U58 TPD4E05U06QDQ; U56 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_CONN_TX1_N)	pass		USB-C J3 USBC2_CONN_TX1_N, clamped by TVS array U57 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_CONN_TX1_P)	pass		USB-C J3 USBC2_CONN_TX1_P, clamped by TVS array U57 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_CONN_TX2_N)	pass		USB-C J3 USBC2_CONN_TX2_N, clamped by TVS array U26 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_CONN_TX2_P)	pass		USB-C J3 USBC2_CONN_TX2_P, clamped by TVS array U26 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_RX1_N)	pass		USB-C J3 USBC2_RX1_N, clamped by TVS array U57 TPD4E05U06QDQ; U56 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_RX1_P)	pass		USB-C J3 USBC2_RX1_P, clamped by TVS array U57 TPD4E05U06QDQ; U56 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_RX2_N)	pass		USB-C J3 USBC2_RX2_N, clamped by TVS array U26 TPD4E05U06QDQ; U56 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/Recovery USB/USBC2_RX2_P)	pass		USB-C J3 USBC2_RX2_P, clamped by TVS array U26 TPD4E05U06QDQ; U56 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/SFP/SCL_SFP)	pass		SFP28 J12 pin SCL_SFP clamped by TVS array U73 TPD4E05U06QDQ; 0R onward to U1 NTS0104 or J1; no Zener
+esd-clamp-not-tvs:(net:/SFP/SDA_SFP)	pass		SFP28 J12 pin SDA_SFP clamped by TVS array U73 TPD4E05U06QDQ; 0R onward to U1 NTS0104 or J1; no Zener
+esd-clamp-not-tvs:(net:/SFP/SFI_CONN_RX_N)	none		SFP28 high-speed lane on J12, AC-coupled by a 100n cap to module socket J1; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/SFP/SFI_CONN_RX_P)	none		SFP28 high-speed lane on J12, AC-coupled by a 100n cap to module socket J1; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/SFP/SFI_CONN_TX_N)	none		SFP28 high-speed lane on J12, AC-coupled by a 100n cap to module socket J1; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/SFP/SFI_CONN_TX_P)	none		SFP28 high-speed lane on J12, AC-coupled by a 100n cap to module socket J1; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/SFP/SFP_MOD_ABS)	pass		SFP28 J12 pin SFP_MOD_ABS clamped by TVS array U73 TPD4E05U06QDQ; 0R onward to U1 NTS0104 or J1; no Zener
+esd-clamp-not-tvs:(net:/SFP/SH)	none		SFP28 cage J19 shield, tied to GND through C169-C179 100n and R200 330R; a shield is chassis, not a signal, so a Zener-vs-TVS clamp question does not apply
+esd-clamp-not-tvs:(net:/SoM_IO2/USB1.D+)	pass		USB-C J9 USB1.D+ with module socket J1 also on the net, clamped by TVS array U38 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/SoM_IO2/USB1.D-)	pass		USB-C J9 USB1.D- with module socket J1 also on the net, clamped by TVS array U38 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_CC1)	pass		USB-C J9 USBC1_CC1, clamped by TVS array U38 TPD4E05U06QDQ; U30 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_CC2)	pass		USB-C J9 USBC1_CC2, clamped by TVS array U38 TPD4E05U06QDQ; U30 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_CONN_TX1_N)	pass		USB-C J9 USBC1_CONN_TX1_N, clamped by TVS array U41 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_CONN_TX1_P)	pass		USB-C J9 USBC1_CONN_TX1_P, clamped by TVS array U41 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_CONN_TX2_N)	pass		USB-C J9 USBC1_CONN_TX2_N, clamped by TVS array U37 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_CONN_TX2_P)	pass		USB-C J9 USBC1_CONN_TX2_P, clamped by TVS array U37 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_RX1_N)	pass		USB-C J9 USBC1_RX1_N, clamped by TVS array U41 TPD4E05U06QDQ; U33 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_RX1_P)	pass		USB-C J9 USBC1_RX1_P, clamped by TVS array U41 TPD4E05U06QDQ; U33 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_RX2_N)	pass		USB-C J9 USBC1_RX2_N, clamped by TVS array U37 TPD4E05U06QDQ; U33 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_RX2_P)	pass		USB-C J9 USBC1_RX2_P, clamped by TVS array U37 TPD4E05U06QDQ; U33 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_SBU_N)	pass		USB-C J9 USBC1_SBU_N, clamped by TVS array U36 TPD4E05U06QDQ; U33 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB DP Alt mode/USBC1_SBU_P)	pass		USB-C J9 USBC1_SBU_P, clamped by TVS array U36 TPD4E05U06QDQ; U33 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Debug%2C PD/USBC0_CC1)	pass		USB-C J7 USBC0_CC1, clamped by TVS array U42 TPD4E05U06QDQ; U30 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Debug%2C PD/USBC0_CC2)	pass		USB-C J7 USBC0_CC2, clamped by TVS array U42 TPD4E05U06QDQ; U30 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Debug%2C PD/USBC0_D_N)	pass		USB-C J7 USBC0_D_N, clamped by TVS array U42 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Debug%2C PD/USBC0_D_P)	pass		USB-C J7 USBC0_D_P, clamped by TVS array U42 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_CC_{1})	pass		USB-C J6 USBC3_CC_{1}, clamped by TVS array U28 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_CC_{2})	pass		USB-C J6 USBC3_CC_{2}, clamped by TVS array U28 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_CONN_TX1_N)	pass		USB-C J6 USBC3_CONN_TX1_N, clamped by TVS array U24 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_CONN_TX1_P)	pass		USB-C J6 USBC3_CONN_TX1_P, clamped by TVS array U24 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_CONN_TX2_N)	pass		USB-C J6 USBC3_CONN_TX2_N, clamped by TVS array U27 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_CONN_TX2_P)	pass		USB-C J6 USBC3_CONN_TX2_P, clamped by TVS array U27 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_D+)	pass		USB-C J6 USBC3_D+, clamped by TVS array U28 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_D-)	pass		USB-C J6 USBC3_D-, clamped by TVS array U28 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_RX_{1}+)	pass		USB-C J6 USBC3_RX_{1}+, clamped by TVS array U24 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_RX_{1}-)	pass		USB-C J6 USBC3_RX_{1}-, clamped by TVS array U24 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_RX_{2}+)	pass		USB-C J6 USBC3_RX_{2}+, clamped by TVS array U27 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC3_RX_{2}-)	pass		USB-C J6 USBC3_RX_{2}-, clamped by TVS array U27 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_CC_{1})	pass		USB-C J5 USBC4_CC_{1}, clamped by TVS array U25 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_CC_{2})	pass		USB-C J5 USBC4_CC_{2}, clamped by TVS array U25 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_CONN_TX1_N)	pass		USB-C J5 USBC4_CONN_TX1_N, clamped by TVS array U19 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_CONN_TX1_P)	pass		USB-C J5 USBC4_CONN_TX1_P, clamped by TVS array U19 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_CONN_TX2_N)	pass		USB-C J5 USBC4_CONN_TX2_N, clamped by TVS array U17 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_CONN_TX2_P)	pass		USB-C J5 USBC4_CONN_TX2_P, clamped by TVS array U17 TPD4E05U06QDQ; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_D+)	pass		USB-C J5 USBC4_D+, clamped by TVS array U25 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_D-)	pass		USB-C J5 USBC4_D-, clamped by TVS array U25 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_RX_{1}+)	pass		USB-C J5 USBC4_RX_{1}+, clamped by TVS array U19 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_RX_{1}-)	pass		USB-C J5 USBC4_RX_{1}-, clamped by TVS array U19 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_RX_{2}+)	pass		USB-C J5 USBC4_RX_{2}+, clamped by TVS array U17 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:/USB Hub/USBC4_RX_{2}-)	pass		USB-C J5 USBC4_RX_{2}-, clamped by TVS array U17 TPD4E05U06QDQ; U21 sits directly behind; no Zener on the net
+esd-clamp-not-tvs:(net:Net-%28J12-RS0%29)	not-considered		SFP28 J12 RS0 carries only R188 1k to +3V3; no IC or other damageable part in reach and no clamp of any class
+esd-clamp-not-tvs:(net:Net-%28J12-RS1%29)	not-considered		SFP28 J12 RS1 carries only R199 0R to GND; no IC or other damageable part in reach and no clamp of any class
+esd-clamp-not-tvs:(net:Net-%28J12-RX_{LOS}%29)	not-considered		SFP28 J12 RX_{LOS} carries only R192 1k to +3V3 and test point TP29; no IC or other damageable part in reach and no clamp of any class
+esd-clamp-not-tvs:(net:Net-%28J12-TX_{DISABLE}%29)	not-considered		SFP28 J12 TX_{DISABLE} carries only R198 0R to GND; no IC or other damageable part in reach and no clamp of any class
+esd-clamp-not-tvs:(net:Net-%28J12-TX_{FAULT}%29)	not-considered		SFP28 J12 TX_{FAULT} carries only R189 1k to +3V3 and test point TP30; no IC or other damageable part in reach and no clamp of any class
 esd-protection:(net:/SFP/SFI_CONN_RX_N)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
 esd-protection:(net:/SFP/SFI_CONN_RX_P)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
 esd-protection:(net:/SFP/SFI_CONN_TX_N)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
@@ -13,6 +111,29 @@ esd-protection:(net:Net-%28J12-RS1%29)	none		an SFP control pin strapped by one 
 esd-protection:(net:Net-%28J12-RX_{LOS}%29)	none		an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
 esd-protection:(net:Net-%28J12-TX_{DISABLE}%29)	none		an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
 esd-protection:(net:Net-%28J12-TX_{FAULT}%29)	none		an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+fet-vdss-below-switched-rail:(component:Q16,net:+1V8)	none		Q16 DMG1012T has only its gate on +1V8 (S on GND, D on Net-(D43-C)); +1V8 is not across drain-source, so VDSS against it is the wrong comparison
+fet-vdss-below-switched-rail:(component:Q17,net:+1V8)	none		Q17 DMG1012T level shifter has only its gate on +1V8 (S on MODULE_SHDN); +1V8 is not across drain-source
+fet-vdss-below-switched-rail:(component:Q2,net:VCC)	not-considered		Q2 SISS05DN source on VCC (LTC4412 U6 ideal diode from VCC_IN); no SISS05DN spec seeded, and VCC carries no voltage in its name
+fet-vdss-below-switched-rail:(component:Q2,net:VCC_IN)	not-considered		Q2 SISS05DN drain on VCC_IN (J2 Mini-Fit entry); no SISS05DN VDSS seeded, and VCC_IN carries no voltage in its name
+fet-vdss-below-switched-rail:(component:Q20,net:/DCDC/VIN_PWR_ON)	none		VIN_PWR_ON is an enable net (R24/R296 divider, U11 EN, Q6/Q7/Q20 gates), not a rail; Q20 only has its gate there
+fet-vdss-below-switched-rail:(component:Q21,net:+5V)	not-considered		Q21 DMC2400UV P-FET source S2 on +5V switching VCONN; no DMC2400UV breakdown spec seeded
+fet-vdss-below-switched-rail:(component:Q23,net:/Power/USBPD2_HV)	none		Q23 SISS05DN is DNP, absent from the assembled board
+fet-vdss-below-switched-rail:(component:Q23,net:VCC)	none		Q23 SISS05DN is DNP, absent from the assembled board
+fet-vdss-below-switched-rail:(component:Q24,net:+20V)	not-considered		Q24 SISS05DN drain on +20V (U63 LTC4412 ideal diode from USBPD1_HV); no SISS05DN VDSS seeded
+fet-vdss-below-switched-rail:(component:Q24,net:/Power/USBPD1_HV)	not-considered		Q24 SISS05DN source on USBPD1_HV (TPS65988 PP_HV2, up to 20 V PD); no SISS05DN VDSS seeded and the net name carries no voltage
+fet-vdss-below-switched-rail:(component:Q25,net:+20V)	not-considered		Q25 SISS05DN drain on +20V (U64 LTC4412 ideal diode from USBPD2_HV); no SISS05DN VDSS seeded
+fet-vdss-below-switched-rail:(component:Q25,net:/Power/USBPD2_HV)	not-considered		Q25 SISS05DN source on USBPD2_HV (TPS65988 PP_HV1); no SISS05DN VDSS seeded and the net name carries no voltage
+fet-vdss-below-switched-rail:(component:Q26,net:+5V)	not-considered		Q26 DMC2400UV P-FET source S2 on +5V switching VCONN; no DMC2400UV breakdown spec seeded
+fet-vdss-below-switched-rail:(component:Q27,net:+5V)	not-considered		Q27 DMC2400UV P-FET source S2 on +5V switching VCONN; no DMC2400UV breakdown spec seeded
+fet-vdss-below-switched-rail:(component:Q29,net:+5V)	not-considered		Q29 DMC2400UV P-FET source S2 on +5V switching VCONN; no DMC2400UV breakdown spec seeded
+fet-vdss-below-switched-rail:(component:Q39,net:VCC)	not-considered		Q39 SISS05DN source on VCC, parallel to Q2 under U6 LTC4412; no SISS05DN VDSS seeded, VCC has no voltage in its name
+fet-vdss-below-switched-rail:(component:Q39,net:VCC_IN)	not-considered		Q39 SISS05DN drain on VCC_IN; no SISS05DN VDSS seeded, VCC_IN has no voltage in its name
+fet-vdss-below-switched-rail:(component:Q4,net:+1V15)	none		Q4 DMG1012T has only its gate on +1V15 (S on GND, D on Net-(D40-C)), a power-good LED driver; +1V15 is not across drain-source
+fet-vdss-below-switched-rail:(component:Q5,net:/Power/USBPD1_HV)	none		Q5 SISS05DN is DNP, absent from the assembled board
+fet-vdss-below-switched-rail:(component:Q5,net:VCC)	none		Q5 SISS05DN is DNP, absent from the assembled board
+fet-vdss-below-switched-rail:(component:Q6,net:/DCDC/VIN_PWR_ON)	none		VIN_PWR_ON is an enable net, not a rail; Q6 only has its gate there
+fet-vdss-below-switched-rail:(component:Q7,net:/DCDC/VIN_PWR_ON)	none		VIN_PWR_ON is an enable net, not a rail; Q7 only has its gate there
+fet-vdss-below-switched-rail:(component:Q9,net:+5V_AON)	not-considered		Q9 SISS05DN source on +5V_AON, switching it to +5V_SOM through R76; no SISS05DN VDSS seeded
 floating-input:(net:/CSI/CAM0.CSI2_CLK+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/CSI/CAM0.CSI2_CLK-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/CSI/CAM0.CSI2_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
@@ -100,6 +221,32 @@ floating-input:(net:Net-%28Q24-G%29)	pass		a driving pin, or a connector pin tha
 floating-input:(net:Net-%28Q25-G%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:Net-%28U21-XTALI%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:Net-%28U72-~{MR}%29)	pass		passes on SW2's pin; the verdict holds because TPS3840's MR has an internal pull-up
+i2c-pull-up-split-rail:(net:/CSI/SCL_CAM0)	pass		R390 2k2 reaches CSIA_I2C_VCC and on through fitted R158 0R to +3V3 only; the +1V8 option R161 is DNP, so one rail
+i2c-pull-up-split-rail:(net:/CSI/SCL_CAM1)	pass		R389 2k2 reaches CSIA_I2C_VCC and on through fitted R158 0R to +3V3 only; the +1V8 option R161 is DNP, so one rail
+i2c-pull-up-split-rail:(net:/CSI/SCL_CAM2)	pass		R392 2k2 reaches CSIB_I2C_VCC and on through fitted R169 0R to +3V3 only; the +1V8 option R170 is DNP, so one rail
+i2c-pull-up-split-rail:(net:/CSI/SCL_CAM3)	pass		R394 2k2 reaches CSIB_I2C_VCC and on through fitted R169 0R to +3V3 only; the +1V8 option R170 is DNP, so one rail
+i2c-pull-up-split-rail:(net:/CSI/SDA_CAM0)	pass		R391 2k2 reaches CSIA_I2C_VCC and on through fitted R158 0R to +3V3 only; the +1V8 option R161 is DNP, so one rail
+i2c-pull-up-split-rail:(net:/CSI/SDA_CAM1)	pass		R164 2k2 reaches CSIA_I2C_VCC and on through fitted R158 0R to +3V3 only; the +1V8 option R161 is DNP, so one rail
+i2c-pull-up-split-rail:(net:/CSI/SDA_CAM2)	pass		R171 2k2 reaches CSIB_I2C_VCC and on through fitted R169 0R to +3V3 only; the +1V8 option R170 is DNP, so one rail
+i2c-pull-up-split-rail:(net:/CSI/SDA_CAM3)	pass		R393 2k2 reaches CSIB_I2C_VCC and on through fitted R169 0R to +3V3 only; the +1V8 option R170 is DNP, so one rail
+i2c-pull-up-split-rail:(net:/Expansion connector/I2C0.SCL)	pass		R374 2k2 to +3V3 is the only resistor to a rail; U1 NTS0104 internal 10k on B also sits on +3V3
+i2c-pull-up-split-rail:(net:/Expansion connector/I2C0.SDA)	pass		R373 2k2 to +3V3 is the only resistor to a rail; U1 NTS0104 internal 10k on B also sits on +3V3
+i2c-pull-up-split-rail:(net:/I2C_{SYS}.SCL)	pass		R377 and R103 (via R111 0R) both end on +3V3; R280 200k behind DNP R282 is not crossed; one rail
+i2c-pull-up-split-rail:(net:/I2C_{SYS}.SDA)	pass		R376 and R104 (via R112 0R) both end on +3V3; R279 behind DNP R281 and the SPI links behind DNP R387 R388 are not crossed; one rail
+i2c-pull-up-split-rail:(net:/Peripherals/I2C_{CONN}.SCL)	pass		R375 2k2 to +3V3 is the only resistor to a rail
+i2c-pull-up-split-rail:(net:/Peripherals/I2C_{CONN}.SDA)	pass		R361 2k2 to +3V3 is the only resistor to a rail
+i2c-pull-up-split-rail:(net:/Recovery USB/USBC2_I2C_SCL)	pass		R280 200k to +3V3 is the only reachable pull-up; R282 is DNP and not crossed
+i2c-pull-up-split-rail:(net:/Recovery USB/USBC2_I2C_SDA)	pass		R279 200k to +3V3 is the only reachable pull-up; R281 is DNP and not crossed
+i2c-pull-up-split-rail:(net:/SFP/I2C_{SFP}.SCL)	pass		only R360 2k2 reaches a rail, +3V3
+i2c-pull-up-split-rail:(net:/SFP/I2C_{SFP}.SDA)	pass		only R362 2k2 reaches a rail, +3V3
+i2c-pull-up-split-rail:(net:/SFP/SCL_SFP)	pass		only R360 2k2 via R186 0R reaches a rail, +3V3
+i2c-pull-up-split-rail:(net:/SFP/SDA_SFP)	pass		only R362 2k2 via R185 0R reaches a rail, +3V3
+i2c-pull-up-split-rail:(net:/USB Debug%2C PD/DEBUG_SCL)	pass		R103 4k7 and R377 2k2 (via R111 0R) both end on +3V3; one rail
+i2c-pull-up-split-rail:(net:/USB Debug%2C PD/DEBUG_SDA)	pass		R104 4k7 and R376 2k2 (via R112 0R) both end on +3V3; one rail
+i2c-pull-up-split-rail:(net:/USB Debug%2C PD/FTDI_CBUS0{slash}SDA)	pass		U34 FT230X CBUS0 to U31 NTS0102 A side; R114 1k to FTDI_3V3 is the only resistor to a rail
+i2c-pull-up-split-rail:(net:/USB Debug%2C PD/FTDI_CBUS3{slash}SCL)	pass		U34 FT230X CBUS3 to U31 NTS0102 A side; R113 1k to FTDI_3V3 is the only resistor to a rail
+i2c-pull-up-split-rail:(net:/USB Debug%2C PD/PDC_I2C2_SCL)	pass		only R105 4k7 reaches a rail, +3V3
+i2c-pull-up-split-rail:(net:/USB Debug%2C PD/PDC_I2C2_SDA)	pass		only R107 4k7 reaches a rail, +3V3
 i2c-pull-up:(net:/CSI/I2C_MUX_SCL)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
 i2c-pull-up:(net:/CSI/I2C_MUX_SDA)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
 i2c-pull-up:(net:/CSI/I2C_{CAM}.SCL)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
@@ -112,10 +259,30 @@ i2c-pull-up:(net:/CSI/MUX_I2C_6_SCL)	none		an unused I2C port that reaches only 
 i2c-pull-up:(net:/CSI/MUX_I2C_6_SDA)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
 i2c-pull-up:(net:/CSI/MUX_I2C_7_SCL)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
 i2c-pull-up:(net:/CSI/MUX_I2C_7_SDA)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-pull-up:(net:/CSI/SCL_CAM0)	pass		U43 mux channel; R390 2k2 to CSIA_I2C_VCC, which R158 0R ties to +3V3 (R161 0R to +1V8 is DNP); R184 0R only runs to camera FFC J11
+i2c-pull-up:(net:/CSI/SCL_CAM1)	pass		U43 mux channel; R389 2k2 to CSIA_I2C_VCC, which R158 0R ties to +3V3 (R161 0R to +1V8 is DNP); R400 0R only runs to camera FFC J11
+i2c-pull-up:(net:/CSI/SCL_CAM2)	pass		U43 mux channel; R392 2k2 to CSIB_I2C_VCC, which R169 0R ties to +3V3 (R170 0R to +1V8 is DNP); R396 0R only runs to camera FFC J10
+i2c-pull-up:(net:/CSI/SCL_CAM3)	pass		U43 mux channel; R394 2k2 to CSIB_I2C_VCC, which R169 0R ties to +3V3 (R170 0R to +1V8 is DNP); R398 0R only runs to camera FFC J10
+i2c-pull-up:(net:/CSI/SDA_CAM0)	pass		U43 mux channel; R391 2k2 to CSIA_I2C_VCC, which R158 0R ties to +3V3 (R161 0R to +1V8 is DNP); R181 0R only runs to camera FFC J11
+i2c-pull-up:(net:/CSI/SDA_CAM1)	pass		U43 mux channel; R164 2k2 to CSIA_I2C_VCC, which R158 0R ties to +3V3 (R161 0R to +1V8 is DNP); R399 0R only runs to camera FFC J11
+i2c-pull-up:(net:/CSI/SDA_CAM2)	pass		U43 mux channel; R171 2k2 to CSIB_I2C_VCC, which R169 0R ties to +3V3 (R170 0R to +1V8 is DNP); R395 0R only runs to camera FFC J10
+i2c-pull-up:(net:/CSI/SDA_CAM3)	pass		U43 mux channel; R393 2k2 to CSIB_I2C_VCC, which R169 0R ties to +3V3 (R170 0R to +1V8 is DNP); R397 0R only runs to camera FFC J10
+i2c-pull-up:(net:/Expansion connector/I2C0.SCL)	pass		R374 2k2 to +3V3 directly; bus joins U1 NTS0104 B1 (B side, VCCB +3V3), U2 AT24CS01 and FMC J18
+i2c-pull-up:(net:/Expansion connector/I2C0.SDA)	pass		R373 2k2 to +3V3 directly; bus joins U1 NTS0104 B2 (B side, VCCB +3V3), U2 AT24CS01 and FMC J18
 i2c-pull-up:(net:/Expansion connector/I2C7.SCL)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
 i2c-pull-up:(net:/Expansion connector/I2C7.SDA)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
 i2c-pull-up:(net:/Expansion connector/I2C8.SCL)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
 i2c-pull-up:(net:/Expansion connector/I2C8.SDA)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
+i2c-pull-up:(net:/I2C_{SYS}.SCL)	pass		R377 2k2 to +3V3 directly, and R111 0R to DEBUG_SCL then R103 4k7 to +3V3; links R100 R122 R282 R71 are DNP
+i2c-pull-up:(net:/I2C_{SYS}.SDA)	pass		R376 2k2 to +3V3 directly, and R112 0R to DEBUG_SDA then R104 4k7 to +3V3; links R121 R281 R387 R388 R40 are DNP
+i2c-pull-up:(net:/Peripherals/I2C_{CONN}.SCL)	pass		R375 2k2 to +3V3 directly; U80 NTS0104 B3 side and JST ports J16 J17 with TPD4E05 clamps
+i2c-pull-up:(net:/Peripherals/I2C_{CONN}.SDA)	pass		R361 2k2 to +3V3 directly; U80 NTS0104 B4 side and JST ports J16 J17 with TPD4E05 clamps
+i2c-pull-up:(net:/Recovery USB/USBC2_I2C_SCL)	pass		R280 200k to +3V3 holds U56 HD3SS3220 SCL/OUT2; R282 0R to I2C_SYS is DNP so the pin is a standalone open-drain output; value range is a separate rule
+i2c-pull-up:(net:/Recovery USB/USBC2_I2C_SDA)	pass		R279 200k to +3V3 holds U56 HD3SS3220 SDA/OUT1; R281 0R to I2C_SYS is DNP so the pin is a standalone open-drain output; value range is a separate rule
+i2c-pull-up:(net:/SFP/I2C_{SFP}.SCL)	pass		R360 2k2 to +3V3 directly on the U1 NTS0104 B side; R186 0R runs on to SFP cage J12
+i2c-pull-up:(net:/SFP/I2C_{SFP}.SDA)	pass		R362 2k2 to +3V3 directly on the U1 NTS0104 B side; R185 0R runs on to SFP cage J12
+i2c-pull-up:(net:/SFP/SCL_SFP)	pass		SFP cage J12 SCL pin, U73 clamp; R186 0R to I2C_SFP.SCL then R360 2k2 to +3V3, two crossings
+i2c-pull-up:(net:/SFP/SDA_SFP)	pass		SFP cage J12 SDA pin, U73 clamp; R185 0R to I2C_SFP.SDA then R362 2k2 to +3V3, two crossings
 i2c-pull-up:(net:/SoM_IO/I2C0_SCL_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
 i2c-pull-up:(net:/SoM_IO/I2C0_SDA_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
 i2c-pull-up:(net:/SoM_IO/I2C1_SCL_1V8)	not-considered		the bus reaches the Jetson module across J1, which may carry its pull-up; the baseboard alone cannot say
@@ -126,14 +293,47 @@ i2c-pull-up:(net:/SoM_IO/I2C3_SCL_1V8)	pass		its 2k2 pull-up is DNP, and the NTS
 i2c-pull-up:(net:/SoM_IO/I2C3_SDA_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
 i2c-pull-up:(net:/SoM_IO/I2C5_SCL_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
 i2c-pull-up:(net:/SoM_IO/I2C5_SDA_1V8)	pass		its 2k2 pull-up is DNP, and the NTS0104 translator on the net carries integrated 10k pull-ups
+i2c-pull-up:(net:/USB Debug%2C PD/DEBUG_SCL)	pass		R103 4k7 to +3V3 directly on U30 TPS65988 I2C1_SCL and U31 NTS0102 B; R111 0R also reaches R377 2k2 to +3V3
+i2c-pull-up:(net:/USB Debug%2C PD/DEBUG_SDA)	pass		R104 4k7 to +3V3 directly on U30 TPS65988 I2C1_SDA and U31 NTS0102 B; R112 0R also reaches R376 2k2 to +3V3
 i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS0{slash}SDA)	pass		R113 or R114, 1k, pulls it to FTDI_3V3, which the NTS0102 spec's supply pins mark as a rail
 i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS3{slash}SCL)	pass		R113 or R114, 1k, pulls it to FTDI_3V3, which the NTS0102 spec's supply pins mark as a rail
+i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C2_SCL)	pass		R105 4k7 to +3V3 directly on U30 TPS65988 I2C2_SCL, with test point
+i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C2_SDA)	pass		R107 4k7 to +3V3 directly on U30 TPS65988 I2C2_SDA, with test point
 i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C3_SCL)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
 i2c-pull-up:(net:/USB Debug%2C PD/PDC_I2C3_SDA)	none		an unused I2C port that reaches only test points, so nothing on it needs a pull-up
+i2c-redundant-pull-up:(net:/CSI/SCL_CAM0)	pass		R390 2k2 is the only pull-up on the board side; R184 0R to J11 is series, not a pull-up
+i2c-redundant-pull-up:(net:/CSI/SCL_CAM1)	pass		R389 2k2 is the only pull-up on the board side; R400 0R to J11 is series, not a pull-up
+i2c-redundant-pull-up:(net:/CSI/SCL_CAM2)	pass		R392 2k2 is the only pull-up on the board side; R396 0R to J10 is series, not a pull-up
+i2c-redundant-pull-up:(net:/CSI/SCL_CAM3)	pass		R394 2k2 is the only pull-up on the board side; R398 0R to J10 is series, not a pull-up
+i2c-redundant-pull-up:(net:/CSI/SDA_CAM0)	pass		R391 2k2 is the only pull-up on the board side; R181 0R to J11 is series, not a pull-up
+i2c-redundant-pull-up:(net:/CSI/SDA_CAM1)	pass		R164 2k2 is the only pull-up on the board side; R399 0R to J11 is series, not a pull-up
+i2c-redundant-pull-up:(net:/CSI/SDA_CAM2)	pass		R171 2k2 is the only pull-up on the board side; R395 0R to J10 is series, not a pull-up
+i2c-redundant-pull-up:(net:/CSI/SDA_CAM3)	pass		R393 2k2 is the only pull-up on the board side; R397 0R to J10 is series, not a pull-up
+i2c-redundant-pull-up:(net:/Expansion connector/I2C0.SCL)	pass		R374 2k2 is the only resistor pull-up; U1 NTS0104 internal 10k is part of the translator, not a second board pull-up
+i2c-redundant-pull-up:(net:/Expansion connector/I2C0.SDA)	pass		R373 2k2 is the only resistor pull-up; U1 NTS0104 internal 10k is part of the translator, not a second board pull-up
 i2c-redundant-pull-up:(net:/I2C_{SYS}.SCL)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
 i2c-redundant-pull-up:(net:/I2C_{SYS}.SDA)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
+i2c-redundant-pull-up:(net:/Peripherals/I2C_{CONN}.SCL)	pass		R375 2k2 is the single board pull-up; J16 J17 are cable ports, U67 U68 are clamps
+i2c-redundant-pull-up:(net:/Peripherals/I2C_{CONN}.SDA)	pass		R361 2k2 is the single board pull-up; J16 J17 are cable ports, U67 U68 are clamps
+i2c-redundant-pull-up:(net:/Recovery USB/USBC2_I2C_SCL)	pass		R280 200k is the only fitted resistor to a rail; R282 DNP cuts off the I2C_SYS pull-ups
+i2c-redundant-pull-up:(net:/Recovery USB/USBC2_I2C_SDA)	pass		R279 200k is the only fitted resistor to a rail; R281 DNP cuts off the I2C_SYS pull-ups
+i2c-redundant-pull-up:(net:/SFP/I2C_{SFP}.SCL)	pass		R360 2k2 is the one pull-up; R186 0R is a series link to SCL_SFP
+i2c-redundant-pull-up:(net:/SFP/I2C_{SFP}.SDA)	pass		R362 2k2 is the one pull-up; R185 0R is a series link to SDA_SFP
+i2c-redundant-pull-up:(net:/SFP/SCL_SFP)	pass		R360 2k2 via R186 0R is the one pull-up; the module pull-ups inside the SFP are not on this board
+i2c-redundant-pull-up:(net:/SFP/SDA_SFP)	pass		R362 2k2 via R185 0R is the one pull-up; the module pull-ups inside the SFP are not on this board
 i2c-redundant-pull-up:(net:/USB Debug%2C PD/DEBUG_SCL)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
 i2c-redundant-pull-up:(net:/USB Debug%2C PD/DEBUG_SDA)	fail		R377 2k2 and R103 4k7 (or R376 and R104) both pull the bus to +3V3, joined through a 0R
+i2c-redundant-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS0{slash}SDA)	pass		R114 1k to FTDI_3V3 is the single pull-up; U31 is a translator, so the B side pull-ups are on another net
+i2c-redundant-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS3{slash}SCL)	pass		R113 1k to FTDI_3V3 is the single pull-up; U31 is a translator, so the B side pull-ups are on another net
+i2c-redundant-pull-up:(net:/USB Debug%2C PD/PDC_I2C2_SCL)	pass		R105 4k7 is the one pull-up on U30 I2C2_SCL
+i2c-redundant-pull-up:(net:/USB Debug%2C PD/PDC_I2C2_SDA)	pass		R107 4k7 is the one pull-up on U30 I2C2_SDA
+input-protection:(net:+3V3)	none		+3V3 is driven by the board (5V/3V3 DC/DC through R258 shunt); J12 SFP28 VccT/VccR and J14 M.2 draw from it, so the connectors are outlets, not power entries
+input-protection:(net:/Recovery USB/USBC2_VBUS)	none		U23 AP22615A OUT sources J3 VBUS; nothing on the board draws from it (Q15 gate senses it), so it is a source port, not an entry (D50 PESD5Z5 clamps it anyway)
+input-protection:(net:/USB DP Alt mode/USBC1_VBUS)	pass	#1934	dual-role J9 port: U35 AP22615A sources it, U30 TPS65988 VBUS2 sinks PD power; D22 ESDA25P35 TVS sits on the net
+input-protection:(net:/USB Debug%2C PD/USBC0_VBUS)	pass	#1934	J7 VBUS from the host feeds U32 NCP718 VIN (FTDI 3V3) and U30 TPS65988 VBUS1; D23 ESDA25P35 TVS sits on the net
+input-protection:(net:/USB Hub/USBC3_VBUS)	none		U18 AP22615A OUT sources J6 VBUS; no on-board load, so it is a source port, not an entry (D45 PESD5Z5 clamps it anyway)
+input-protection:(net:/USB Hub/USBC4_VBUS)	none		U20 AP22615A OUT sources J5 VBUS; no on-board load, so it is a source port, not an entry (D48 PESD5Z5 clamps it anyway)
+input-protection:(net:VCC_IN)	pass		J2 Mini-Fit power entry feeds U65 SIC431 VIN, U6 LTC4412 IN and Q2/Q39; D2 PTVS26VS1UR TVS sits on VCC_IN (no fuse, a TVS satisfies the rule)
 led-polarity:(component:D10)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
 led-polarity:(component:D12)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
 led-polarity:(component:D14)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
@@ -168,7 +368,196 @@ led-polarity:(component:D52)	pass		C toward GND or a sink and A toward a rail, b
 led-polarity:(component:D6)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
 led-polarity:(component:D61)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
 led-polarity:(component:D63)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
+pin-exceeds-abs-max:(pin:U1.1)	pass		U1 NTS0104BQ VCC(A) on +1V8 (1.8 V) is under the VCC(A) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U1.14)	pass		U1 NTS0104BQ VCC(B) on +3V3 (3.3 V) is under the VCC(B) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U1.15)	none		U1.15 is the GND exposed pad pin of U1 NTS0104BQ on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-exceeds-abs-max:(pin:U1.7)	none		U1.7 is the GND pin of U1 NTS0104BQ on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-exceeds-abs-max:(pin:U31.2)	none		U31.2 is the GND pin of U31 NTS0102GT on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-exceeds-abs-max:(pin:U31.3)	pass		U31 NTS0102GT VCC(A) on /USB Debug, PD/FTDI_3V3 (3.3 V from U32 NCP718BSN330 LDO) is under the VCC(A) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U31.7)	pass		U31 NTS0102GT VCC(B) on /USB Debug, PD/FTDI_3V3 (3.3 V from U32 NCP718BSN330 LDO) is under the VCC(B) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U48.2)	none		U48.2 is the GND pin of U48 NTS0102GT on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-exceeds-abs-max:(pin:U48.3)	pass		U48 NTS0102GT VCC(A) on +1V8 (1.8 V) is under the VCC(A) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U48.7)	pass		U48 NTS0102GT VCC(B) on +3V3 (3.3 V) is under the VCC(B) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U49.2)	none		U49.2 is the GND pin of U49 NTS0102GT on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-exceeds-abs-max:(pin:U49.3)	pass		U49 NTS0102GT VCC(A) on +1V8 (1.8 V) is under the VCC(A) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U49.7)	pass		U49 NTS0102GT VCC(B) on +3V3 (3.3 V) is under the VCC(B) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U51.2)	none		U51.2 is the GND pin of U51 NTS0102GT on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-exceeds-abs-max:(pin:U51.3)	pass		U51 NTS0102GT VCC(A) on +1V8 (1.8 V) is under the VCC(A) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U51.7)	pass		U51 NTS0102GT VCC(B) on +5V (5.0 V) is under the VCC(B) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U80.1)	pass		U80 NTS0104BQ VCC(A) on +1V8 (1.8 V) is under the VCC(A) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U80.14)	pass		U80 NTS0104BQ VCC(B) on +3V3 (3.3 V) is under the VCC(B) abs max of 6.5 V
+pin-exceeds-abs-max:(pin:U80.15)	none		U80.15 is the GND exposed pad pin of U80 NTS0104BQ on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-exceeds-abs-max:(pin:U80.7)	none		U80.7 is the GND pin of U80 NTS0104BQ on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-out-of-recommended:(pin:U1.1)	pass		U1 NTS0104BQ VCC(A) on +1V8 (1.8 V) is inside the VCC(A) recommended range 1.65 to 3.6 V
+pin-out-of-recommended:(pin:U1.14)	pass		U1 NTS0104BQ VCC(B) on +3V3 (3.3 V) is inside the VCC(B) recommended range 2.3 to 5.5 V
+pin-out-of-recommended:(pin:U1.15)	none		U1.15 is the GND exposed pad pin of U1 NTS0104BQ on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-out-of-recommended:(pin:U1.7)	none		U1.7 is the GND pin of U1 NTS0104BQ on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-out-of-recommended:(pin:U31.2)	none		U31.2 is the GND pin of U31 NTS0102GT on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-out-of-recommended:(pin:U31.3)	pass		U31 NTS0102GT VCC(A) on /USB Debug, PD/FTDI_3V3 (3.3 V from U32 NCP718BSN330 LDO) is inside the VCC(A) recommended range 1.65 to 3.6 V
+pin-out-of-recommended:(pin:U31.7)	pass		U31 NTS0102GT VCC(B) on /USB Debug, PD/FTDI_3V3 (3.3 V from U32 NCP718BSN330 LDO) is inside the VCC(B) recommended range 2.3 to 5.5 V
+pin-out-of-recommended:(pin:U48.2)	none		U48.2 is the GND pin of U48 NTS0102GT on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-out-of-recommended:(pin:U48.3)	pass		U48 NTS0102GT VCC(A) on +1V8 (1.8 V) is inside the VCC(A) recommended range 1.65 to 3.6 V
+pin-out-of-recommended:(pin:U48.7)	pass		U48 NTS0102GT VCC(B) on +3V3 (3.3 V) is inside the VCC(B) recommended range 2.3 to 5.5 V
+pin-out-of-recommended:(pin:U49.2)	none		U49.2 is the GND pin of U49 NTS0102GT on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-out-of-recommended:(pin:U49.3)	pass		U49 NTS0102GT VCC(A) on +1V8 (1.8 V) is inside the VCC(A) recommended range 1.65 to 3.6 V
+pin-out-of-recommended:(pin:U49.7)	pass		U49 NTS0102GT VCC(B) on +3V3 (3.3 V) is inside the VCC(B) recommended range 2.3 to 5.5 V
+pin-out-of-recommended:(pin:U51.2)	none		U51.2 is the GND pin of U51 NTS0102GT on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-out-of-recommended:(pin:U51.3)	pass		U51 NTS0102GT VCC(A) on +1V8 (1.8 V) is inside the VCC(A) recommended range 1.65 to 3.6 V
+pin-out-of-recommended:(pin:U51.7)	pass		U51 NTS0102GT VCC(B) on +5V (5.0 V) is inside the VCC(B) recommended range 2.3 to 5.5 V
+pin-out-of-recommended:(pin:U80.1)	pass		U80 NTS0104BQ VCC(A) on +1V8 (1.8 V) is inside the VCC(A) recommended range 1.65 to 3.6 V
+pin-out-of-recommended:(pin:U80.14)	pass		U80 NTS0104BQ VCC(B) on +3V3 (3.3 V) is inside the VCC(B) recommended range 2.3 to 5.5 V
+pin-out-of-recommended:(pin:U80.15)	none		U80.15 is the GND exposed pad pin of U80 NTS0104BQ on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-out-of-recommended:(pin:U80.7)	none		U80.7 is the GND pin of U80 NTS0104BQ on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+power-input-not-driven:(net:+12V)	pass		fed from U8 SIC431 12V_OUT through R22 0R, with a PWR_FLAG on the net
+power-input-not-driven:(net:+1V15)	pass		fed from DCDC 1V15_OUT through R7 0R, with a PWR_FLAG on the net
+power-input-not-driven:(net:+1V8)	pass		fed from DCDC 1V8_OUT through R10 0R, with a PWR_FLAG on the net
+power-input-not-driven:(net:+20V)	pass		fed from DCDC 20V_OUT through R284 0R001 and from the PD ideal diodes Q24/Q25, with a PWR_FLAG on the net
+power-input-not-driven:(net:+3V3)	pass		fed from DCDC 3V3_OUT through R258 0R001, with a PWR_FLAG on the net
+power-input-not-driven:(net:+3V3_AON)	pass		fed from /Power/3V3_LDO through R63 0R, with a PWR_FLAG on the net
+power-input-not-driven:(net:+5V)	pass		fed from DCDC 5V_OUT through R77 0R001, with a PWR_FLAG on the net
+power-input-not-driven:(net:+5V_AON)	pass		fed from DCDC 5V_AON_OUT through R366 0R001, with a PWR_FLAG on the net
+power-input-not-driven:(net:+5V_SOM)	pass		fed from +5V_AON through Q9 SISS05DN and R76 0R, with a PWR_FLAG on the net
+power-input-not-driven:(net:/Expansion connector/+3V3_AUX)	pass		R320 0R from +3V3 is DNP, so U2 AT24CS01 VCC is fed only through internal J18 D32 (3P3VAUX) from the mated accessory; a PWR_FLAG asserts that feed, and I cannot confirm the accessory supplies it
+power-input-not-driven:(net:/Power/USBPD1_HV)	not-considered		U30 TPS65988 PP_HV2 feeds the net through a bidirectional pin; its only power_in pin is U61 LTC4412 IN, and U61 is DNP, so no fitted supply pin is fed
+power-input-not-driven:(net:/Power/USBPD2_HV)	not-considered		U30 TPS65988 PP_HV1 feeds the net through a bidirectional pin; its only power_in pin is U62 LTC4412 IN, and U62 is DNP, so no fitted supply pin is fed
+power-input-not-driven:(net:/Recovery USB/USBC2_VBUS)	pass		U23 AP22615A OUT (power_out) drives it
+power-input-not-driven:(net:/SoM_IO2/TC_VCC)	none		U59 TXU0304 (the only power_in), J20, R341 and R342 are all DNP; nothing on the net is fitted
+power-input-not-driven:(net:/USB DP Alt mode/USBC1_VBUS)	pass		U35 AP22615A OUT (power_out) drives it
+power-input-not-driven:(net:/USB Debug%2C PD/FTDI_3V3)	pass		fed by U32 NCP718 VOUT from USBC0 VBUS, with a PWR_FLAG on the net
+power-input-not-driven:(net:/USB Debug%2C PD/USBC0_VBUS)	pass		U40 AP22615A OUT (power_out) drives it, and the host's VBUS arrives on J7
+power-input-not-driven:(net:/USB Hub/USBC3_VBUS)	pass		U18 AP22615A OUT (power_out) drives it
+power-input-not-driven:(net:/USB Hub/USBC4_VBUS)	pass		U20 AP22615A OUT (power_out) drives it
+power-input-not-driven:(net:FLASH_PWR)	pass		fed from +3V3 through D15 and from PDC_LDO_3V3 through D17 (RB521S30 ORing), with a PWR_FLAG on the net
+power-input-not-driven:(net:GND)	pass		ground reference, with a PWR_FLAG on GND
+power-input-not-driven:(net:Net-%28D1-C%29)	pass		J1 PMIC_BBATT fed from +3V3_AON through D1 RB521S30 and R6 2k2, with a PWR_FLAG on the net
+power-input-not-driven:(net:SYS_VIN_HV)	pass		fed from DCDC 16V_OUT through R65 0R001 to the module J1 SYS_VIN_HV pins, with a PWR_FLAG on the net
+power-input-not-driven:(net:VCC)	pass		fed from VCC_IN through Q2/Q39 ideal diode under U6 LTC4412, with a PWR_FLAG on the net
+power-input-not-driven:(net:VCC_IN)	pass		fed by the J2 Mini-Fit power entry, with a PWR_FLAG on the net
+power-input-not-driven:(net:unconnected-%28U29-PadEP%29)	none		U29 W25Q80DV exposed pad, alone and marked no-connect; it draws no supply
+power-input-not-driven:(net:unconnected-%28U43-EP-Pad25%29)	none		U43 PI4MSD5V9548A exposed pad, alone and marked no-connect; it draws no supply
+power-input-not-driven:(net:unconnected-%28U71-EP-Pad17%29)	none		U71 PCAL6408A exposed pad, alone and marked no-connect; it draws no supply
+rail-not-classified:(net:+12V)	not-considered		fed from /DCDC/12V_OUT through R22 0R, carries D13/D64 ESD clamps, R372 1k and TP98, R247 DNP to +12V_FMC; real 12 V rail named in the + form, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:+1V15)	pass		buck output after R7, feeds U21 supply pins typed power_in; real 1.15 V rail named in the + form
+rail-not-classified:(net:+1V8)	pass		buck output after R10, feeds U1, U43, U48, U49, U5, U51 supply pins typed power_in; real 1.8 V rail named in the + form
+rail-not-classified:(net:+20V)	pass		input rail through R284 0R001 sense, Q24/Q25 drains, feeds U63/U64 LTC4412 IN (power_in), D56 clamp; real 20 V rail named in the + form
+rail-not-classified:(net:+3V3)	pass		main 3.3 V rail with 30 power_in pins (U1, U14, U21, J12, J14 among them); named in the + form
+rail-not-classified:(net:+3V3_AON)	pass		always-on 3.3 V rail feeding J1.L53, U22, U50, U54, U60, U66 supply pins typed power_in; named in the + form
+rail-not-classified:(net:+5V)	pass		5 V rail feeding U18, U20, U23, U30, U35 supply pins typed power_in; named in the + form
+rail-not-classified:(net:+5V_AON)	pass		always-on 5 V rail through R366 sense and Q9, feeds U70 MAX16150 VCC (power_in) and U15 NCP718 VIN, 22u C62; named in the + form
+rail-not-classified:(net:+5V_SOM)	pass		module input rail to J1 SYS_VIN_MV pins (L22 typed power_in), 10u and 22u bulk caps; named in the + form
+rail-not-classified:(net:/CSI/CSIA_3V3)	not-considered		U45 AP22615 load-switch output to the camera FFC J11 supply pins with a 1u cap; a real camera rail; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/CSI/CSIA_3V3_ISET)	none		U45 ISET pin to a 4k7 current-limit resistor; a programming node, not a rail
+rail-not-classified:(net:/CSI/CSIA_5V)	not-considered		U44 AP22615 load-switch output to the camera FFC J11 supply pins with a 1u cap; a real camera rail; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/CSI/CSIA_5V_ISET)	none		U44 ISET pin to a 4k7 current-limit resistor; a programming node, not a rail
+rail-not-classified:(net:/CSI/CSIB_3V3)	not-considered		U47 AP22615 load-switch output to the camera FFC J10 supply pins with a 1u cap; a real camera rail; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/CSI/CSIB_3V3_ISET)	none		U47 ISET pin to a 4k7 current-limit resistor; a programming node, not a rail
+rail-not-classified:(net:/CSI/CSIB_5V)	not-considered		U46 AP22615 load-switch output to the camera FFC J10 supply pins with a 1u cap; a real camera rail; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/CSI/CSIB_5V_ISET)	none		U46 ISET pin to a 4k7 current-limit resistor; a programming node, not a rail
+rail-not-classified:(net:/CSI/VSYNC_CAM0_3V3)	none		camera VSYNC signal named for its 3.3 V logic level, two nodes and no supply pin; not a rail
+rail-not-classified:(net:/CSI/VSYNC_CAM1_3V3)	none		camera VSYNC signal named for its 3.3 V logic level, two nodes and no supply pin; not a rail
+rail-not-classified:(net:/CSI/VSYNC_CAM2_3V3)	none		camera VSYNC signal named for its 3.3 V logic level, two nodes and no supply pin; not a rail
+rail-not-classified:(net:/CSI/VSYNC_CAM3_3V3)	none		camera VSYNC signal named for its 3.3 V logic level, two nodes and no supply pin; not a rail
+rail-not-classified:(net:/DCDC/12V_BOOT)	none		U8 SiC431 bootstrap node between BOOT and C to PHASE; the 12V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/12V_FB)	none		U8 SiC431 feedback divider tap on the FB pin; the 12V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/12V_MODE1)	none		U8 SiC431 MODE1 strap input with resistors; the 12V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/12V_MODE2)	none		U8 SiC431 MODE2 strap input with a resistor; the 12V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/12V_OUT)	not-considered		U8 SiC431 buck output at V_OUT, 4x 22u and L6, then R22 0R to +12V; a real 12V rail named with a leading voltage token, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/DCDC/12V_PHASE)	none		U8 SiC431 PHASE pin to the bootstrap cap; the 12V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/12V_SW)	none		U8 SiC431 switch node between the SW pins and the inductor; the 12V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/12V_VDD)	none		U8 SiC431 internal bias pin V_DD with a 1u cap only; the 12V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/12V_VDRV)	none		U8 SiC431 gate-drive supply pin V_DRV with a 4u7 cap only; the 12V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/16V_BOOT)	none		U11 SiC431 bootstrap node between BOOT and C to PHASE; the 16V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/16V_FB)	none		U11 SiC431 feedback divider tap on the FB pin; the 16V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/16V_MODE1)	none		U11 SiC431 MODE1 strap input with resistors; the 16V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/16V_MODE2)	none		U11 SiC431 MODE2 strap input with a resistor; the 16V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/16V_OUT)	not-considered		U11 SiC431 buck output at V_OUT, 15x 22u, L3, R65 0R001 sense; a real 16V rail named with a leading voltage token, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/DCDC/16V_PHASE)	none		U11 SiC431 PHASE pin to the bootstrap cap; the 16V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/16V_SW)	none		U11 SiC431 switch node between the SW pins and the inductor; the 16V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/16V_VDD)	none		U11 SiC431 internal bias pin V_DD with a 1u cap only; the 16V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/16V_VDRV)	none		U11 SiC431 gate-drive supply pin V_DRV with a 4u7 cap only; the 16V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/1V15_FB)	none		U69 TPS564247 feedback divider tap; not a rail
+rail-not-classified:(net:/DCDC/1V15_OUT)	not-considered		U69 TPS564247 buck output after L5, 2x 22u, R7 0R to +1V15; a real 1V15 rail named with a leading voltage token, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/DCDC/1V15_SW)	none		U69 switch node to the inductor; not a rail
+rail-not-classified:(net:/DCDC/1V8_FB)	none		U7 TPS564247 feedback divider tap; not a rail
+rail-not-classified:(net:/DCDC/1V8_OUT)	not-considered		U7 TPS564247 buck output after L7, 2x 22u, R10 0R to +1V8; a real 1V8 rail named with a leading voltage token, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/DCDC/1V8_SW)	none		U7 switch node to the inductor; not a rail
+rail-not-classified:(net:/DCDC/20V_BOOT)	none		U65 SiC431 bootstrap node between BOOT and C to PHASE; the 20V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/20V_EN)	none		U65 SiC431 enable input on EN with a divider; the 20V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/20V_FB)	none		U65 SiC431 feedback divider tap on the FB pin; the 20V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/20V_MODE1)	none		U65 SiC431 MODE1 strap input with resistors; the 20V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/20V_MODE2)	none		U65 SiC431 MODE2 strap input with a resistor; the 20V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/20V_OUT)	not-considered		U65 SiC431 buck output at V_OUT, L and 22u bank, sense resistor toward +20V; a real 20V rail named with a leading voltage token, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/DCDC/20V_PHASE)	none		U65 SiC431 PHASE pin to the bootstrap cap; the 20V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/20V_SW)	none		U65 SiC431 switch node between the SW pins and the inductor; the 20V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/20V_VDD)	none		U65 SiC431 internal bias pin V_DD with a 1u cap only; the 20V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/20V_VDRV)	none		U65 SiC431 gate-drive supply pin V_DRV with a 4u7 cap only; the 20V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/3V3_BOOT)	none		U13 SiC431 bootstrap node between BOOT and C to PHASE; the 3V3 in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/3V3_FB)	none		U13 SiC431 feedback divider tap on the FB pin; the 3V3 in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/3V3_MODE1)	none		U13 SiC431 MODE1 strap input with resistors; the 3V3 in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/3V3_MODE2)	none		U13 SiC431 MODE2 strap input with a resistor; the 3V3 in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/3V3_OUT)	not-considered		U13 SiC431 buck output at V_OUT, L and 22u bank, sense resistor toward +3V3; a real 3V3 rail named with a leading voltage token, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/DCDC/3V3_PHASE)	none		U13 SiC431 PHASE pin to the bootstrap cap; the 3V3 in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/3V3_SW)	none		U13 SiC431 switch node between the SW pins and the inductor; the 3V3 in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/3V3_VDD)	none		U13 SiC431 internal bias pin V_DD with a 1u cap only; the 3V3 in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/3V3_VDRV)	none		U13 SiC431 gate-drive supply pin V_DRV with a 4u7 cap only; the 3V3 in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_BOOT)	none		U12 SiC431 bootstrap node between BOOT and C to PHASE; the 5V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_FB)	none		U12 SiC431 feedback divider tap on the FB pin; the 5V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_MODE1)	none		U12 SiC431 MODE1 strap input with resistors; the 5V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_MODE2)	none		U12 SiC431 MODE2 strap input with a resistor; the 5V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_OUT)	not-considered		U12 SiC431 buck output at V_OUT, 4x 22u, L1, R77 0R001 sense; a real 5V rail named with a leading voltage token, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/DCDC/5V_PHASE)	none		U12 SiC431 PHASE pin to the bootstrap cap; the 5V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_SW)	none		U12 SiC431 switch node between the SW pins and the inductor; the 5V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_VDD)	none		U12 SiC431 internal bias pin V_DD with a 1u cap only; the 5V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_VDRV)	none		U12 SiC431 gate-drive supply pin V_DRV with a 4u7 cap only; the 5V in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_{AON}_BOOT)	none		U75 SiC431 bootstrap node between BOOT and C to PHASE; the 5V AON in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_{AON}_EN)	none		U75 SiC431 enable input on EN with a divider; the 5V AON in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_{AON}_FB)	none		U75 SiC431 feedback divider tap on the FB pin; the 5V AON in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_{AON}_MODE1)	none		U75 SiC431 MODE1 strap input with resistors; the 5V AON in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_{AON}_MODE2)	none		U75 SiC431 MODE2 strap input with a resistor; the 5V AON in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_{AON}_OUT)	not-considered		U75 SiC431 buck output at V_OUT, L and 22u bank, sense resistor toward +5V_AON; a real 5V AON rail named with a leading voltage token, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/DCDC/5V_{AON}_PHASE)	none		U75 SiC431 PHASE pin to the bootstrap cap; the 5V AON in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_{AON}_SW)	none		U75 SiC431 switch node between the SW pins and the inductor; the 5V AON in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_{AON}_VDD)	none		U75 SiC431 internal bias pin V_DD with a 1u cap only; the 5V AON in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/DCDC/5V_{AON}_VDRV)	none		U75 SiC431 gate-drive supply pin V_DRV with a 4u7 cap only; the 5V AON in the name says which converter, not the node voltage, so it is not a rail
+rail-not-classified:(net:/Expansion connector/+12V_FMC)	not-considered		12 V supply pins of the FMC+ connector J18 with 22u C227, fed from +12V only through R247 which is DNP; a rail by design, named in the + form; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/Expansion connector/+3V3_AUX)	pass		FMC 3P3VAUX pin J18.D32 feeding U2 AT24CS01 VCC (power_in), R320 DNP; a real rail named in the + form
+rail-not-classified:(net:/Expansion connector/+3V3_FMC)	not-considered		3.3 V pins of J18 and J8 with 22u C229, R249 DNP; a rail by design, named in the + form; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/Expansion connector/+5V_FMC)	not-considered		J8 pin 2 with 22u C230, R250 DNP; a rail by design, named in the + form; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/M.2/3V3_M2)	not-considered		3.3 V supply pins of the M.2 socket J13 with 4x 22u, fed through R213 0R; a real rail named with a leading voltage token, connector pins typed passive; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/Peripherals/FAN_PWM_5V)	none		fan PWM signal from U51 NTS0102 B1 to J15 pin 4 with U16 ESD; named for its 5 V logic level, not a rail
+rail-not-classified:(net:/Peripherals/FAN_TACH_5V)	none		fan tach signal from J15 pin 3 to U51 NTS0102 B2 with U16 ESD; named for its 5 V logic level, not a rail
+rail-not-classified:(net:/Peripherals/I2C_CONN1_3V3)	not-considered		U53 AP22615 load-switch output to pin 2 of the JST-SH I2C port J16, TP93; a real 3.3 V port supply named function-first that no lexicon pattern covers, but the only load is a connector pin typed passive, so no power_in pin gives the second channel
+rail-not-classified:(net:/Peripherals/I2C_CONN2_3V3)	not-considered		U55 AP22615 load-switch output to pin 2 of the JST-SH I2C port J17, TP94; a real 3.3 V port supply named function-first that no lexicon pattern covers, but the only load is a connector pin typed passive, so no power_in pin gives the second channel
+rail-not-classified:(net:/Power/3V3_LDO)	not-considered		U15 NCP718 3.3 V LDO output with 10u C75, through R63 0R onward; a real rail named with a leading voltage token, no pin on it typed power_in; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/SoM_IO/GPIO_EXP_IRQ_1V8)	none		module-side GPIO_EXP_IRQ signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C0_SCL_1V8)	none		module-side I2C0_SCL signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C0_SDA_1V8)	none		module-side I2C0_SDA signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C1_SCL_1V8)	none		module-side I2C1_SCL signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C1_SDA_1V8)	none		module-side I2C1_SDA signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C2_SCL_1V8)	none		module-side I2C2_SCL signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C2_SDA_1V8)	none		module-side I2C2_SDA signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C3_SCL_1V8)	none		module-side I2C3_SCL signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C3_SDA_1V8)	none		module-side I2C3_SDA signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C5_SCL_1V8)	none		module-side I2C5_SCL signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/I2C5_SDA_1V8)	none		module-side I2C5_SDA signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/M2_E_W_DIS_1_1V8)	none		module-side M2_E_W_DIS_1 signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/M2_E_W_DIS_2_1V8)	none		module-side M2_E_W_DIS_2 signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/SFP_LEDG_1V8)	none		module-side SFP_LEDG signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/SFP_LEDY_1V8)	none		module-side SFP_LEDY signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/UART3_DEBUG_RX_1V8)	none		module-side UART3_DEBUG_RX signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/UART3_DEBUG_TX_1V8)	none		module-side UART3_DEBUG_TX signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/USBC1_FLG_1V8)	none		module-side USBC1_FLG signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/USBC2_ID_1V8)	none		module-side USBC2_ID signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/USBC2_PEN_1V8)	none		module-side USBC2_PEN signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/USBC2_VBUS_DET_1V8)	none		module-side USBC2_VBUS_DET signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/~{PDC_I2C1_IRQ}_1V8)	none		module-side ~{PDC_I2C1_IRQ} signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/SoM_IO/~{USBC2_INT}_1V8)	none		module-side ~{USBC2_INT} signal on the 1.8 V side of a level shifter, named for its logic level, no supply pin; not a rail
+rail-not-classified:(net:/USB DP Alt mode/USBC1_5V_PEN)	none		U30 TPS65988 PP_EXT2 power-path enable output through R143 0R; a control signal, not a rail
 rail-not-classified:(net:/USB Debug%2C PD/FTDI_3V3)	pass		FTDI_3V3 feeds U31 and U34 supply pins and carries the regulator's output; with the project's NTS0102 spec agni stamps it a 3.3 V rail
+rail-not-classified:(net:/USB Debug%2C PD/PDC_LDO_1V8)	not-considered		U30 TPS65988 LDO_1V8 output (power_out) with 10u C120; a real rail; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/USB Debug%2C PD/PDC_LDO_3V3)	not-considered		U30 TPS65988 LDO_3V3 output with 10u C121, D17 and pull-ups R95/R96; a real rail named a rail by the project lexicon pattern ^(PDC_LDO|FTDI)_; no pin on the net is typed power_in, so nothing confirms the rail and the rule declines
+rail-not-classified:(net:/USB Debug%2C PD/USBC0_5V_PEN)	none		U30 TPS65988 PP_EXT1 power-path enable output through R151 0R; a control signal, not a rail
+reverse-blocking-absent:(net:+3V3)	none		+3V3 is driven by the board's DC/DC through R258; J12 SFP28 and J14 M.2 draw from it, so they are outlets, not a way power arrives
 reverse-blocking-absent:(net:VCC_IN)	fail		U6 LTC4412 and P-FET Q2 block reverse current into VCC, but U65 (SIC431) takes VIN straight off VCC_IN beside them, so J2 reaches a power input through no blocking element
 single-pin-net:(net:unconnected-%28J18-PadB24%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
 single-pin-net:(net:unconnected-%28J18-PadB25%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
