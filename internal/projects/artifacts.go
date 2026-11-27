@@ -33,6 +33,11 @@ func classifyArtifact(id string, files []string, read func(string) ([]byte, erro
 		role.typ = webapi.ArtifactType_ARTIFACT_TYPE_SYMBOLS
 		return role, nil
 	}
+	// A folder of PartSpec textprotos alone is the design's datasheet facts (agni issue 1922).
+	if len(files) > 0 && !slices.ContainsFunc(files, func(f string) bool { return !paramFile(f) }) {
+		role.typ = webapi.ArtifactType_ARTIFACT_TYPE_PARAMS
+		return role, nil
+	}
 	resp := service.ProposeFromFiles("", files, read)
 	switch len(resp.GetDesigns()) {
 	case 0:
@@ -136,6 +141,9 @@ func typeWord(t webapi.ArtifactType) string {
 
 // symbolFile reports whether f is a symbol file a schematic reads its parts from: gEDA, Lepton or
 // xschem `.sym`, or KiCad `.kicad_sym`.
+// paramFile reports whether f is a PartSpec textproto, the file a params folder holds.
+func paramFile(f string) bool { return strings.EqualFold(path.Ext(f), ".textproto") }
+
 func symbolFile(f string) bool {
 	ext := strings.ToLower(path.Ext(f))
 	return ext == ".sym" || ext == ".kicad_sym"

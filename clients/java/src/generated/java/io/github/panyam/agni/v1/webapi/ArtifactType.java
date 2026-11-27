@@ -62,6 +62,16 @@ public enum ArtifactType
    * <code>ARTIFACT_TYPE_SYMBOLS = 5;</code>
    */
   ARTIFACT_TYPE_SYMBOLS(5),
+  /**
+   * <pre>
+   * ARTIFACT_TYPE_PARAMS is a folder of PartSpec `.textproto` files, the datasheet facts the
+   * design's rules read (agni issue 1922). The view's design.yaml names it under `params:`, so a
+   * stored design checks with the same specs its folder does.
+   * </pre>
+   *
+   * <code>ARTIFACT_TYPE_PARAMS = 6;</code>
+   */
+  ARTIFACT_TYPE_PARAMS(6),
   UNRECOGNIZED(-1),
   ;
 
@@ -121,6 +131,16 @@ public enum ArtifactType
    * <code>ARTIFACT_TYPE_SYMBOLS = 5;</code>
    */
   public static final int ARTIFACT_TYPE_SYMBOLS_VALUE = 5;
+  /**
+   * <pre>
+   * ARTIFACT_TYPE_PARAMS is a folder of PartSpec `.textproto` files, the datasheet facts the
+   * design's rules read (agni issue 1922). The view's design.yaml names it under `params:`, so a
+   * stored design checks with the same specs its folder does.
+   * </pre>
+   *
+   * <code>ARTIFACT_TYPE_PARAMS = 6;</code>
+   */
+  public static final int ARTIFACT_TYPE_PARAMS_VALUE = 6;
 
 
   public final int getNumber() {
@@ -153,6 +173,7 @@ public enum ArtifactType
       case 3: return ARTIFACT_TYPE_BOARD;
       case 4: return ARTIFACT_TYPE_OTHER;
       case 5: return ARTIFACT_TYPE_SYMBOLS;
+      case 6: return ARTIFACT_TYPE_PARAMS;
       default: return null;
     }
   }

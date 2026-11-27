@@ -488,7 +488,8 @@ func (s *DesignService) SourcedFrom(ctx context.Context, mount, dir string) ([]s
 // planSymbols reads the proposal's design.yaml for the project it extends and the symbol folders
 // it names (agni issue 1756). Each symbol folder becomes an artifact of type ARTIFACT_TYPE_SYMBOLS,
 // named symbols, symbols-2 and so on, with its files copied by hash and its source in the mount, so
-// the design reads alone. A folder may sit outside the design's own folder, as a library a sibling
+// the design reads alone. Each params folder becomes one named params, params-2 and so on, which
+// classifies as ARTIFACT_TYPE_PARAMS (agni issue 1922). A folder may sit outside the design's own folder, as a library a sibling
 // design keeps does. With noCopy the folders are listed in add.uncopied instead. A proposal with no
 // design.yaml has neither.
 func (s *DesignService) planSymbols(ctx context.Context, mount string, p *webapi.ProposedDesign, add *addedDesign, noCopy bool) error {
@@ -503,6 +504,7 @@ func (s *DesignService) planSymbols(ctx context.Context, mount string, p *webapi
 	var d struct {
 		Extends string   `yaml:"extends"`
 		Symbols []string `yaml:"symbols"`
+		Params  []string `yaml:"params"`
 	}
 	if yaml.Unmarshal(raw, &d) != nil {
 		return nil
@@ -516,22 +518,33 @@ func (s *DesignService) planSymbols(ctx context.Context, mount string, p *webapi
 	for _, w := range add.writes {
 		taken[w.ID] = true
 	}
+	type tierRef struct{ word, kind, ref string }
+	var refs []tierRef
 	for _, ref := range d.Symbols {
+		refs = append(refs, tierRef{"symbols", "symbol", ref})
+	}
+	for _, ref := range d.Params {
+		refs = append(refs, tierRef{"params", "params", ref})
+	}
+	for _, tr := range refs {
+		ref := tr.ref
 		dir, err := descriptor.Resolve(ref)
 		if err != nil {
-			return fmt.Errorf("%w: %s names the symbol folder %q: %v", ErrInvalidArgument, descriptor, ref, err)
+			return fmt.Errorf("%w: %s names the %s folder %q: %v", ErrInvalidArgument, descriptor, tr.kind, ref, err)
 		}
-		if noCopy {
+		// no_symbol_copy leaves symbol folders out. A params folder is a few textprotos and is always
+		// copied, so a check by name reads the same specs.
+		if noCopy && tr.word == "symbols" {
 			add.uncopied = append(add.uncopied, dir.String())
 			continue
 		}
 		files, err := s.walk(ctx, dir)
 		if err != nil {
-			return fmt.Errorf("%s names the symbol folder %s: %w", descriptor, dir, err)
+			return fmt.Errorf("%s names the %s folder %s: %w", descriptor, tr.kind, dir, err)
 		}
-		id := "symbols"
+		id := tr.word
 		for i := 2; taken[id]; i++ {
-			id = fmt.Sprintf("symbols-%d", i)
+			id = fmt.Sprintf("%s-%d", tr.word, i)
 		}
 		taken[id] = true
 		w := ArtifactWrite{ID: id, AllowMissing: true, Source: &webapi.ArtifactSource{Mount: dir.Mount, Path: dir.Path}}

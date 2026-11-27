@@ -267,15 +267,23 @@ func (s *DirStore) designOf(id string, rec recordYAML) (*webapi.Design, error) {
 				return nil, err
 			}
 		}
-		for _, dir := range symbolDirs(rec) {
-			u, err := join(dir)
-			if err != nil {
-				return nil, err
+		for _, tier := range []struct {
+			typ  webapi.ArtifactType
+			uris func(*webapi.AnalysisConfig) *[]string
+		}{
+			{webapi.ArtifactType_ARTIFACT_TYPE_SYMBOLS, func(c *webapi.AnalysisConfig) *[]string { return &c.SymbolPathUris }},
+			{webapi.ArtifactType_ARTIFACT_TYPE_PARAMS, func(c *webapi.AnalysisConfig) *[]string { return &c.ParamUris }},
+		} {
+			for _, dir := range tierDirs(rec, tier.typ) {
+				u, err := join(dir)
+				if err != nil {
+					return nil, err
+				}
+				if d.Config == nil {
+					d.Config = &webapi.AnalysisConfig{}
+				}
+				*tier.uris(d.Config) = append(*tier.uris(d.Config), u)
 			}
-			if d.Config == nil {
-				d.Config = &webapi.AnalysisConfig{}
-			}
-			d.Config.SymbolPathUris = append(d.Config.SymbolPathUris, u)
 		}
 	}
 	d.Packs = rec.Packs
@@ -302,7 +310,7 @@ func describe(id string, rec recordYAML) (entry string, companions []string, raw
 	}
 	// The view's descriptor holds what reading the board needs. The series stays in the record alone,
 	// so moving a design to another series keeps its view.
-	y := descriptorYAML{Name: id, Title: rec.Title, Entry: entry, Companions: companions, FlattenHierarchy: rec.FlattenHierarchy, Intent: rec.Intent, Symbols: symbolDirs(rec)}
+	y := descriptorYAML{Name: id, Title: rec.Title, Entry: entry, Companions: companions, FlattenHierarchy: rec.FlattenHierarchy, Intent: rec.Intent, Symbols: tierDirs(rec, webapi.ArtifactType_ARTIFACT_TYPE_SYMBOLS), Params: tierDirs(rec, webapi.ArtifactType_ARTIFACT_TYPE_PARAMS)}
 	if raw, err = yaml.Marshal(&y); err != nil {
 		return "", nil, nil, err
 	}
@@ -874,13 +882,14 @@ func storedPath(p string) (string, error) {
 	return clean, nil
 }
 
-// symbolDirs names the design's symbol folders in its view, one per artifact of type
-// ARTIFACT_TYPE_SYMBOLS, each the artifact's own folder (agni issue 1756). The view's design.yaml
-// lists them under `symbols:`, so a read searches them for its parts.
-func symbolDirs(rec recordYAML) []string {
+// tierDirs names the design's folders of one tier type in its view, one per artifact of that type,
+// each the artifact's own folder. The view's design.yaml lists ARTIFACT_TYPE_SYMBOLS under
+// `symbols:`, so a read searches them for its parts (agni issue 1756), and ARTIFACT_TYPE_PARAMS
+// under `params:`, so a check reads their datasheet facts (agni issue 1922).
+func tierDirs(rec recordYAML, typ webapi.ArtifactType) []string {
 	var out []string
 	for _, a := range rec.Artifacts {
-		if a.Type == webapi.ArtifactType_ARTIFACT_TYPE_SYMBOLS.String() {
+		if a.Type == typ.String() {
 			out = append(out, a.ID)
 		}
 	}

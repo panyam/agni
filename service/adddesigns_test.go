@@ -74,6 +74,39 @@ func TestImportDesignFilesKeepsANamedSymbolFolder(t *testing.T) {
 	}
 }
 
+// A dropped folder whose design.yaml names a params folder keeps it as an artifact of type
+// ARTIFACT_TYPE_PARAMS, and the design's analysis config names it, so a stored design checks with the
+// datasheet facts its folder does (agni issue 1922). Glasgow's TPD3S014 spec was lost this way.
+func TestImportDesignFilesKeepsANamedParamsFolder(t *testing.T) {
+	ctx := context.Background()
+	svc, b, _ := designService(t)
+	if _, err := svc.CreateDesign(ctx, &webapi.CreateDesignRequest{DesignId: "gl"}); err != nil {
+		t.Fatal(err)
+	}
+	folder := map[string]string{
+		"design.yaml":               "entry: gl.kicad_sch\nparams: [params]\n",
+		"gl.kicad_sch":              "(kicad_sch)",
+		"params/tpd3s014.textproto": `mpn: "TPD3S014"`,
+	}
+	resp, err := svc.ImportDesignFiles(ctx, &webapi.ImportDesignFilesRequest{Parent: "designs/gl", Files: b.files(folder)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var specs *webapi.Artifact
+	for _, a := range resp.GetArtifacts() {
+		if a.GetName() == "designs/gl/artifacts/params" {
+			specs = a
+		}
+	}
+	if specs == nil || specs.GetType() != webapi.ArtifactType_ARTIFACT_TYPE_PARAMS || len(specs.GetFiles()) != 1 {
+		t.Fatalf("artifacts = %v; want a params artifact holding the one textproto", resp.GetArtifacts())
+	}
+	d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/gl"})
+	if err != nil || len(d.GetConfig().GetParamUris()) != 1 || !strings.HasSuffix(d.GetConfig().GetParamUris()[0], "/params") {
+		t.Errorf("designs/gl's params folders = %v, %v; want the params artifact's folder", d.GetConfig().GetParamUris(), err)
+	}
+}
+
 func TestADesignsPacksAreKeptAndChecked(t *testing.T) {
 	ctx := context.Background()
 	svc, _, _ := designService(t)

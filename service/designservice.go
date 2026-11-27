@@ -330,9 +330,9 @@ func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.Impor
 	if err := s.refuseLinked(ctx, req.GetParent(), plan.IDs); err != nil {
 		return nil, err
 	}
-	symbols := decl.symbols
+	tiers := append(append([]string{}, decl.symbols...), decl.params...)
 	inSymbols := func(f string) bool {
-		return slices.ContainsFunc(symbols, func(dir string) bool { return strings.HasPrefix(f, dir+"/") })
+		return slices.ContainsFunc(tiers, func(dir string) bool { return strings.HasPrefix(f, dir+"/") })
 	}
 	var writes []ArtifactWrite
 	for _, a := range plan.IDs {
@@ -347,20 +347,26 @@ func (s *DesignService) ImportDesignFiles(ctx context.Context, req *webapi.Impor
 		writes = append(writes, w)
 	}
 	// A symbol folder the design.yaml names is an artifact of its own, as AddDesigns keeps one (agni
-	// issue 1756), so a gEDA, Lepton or xschem design reads its parts' pins.
-	for i, dir := range symbols {
-		w := ArtifactWrite{ID: "symbols", AllowMissing: true}
-		if i > 0 {
-			w.ID = fmt.Sprintf("symbols-%d", i+1)
-		}
-		for _, p := range paths {
-			if rel, ok := strings.CutPrefix(p, dir+"/"); ok {
-				f := byPath[p]
-				w.Files = append(w.Files, &webapi.SnapshotFile{Path: rel, Sha256: f.GetSha256(), Size: f.GetSize()})
+	// issue 1756), so a gEDA, Lepton or xschem design reads its parts' pins. A params folder is one
+	// too, so a stored design checks with the datasheet facts its folder does (agni issue 1922).
+	for _, tier := range []struct {
+		word string
+		dirs []string
+	}{{"symbols", decl.symbols}, {"params", decl.params}} {
+		for i, dir := range tier.dirs {
+			w := ArtifactWrite{ID: tier.word, AllowMissing: true}
+			if i > 0 {
+				w.ID = fmt.Sprintf("%s-%d", tier.word, i+1)
 			}
-		}
-		if len(w.Files) > 0 {
-			writes = append(writes, w)
+			for _, p := range paths {
+				if rel, ok := strings.CutPrefix(p, dir+"/"); ok {
+					f := byPath[p]
+					w.Files = append(w.Files, &webapi.SnapshotFile{Path: rel, Sha256: f.GetSha256(), Size: f.GetSize()})
+				}
+			}
+			if len(w.Files) > 0 {
+				writes = append(writes, w)
+			}
 		}
 	}
 	plan.Unread = slices.DeleteFunc(plan.Unread, inSymbols)

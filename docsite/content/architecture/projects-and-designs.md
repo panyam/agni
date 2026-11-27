@@ -416,7 +416,11 @@ design holds changed. A descriptor with no `intent:` leaves the stored one alone
 pins alone. The project it `extends` is kept as a pack, and the design's `packs` name it. A read
 that names no packs, a snapshot naming the design or a report naming no project, reads under them.
 So symbols the design names are the design's, pinned, and symbols its project names are shared
-through one pack. `AddDesignsRequest.no_symbol_copy` leaves the design's own folders out. Reading a folder by its path, as `agni check <folder>` does, still honours its
+through one pack. `AddDesignsRequest.no_symbol_copy` leaves the design's own symbol folders out. A
+folder it names under `params:` is copied in the same way, as `ARTIFACT_TYPE_PARAMS`, by an add, a
+push or an upload, so a check by name reads the datasheet facts its folder does (agni issue 1922).
+It is always copied, since a params folder holds a few textprotos. `TestVerdictAuditServerParity`
+holds a stored design's verdicts on Glasgow and Jetson to the CLI's. Reading a folder by its path, as `agni check <folder>` does, still honours its
 `design.yaml`. The browser engine and the static demo still list their seeded boards, since they
 have no store.
 

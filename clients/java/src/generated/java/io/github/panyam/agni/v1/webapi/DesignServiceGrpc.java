@@ -846,7 +846,8 @@ public final class DesignServiceGrpc {
      * series and intent come from the proposal and the request, so the server writes nothing into the
      * mount. A proposal the request does not name is not added.
      * A design keeps the symbol folders its design.yaml names under `symbols:` as artifacts of type
-     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). When its design.yaml
+     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). It keeps the folders
+     * named under `params:` the same way, as ARTIFACT_TYPE_PARAMS (agni issue 1922). When its design.yaml
      * extends a project, the server keeps that project as a pack, as `agni designs push` does, and
      * sets the design's packs to it, so the project's own symbol folders are shared rather than copied
      * into each design. With validate_only the server answers
@@ -1161,7 +1162,8 @@ public final class DesignServiceGrpc {
      * series and intent come from the proposal and the request, so the server writes nothing into the
      * mount. A proposal the request does not name is not added.
      * A design keeps the symbol folders its design.yaml names under `symbols:` as artifacts of type
-     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). When its design.yaml
+     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). It keeps the folders
+     * named under `params:` the same way, as ARTIFACT_TYPE_PARAMS (agni issue 1922). When its design.yaml
      * extends a project, the server keeps that project as a pack, as `agni designs push` does, and
      * sets the design's packs to it, so the project's own symbol folders are shared rather than copied
      * into each design. With validate_only the server answers
@@ -1455,7 +1457,8 @@ public final class DesignServiceGrpc {
      * series and intent come from the proposal and the request, so the server writes nothing into the
      * mount. A proposal the request does not name is not added.
      * A design keeps the symbol folders its design.yaml names under `symbols:` as artifacts of type
-     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). When its design.yaml
+     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). It keeps the folders
+     * named under `params:` the same way, as ARTIFACT_TYPE_PARAMS (agni issue 1922). When its design.yaml
      * extends a project, the server keeps that project as a pack, as `agni designs push` does, and
      * sets the design's packs to it, so the project's own symbol folders are shared rather than copied
      * into each design. With validate_only the server answers
@@ -1739,7 +1742,8 @@ public final class DesignServiceGrpc {
      * series and intent come from the proposal and the request, so the server writes nothing into the
      * mount. A proposal the request does not name is not added.
      * A design keeps the symbol folders its design.yaml names under `symbols:` as artifacts of type
-     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). When its design.yaml
+     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). It keeps the folders
+     * named under `params:` the same way, as ARTIFACT_TYPE_PARAMS (agni issue 1922). When its design.yaml
      * extends a project, the server keeps that project as a pack, as `agni designs push` does, and
      * sets the design's packs to it, so the project's own symbol folders are shared rather than copied
      * into each design. With validate_only the server answers
@@ -2033,7 +2037,8 @@ public final class DesignServiceGrpc {
      * series and intent come from the proposal and the request, so the server writes nothing into the
      * mount. A proposal the request does not name is not added.
      * A design keeps the symbol folders its design.yaml names under `symbols:` as artifacts of type
-     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). When its design.yaml
+     * ARTIFACT_TYPE_SYMBOLS, copied by hash, so it reads alone (agni issue 1756). It keeps the folders
+     * named under `params:` the same way, as ARTIFACT_TYPE_PARAMS (agni issue 1922). When its design.yaml
      * extends a project, the server keeps that project as a pack, as `agni designs push` does, and
      * sets the design's packs to it, so the project's own symbol folders are shared rather than copied
      * into each design. With validate_only the server answers
