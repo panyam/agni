@@ -200,6 +200,9 @@ func TestClassifyTVSFamilies(t *testing.T) {
 	mpn := func(ref, part string) *ir.Component {
 		return &ir.Component{RefDes: ref, Attributes: map[string]string{"MPN": part}}
 	}
+	zener := func(ref, value string) *ir.Component {
+		return &ir.Component{RefDes: ref, Attributes: map[string]string{"Value": value, "Description": "Zener diode"}}
+	}
 	for _, tc := range []struct {
 		name string
 		c    *ir.Component
@@ -217,6 +220,11 @@ func TestClassifyTVSFamilies(t *testing.T) {
 		// A family prefix only moves a part within the families a suppressor can sit under.
 		{"a resistor whose value starts like a family", mpn("R5", "SMAJ-100R"), ClassResistor},
 		{"an ordinary diode", mpn("D2", "BAT54"), ClassDiode},
+		// A family can name its series after a hyphen, matched on the whole value (agni 1915).
+		// Glasgow draws Bourns CDSOD323-T36S TVS diodes with KiCad's Zener symbol.
+		{"a TVS drawn as a Zener", zener("D16", "CDSOD323-T36S"), ClassTVS},
+		{"a Zener drawn as a Zener", zener("D3", "BZT52C5V1"), ClassZener},
+		{"the package name without the TVS series", zener("D4", "CDSOD323-B0520"), ClassZener},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := Classify(tc.c, nil); got != tc.want {

@@ -248,8 +248,10 @@ part name and attributes (`ferrite`, `tvs`, `crystal`). The `class` block extend
 class it teaches.
 
 A third signal is the part-number family. Some part numbers belong to a common ESD or TVS family
-(`TPD4E05U06`, `PESD5Z5.0F`, `ESDA25P35`, `USBLC6`, `VBUS54CV`, `SMAJ`, and their neighbours). A
-part with one of those numbers is a `tvs` whether it sits under a diode, an IC or an unknown symbol.
+(`TPD4E05U06`, `PESD5Z5.0F`, `ESDA25P35`, `USBLC6`, `VBUS54CV`, `SMAJ`, `CDSOD323-T36S`, and their
+neighbours). A part with one of those numbers is a `tvs` whether it sits under a diode, a Zener, an
+IC or an unknown symbol. A family pattern matches the start of a word of the part's text, or the
+start of a whole value, so a pattern can name a series after a hyphen, as `^cdsod323-t\d` does.
 An ESD array is often drawn as a `U` part, and a TVS diode often carries nothing but its part
 number. The bare words `tvs` and `esd` only refine a diode, since an IC whose description mentions
 ESD protection is still an IC. `families` adds to the built-in list, and `replace: true` replaces it

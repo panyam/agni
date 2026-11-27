@@ -2,8 +2,8 @@
 # Columns: verdict id, the outcome a reader reached, the issue that explains a disagreement, what was checked.
 # Outcomes: pass, fail, not-considered, or none when the rule should not judge the subject at all.
 bulk-cap:(net:/xVBUS)	fail		USB-C VBUS before FB1 carries no capacitor; the bulk sits after the bead on /VUSB
-esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
-esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/VSENSE)	pass		the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/VSENSE)	pass		the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
 esd-protection:(net:/CC1)	none		USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
 esd-protection:(net:/CC2)	none		USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
 esd-protection:(net:/IO_Banks/IO_Buffer_A/P0)	none		only connector is J9, a 1x08 socket marked DNP, so the assembled board does not expose the net
@@ -14,7 +14,7 @@ esd-protection:(net:/IO_Banks/IO_Buffer_A/P4)	none		only connector is J9, a 1x08
 esd-protection:(net:/IO_Banks/IO_Buffer_A/P5)	none		only connector is J9, a 1x08 socket marked DNP, so the assembled board does not expose the net
 esd-protection:(net:/IO_Banks/IO_Buffer_A/P6)	none		only connector is J9, a 1x08 socket marked DNP, so the assembled board does not expose the net
 esd-protection:(net:/IO_Banks/IO_Buffer_A/P7)	none		only connector is J9, a 1x08 socket marked DNP, so the assembled board does not expose the net
-esd-protection:(net:/IO_Banks/IO_Buffer_A/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-protection:(net:/IO_Banks/IO_Buffer_A/VSENSE)	pass		the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
 esd-protection:(net:/IO_Banks/IO_Buffer_B/P0)	none		only connector is J7, a 1x08 socket marked DNP, so the assembled board does not expose the net
 esd-protection:(net:/IO_Banks/IO_Buffer_B/P1)	none		only connector is J7, a 1x08 socket marked DNP, so the assembled board does not expose the net
 esd-protection:(net:/IO_Banks/IO_Buffer_B/P2)	none		only connector is J7, a 1x08 socket marked DNP, so the assembled board does not expose the net
@@ -23,7 +23,7 @@ esd-protection:(net:/IO_Banks/IO_Buffer_B/P4)	none		only connector is J7, a 1x08
 esd-protection:(net:/IO_Banks/IO_Buffer_B/P5)	none		only connector is J7, a 1x08 socket marked DNP, so the assembled board does not expose the net
 esd-protection:(net:/IO_Banks/IO_Buffer_B/P6)	none		only connector is J7, a 1x08 socket marked DNP, so the assembled board does not expose the net
 esd-protection:(net:/IO_Banks/IO_Buffer_B/P7)	none		only connector is J7, a 1x08 socket marked DNP, so the assembled board does not expose the net
-esd-protection:(net:/IO_Banks/IO_Buffer_B/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-protection:(net:/IO_Banks/IO_Buffer_B/VSENSE)	pass		the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
 esd-protection:(net:/IO_Banks/Z0_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
 esd-protection:(net:/IO_Banks/Z0_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
 esd-protection:(net:/IO_Banks/Z10_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
