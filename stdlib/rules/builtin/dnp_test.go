@@ -197,6 +197,30 @@ func TestFloatingInputCountsTheAssembledBoard(t *testing.T) {
 	}
 }
 
+// A strap drawn with both positions and neither fitted leaves its input floating on purpose. A
+// four-level input reads that as a level, so the verdict waits for the part's datasheet (agni issue
+// 1916). One unfitted pull with nothing on the other side still fails, as above.
+func TestAnUnfittedStrapPairIsNotConsidered(t *testing.T) {
+	in := ir.PinDirection_PIN_DIRECTION_INPUT
+	design := func(dnp ...string) *ir.Design {
+		return markDNP(pinDesign(map[string][]supplyPin{
+			"U1": {{"EQ0", "1", in}}, "R1": twoPin(), "R2": twoPin(), "U2": {{"VDD", "1", ir.PinDirection_PIN_DIRECTION_POWER_IN}},
+		}, map[string][]string{"EQ0": {"U1.1", "R1.1", "R2.1"}, "+3V3": {"R1.2", "U2.1"}, "GND": {"R2.2"}}), dnp...)
+	}
+	if got := verdictOn(t, floatingInput, design("R1", "R2"), "EQ0"); got != string(check.NotConsidered) {
+		t.Errorf("an input whose pull-up and pull-down are both unfitted = %q, want not-considered", got)
+	}
+	if got := verdictOn(t, floatingInput, design("R1"), "EQ0"); got != string(check.NotConsidered) {
+		t.Errorf("an input with its pull-down fitted = %q, want not-considered", got)
+	}
+	upOnly := markDNP(pinDesign(map[string][]supplyPin{
+		"U1": {{"EQ0", "1", in}}, "R1": twoPin(), "U2": {{"VDD", "1", ir.PinDirection_PIN_DIRECTION_POWER_IN}},
+	}, map[string][]string{"EQ0": {"U1.1", "R1.1"}, "+3V3": {"R1.2", "U2.1"}}), "R1")
+	if got := verdictOn(t, floatingInput, upOnly, "EQ0"); got != string(check.Fail) {
+		t.Errorf("an input whose only pull-up is unfitted = %q, want fail", got)
+	}
+}
+
 // The rules that judge a part's own rating or orientation judge no unfitted part.
 func TestTheRatingRulesJudgeFittedPartsOnly(t *testing.T) {
 	want := map[string]bool{

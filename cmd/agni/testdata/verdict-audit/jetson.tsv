@@ -85,14 +85,14 @@ floating-input:(net:/M.2/PCIe_{C5x4}.RX3-)	pass		a driving pin, or a connector p
 floating-input:(net:/SoM_IO/UART3_DEBUG_RX_1V8)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/USB DP Alt mode/USBC1_CTL0)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/USB DP Alt mode/USBC1_CTL1)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
-floating-input:(net:/USB DP Alt mode/USBC1_DPEQ0)	pass	#1916	a TUSB1046 EQ strap with both straps DNP; the pin is a four-level input and floating selects a level
-floating-input:(net:/USB DP Alt mode/USBC1_EQ0)	pass	#1916	a TUSB1046 EQ strap with both straps DNP; the pin is a four-level input and floating selects a level
+floating-input:(net:/USB DP Alt mode/USBC1_DPEQ0)	not-considered		a TUSB1046 EQ strap with both straps DNP; the pin is a four-level input and floating selects a level, which only the datasheet confirms
+floating-input:(net:/USB DP Alt mode/USBC1_EQ0)	not-considered		a TUSB1046 EQ strap with both straps DNP; the pin is a four-level input and floating selects a level, which only the datasheet confirms
 floating-input:(net:/USB DP Alt mode/USBC1_FLIP)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/USB DP Alt mode/USBC1_RX1_N)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/USB DP Alt mode/USBC1_RX1_P)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/USB DP Alt mode/USBC1_RX2_N)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/USB DP Alt mode/USBC1_RX2_P)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
-floating-input:(net:/USB DP Alt mode/USBC1_SSEQ0)	pass	#1916	a TUSB1046 EQ strap with both straps DNP; the pin is a four-level input and floating selects a level
+floating-input:(net:/USB DP Alt mode/USBC1_SSEQ0)	not-considered		a TUSB1046 EQ strap with both straps DNP; the pin is a four-level input and floating selects a level, which only the datasheet confirms
 floating-input:(net:/USB Debug%2C PD/FTDI_LED_RX)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:Net-%28Q2-G%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:Net-%28Q22-G%29)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
@@ -169,7 +169,7 @@ led-polarity:(component:D6)	pass		C toward GND or a sink and A toward a rail, by
 led-polarity:(component:D61)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
 led-polarity:(component:D63)	pass		C toward GND or a sink and A toward a rail, by the symbol's pin names
 rail-not-classified:(net:/USB Debug%2C PD/FTDI_3V3)	pass		FTDI_3V3 feeds U31 and U34 supply pins and carries the regulator's output; with the project's NTS0102 spec agni stamps it a 3.3 V rail
-reverse-blocking-absent:(net:VCC_IN)	pass	#1920	U6 LTC4412 drives P-FET Q2 between VCC_IN and VCC as an ideal diode, which blocks reverse current
+reverse-blocking-absent:(net:VCC_IN)	fail		U6 LTC4412 and P-FET Q2 block reverse current into VCC, but U65 (SIC431) takes VIN straight off VCC_IN beside them, so J2 reaches a power input through no blocking element
 single-pin-net:(net:unconnected-%28J18-PadB24%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
 single-pin-net:(net:unconnected-%28J18-PadB25%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
 test-point-coverage:(net:/DCDC/12V_OUT)	fail		no test point on the rail in KiCad's netlist
