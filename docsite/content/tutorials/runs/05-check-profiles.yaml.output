@@ -1,4 +1,4 @@
 #agni-run 11f4aa3cb3dd6847
-45 finding(s) total
-25590 subject(s) considered by 42 rule(s), 682 not considered (--verdicts for the detail)
+42 finding(s) total
+25587 subject(s) considered by 42 rule(s), 685 not considered (--verdicts for the detail)
 note: jetson-profiles supersedes 4 rule(s): profile/pcie-signal-missing, profile/pcie-host-incomplete, profile/pcie-signal-dangling, profile/pcie-esd-missing

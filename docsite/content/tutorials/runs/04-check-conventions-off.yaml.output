@@ -1,7 +1,6 @@
 #agni-run 28dbcc35e4d01004
 findings by rule:
   esd-protection         4
-  floating-input         3
   i2c-pull-up            2
   i2c-redundant-pull-up  4
   rail-not-classified    1
@@ -9,5 +8,5 @@ findings by rule:
   single-pin-net         2
   test-point-coverage    20
 
-37 finding(s) total
-24185 subject(s) considered by 38 rule(s), 650 not considered (--verdicts for the detail)
+34 finding(s) total
+24182 subject(s) considered by 38 rule(s), 653 not considered (--verdicts for the detail)

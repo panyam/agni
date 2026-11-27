@@ -4,13 +4,6 @@
 # needs-intent (a fact about the board is undeclared) and false-positive (with its ticket).
 design: tools/samples/boards/jetson-agx-thor-baseboard
 findings:
-  floating-input:
-    - class: design-choice
-      why: Each is an equalization strap of U33, a TUSB1046 redriver, with a 1 kOhm pull-up and a 1 kOhm pull-down both marked do-not-populate, so on the assembled board the pin is left open. Its EQ and SSEQ pins are four-level strap inputs, where open selects one of the levels, so leaving both straps off is a setting. Not checked against the TUSB1046 datasheet.
-      subjects:
-        - net:/USB DP Alt mode/USBC1_DPEQ0
-        - net:/USB DP Alt mode/USBC1_EQ0
-        - net:/USB DP Alt mode/USBC1_SSEQ0
   esd-protection:
     - class: design-choice
       why: The SFP cage's 10G lines are AC-coupled pairs where a TVS's capacitance would cost signal integrity, and the module protects its own end.

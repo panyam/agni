@@ -1,7 +1,6 @@
 #agni-run 672f44b1a4b222fa
 findings by rule:
   esd-protection         4
-  floating-input         3
   i2c-pull-up            2
   i2c-redundant-pull-up  4
   rail-not-classified    1
@@ -9,14 +8,11 @@ findings by rule:
   single-pin-net         2
   test-point-coverage    20
 
-first 37:
+first 34:
   [info] esd-protection: /SFP/SFI_CONN_RX_N (externally-exposed signal net has no ESD protection)
   [info] esd-protection: /SFP/SFI_CONN_RX_P (externally-exposed signal net has no ESD protection)
   [info] esd-protection: /SFP/SFI_CONN_TX_N (externally-exposed signal net has no ESD protection)
   [info] esd-protection: /SFP/SFI_CONN_TX_P (externally-exposed signal net has no ESD protection)
-  [warning] floating-input: /USB DP Alt mode/USBC1_DPEQ0 (net carries only input pins; nothing drives it)
-  [warning] floating-input: /USB DP Alt mode/USBC1_EQ0 (net carries only input pins; nothing drives it)
-  [warning] floating-input: /USB DP Alt mode/USBC1_SSEQ0 (net carries only input pins; nothing drives it)
   [error] i2c-pull-up: /USB Debug, PD/FTDI_CBUS0{slash}SDA (I2C net has no pull-up resistor to a rail)
   [error] i2c-pull-up: /USB Debug, PD/FTDI_CBUS3{slash}SCL (I2C net has no pull-up resistor to a rail)
   [warning] i2c-redundant-pull-up: /I2C_{SYS}.SCL (I2C net has 2 pull-up resistors to +3V3)
@@ -48,5 +44,5 @@ first 37:
   [info] test-point-coverage: FLASH_PWR (rail carries no test point; bring-up and factory test cannot probe it)
   [info] test-point-coverage: VCC_IN (rail carries no test point; bring-up and factory test cannot probe it)
 
-37 finding(s) total
-24075 subject(s) considered by 35 rule(s), 650 not considered (--verdicts for the detail)
+34 finding(s) total
+24072 subject(s) considered by 35 rule(s), 653 not considered (--verdicts for the detail)
