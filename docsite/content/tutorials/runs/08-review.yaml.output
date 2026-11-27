@@ -25,7 +25,7 @@ Design: `boards/jetson`
 |---|-------|---------|--------|
 | I1 | every PCIe link is complete | pass |  |
 | I2 | the CAN interface is complete and terminated | not-applicable | interface not present on this design |
-| I3 | exposed signals have ESD protection | fail | esd-protection: /SFP/SFI_CONN_RX_N (externally-exposed signal net has no ESD protection); esd-protection: /SFP/SFI_CONN_RX_P (externally-exposed signal net has no ESD protection); esd-protection: /SFP/SFI_CONN_TX_N (externally-exposed signal net has no ESD protection); (+7 more) |
+| I3 | exposed signals have ESD protection | fail | esd-protection: /SFP/SFI_CONN_RX_N (externally-exposed signal net has no ESD protection); esd-protection: /SFP/SFI_CONN_RX_P (externally-exposed signal net has no ESD protection); esd-protection: /SFP/SFI_CONN_TX_N (externally-exposed signal net has no ESD protection); (+1 more) |
 | I4 | every I2C bus has pull-ups | pass |  |
 
 ## House style

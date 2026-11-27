@@ -1,7 +1,7 @@
 #agni-run 7df1cec7f750d0bb
 findings by rule:
   bulk-cap               1
-  esd-protection         390
+  esd-protection         332
   floating-input         3
   i2c-pull-up            8
   i2c-redundant-pull-up  4
@@ -12,5 +12,5 @@ findings by rule:
   single-pin-net         2
   test-point-coverage    36
 
-505 finding(s) total
-26051 subject(s) considered by 41 rule(s), 1065 not considered (--verdicts for the detail)
+447 finding(s) total
+25993 subject(s) considered by 41 rule(s), 1123 not considered (--verdicts for the detail)
