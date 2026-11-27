@@ -1,12 +1,12 @@
 #agni-run e2ac3ffe728ea9f7
 #agni-step
 comparing:
-  ours:   agni <version>, 59 finding(s) over mount://jetson/boards/jetson
+  ours:   agni <version>, 53 finding(s) over mount://jetson/boards/jetson
   theirs: kicad-cli pcb drc 10.0.6, 957 finding(s) over boards/jetson   [no coverage axis: its silence is not a pass]
 
 entities flagged:
   both         1
-  ours only    57
+  ours only    51
   theirs only  259
 
 ours only:
@@ -45,7 +45,6 @@ ours only:
   net /SFP/SFI_CONN_RX_P
   net /SFP/SFI_CONN_TX_N
   net /SFP/SFI_CONN_TX_P
-  net /SFP/SH
   net /SoM_IO2/TC_VCC
   net /USB DP Alt mode/USBC1_DPEQ0
   net /USB DP Alt mode/USBC1_EQ0
@@ -59,11 +58,6 @@ ours only:
   net /USB Debug, PD/PDC_LDO_3V3
   net FLASH_PWR
   net Net-(D1-C)
-  net Net-(J12-RS0)
-  net Net-(J12-RS1)
-  net Net-(J12-RX_{LOS})
-  net Net-(J12-TX_{DISABLE})
-  net Net-(J12-TX_{FAULT})
   net VCC_IN
   net unconnected-(J18-PadB24)
   net unconnected-(J18-PadB25)

@@ -4,8 +4,8 @@
 bulk-cap:(net:/xVBUS)	fail		USB-C VBUS before FB1 carries no capacitor; the bulk sits after the bead on /VUSB
 esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
 esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/VSENSE)	pass	#1915	the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
-esd-protection:(net:/CC1)	none	#1913	USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
-esd-protection:(net:/CC2)	none	#1913	USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
+esd-protection:(net:/CC1)	none		USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
+esd-protection:(net:/CC2)	none		USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
 esd-protection:(net:/IO_Banks/IO_Buffer_A/P0)	none		only connector is J9, a 1x08 socket marked DNP, so the assembled board does not expose the net
 esd-protection:(net:/IO_Banks/IO_Buffer_A/P1)	none		only connector is J9, a 1x08 socket marked DNP, so the assembled board does not expose the net
 esd-protection:(net:/IO_Banks/IO_Buffer_A/P2)	none		only connector is J9, a 1x08 socket marked DNP, so the assembled board does not expose the net
@@ -50,7 +50,7 @@ esd-protection:(net:/IO_Banks/Z8_N)	fail		FPGA pin straight to J5, the 1.27 mm L
 esd-protection:(net:/IO_Banks/Z8_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
 esd-protection:(net:/IO_Banks/Z9_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
 esd-protection:(net:/IO_Banks/Z9_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
-esd-protection:(net:/SHLD)	none	#1913	the USB-C shell, tied to GND through C13 and R3; a shield net is not a signal
+esd-protection:(net:/SHLD)	none		the USB-C shell, tied to GND through C13 and R3; a shield net is not a signal
 esd-protection:(net:/USB_N)	pass	#1918	U15 TPD3S014 sits on the net (D1/D2) and its two-channel ESD clamp protects D+ and D-
 esd-protection:(net:/USB_P)	pass	#1918	U15 TPD3S014 sits on the net (D1/D2) and its two-channel ESD clamp protects D+ and D-
 esd-protection:(net:Net-%28D12-K%29)	none		only connector is J10, the AUX header marked DNP, and its clamp D12 is DNP too; the assembled board does not expose the net

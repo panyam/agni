@@ -7,12 +7,12 @@ esd-protection:(net:/SFP/SFI_CONN_RX_N)	fail		SFP28 high-speed lane, AC-coupled 
 esd-protection:(net:/SFP/SFI_CONN_RX_P)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
 esd-protection:(net:/SFP/SFI_CONN_TX_N)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
 esd-protection:(net:/SFP/SFI_CONN_TX_P)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
-esd-protection:(net:/SFP/SH)	none	#1913	the SFP cage shield J19, to GND through capacitors and R200; a shield net is not a signal
-esd-protection:(net:Net-%28J12-RS0%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
-esd-protection:(net:Net-%28J12-RS1%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
-esd-protection:(net:Net-%28J12-RX_{LOS}%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
-esd-protection:(net:Net-%28J12-TX_{DISABLE}%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
-esd-protection:(net:Net-%28J12-TX_{FAULT}%29)	none	#1913	an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+esd-protection:(net:/SFP/SH)	none		the SFP cage shield J19, to GND through capacitors and R200; a shield net is not a signal
+esd-protection:(net:Net-%28J12-RS0%29)	none		an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+esd-protection:(net:Net-%28J12-RS1%29)	none		an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+esd-protection:(net:Net-%28J12-RX_{LOS}%29)	none		an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+esd-protection:(net:Net-%28J12-TX_{DISABLE}%29)	none		an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
+esd-protection:(net:Net-%28J12-TX_{FAULT}%29)	none		an SFP control pin strapped by one resistor to +3V3 or GND, with no IC pin on the net to protect
 floating-input:(net:/CSI/CAM0.CSI2_CLK+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/CSI/CAM0.CSI2_CLK-)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist
 floating-input:(net:/CSI/CAM0.CSI2_D0+)	pass		a driving pin, or a connector pin that brings the far end's driver, sits on the net in KiCad's netlist

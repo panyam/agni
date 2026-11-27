@@ -76,6 +76,9 @@ func esdProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 			v.Outcome = check.NotConsidered
 			v.Reason = "the net is clamped by Zener " + zener + " rather than left bare, which esd-clamp-not-tvs characterises rather than this rule"
 			v.Context = compContext(zener, "Zener clamp in reach")
+		case check.NothingToProtect(m, n):
+			v.Outcome = check.NotConsidered
+			v.Reason = check.NothingToProtectReason
 		default:
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{
@@ -107,6 +110,7 @@ var esdProtectionSpec = &check.Spec{
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "tvs_reach"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ic_esd_rated"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "zener_reach"}}},
+		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.nothing_to_protect"}}},
 	}},
 	Message: "externally-exposed signal net has no ESD protection",
 }

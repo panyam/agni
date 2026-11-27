@@ -1,7 +1,7 @@
 #agni-run 672f44b1a4b222fa
 findings by rule:
   bulk-cap               1
-  esd-protection         10
+  esd-protection         4
   floating-input         3
   i2c-pull-up            2
   i2c-redundant-pull-up  4
@@ -10,18 +10,12 @@ findings by rule:
   single-pin-net         2
   test-point-coverage    27
 
-first 50:
+first 45:
   [warning] bulk-cap: Net-(D1-C) (power rail has no bulk capacitor)
   [info] esd-protection: /SFP/SFI_CONN_RX_N (externally-exposed signal net has no ESD protection)
   [info] esd-protection: /SFP/SFI_CONN_RX_P (externally-exposed signal net has no ESD protection)
   [info] esd-protection: /SFP/SFI_CONN_TX_N (externally-exposed signal net has no ESD protection)
   [info] esd-protection: /SFP/SFI_CONN_TX_P (externally-exposed signal net has no ESD protection)
-  [info] esd-protection: /SFP/SH (externally-exposed signal net has no ESD protection)
-  [info] esd-protection: Net-(J12-RS0) (externally-exposed signal net has no ESD protection)
-  [info] esd-protection: Net-(J12-RS1) (externally-exposed signal net has no ESD protection)
-  [info] esd-protection: Net-(J12-RX_{LOS}) (externally-exposed signal net has no ESD protection)
-  [info] esd-protection: Net-(J12-TX_{DISABLE}) (externally-exposed signal net has no ESD protection)
-  [info] esd-protection: Net-(J12-TX_{FAULT}) (externally-exposed signal net has no ESD protection)
   [warning] floating-input: /USB DP Alt mode/USBC1_DPEQ0 (net carries only input pins; nothing drives it)
   [warning] floating-input: /USB DP Alt mode/USBC1_EQ0 (net carries only input pins; nothing drives it)
   [warning] floating-input: /USB DP Alt mode/USBC1_SSEQ0 (net carries only input pins; nothing drives it)
@@ -61,6 +55,7 @@ first 50:
   [info] test-point-coverage: /SoM_IO2/TC_VCC (rail carries no test point; bring-up and factory test cannot probe it)
   [info] test-point-coverage: /USB Debug, PD/FTDI_3V3 (rail carries no test point; bring-up and factory test cannot probe it)
   [info] test-point-coverage: FLASH_PWR (rail carries no test point; bring-up and factory test cannot probe it)
+  [info] test-point-coverage: VCC_IN (rail carries no test point; bring-up and factory test cannot probe it)
 
-51 finding(s) total
-24089 subject(s) considered by 35 rule(s), 643 not considered (--verdicts for the detail)
+45 finding(s) total
+24083 subject(s) considered by 35 rule(s), 649 not considered (--verdicts for the detail)

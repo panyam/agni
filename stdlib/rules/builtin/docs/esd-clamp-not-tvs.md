@@ -35,7 +35,8 @@ ESD rating. The two are mutually
 exclusive on any one net, so moving a net here removes it from the `esd-protection` count without
 hiding it. A TVS or a datasheet IC-ESD rating in reach satisfies both rules (neither fires). A net
 that leaves the board only through connectors marked do-not-populate is not considered by either
-rule (agni issue 1912).
+rule (agni issue 1912). A Zener-clamped net with nothing behind it that a discharge could damage
+is not considered either (agni issue 1913).
 
 The Zener is recognized by classification. When a part's `Description` or other part text carries
 a `zener` token, the part classifies as the `zener` device class, which is distinct from `tvs`. The
