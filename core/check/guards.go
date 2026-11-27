@@ -224,17 +224,29 @@ func UnfittedConnectorsReason(refs []string) string {
 // ground through a capacitor and a resistor is one case. A connector pin strapped to a rail by one
 // resistor, like an SFP module's rate select, is another.
 //
-// An IC, an LED, a part with no class and a connector declared internal all count as damageable. So
-// a connector pin reaching a microcontroller through a series resistor is still judged, and so is an
-// SFP lane AC-coupled to a module socket.
+// An IC, an LED, a part with no class, a connector declared internal and a second connector all count
+// as damageable. So a connector pin reaching a microcontroller through a series resistor is still
+// judged, and so are an SFP lane AC-coupled to a module socket and a line passing between two
+// connectors.
 func NothingToProtect(m Model, n *ir.Net) bool {
 	if n == nil {
 		return false
 	}
+	// conn holds the one connector the walk allows. A second carries the discharge on to whatever
+	// mates with it, which the board cannot see, so it counts as damageable.
+	conn := ""
 	harmless := func(ref string) bool {
-		return IsVirtualRef(ref) || !m.IsFitted(ref) || IsPassiveClass(m.ComponentClass(ref)) ||
-			m.HasClass(ref, ClassTVS) || m.HasClass(ref, ClassZener) || m.HasClass(ref, ClassTestConnector) ||
-			m.ExposedConnector(ref)
+		if IsVirtualRef(ref) || !m.IsFitted(ref) || IsPassiveClass(m.ComponentClass(ref)) ||
+			m.HasClass(ref, ClassTVS) || m.HasClass(ref, ClassZener) {
+			return true
+		}
+		if !m.HasClass(ref, ClassTestConnector) && !m.ExposedConnector(ref) {
+			return false
+		}
+		if conn == "" {
+			conn = ref
+		}
+		return conn == ref
 	}
 	for _, c := range n.Connections {
 		if !harmless(c.ComponentRef) {
@@ -282,7 +294,7 @@ func NothingToProtect(m Model, n *ir.Net) bool {
 }
 
 // NothingToProtectReason is the reason an ESD rule gives when NothingToProtect holds.
-const NothingToProtectReason = "nothing on the net or in its series reach can be damaged, only passives, the connector and the rails beyond them"
+const NothingToProtectReason = "nothing on the net or in its series reach can be damaged, only passives, its one connector and the rails beyond them"
 
 // PowerPinReachable reports a power-direction pin on the net or on any net in its 2-hop
 // series reach (WS3-011), so the split between esd and input-protection does not depend on
