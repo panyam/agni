@@ -1,8 +1,8 @@
 # The geometric DRC fires board (WS3-008): each violation class once, on its own net.
 # THIN routes a 0.05mm trace; CLOSE_A/CLOSE_B run parallel with a 0.04mm edge gap on
 # F.Cu; SMALLHOLE's via drills 0.1mm; THINRING's via ring is 0.05mm. Incidentals: every
-# net is a single-pad stub off connector J1, so single-pin-net and esd-protection fire
-# per net (GND-less test board, no TVS).
+# net is a single-pad stub off connector J1, so single-pin-net fires per net. Nothing on
+# those stubs can be damaged, so esd-protection leaves them unjudged (agni issue 1913).
 fires:
   track-width:
     subjects: [THIN]
@@ -17,6 +17,4 @@ fires:
     subjects: [THINRING]
     why: "a 0.05mm ring is below the 0.075mm breakout floor"
   single-pin-net:
-    subjects: [CLOSE_A, CLOSE_B, SMALLHOLE, THIN, THINRING]
-  esd-protection:
     subjects: [CLOSE_A, CLOSE_B, SMALLHOLE, THIN, THINRING]
