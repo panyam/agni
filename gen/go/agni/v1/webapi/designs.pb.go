@@ -272,6 +272,10 @@ const (
 	// `.kicad_sym`, that the design's schematic finds its parts' pins in (agni issue 1756). The view's
 	// design.yaml names it under `symbols:`, so a read searches it.
 	ArtifactType_ARTIFACT_TYPE_SYMBOLS ArtifactType = 5
+	// ARTIFACT_TYPE_PARAMS is a folder of PartSpec `.textproto` files, the datasheet facts the
+	// design's rules read (agni issue 1922). The view's design.yaml names it under `params:`, so a
+	// stored design checks with the same specs its folder does.
+	ArtifactType_ARTIFACT_TYPE_PARAMS ArtifactType = 6
 )
 
 // Enum value maps for ArtifactType.
@@ -283,6 +287,7 @@ var (
 		3: "ARTIFACT_TYPE_BOARD",
 		4: "ARTIFACT_TYPE_OTHER",
 		5: "ARTIFACT_TYPE_SYMBOLS",
+		6: "ARTIFACT_TYPE_PARAMS",
 	}
 	ArtifactType_value = map[string]int32{
 		"ARTIFACT_TYPE_UNSPECIFIED": 0,
@@ -291,6 +296,7 @@ var (
 		"ARTIFACT_TYPE_BOARD":       3,
 		"ARTIFACT_TYPE_OTHER":       4,
 		"ARTIFACT_TYPE_SYMBOLS":     5,
+		"ARTIFACT_TYPE_PARAMS":      6,
 	}
 )
 
@@ -2923,14 +2929,15 @@ const file_agni_v1_webapi_designs_proto_rawDesc = "" +
 	"\x13ADD_OUTCOME_UPDATED\x10\x02\x12\x19\n" +
 	"\x15ADD_OUTCOME_UNCHANGED\x10\x03\x12\x17\n" +
 	"\x13ADD_OUTCOME_SKIPPED\x10\x04\x12\x17\n" +
-	"\x13ADD_OUTCOME_REFUSED\x10\x05*\xb2\x01\n" +
+	"\x13ADD_OUTCOME_REFUSED\x10\x05*\xcc\x01\n" +
 	"\fArtifactType\x12\x1d\n" +
 	"\x19ARTIFACT_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15ARTIFACT_TYPE_NETLIST\x10\x01\x12\x1b\n" +
 	"\x17ARTIFACT_TYPE_SCHEMATIC\x10\x02\x12\x17\n" +
 	"\x13ARTIFACT_TYPE_BOARD\x10\x03\x12\x17\n" +
 	"\x13ARTIFACT_TYPE_OTHER\x10\x04\x12\x19\n" +
-	"\x15ARTIFACT_TYPE_SYMBOLS\x10\x052\xb6\r\n" +
+	"\x15ARTIFACT_TYPE_SYMBOLS\x10\x05\x12\x18\n" +
+	"\x14ARTIFACT_TYPE_PARAMS\x10\x062\xb6\r\n" +
 	"\rDesignService\x12K\n" +
 	"\fCreateDesign\x12#.agni.v1.webapi.CreateDesignRequest\x1a\x16.agni.v1.webapi.Design\x12E\n" +
 	"\tGetDesign\x12 .agni.v1.webapi.GetDesignRequest\x1a\x16.agni.v1.webapi.Design\x12V\n" +

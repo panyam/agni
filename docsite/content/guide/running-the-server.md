@@ -361,6 +361,11 @@ packs, and says so. The files themselves are stored once by hash, however many d
 `--no-symbol-copy` leaves the design's own symbol folders out, for a library a pack already holds,
 and names each one it left out.
 
+A folder the `design.yaml` names under `params:` is kept the same way, as an artifact of its own,
+whether the design was added, pushed or uploaded (agni issue 1922). So `agni check designs/<id>`
+reads the datasheet facts that `agni check <folder>` reads. Glasgow's `params/` holds U15's
+TPD3S014 spec, and without it a stored Glasgow failed `input-protection` on its USB-C VBUS.
+
 In a container, give the store and the uploads a volume. The image makes `/var/lib/agni/meta` and
 `/var/lib/agni/files` owned by its user, so a named volume on either starts out writable. The
 compose bundle (`deploy/compose.yaml`) mounts one volume, `data`, on `/var/lib/agni` and keeps both

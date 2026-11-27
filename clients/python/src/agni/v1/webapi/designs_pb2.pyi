@@ -51,6 +51,7 @@ class ArtifactType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ARTIFACT_TYPE_BOARD: _ClassVar[ArtifactType]
     ARTIFACT_TYPE_OTHER: _ClassVar[ArtifactType]
     ARTIFACT_TYPE_SYMBOLS: _ClassVar[ArtifactType]
+    ARTIFACT_TYPE_PARAMS: _ClassVar[ArtifactType]
 DESIGN_REVISION_SOURCE_UNSPECIFIED: DesignRevisionSource
 DESIGN_REVISION_SOURCE_TAGS: DesignRevisionSource
 DESIGN_REVISION_SOURCE_COMMITS: DesignRevisionSource
@@ -73,6 +74,7 @@ ARTIFACT_TYPE_SCHEMATIC: ArtifactType
 ARTIFACT_TYPE_BOARD: ArtifactType
 ARTIFACT_TYPE_OTHER: ArtifactType
 ARTIFACT_TYPE_SYMBOLS: ArtifactType
+ARTIFACT_TYPE_PARAMS: ArtifactType
 
 class Report(_message.Message):
     __slots__ = ("name", "packs", "project", "design_hash", "pack_hashes", "results", "create_time", "design_changed", "packs_changed", "finding_count", "source_versions", "revision", "pack_versions")

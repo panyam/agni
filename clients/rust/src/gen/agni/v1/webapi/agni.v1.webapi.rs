@@ -3507,6 +3507,10 @@ pub enum ArtifactType {
     /// `.kicad_sym`, that the design's schematic finds its parts' pins in (agni issue 1756). The view's
     /// design.yaml names it under `symbols:`, so a read searches it.
     Symbols = 5,
+    /// ARTIFACT_TYPE_PARAMS is a folder of PartSpec `.textproto` files, the datasheet facts the
+    /// design's rules read (agni issue 1922). The view's design.yaml names it under `params:`, so a
+    /// stored design checks with the same specs its folder does.
+    Params = 6,
 }
 impl ArtifactType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -3521,6 +3525,7 @@ impl ArtifactType {
             Self::Board => "ARTIFACT_TYPE_BOARD",
             Self::Other => "ARTIFACT_TYPE_OTHER",
             Self::Symbols => "ARTIFACT_TYPE_SYMBOLS",
+            Self::Params => "ARTIFACT_TYPE_PARAMS",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -3532,6 +3537,7 @@ impl ArtifactType {
             "ARTIFACT_TYPE_BOARD" => Some(Self::Board),
             "ARTIFACT_TYPE_OTHER" => Some(Self::Other),
             "ARTIFACT_TYPE_SYMBOLS" => Some(Self::Symbols),
+            "ARTIFACT_TYPE_PARAMS" => Some(Self::Params),
             _ => None,
         }
     }

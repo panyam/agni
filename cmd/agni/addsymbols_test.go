@@ -108,3 +108,36 @@ func findingCount(t *testing.T, out string) int {
 	}
 	return len(resp.Findings)
 }
+
+// Adding Glasgow from a mount copies the params folder its design.yaml names as an artifact of type
+// ARTIFACT_TYPE_PARAMS, and the design's config names it, so U15's TPD3S014 spec reaches a check by
+// name (agni issue 1922).
+func TestAnAddedDesignCopiesItsParams(t *testing.T) {
+	ctx := context.Background()
+	boards, err := filepath.Abs(filepath.Join("..", "..", "tools", "samples", "boards"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(boards, "glasgow-revC3", "params")); err != nil {
+		t.Fatalf("the Glasgow sample is missing (run `make samples-oracle`): %v", err)
+	}
+	dir := t.TempDir()
+	srv := designServerCapped(t, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), 1<<28, mountset.Folder("boards", boards))
+	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	added, err := designs.AddDesigns(ctx, connect.NewRequest(&webapi.AddDesignsRequest{Uri: "mount://boards/glasgow-revC3", Designs: []*webapi.DesignToAdd{{Folder: "glasgow-revC3", DesignId: "glasgow"}}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if uris := added.Msg.GetDesigns()[0].GetConfig().GetParamUris(); len(uris) != 1 || !strings.HasSuffix(uris[0], "/params") {
+		t.Errorf("glasgow's params folders = %v; want the view's params artifact", uris)
+	}
+	arts, err := designs.ListArtifacts(ctx, connect.NewRequest(&webapi.ListArtifactsRequest{Parent: "designs/glasgow"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(arts.Msg.GetArtifacts(), func(a *webapi.Artifact) bool {
+		return a.GetType() == webapi.ArtifactType_ARTIFACT_TYPE_PARAMS && a.GetName() == "designs/glasgow/artifacts/params" && len(a.GetFiles()) > 0
+	}) {
+		t.Errorf("glasgow's artifacts = %v; want a params artifact holding the TPD3S014 spec", arts.Msg.GetArtifacts())
+	}
+}

@@ -1628,6 +1628,7 @@ impl serde::Serialize for ArtifactType {
             Self::Board => "ARTIFACT_TYPE_BOARD",
             Self::Other => "ARTIFACT_TYPE_OTHER",
             Self::Symbols => "ARTIFACT_TYPE_SYMBOLS",
+            Self::Params => "ARTIFACT_TYPE_PARAMS",
         };
         serializer.serialize_str(variant)
     }
@@ -1645,6 +1646,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactType {
             "ARTIFACT_TYPE_BOARD",
             "ARTIFACT_TYPE_OTHER",
             "ARTIFACT_TYPE_SYMBOLS",
+            "ARTIFACT_TYPE_PARAMS",
         ];
 
         struct GeneratedVisitor;
@@ -1691,6 +1693,7 @@ impl<'de> serde::Deserialize<'de> for ArtifactType {
                     "ARTIFACT_TYPE_BOARD" => Ok(ArtifactType::Board),
                     "ARTIFACT_TYPE_OTHER" => Ok(ArtifactType::Other),
                     "ARTIFACT_TYPE_SYMBOLS" => Ok(ArtifactType::Symbols),
+                    "ARTIFACT_TYPE_PARAMS" => Ok(ArtifactType::Params),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

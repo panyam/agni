@@ -25,6 +25,8 @@ type declared struct {
 	// symbols are the symbol folders named under `symbols:`, cleaned. A folder outside the files,
 	// such as ../shared/symbols, can't be among them and is left out.
 	symbols []string
+	// params are the PartSpec folders named under `params:`, cleaned the same way (agni issue 1922).
+	params []string
 	// flatten is the flatten_hierarchy the descriptor sets, nil when it has no such line. A stored
 	// design keeps its own value when the line is absent, as it keeps its intent.
 	flatten *bool
@@ -46,6 +48,7 @@ func readDeclared(files []string, read func(string) ([]byte, error)) (declared, 
 		Entry      yaml.Node `yaml:"entry"`
 		Companions yaml.Node `yaml:"companions"`
 		Symbols    yaml.Node `yaml:"symbols"`
+		Params     yaml.Node `yaml:"params"`
 		Flatten    yaml.Node `yaml:"flatten_hierarchy"`
 		Intent     yaml.Node `yaml:"intent"`
 	}
@@ -64,11 +67,17 @@ func readDeclared(files []string, read func(string) ([]byte, error)) (declared, 
 			}
 		}
 	}
-	var symbols []string
-	if y.Symbols.Decode(&symbols) == nil {
-		for _, dir := range symbols {
+	for _, tier := range []struct {
+		node yaml.Node
+		into *[]string
+	}{{y.Symbols, &out.symbols}, {y.Params, &out.params}} {
+		var dirs []string
+		if tier.node.Decode(&dirs) != nil {
+			continue
+		}
+		for _, dir := range dirs {
 			if c, err := mounts.CleanPath(dir); err == nil && c != "" {
-				out.symbols = append(out.symbols, c)
+				*tier.into = append(*tier.into, c)
 			}
 		}
 	}
