@@ -26,13 +26,20 @@ import (
 // checks, diffs and queries designs by name (agni issues 1695, 1739).
 func designServer(t *testing.T, store, uploads string, mounted ...mounts.Mount) *httptest.Server {
 	t.Helper()
+	return designServerCapped(t, store, uploads, 1<<24, mounted...)
+}
+
+// designServerCapped is designServer with its upload limit set, for a design whose board file is
+// larger than the 16 MiB the other tests need (Jetson's is about 85 MB).
+func designServerCapped(t *testing.T, store, uploads string, maxBytes int64, mounted ...mounts.Mount) *httptest.Server {
+	t.Helper()
 	ms, err := withUploadsMount(mounted, uploads)
 	if err != nil {
 		t.Fatal(err)
 	}
 	loader := service.NewCachingLoader(&osLoader{mounts: tableOf(ms), loader: newLoader()}, service.NewDesignCache(0))
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
-	resolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: tableOf(ms)}, Uploads: uploadedHost, UploadMaxBytes: 1 << 24}
+	resolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: tableOf(ms)}, Uploads: uploadedHost, UploadMaxBytes: maxBytes}
 	st := testStore(t, store)
 	snaps, err := storeRecords(st, storeSnapshotsDir)
 	if err != nil {
