@@ -57,6 +57,14 @@ header pins, left for the user to solder, are another. `floating-input` reads th
 way, as the board's interface (agni issue 1082), since a pin there floats whether or not a header is
 fitted. A net whose every part is unfitted is not considered either, with its own reason (agni issue
 961).
+
+A net with nothing a discharge could damage is not considered either (agni issue 1913). The check
+walks the same two hops as the clamp search, across resistors, ferrites and capacitors too, since a
+series AC-coupling capacitor passes a fast edge. It stops at rails and grounds. When every fitted
+part it meets is a passive, a clamp or an exposed connector, nothing is left to protect. A USB-C shell
+tied to ground through an RC network is one case, and an SFP rate-select pin strapped to a rail by
+one resistor is another. An IC, an LED, a part with no class and a connector declared internal all
+count as damageable, so an SFP lane AC-coupled to a module socket is still judged.
 Severity is info because the approximation still cannot know whether a plain header is a real
 external interface or an unlabeled internal one. Since WS3-011
 the clamp may sit one series hop away (connector -> series R -> clamped node, the classic ESD

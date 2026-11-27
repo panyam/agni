@@ -18,18 +18,12 @@ findings:
         - net:/USB DP Alt mode/USBC1_SSEQ0
   esd-protection:
     - class: design-choice
-      why: The SFP cage's 10G lines are AC-coupled pairs where a TVS's capacitance would cost signal integrity, its low-speed control pins (TX_FAULT, TX_DISABLE, rate select) go through 1 kOhm or 0 Ohm series parts, and SH is the cage shield returned to ground through an RC network; the module protects its own end.
+      why: The SFP cage's 10G lines are AC-coupled pairs where a TVS's capacitance would cost signal integrity, and the module protects its own end.
       subjects:
         - net:/SFP/SFI_CONN_RX_N
         - net:/SFP/SFI_CONN_RX_P
         - net:/SFP/SFI_CONN_TX_N
         - net:/SFP/SFI_CONN_TX_P
-        - net:/SFP/SH
-        - net:Net-(J12-TX_{FAULT})
-        - net:Net-(J12-RS0)
-        - net:Net-(J12-TX_{DISABLE})
-        - net:Net-(J12-RX_{LOS})
-        - net:Net-(J12-RS1)
   i2c-pull-up:
     - class: needs-intent
       why: These lines pass through an NTS0102 level translator, which carries its own 10 kOhm pull-ups on both sides; that is a datasheet fact this run has no parameter set for.

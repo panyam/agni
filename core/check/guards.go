@@ -216,6 +216,74 @@ func UnfittedConnectorsReason(refs []string) string {
 	return "the net leaves the board only through " + joinRefs(refs) + ", marked do-not-populate, so the assembled board exposes nothing here"
 }
 
+// NothingToProtect reports whether a discharge into n can reach no part that it could damage (agni
+// issue 1913). It walks ProtectionReachHops across fitted two-terminal passives, capacitors included,
+// since a series AC-coupling capacitor passes a fast edge. The clamp search's Reach does not cross a
+// capacitor, so this keeps a walk of its own. The walk stops at a rail or a ground. Every fitted part
+// it meets is a passive, a TVS or Zener clamp, or a connector the board exposes. A USB-C shell tied to
+// ground through a capacitor and a resistor is one case. A connector pin strapped to a rail by one
+// resistor, like an SFP module's rate select, is another.
+//
+// An IC, an LED, a part with no class and a connector declared internal all count as damageable. So
+// a connector pin reaching a microcontroller through a series resistor is still judged, and so is an
+// SFP lane AC-coupled to a module socket.
+func NothingToProtect(m Model, n *ir.Net) bool {
+	if n == nil {
+		return false
+	}
+	harmless := func(ref string) bool {
+		return IsVirtualRef(ref) || !m.IsFitted(ref) || IsPassiveClass(m.ComponentClass(ref)) ||
+			m.HasClass(ref, ClassTVS) || m.HasClass(ref, ClassZener) || m.HasClass(ref, ClassTestConnector) ||
+			m.ExposedConnector(ref)
+	}
+	for _, c := range n.Connections {
+		if !harmless(c.ComponentRef) {
+			return false
+		}
+	}
+	netsOf := map[string][]*ir.Net{}
+	for _, o := range m.Nets() {
+		for _, c := range o.Connections {
+			if l := netsOf[c.ComponentRef]; len(l) == 0 || l[len(l)-1] != o {
+				netsOf[c.ComponentRef] = append(l, o)
+			}
+		}
+	}
+	seen := map[string]bool{n.Name: true}
+	frontier := []*ir.Net{n}
+	for depth := 0; depth < ProtectionReachHops && len(frontier) > 0; depth++ {
+		var next []*ir.Net
+		for _, cur := range frontier {
+			for _, c := range cur.Connections {
+				ref := c.ComponentRef
+				if !m.IsFitted(ref) || len(netsOf[ref]) != 2 {
+					continue
+				}
+				if cls := m.ComponentClass(ref); !IsPassiveClass(cls) && cls != ClassNetTie || cls == ClassTestPoint {
+					continue
+				}
+				for _, o := range netsOf[ref] {
+					if seen[o.Name] || IsBusLike(m, o) || m.IsRailNet(o) {
+						continue
+					}
+					seen[o.Name] = true
+					for _, oc := range o.Connections {
+						if !harmless(oc.ComponentRef) {
+							return false
+						}
+					}
+					next = append(next, o)
+				}
+			}
+		}
+		frontier = next
+	}
+	return true
+}
+
+// NothingToProtectReason is the reason an ESD rule gives when NothingToProtect holds.
+const NothingToProtectReason = "nothing on the net or in its series reach can be damaged, only passives, the connector and the rails beyond them"
+
 // PowerPinReachable reports a power-direction pin on the net or on any net in its 2-hop
 // series reach (WS3-011), so the split between esd and input-protection does not depend on
 // whether a bead sits between the connector and the regulator.

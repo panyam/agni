@@ -64,6 +64,9 @@ func esdClampNotTVSVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 			v.Outcome = check.Pass
 			v.Witness = ratedWitness
 			v.Context = compContext(rated, "ESD-rated part")
+		case zener != "" && check.NothingToProtect(m, n):
+			v.Outcome = check.NotConsidered
+			v.Reason = check.NothingToProtectReason
 		case zener != "":
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{
@@ -89,6 +92,7 @@ var esdClampNotTVSSpec = &check.Spec{
 	Where: check.And{Xs: []check.Expr{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.connectors_unfitted"}}},
+		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.nothing_to_protect"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.global"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.power_driven"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},

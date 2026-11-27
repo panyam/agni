@@ -531,7 +531,9 @@ Audit against the board's own tool, not against agni. `kicad-cli sch export netl
 erc` and `kicad-cli pcb drc` give a reading that shares no code with ours. The netlist export writes a `.kicad_prl` beside the
 board, and the Jetson tutorial capture counts that file as one more skipped, so delete it after. Audit a rule's fails
 first, because false positives live there. Then audit any pass the rule may have reached without
-classifying its subject.
+classifying its subject. Before blaming a missing clamp or an exposed connector, check whether the
+part is marked do-not-populate. `agni query <board> 'component.dnp(?R)'` lists them, and two of the
+first audit's rows blamed agni for a part that was never fitted (agni issues 1912, 1917).
 
 The gate runs the test as a ratchet. A row that disagrees must name its issue, and a row that names
 an issue must still disagree. A fix therefore fails the test until its PR clears the issue from its
