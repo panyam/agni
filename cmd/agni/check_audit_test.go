@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -20,7 +21,8 @@ import (
 // in testdata/verdict-audit. A row there records the outcome a reader reached by reading the
 // schematic, and the bug that explains why agni disagrees, if it does. The outcome "none" says the
 // rule should not judge that subject at all, such as a shield net under an ESD rule. The file lists audited rows
-// only, so a verdict with no row counts as not yet audited.
+// only, so a verdict with no row counts as not yet audited. A fail or an inconclusive verdict must
+// have a row, since a finding is what a reader sees first (agni issue 1930).
 //
 // The gate runs this as a ratchet. A mismatch must name a bug, and a row that names a bug must
 // still mismatch, so a fix fails here until its rows are updated. `make exercise-checks` sets
@@ -67,6 +69,8 @@ type auditTally struct {
 type auditReport struct {
 	rules      map[string]*auditTally
 	mismatches []auditMismatch
+	// unauditedFindings lists, sorted, each fail or inconclusive verdict with no audit row.
+	unauditedFindings []string
 }
 
 func auditOutcome(o checks.Outcome) string {
@@ -175,11 +179,16 @@ func compareAudit(verdicts []*checks.Verdict, rows []auditRow) auditReport {
 			rep.mismatches = append(rep.mismatches, auditMismatch{row: r, got: g, kind: kind})
 		}
 	}
-	for id := range got {
-		if !audited[id] {
-			tally(auditRuleOf(id)).unaudited++
+	for id, g := range got {
+		if audited[id] {
+			continue
+		}
+		tally(auditRuleOf(id)).unaudited++
+		if g == "fail" || g == "inconclusive" {
+			rep.unauditedFindings = append(rep.unauditedFindings, id)
 		}
 	}
+	sort.Strings(rep.unauditedFindings)
 	return rep
 }
 
@@ -241,6 +250,9 @@ func TestVerdictAudit(t *testing.T) {
 				t.Fatalf("%s stated %d verdicts, want at least %d", b.name, len(verdicts), b.minVerdicts)
 			}
 			rep := compareAudit(verdicts, rows)
+			for _, id := range rep.unauditedFindings {
+				t.Errorf("%s: agni says %s fails or is inconclusive, and %s has no row for it; audit it against the netlist and add one", b.name, id, b.file)
+			}
 			if exercise {
 				fmt.Println(rep.table(b.name))
 				for _, m := range rep.mismatches {
@@ -325,6 +337,15 @@ func TestVerdictAuditComparison(t *testing.T) {
 	if tl.verdicts != 6 || tl.audited != 8 || tl.match != 2 || tl.unaudited != 0 {
 		t.Errorf("tally %+v: want 6 verdicts, 8 audited, 2 matches (A, and Y gone as it should be), 0 not yet audited", *tl)
 	}
+
+	t.Run("a finding with no row is named, and a pass with no row is not", func(t *testing.T) {
+		partial := []auditRow{{id: "r:(net:A)", want: "pass"}}
+		got := compareAudit(append(run, v("r:(net:G)", checks.Outcome_OUTCOME_INCONCLUSIVE)), partial).unauditedFindings
+		want := []string{"r:(net:B)", "r:(net:G)"}
+		if !slices.Equal(got, want) {
+			t.Errorf("unaudited findings = %v, want %v", got, want)
+		}
+	})
 
 	t.Run("a flipped row is reported as exactly that row", func(t *testing.T) {
 		agree := []auditRow{{id: "r:(net:A)", want: "pass"}, {id: "r:(net:B)", want: "fail"}}
