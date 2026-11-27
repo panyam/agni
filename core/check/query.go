@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/core/ident"
 	"github.com/panyam/agni/core/param"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -275,6 +276,12 @@ func (m *irModel) IsFeedbackPinName(name string) bool {
 
 func (m *irModel) IsSwitchingPinName(name string) bool {
 	return m.lexicon().RoleVocab().IsSwitchingPin(name)
+}
+
+// IsSupplyPinName reads a pin name as a supply input; see Model.IsSupplyPinName. KiCad's subscript
+// markup is folded first, so a symbol's `V_{DD}` reads as `VDD`.
+func (m *irModel) IsSupplyPinName(name string) bool {
+	return m.lexicon().RoleVocab().IsSupplyPin(ident.FoldScripts(name))
 }
 
 func (m *irModel) IsPowerRailName(name string) bool { return m.lexicon().RoleVocab().IsRail(name) }

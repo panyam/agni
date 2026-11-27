@@ -4,11 +4,6 @@
 # needs-intent (a fact about the board is undeclared) and false-positive (with its ticket).
 design: tools/samples/boards/jetson-agx-thor-baseboard
 findings:
-  bulk-cap:
-    - class: design-choice
-      why: N$54 is the module's PMIC backup-battery input through D1 and R6, which the module decouples on its own side.
-      subjects:
-        - net:Net-(D1-C)
   floating-input:
     - class: design-choice
       why: Each is an equalization strap of U33, a TUSB1046 redriver, with a 1 kOhm pull-up and a 1 kOhm pull-down both marked do-not-populate, so on the assembled board the pin is left open. Its EQ and SSEQ pins are four-level strap inputs, where open selects one of the levels, so leaving both straps off is a setting. Not checked against the TUSB1046 datasheet.
@@ -57,22 +52,16 @@ findings:
         - net:unconnected-(J18-PadB25)
   test-point-coverage:
     - class: design-choice
-      why: The board puts test points on its main rails, not on each converter's internal supply and output nodes, the FMC rails or the debug bridge's 3.3 V.
+      why: The board puts test points on its main rails, not on each converter's output node, the FMC rails or the debug bridge's 3.3 V.
       subjects:
         - net:/DCDC/12V_OUT
-        - net:/DCDC/12V_VDD
         - net:/DCDC/16V_OUT
-        - net:/DCDC/16V_VDD
         - net:/DCDC/1V15_OUT
         - net:/DCDC/1V8_OUT
         - net:/DCDC/20V_OUT
-        - net:/DCDC/20V_VDD
         - net:/DCDC/3V3_OUT
-        - net:/DCDC/3V3_VDD
         - net:/DCDC/5V_OUT
-        - net:/DCDC/5V_VDD
         - net:/DCDC/5V_{AON}_OUT
-        - net:/DCDC/5V_{AON}_VDD
         - net:/Expansion connector/+12V_FMC
         - net:/Expansion connector/+3V3_AUX
         - net:/Expansion connector/+3V3_FMC
@@ -81,7 +70,6 @@ findings:
         - net:/Expansion connector/+V_{ADJ}
         - net:/M.2/3V3_M2
         - net:/Power/3V3_LDO
-        - net:/DCDC/VIN_PWR_ON
         - net:/SoM_IO2/TC_VCC
         - net:/USB Debug, PD/FTDI_3V3
     - class: design-choice

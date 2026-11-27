@@ -44,7 +44,11 @@ feedback patterns are naming-lexicon config, and a project extends them (WS3-069
 excluded for the same reason, since a probe there loads the highest dV/dt node in the design, and
 control and gate-drive nets such as a mode strap or an enable are excluded because they are not
 rails (agni 680). Some divider taps feed a sense pin and are named for the rail they sense
-(VBUS_MON_UP). Such a tap is excluded too, because a sense input is not a rail (agni 935). Severity is info because DFT
+(VBUS_MON_UP). Such a tap is excluded too, because a sense input is not a rail (agni 935). Two more
+shapes are excluded because neither is a board rail (agni 1914). One is a part's own bias supply, a
+supply-named pin typed passive or power_out with only capacitors beside it, as a SIC431 buck's
+`12V_VDD` is. The other is a rail-named control signal whose every part pin is an input, such as
+`VIN_PWR_ON` driving FET gates and an enable. Severity is info because DFT
 posture is a per-project policy. The reviewer decides, and the rule surfaces the rails.
 
 ### Query structure

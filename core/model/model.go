@@ -158,6 +158,9 @@ type Model interface {
 	// IsFeedbackPinName and IsSwitchingPinName read a PIN name as a regulator's feedback or switch pin.
 	IsFeedbackPinName(name string) bool
 	IsSwitchingPinName(name string) bool
+	// IsSupplyPinName reads a PIN name as a supply input (VDD, VCC, VIN and their kin), from the
+	// lexicon's supply_pin vocabulary.
+	IsSupplyPinName(name string) bool
 	// DiffNegative is the complementary net name for a differential pair's positive member, under this
 	// model's lexicon, and ok=false when the name is not a positive member.
 	DiffNegative(name string) (string, bool)

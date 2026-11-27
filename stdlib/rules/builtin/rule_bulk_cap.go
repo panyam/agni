@@ -2,7 +2,11 @@ package builtin
 
 import (
 	"context"
+	"slices"
+	"strings"
+
 	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
 )
 
@@ -53,6 +57,9 @@ func bulkCapVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 		case check.Unpopulated(m, n):
 			v.Outcome = check.NotConsidered
 			v.Reason = "every part on the rail is marked do-not-populate, so the assembled board has no rail here to hold up"
+		case bulk == "" && len(moduleFedOnly(m, n)) > 0:
+			v.Outcome = check.NotConsidered
+			v.Reason = "the rail feeds only " + strings.Join(moduleFedOnly(m, n), ", ") + ", declared internal, and no part on this board draws from it, so the module across the connector holds its own reservoir"
 		case bulk != "":
 			v.Outcome = check.Pass
 			v.Witness, v.Context = railCapacitorWitness(bulk, at, "capacitor")
@@ -69,6 +76,40 @@ func bulkCapVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	return out
 }
 
+// moduleFedOnly returns the internal connectors on n when they are the rail's only load, and nil
+// otherwise (agni issue 1914). Jetson's `Net-(D1-C)` carries a power flag and feeds the module's
+// backup-battery pin across J1, through a Schottky from +3V3_AON and 2k2 from the coin cell. No IC on
+// the board sits on it, so a bulk capacitor there would hold up nothing the board builds. A USB VBUS
+// output still has its load across an exposed connector, so it stays judged.
+func moduleFedOnly(m check.Model, n *ir.Net) []string {
+	var refs []string
+	for _, c := range n.GetConnections() {
+		ref := c.GetComponentRef()
+		if check.IsVirtualRef(ref) || !m.IsFitted(ref) || check.IsPassiveClass(m.ComponentClass(ref)) ||
+			m.HasClass(ref, check.ClassDiode) || m.HasClass(ref, check.ClassTVS) || m.HasClass(ref, check.ClassZener) {
+			continue
+		}
+		if !m.HasClass(ref, check.ClassConnector) || m.ExposedConnector(ref) {
+			return nil
+		}
+		if !slices.Contains(refs, ref) {
+			refs = append(refs, ref)
+		}
+	}
+	return refs
+}
+
+func init() {
+	check.RegisterSpecFunc("module_fed_only", &check.SpecFunc{
+		// A rail whose only load sits across an internal connector (see moduleFedOnly).
+		Reads:      []string{"component.class", "component.dnp", "on_net"},
+		Primitives: []string{"exists", "traverse"},
+		Fn: func(m check.Model, ents map[string]any, _ []any) any {
+			return len(moduleFedOnly(m, ents["net"].(*ir.Net))) > 0
+		},
+	})
+}
+
 // bulkCapSpec is the rule's declarative twin.
 var bulkCapSpec = &check.Spec{
 	Over: "nets",
@@ -82,6 +123,7 @@ var bulkCapSpec = &check.Spec{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.unpopulated"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.rail_capacitor"}}},
+		check.Not{X: check.IsTrue{T: check.Call{Fn: "module_fed_only"}}},
 	}},
 	Message: "power rail has no bulk capacitor",
 }

@@ -47,6 +47,13 @@ issue 1115). The walk
 never crosses into a ground, and a series resistor of any other value still ends the rail. A pass
 names the link beside the capacitor.
 
+A rail whose only load sits across a connector the design declares internal is not considered,
+and the reason names the connector (agni issue 1914). Jetson flags the module's backup-battery feed
+with a power flag. A Schottky from `+3V3_AON` and 2k2 from the coin cell feed it, and its one load is
+the module across J1, which holds its own reservoir. Passives, diodes and clamps on the net do not
+count as loads. An IC on the net, or a load across an exposed connector such as a USB VBUS output,
+keeps the rail judged.
+
 ### Query structure
 
 select rails by fact, require a capacitor member.
