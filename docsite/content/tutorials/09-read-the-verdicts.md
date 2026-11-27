@@ -51,12 +51,12 @@ manual item, which is also fine. Neither is a gap worth working on. A column fil
 `needs-data` is a gap worth working on, because seeding a few parts converts it directly into
 coverage.
 
-## Seven failures is a good sign
+## Six failures is a good sign
 
-This board reports 7 fail out of 15. That looks alarming, but it is the healthiest state on offer.
+This board reports 6 fail out of 15. That looks alarming, but it is the healthiest state on offer.
 Every one of them names its subjects and its reason, so a reviewer can now finish the conversation
-about each one. Rung 2's I2C errors are among them, and so are the test points on nets nobody
-named, which no shipped rule would ever have raised.
+about each one. Rung 2's ESD and test-point findings are among them, and so are the test points on
+nets nobody named, which no shipped rule would ever have raised.
 
 Compare against the board before the tiers were added. Fewer questions were being asked, so some
 failures could not appear, and others, like the ESD findings on internal connectors, were noise

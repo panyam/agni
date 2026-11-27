@@ -1,4 +1,4 @@
-# Rung 11: the merge gate on rev A, which trips on the board's error findings.
+# Rung 11: the merge gate on rev A, which passes because no error finding is left.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
 fetched_into: boards/jetson

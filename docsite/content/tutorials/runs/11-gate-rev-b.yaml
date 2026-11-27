@@ -1,4 +1,4 @@
-# Rung 11: the same gate on rev B, which fixed two of the I2C errors and not the rest.
+# Rung 11: the same gate on rev B, which passes too while its review still fails five items.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
 fetched_into: boards/jetson
