@@ -17,31 +17,10 @@ findings:
         - net:/Debugger/USB.CC1
         - net:/Debugger/USB.CC2
     - class: design-choice
-      why: A Feather's header pins go straight to the MCU with no ESD protection, as is usual for a development board whose pins are meant to be wired by hand.
+      why: The I2C lines reach the STEMMA QT connector as well as the unfitted Feather headers, and go straight to the MCU with no ESD protection, as is usual for a development board's hand-wired port.
       subjects:
-        - net:/Connectors/ENABLE
-        - net:/Connectors/SHPHLD
-        - net:/Connectors/ANALOG.A0
-        - net:/Connectors/ANALOG.A1
-        - net:/Connectors/ANALOG.A2
-        - net:/Connectors/ANALOG.A3
-        - net:/Connectors/ANALOG.A4
-        - net:/Connectors/ANALOG.A5
-        - net:/Connectors/DIG.D10
-        - net:/Connectors/DIG.D11
-        - net:/Connectors/DIG.D12
-        - net:/Connectors/DIG.D13
-        - net:/Connectors/DIG.D5
-        - net:/Connectors/DIG.D6
-        - net:/Connectors/DIG.D9
         - net:/Connectors/I2C.SCL
         - net:/Connectors/I2C.SDA
-        - net:/Connectors/SPI.MISO
-        - net:/Connectors/SPI.MOSI
-        - net:/Connectors/SPI.SCK
-        - net:/SWD_TRG.~{RESET}
-        - net:/Connectors/UART.RX
-        - net:/Connectors/UART.TX
   i2c-pull-up:
     - class: design-choice
       why: Both pull-ups on the main I2C bus, R2 and R3, are marked do-not-populate, so the board ships relying on the device plugged into the STEMMA QT port or the nRF54L15's internal pull-ups. Surfaced once DNP parts stopped counting as pull-ups (agni issue 938).

@@ -56,6 +56,9 @@ func esdProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 		case check.Unpopulated(m, n):
 			v.Outcome = check.NotConsidered
 			v.Reason = "every part on the net, the connector included, is marked do-not-populate, so nothing behind it is built to protect"
+		case len(check.UnfittedConnectors(m, n)) > 0:
+			v.Outcome = check.NotConsidered
+			v.Reason = check.UnfittedConnectorsReason(check.UnfittedConnectors(m, n))
 		case tvs != "":
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
@@ -93,6 +96,7 @@ var esdProtectionSpec = &check.Spec{
 	Where: check.And{Xs: []check.Expr{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.unpopulated"}}},
+		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.connectors_unfitted"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.global"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.power_driven"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},

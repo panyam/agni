@@ -323,6 +323,10 @@ var specFacts = map[string]factDef{
 		reads: []string{"component.dnp"},
 		get:   func(ev *evalEnv) any { return Unpopulated(ev.m, ev.ents["net"].(*ir.Net)) },
 	},
+	"net.connectors_unfitted": { // every exposed connector on the net is marked do-not-populate (agni issue 1912)
+		reads: []string{"component.class", "component.dnp"},
+		get:   func(ev *evalEnv) any { return len(UnfittedConnectors(ev.m, ev.ents["net"].(*ir.Net))) > 0 },
+	},
 	"net.rail_capacitor": { // a fitted capacitor sits on the net or across a zero-ohm link from it (agni issue 1015)
 		reads: []string{"component.class", "component.dnp", "on_net"}, primitives: []string{"exists", "traverse"},
 		get: func(ev *evalEnv) any {

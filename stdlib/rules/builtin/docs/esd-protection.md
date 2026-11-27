@@ -49,6 +49,14 @@ extend them. A design can declare a board-to-board, module, mezzanine or card-sl
 Such a connector joins this board to another one inside the product, and nothing a user touches
 reaches it. That is a declaration rather than a class, since the same connector is the module
 socket on one carrier and the cable entry on another (agni issue 831).
+
+A net that leaves the board only through connectors marked do-not-populate is not considered, and
+the reason names them (agni issue 1912). The assembled board has no socket there to plug into, though
+the IC behind the footprint is fitted. Glasgow's 1x08 sockets J6 to J9 are one case, and a Feather's
+header pins, left for the user to solder, are another. `floating-input` reads the same pads the other
+way, as the board's interface (agni issue 1082), since a pin there floats whether or not a header is
+fitted. A net whose every part is unfitted is not considered either, with its own reason (agni issue
+961).
 Severity is info because the approximation still cannot know whether a plain header is a real
 external interface or an unlabeled internal one. Since WS3-011
 the clamp may sit one series hop away (connector -> series R -> clamped node, the classic ESD
