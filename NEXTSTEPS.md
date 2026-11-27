@@ -9,33 +9,21 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-24, at `fe04e00e`.
+Last pruned 2026-11-27, at `90c6086e`.
 
 ## At a glance
 
-**Mission #1708 is active**, to run agni check on a real board and trust every verdict. Its
-exercise is `make exercise-checks` (#1712). The exercise holds Glasgow revC3's and Jetson's verdicts
-to the hand-audited files in `cmd/agni/testdata/verdict-audit`, and each disagreement names its
-issue. The next ticket is the one clearing the most rows.
+**Mission #1708 is active**, to run agni check on a real board and trust every verdict, at 8 of
+26 tickets. Its exercise is `make exercise-checks` (#1712), which holds Glasgow revC3's and Jetson's
+verdicts to the hand-audited files in `cmd/agni/testdata/verdict-audit`. It last ran on 2026-11-27
+at `90c6086e`, with 6 disagreements left, down from 75. The audit runs Jetson with
+`examples/jetson-project/params`. Before blaming a clamp or a connector in an audit row, check
+`component.dnp`, since two of the first rows were parts never fitted (`build/check-rule.md`).
 
-#1799 (run agni inside an enterprise against its own GitHub Enterprise
-Server) closed on 2026-11-23 at 17 of 17, with `make exercise-enterprise` passing 24 of 24 at
-`a394e384`. CI keeps running it, plus `make exercise-enterprise-bundle` (compose) and
-`make kind-up exercise-enterprise-helm` (Helm on kind). Its Later lines moved to #1708 (#1227) and
-#1806. `guide/deploying/` walks an admin through it, and nobody has followed it by hand on a fresh
-VM yet. `agni serve --config serve.yaml` (PR 1856) holds serve's flags and the `--bootstrap`
-resources (PR 1852), and the chart passes only `--config`. A stored design's check now runs its
-`design.yaml` intent, pushed, added or linked (PRs 1859 and 1866). Push, add and link also keep the companions a
-`design.yaml` declares and read the entry it names, so an ODB++ board and an EDIF schematic stay one
-design that checks as its folder does (PR 1863). v0.11.2 shipped all of that on 2026-11-23. v0.11.3
-made `agni serve` wait for its poll, webhook, bootstrap, prune and sweep work before it exits (PR
-1870). v0.11.4 made a linked pack list only what its `project.yaml` names, so boards beside it count
-against no size limit, and took servicekit v0.2.6 for GO-2026-6278 (PR 1872). Since then, linking a
-declared entry, or its folder, links the companions its `design.yaml` declares (PR 1876).
-`make exercise-formats` prints one row per format and corpus file (PR 1874), and `agni serve
---local-accounts` signs people in with a username and password that `agni users` keeps in `--store`
-(PR 1878). `agni login --with local` gets a CLI token, and the compose bundle (`AGNI_LOCAL_ACCOUNTS`) and
-Helm chart (`localAccounts`) turn it on (PR 1886). Email reset waits on #1884. A GitHub repo past the mount cap now mounts lazily, listing its tree and fetching what a read names, and `--mount-max-bytes` and `--mount-max-files` set the cap (PR 1881). Its follow-ups are on #1880. Rule messages, impact text and help lost their last em-dashes, and the KiCad item separator changed (PR 1882). v0.11.6 shipped PRs 1874 to 1886 on 2026-11-24. Since then, a companion that a link followed records its entry in `companion_of`, so bootstrap counts it as named and `prune: true` keeps it (PR 1892). Its gaps are on #1893. v0.11.7 shipped PRs 1891 (a stored design keeps `flatten_hierarchy`), 1892 and 1894 (checklist item files keep a team's own fields). Since then, `agni serve --grant source=pattern,...` and serve.yaml `access:` open a private source to signed-in people by subject pattern, through goapplib v0.7.38's `connections.WithSourceGrants` (PR 1897). `agnids` takes `--grant` and `--grants-file`, and the enterprise bundle mounts one `access.yaml` into both services (PR 1898). `oidc:group:<id>` and `github:org:<org>` patterns follow claims a sign-in writes on the token, through goapplib v0.7.39's `WithViewerClaims` (PR 1899). v0.11.9 shipped PRs 1898 and 1899 on 2026-11-24.
+#1799 (enterprise) closed on 2026-11-23, and CI keeps running `make exercise-enterprise`,
+`exercise-enterprise-bundle` and `kind-up exercise-enterprise-helm`. `guide/deploying/` walks an
+admin through it, and nobody has followed it by hand on a fresh VM yet. v0.11.10 is the latest
+release.
 
 - **agni is on goapplib v0.7.39, oneauth v0.3.22, servicekit v0.2.6 and ci-actions v0.1.5.**
   `--trusted-proxy` reads through servicekit's `TrustedProxies` (PR 1829). `--oidc-*` signs people
@@ -57,15 +45,18 @@ Helm chart (`localAccounts`) turn it on (PR 1886). Email reset waits on #1884. A
   those lists on 2026-11-21. Anything that fits no mission is on #1806, and
   `is:closed label:waiting reason:"not planned"` finds them all. A mission moves its Later lines
   before it closes.
-- **Missions to pick from.** #1611 (markup, starts at #1612 and #1613), and four whose first
-  ticket writes the exercise: #1708 (#1712), #1709 (#1713) and #1711 (#1715, which needs a
-  datasheet PDF agni-samples may carry). #1710 has its exercise now, at 1 of 11, next #134.
+- **Other missions.** #1611 (markup, starts at #1612 and #1613), and two whose first ticket
+  writes the exercise: #1709 (#1713) and #1711 (#1715, which needs a datasheet PDF agni-samples
+  may carry). #1710 has its exercise now, at 1 of 11, next #134.
   `make exercise-formats` exits 1 at `b8ba5401`, because royalblue54L-feather does not read (#681). #1176 holds only Later lines.
 
 ## Open, ranked
 
-Mission #1708's queue, by `~/.claude/skills/retriage/queue.sh`. The bugs the audit found go first,
-ranked by how many audited rows each clears.
+Mission #1708's queue, by `~/.claude/skills/retriage/queue.sh`. The audit's bugs go first, ranked
+by how many audited rows each clears: #1916 (3, TUSB1046 four-level strap pins), #1918 (2, the
+TPD3S014's integrated clamps on USB D+ and D-) and #1920 (1, the LTC4412 ideal diode). They are P2,
+so `queue.sh` ranks #88 above them by age. #1919's rows match with the project's params, and it
+stays open for a run without them. #1922 asks for an API parity subtest.
 
 Later work is #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
