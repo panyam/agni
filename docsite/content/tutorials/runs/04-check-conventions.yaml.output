@@ -1,4 +1,4 @@
-#agni-run 8a865108c07a27b0
+#agni-run 3467ddf6fc974095
 findings by rule:
   esd-protection         4
   i2c-redundant-pull-up  4
