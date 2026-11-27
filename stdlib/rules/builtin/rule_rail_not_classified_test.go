@@ -121,3 +121,21 @@ func TestRailNotClassifiedSilentWithoutEvidence(t *testing.T) {
 		}
 	}
 }
+
+// A net whose name stamps the rail role and that feeds no supply pin stays not-considered, since a
+// real +12V and a converter's 12V_VDD bias node look the same then. The reason says the stamp is
+// unconfirmed rather than that the net may be a signal (agni issue 1931).
+func TestRailNotClassifiedSaysAStampIsUnconfirmed(t *testing.T) {
+	d := houseNamedDesign()
+	d.Nets[2].Connections = []*ir.Connection{{ComponentRef: "U1", PinRef: "3"}}
+	for _, v := range railNotClassified.Eval(context.Background(), check.NewModel(d)) {
+		if v.Subjects[0].Ref != "+5V" {
+			continue
+		}
+		if v.Outcome != check.NotConsidered || !strings.Contains(v.Reason, "nothing confirms the stamp") {
+			t.Errorf("a stamped rail with no supply pin = %s %q, want not-considered saying the stamp is unconfirmed", v.Outcome, v.Reason)
+		}
+		return
+	}
+	t.Fatal("no verdict on +5V")
+}

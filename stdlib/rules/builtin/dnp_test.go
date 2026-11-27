@@ -143,6 +143,12 @@ func TestAnUnfittedCircuitIsNotJudged(t *testing.T) {
 		}
 		return d
 	}
+	if got := verdictOn(t, powerInputNotDriven, markDNP(rail(), "U1", "C1"), "TC_VCC"); got != string(check.NotConsidered) {
+		t.Errorf("power-input-not-driven on a flagged rail whose only load is unfitted = %q, want not-considered", got)
+	}
+	if got := verdictOn(t, powerInputNotDriven, rail(), "TC_VCC"); got != string(check.Pass) {
+		t.Errorf("power-input-not-driven on the fitted flagged rail = %q, want pass", got)
+	}
 	if got := verdictOn(t, decouplingPresent, markDNP(rail(), "U1", "C1"), "TC_VCC"); got != "" {
 		t.Errorf("decoupling-present on a rail whose only load is unfitted = %q, want no verdict", got)
 	}

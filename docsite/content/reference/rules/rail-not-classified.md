@@ -60,6 +60,10 @@ undeclared lexicon, 5 on the board where the built-in vocabulary already matches
 - A net with no power-input pin never fails, even if its name declares a voltage. It is reported
   not-considered with the missing channel named. On a format that cannot type power pins, every
   candidate net reads this way.
+- A net whose name already stamped the rail role, and that feeds no power-input pin, is
+  not-considered too. A real `+12V` that only feeds a connector looks the same as a converter's
+  `12V_VDD` bias node, which the built-in vocabulary also stamps a rail. The reason says the stamp is
+  unconfirmed (agni issue 1931).
 
 ### Query structure
 
