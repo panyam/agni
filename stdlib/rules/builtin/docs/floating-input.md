@@ -36,6 +36,15 @@ inductor, ferrite, fuse, test point) silences the rule for that net. The exempti
 libraries that type passive pins INPUT. The Mentor EDIF corpus does that for capacitors, so once
 pin keys joined correctly, its cap-plus-input nets read as all-input (WS1-025).
 
+### An unfitted strap pair waits for the datasheet
+
+An unfitted part has no pins on the assembled board. An input whose only pull is unfitted is
+alone on its net, and the rule fails it. A strap drawn with both positions is different. One
+unfitted resistor runs to a supply rail and another runs to ground. The designer drew both and
+fitted neither, so floating is a position they chose. A four-level input, such as a TUSB1046 EQ
+pin, reads a floating pin as one of its levels. The part's datasheet says whether that level is
+valid, and a netlist does not, so the net is not-considered and the reason names both resistors.
+
 ### A diode terminal is not a logic input
 
 Some libraries type a diode/LED/TVS terminal (an anode or cathode) INPUT, the same way they type

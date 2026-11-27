@@ -1,12 +1,11 @@
-#agni-run 9ddfd4972557b0f1
+#agni-run fc496556a1891622
 findings by rule:
   esd-protection         4
-  floating-input         3
   i2c-redundant-pull-up  4
   jetson/active-low-overbar 2
   reverse-blocking-absent 1
   single-pin-net         2
   test-point-coverage    29
 
-45 finding(s) total
-25590 subject(s) considered by 42 rule(s), 682 not considered (--verdicts for the detail)
+42 finding(s) total
+25587 subject(s) considered by 42 rule(s), 685 not considered (--verdicts for the detail)

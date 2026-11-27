@@ -42,6 +42,10 @@ var floatingInput = &check.Rule{
 //     floating. The part may be the pull-up that fixes it, a series element with the driver on the
 //     far side, or a footprint nobody stuffed. Context names it.
 //
+// A third exemption is NotConsidered too. A net whose unfitted resistors run to both a rail and
+// ground is a strap left in its floating position, which a multi-level input reads as a level
+// (check.UnfittedStrapPair, agni issue 1916).
+//
 // Any other net with a pin that is neither an input nor a no-connect passes. The pass witness counts
 // those pins, so retyping the driver as an input drops the count to zero and flips the verdict.
 func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
@@ -82,6 +86,10 @@ func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		passive := firstPassive(m, n)
+		strap := ""
+		if ncOrIn == pins {
+			strap = check.UnfittedStrapPair(m, n)
+		}
 		switch {
 		case logicInputs < 1:
 			v.Outcome = check.NotConsidered
@@ -93,6 +101,9 @@ func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 			v.Outcome = check.NotConsidered
 			v.Reason = "the net carries a passive part, which may be the pull that fixes it or a series element hiding the driver, so it is not provably floating"
 			v.Context = compContext(passive, "passive on the net")
+		case strap != "":
+			v.Outcome = check.NotConsidered
+			v.Reason = strap
 		case ncOrIn == pins:
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{

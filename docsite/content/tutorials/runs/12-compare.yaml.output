@@ -1,12 +1,12 @@
-#agni-run e2ac3ffe728ea9f7
+#agni-run d13deaa74c3aa1da
 #agni-step
 comparing:
-  ours:   agni <version>, 45 finding(s) over mount://jetson/boards/jetson
+  ours:   agni <version>, 42 finding(s) over mount://jetson/boards/jetson
   theirs: kicad-cli pcb drc 10.0.6, 957 finding(s) over boards/jetson   [no coverage axis: its silence is not a pass]
 
 entities flagged:
   both         1
-  ours only    43
+  ours only    40
   theirs only  259
 
 ours only:
@@ -39,9 +39,6 @@ ours only:
   net /SFP/SFI_CONN_TX_N
   net /SFP/SFI_CONN_TX_P
   net /SoM_IO2/TC_VCC
-  net /USB DP Alt mode/USBC1_DPEQ0
-  net /USB DP Alt mode/USBC1_EQ0
-  net /USB DP Alt mode/USBC1_SSEQ0
   net /USB Debug, PD/DEBUG_SCL
   net /USB Debug, PD/DEBUG_SDA
   net /USB Debug, PD/FTDI_3V3

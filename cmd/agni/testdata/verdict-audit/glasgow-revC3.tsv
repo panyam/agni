@@ -51,8 +51,8 @@ esd-protection:(net:/IO_Banks/Z8_P)	fail		FPGA pin straight to J5, the 1.27 mm L
 esd-protection:(net:/IO_Banks/Z9_N)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
 esd-protection:(net:/IO_Banks/Z9_P)	fail		FPGA pin straight to J5, the 1.27 mm LVDS header, with no clamp on the net
 esd-protection:(net:/SHLD)	none		the USB-C shell, tied to GND through C13 and R3; a shield net is not a signal
-esd-protection:(net:/USB_N)	pass	#1918	U15 TPD3S014 sits on the net (D1/D2) and its two-channel ESD clamp protects D+ and D-
-esd-protection:(net:/USB_P)	pass	#1918	U15 TPD3S014 sits on the net (D1/D2) and its two-channel ESD clamp protects D+ and D-
+esd-protection:(net:/USB_N)	pass		U15 TPD3S014 sits on the net (D1/D2) and its two-channel ESD clamp protects D+ and D-
+esd-protection:(net:/USB_P)	pass		U15 TPD3S014 sits on the net (D1/D2) and its two-channel ESD clamp protects D+ and D-
 esd-protection:(net:Net-%28D12-K%29)	none		only connector is J10, the AUX header marked DNP, and its clamp D12 is DNP too; the assembled board does not expose the net
 esd-protection:(net:Net-%28D13-K%29)	none		only connector is J10, the AUX header marked DNP, and its clamp D13 is DNP too; the assembled board does not expose the net
 floating-input:(net:/IO_Banks/DA0)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist

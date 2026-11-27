@@ -1,4 +1,4 @@
-#agni-run 2daa8e48d0e1986b
+#agni-run a363f5171284a802
 i2c-pull-up  2 pass
     pass  /SoM_IO/I2C0_SCL_1V8  U1 pulls its A2 pin up internally through 10 kΩ, per its
                                 datasheet

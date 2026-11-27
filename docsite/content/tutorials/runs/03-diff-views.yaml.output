@@ -1,4 +1,4 @@
-#agni-run 24ecf7d731235697
+#agni-run 20de49580bdd8cf4
 diff jetson-agx-thor-baseboard.kicad_sch -> jetson-agx-thor-baseboard.kicad_pcb
 
 Components: +0  -0  ~0
