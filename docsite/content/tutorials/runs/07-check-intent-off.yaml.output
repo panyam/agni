@@ -10,7 +10,7 @@ findings by rule:
   jetson/active-low-overbar 2
   reverse-blocking-absent 8
   single-pin-net         2
-  test-point-coverage    36
+  test-point-coverage    29
 
-447 finding(s) total
-25993 subject(s) considered by 41 rule(s), 1123 not considered (--verdicts for the detail)
+440 finding(s) total
+25986 subject(s) considered by 41 rule(s), 1123 not considered (--verdicts for the detail)

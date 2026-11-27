@@ -176,5 +176,5 @@ generator to keep in step. [Projects](../../guide/projects/#projectyaml) shows t
 
 ## Next
 
-[Read the verdicts](../09-read-the-verdicts/) explains why "6 fail" is a much better number than it
+[Read the verdicts](../09-read-the-verdicts/) explains why "5 fail" is a much better number than it
 looks.
