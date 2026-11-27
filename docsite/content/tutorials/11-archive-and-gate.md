@@ -89,8 +89,8 @@ lexicon cleared them. A tripped gate exits `2`, and the next section trips one.
 
 ## The gate reads severity, not verdict
 
-The checklist still fails 6 of its 15 items on this board, and the gate passed anyway. Rev B fixed
-the naming, and its review went from 6 failures to 5. Run the gate on it:
+The checklist still fails 5 of its 15 items on this board, and the gate passed anyway. Rev B fixed
+the naming, and its review went from 5 failures to 4. Run the gate on it:
 
 {{ agniRun "content/tutorials/runs/11-gate-rev-b.yaml" }}
 

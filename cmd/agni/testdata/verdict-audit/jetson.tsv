@@ -2,7 +2,7 @@
 # agni checks the board with examples/jetson-project/params, the datasheet specs that project reviews it with.
 # Columns: verdict id, the outcome a reader reached, the issue that explains a disagreement, what was checked.
 # Outcomes: pass, fail, not-considered, or none when the rule should not judge the subject at all.
-bulk-cap:(net:Net-%28D1-C%29)	none	#1914	a Schottky and R6 2k2 feed the module's backup-battery pin; a current-limited feed is not a rail that wants bulk capacitance
+bulk-cap:(net:Net-%28D1-C%29)	none		a Schottky and R6 2k2 feed the module's backup-battery pin; a current-limited feed is not a rail that wants bulk capacitance
 esd-protection:(net:/SFP/SFI_CONN_RX_N)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
 esd-protection:(net:/SFP/SFI_CONN_RX_P)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
 esd-protection:(net:/SFP/SFI_CONN_TX_N)	fail		SFP28 high-speed lane, AC-coupled to the SFP cage connector J12 with no clamp
@@ -173,20 +173,20 @@ reverse-blocking-absent:(net:VCC_IN)	pass	#1920	U6 LTC4412 drives P-FET Q2 betwe
 single-pin-net:(net:unconnected-%28J18-PadB24%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
 single-pin-net:(net:unconnected-%28J18-PadB25%29)	fail		kicad-cli's ERC reports the J18 pin as not connected
 test-point-coverage:(net:/DCDC/12V_OUT)	fail		no test point on the rail in KiCad's netlist
-test-point-coverage:(net:/DCDC/12V_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/12V_VDD)	none		a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
 test-point-coverage:(net:/DCDC/16V_OUT)	fail		no test point on the rail in KiCad's netlist
-test-point-coverage:(net:/DCDC/16V_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/16V_VDD)	none		a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
 test-point-coverage:(net:/DCDC/1V15_OUT)	fail		no test point on the rail in KiCad's netlist
 test-point-coverage:(net:/DCDC/1V8_OUT)	fail		no test point on the rail in KiCad's netlist
 test-point-coverage:(net:/DCDC/20V_OUT)	fail		no test point on the rail in KiCad's netlist
-test-point-coverage:(net:/DCDC/20V_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/20V_VDD)	none		a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
 test-point-coverage:(net:/DCDC/3V3_OUT)	fail		no test point on the rail in KiCad's netlist
-test-point-coverage:(net:/DCDC/3V3_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/3V3_VDD)	none		a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
 test-point-coverage:(net:/DCDC/5V_OUT)	fail		no test point on the rail in KiCad's netlist
-test-point-coverage:(net:/DCDC/5V_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/5V_VDD)	none		a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
 test-point-coverage:(net:/DCDC/5V_{AON}_OUT)	fail		no test point on the rail in KiCad's netlist
-test-point-coverage:(net:/DCDC/5V_{AON}_VDD)	none	#1914	a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
-test-point-coverage:(net:/DCDC/VIN_PWR_ON)	none	#1914	drives the gates of Q6, Q7 and Q20; a control net, not a rail
+test-point-coverage:(net:/DCDC/5V_{AON}_VDD)	none		a SIC431 VDD bias pin with its decoupling capacitor, not a board rail
+test-point-coverage:(net:/DCDC/VIN_PWR_ON)	none		drives the gates of Q6, Q7 and Q20; a control net, not a rail
 test-point-coverage:(net:/Expansion connector/+12V_FMC)	fail		no test point on the rail in KiCad's netlist
 test-point-coverage:(net:/Expansion connector/+3V3_AUX)	fail		no test point on the rail in KiCad's netlist
 test-point-coverage:(net:/Expansion connector/+3V3_FMC)	fail		no test point on the rail in KiCad's netlist

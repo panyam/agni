@@ -71,7 +71,11 @@ net, and vendor symbols type it power_in. Only the pad's name exempts it, becaus
 to find a VDD pin left unwired. A **divider tap into a sense pin** is a measurement, not a supply. It
 is a net of resistors whose legs run to a supply and to ground beside a power_in pin, such as a USB
 hub's VBUS-detect input. A supply fed through a single series resistor or a 0 Ohm link
-still wants its decoupling, so a divider needs both legs.
+still wants its decoupling, so a divider needs both legs. A part's **own bias supply** is left
+alone too (agni issue 1914). It is a supply-named pin typed passive or power_out, with only
+capacitors beside it and nothing on the board feeding it, as a buck's internal VDD regulator is. A
+supply pin typed power_in alone with its capacitor is still judged, since that is the unwired VDD
+these rules exist to find.
 
 A **connector's own pin** does not make a net a subject. A receptacle's symbol types VBUS power_in.
 When a net's only supply pin is on a connector, power leaves the board there, so the net has no load

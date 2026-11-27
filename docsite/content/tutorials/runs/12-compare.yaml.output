@@ -1,12 +1,12 @@
 #agni-run e2ac3ffe728ea9f7
 #agni-step
 comparing:
-  ours:   agni <version>, 53 finding(s) over mount://jetson/boards/jetson
+  ours:   agni <version>, 45 finding(s) over mount://jetson/boards/jetson
   theirs: kicad-cli pcb drc 10.0.6, 957 finding(s) over boards/jetson   [no coverage axis: its silence is not a pass]
 
 entities flagged:
   both         1
-  ours only    51
+  ours only    43
   theirs only  259
 
 ours only:
@@ -17,20 +17,13 @@ ours only:
   net /CSI/CSIB_5V
   net /CSI/CSIB_I2C_VCC
   net /DCDC/12V_OUT
-  net /DCDC/12V_VDD
   net /DCDC/16V_OUT
-  net /DCDC/16V_VDD
   net /DCDC/1V15_OUT
   net /DCDC/1V8_OUT
   net /DCDC/20V_OUT
-  net /DCDC/20V_VDD
   net /DCDC/3V3_OUT
-  net /DCDC/3V3_VDD
   net /DCDC/5V_OUT
-  net /DCDC/5V_VDD
   net /DCDC/5V_{AON}_OUT
-  net /DCDC/5V_{AON}_VDD
-  net /DCDC/VIN_PWR_ON
   net /Expansion connector/+12V_FMC
   net /Expansion connector/+3V3_AUX
   net /Expansion connector/+3V3_FMC
@@ -57,7 +50,6 @@ ours only:
   net /USB Debug, PD/PDC_LDO_1V8
   net /USB Debug, PD/PDC_LDO_3V3
   net FLASH_PWR
-  net Net-(D1-C)
   net VCC_IN
   net unconnected-(J18-PadB24)
   net unconnected-(J18-PadB25)

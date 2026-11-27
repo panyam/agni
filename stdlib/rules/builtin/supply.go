@@ -89,10 +89,67 @@ func senseDir(d ir.PinDirection) bool {
 	return false
 }
 
+// ownBiasSupply reports why a net is one part's own internal supply rather than a board rail, and ""
+// when it is not one (agni issue 1914). A SIC431 buck makes its VDD bias from an internal regulator
+// and wants only a capacitor on the pin, so Jetson names six such nets `12V_VDD` and the like after
+// the converter. The shape is one fitted part's supply-named pin, typed passive or power_out, with
+// nothing else fitted on the net but capacitors. Nothing on the board feeds that net, so the part
+// itself does.
+func ownBiasSupply(m check.Model, n *ir.Net) string {
+	owner, pin, caps := "", "", []string{}
+	for _, c := range n.GetConnections() {
+		ref := c.GetComponentRef()
+		if check.IsVirtualRef(ref) || !m.IsFitted(ref) {
+			continue
+		}
+		if m.ComponentClass(ref) == check.ClassCapacitor {
+			caps = append(caps, ref)
+			continue
+		}
+		if owner != "" || check.IsPassiveClass(m.ComponentClass(ref)) || m.HasClass(ref, check.ClassConnector) {
+			return ""
+		}
+		// A power_in pin takes a supply from the board, and alone with its capacitor it is the
+		// forgotten wire the supply rules exist to catch. A bias output reads passive or power_out.
+		if check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN {
+			return ""
+		}
+		owner, pin = ref, m.PinName(ref, c.GetPinRef())
+	}
+	if owner == "" || len(caps) == 0 || !m.IsSupplyPinName(pin) {
+		return ""
+	}
+	return "the net is " + owner + "'s own internal supply on its " + pin + " pin, decoupled by " + caps[0] + ", and nothing else on the board draws from it or feeds it"
+}
+
+// controlSignal reports why a rail-named net is a control signal rather than a supply, and "" when it
+// is not one (agni issue 1914). Jetson's `VIN_PWR_ON` drives three FET gates and a buck's enable, and
+// its `VIN` prefix reads as a rail. Every part pin on such a net is an input, and none is a power
+// input or a passive-typed pin that could be a supply.
+func controlSignal(m check.Model, n *ir.Net) string {
+	inputs := 0
+	for _, c := range n.GetConnections() {
+		ref := c.GetComponentRef()
+		if check.IsVirtualRef(ref) || !m.IsFitted(ref) || check.IsPassiveClass(m.ComponentClass(ref)) {
+			continue
+		}
+		if check.ConnDir(m, c) != ir.PinDirection_PIN_DIRECTION_INPUT {
+			return ""
+		}
+		inputs++
+	}
+	if inputs == 0 {
+		return ""
+	}
+	return "every part pin on the net is an input, so it carries a control signal rather than a supply"
+}
+
 // notASupply returns the reason a net with a power-input pin is not a supply rail, or "".
 func notASupply(m check.Model, n *ir.Net) string {
-	if r := floatingExposedPad(m, n); r != "" {
-		return r
+	for _, f := range []func(check.Model, *ir.Net) string{floatingExposedPad, dividerTap, ownBiasSupply, controlSignal} {
+		if r := f(m, n); r != "" {
+			return r
+		}
 	}
-	return dividerTap(m, n)
+	return ""
 }

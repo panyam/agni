@@ -167,10 +167,15 @@ func clean(s string) string {
 // KiCad's overbar `~{RESET}` is NOT folded, since it marks an active-low pin, a different pin from
 // `RESET`.
 func PinName(s string) string {
-	s = scriptMarkup.ReplaceAllString(s, "$1")
+	s = FoldScripts(s)
 	s = parenSubscript.ReplaceAllString(s, "$1$2")
 	return strings.ReplaceAll(Canonical(s), "_", "")
 }
+
+// FoldScripts drops KiCad's subscript and superscript markup and keeps its text, so `V_{DD}` reads as
+// `VDD` and `3V3_{OUT}` as `3V3OUT`. Nothing else changes, so a caller matching a vocabulary against
+// the result still sees the name's own underscores. The overbar `~{X}` is kept, as PinName keeps it.
+func FoldScripts(s string) string { return scriptMarkup.ReplaceAllString(s, "$1") }
 
 // scriptMarkup is KiCad's subscript and superscript text markup, `_{x}` and `^{x}`.
 var scriptMarkup = regexp.MustCompile(`[_^]\{([^{}]*)\}`)
