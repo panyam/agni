@@ -9,14 +9,15 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-27, at `90c6086e`.
+Last pruned 2026-11-27, at `5ef6f645`.
 
 ## At a glance
 
-**Mission #1708 is active**, to run agni check on a real board and trust every verdict, at 8 of
+**Mission #1708 is active**, to run agni check on a real board and trust every verdict, at 10 of
 26 tickets. Its exercise is `make exercise-checks` (#1712), which holds Glasgow revC3's and Jetson's
 verdicts to the hand-audited files in `cmd/agni/testdata/verdict-audit`. It last ran on 2026-11-27
-at `90c6086e`, with 6 disagreements left, down from 75. The audit runs Jetson with
+at `5ef6f645`, with 6 disagreements left, down from 75. `TestVerdictAuditServerParity` holds a
+server's verdicts on both boards to the CLI's, over `check --remote` and a stored design (#1922). The audit runs Jetson with
 `examples/jetson-project/params`. Before blaming a clamp or a connector in an audit row, check
 `component.dnp`, since two of the first rows were parts never fitted (`build/check-rule.md`).
 
@@ -55,8 +56,8 @@ release.
 Mission #1708's queue, by `~/.claude/skills/retriage/queue.sh`. The audit's bugs go first, ranked
 by how many audited rows each clears: #1916 (3, TUSB1046 four-level strap pins), #1918 (2, the
 TPD3S014's integrated clamps on USB D+ and D-) and #1920 (1, the LTC4412 ideal diode). They are P2,
-so `queue.sh` ranks #88 above them by age. #1919's rows match with the project's params, and it
-stays open for a run without them. #1922 asks for an API parity subtest.
+so `queue.sh` ranks #88 above them by age. Each needs a datasheet fact. Glasgow already carries a
+TPD3S014 spec in its `params/`, which #1918 may extend with an ESD rating.
 
 Later work is #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
