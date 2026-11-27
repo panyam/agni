@@ -1,16 +1,24 @@
-#agni-run 6d1ea40fccb39757
-pin-exceeds-abs-max  4 not-considered, 8 pass
-    not-considered  U31.2  pin could not be resolved to a datasheet terminal
-    not-considered  U48.2  pin could not be resolved to a datasheet terminal
-    not-considered  U49.2  pin could not be resolved to a datasheet terminal
-    not-considered  U51.2  pin could not be resolved to a datasheet terminal
-    pass            U31.3  3.3 V is within the absolute maximum of 6.5 V
-    pass            U31.7  3.3 V is within the absolute maximum of 6.5 V
-    pass            U48.3  1.8 V is within the absolute maximum of 6.5 V
-    pass            U48.7  3.3 V is within the absolute maximum of 6.5 V
-    pass            U49.3  1.8 V is within the absolute maximum of 6.5 V
-    pass            U49.7  3.3 V is within the absolute maximum of 6.5 V
-    pass            U51.3  1.8 V is within the absolute maximum of 6.5 V
-    pass            U51.7  5 V is within the absolute maximum of 6.5 V
+#agni-run 4e9d3d23a07d113d
+pin-exceeds-abs-max  8 not-considered, 12 pass
+    not-considered  U1.15   pin could not be resolved to a datasheet terminal
+    not-considered  U1.7    pin could not be resolved to a datasheet terminal
+    not-considered  U31.2   pin could not be resolved to a datasheet terminal
+    not-considered  U48.2   pin could not be resolved to a datasheet terminal
+    not-considered  U49.2   pin could not be resolved to a datasheet terminal
+    not-considered  U51.2   pin could not be resolved to a datasheet terminal
+    not-considered  U80.15  pin could not be resolved to a datasheet terminal
+    not-considered  U80.7   pin could not be resolved to a datasheet terminal
+    pass            U1.1    1.8 V is within the absolute maximum of 6.5 V
+    pass            U1.14   3.3 V is within the absolute maximum of 6.5 V
+    pass            U31.3   3.3 V is within the absolute maximum of 6.5 V
+    pass            U31.7   3.3 V is within the absolute maximum of 6.5 V
+    pass            U48.3   1.8 V is within the absolute maximum of 6.5 V
+    pass            U48.7   3.3 V is within the absolute maximum of 6.5 V
+    pass            U49.3   1.8 V is within the absolute maximum of 6.5 V
+    pass            U49.7   3.3 V is within the absolute maximum of 6.5 V
+    pass            U51.3   1.8 V is within the absolute maximum of 6.5 V
+    pass            U51.7   5 V is within the absolute maximum of 6.5 V
+    pass            U80.1   1.8 V is within the absolute maximum of 6.5 V
+    pass            U80.14  3.3 V is within the absolute maximum of 6.5 V
 
-12 verdicts across 1 rule(s), 8 pass, 4 not-considered
+20 verdicts across 1 rule(s), 12 pass, 8 not-considered

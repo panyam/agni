@@ -34,7 +34,8 @@ var i2cPullUp = &check.Rule{
 
 // i2cPullUpVerdicts returns one verdict per I2C net, and that list IS this rule's considered set. A
 // pin the design marks no-connect is NotConsidered, since an unused bus pin needs no pull-up (agni
-// issue 1244).
+// issue 1244). So is a line with no pull-up that leaves the board through an internal connector, or
+// that reaches only test points beside its one part (check.PullUpOffBoard, agni issue 1911).
 //
 // A pass carries its PATH as the witness ("SCL reaches rail +3V3 through R7"), and the same hops are
 // the entities the viewer highlights.
@@ -49,6 +50,12 @@ func i2cPullUpVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 			continue
 		}
 		outcome, w, ctx := check.PullUpVerdict(m, n)
+		if outcome == check.Fail {
+			if why := check.PullUpOffBoard(m, n); why != "" {
+				out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}, Rule: "i2c-pull-up", Outcome: check.NotConsidered, Reason: why})
+				continue
+			}
+		}
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}, Rule: "i2c-pull-up", Outcome: outcome, Witness: w, Context: ctx}
 		if outcome == check.Fail {
 			f := check.NetFinding("I2C net has no pull-up resistor to a rail")(n)
@@ -68,6 +75,7 @@ var i2cPullUpSpec = &check.Spec{
 		check.IsTrue{T: check.Call{Fn: "i2c_name", Args: []check.Term{check.Fact{Name: "net.names"}}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "deliberately_open"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "pullup_reaches_rail"}}},
+		check.Not{X: check.IsTrue{T: check.Call{Fn: "pullup_off_board"}}},
 	}},
 	Message: "I2C net has no pull-up resistor to a rail",
 }

@@ -83,19 +83,21 @@ bill.
 
 {{ agniRun "content/tutorials/runs/11-gate-merge.yaml" }}
 
-Exit `2` is a tripped gate, so CI fails. Put that one line in your pipeline and a board with an
-error-severity finding cannot merge. On this board that is the twenty-eight `i2c-pull-up` errors.
+Exit `0`, so CI passes. Put that one line in your pipeline and a board with an error-severity
+finding cannot merge. This board has none left. Rung 2's two errors were the FTDI lines, and rung 4's
+lexicon cleared them. A tripped gate exits `2`, and the next section trips one.
 
 ## The gate reads severity, not verdict
 
-Rev B fitted two of the missing pull-ups and fixed the naming, and its review went from 7 failures to
-6. Run the gate on it:
+The checklist still fails 6 of its 15 items on this board, and the gate passed anyway. Rev B fixed
+the naming, and its review went from 6 failures to 5. Run the gate on it:
 
 {{ agniRun "content/tutorials/runs/11-gate-rev-b.yaml" }}
 
-Still failing, and correctly, because twenty-six I2C errors remain. A gate trips on a set of
-findings, and a revision that fixes some of them does not open the gate. The review delta in rung 10
-shows the progress that the exit code cannot show.
+It passes too, for the same reason. None of the findings behind those failing items is an error, and
+the gate asked about errors. A gate trips on the findings at or above one severity. A checklist
+item's verdict answers a different question, so a gate stays open on a board whose review still
+fails. The review delta in rung 10 shows the progress that the exit code cannot show.
 
 The subtler case is evidence. In rung 6 the checklist scored the first-pass draft of the NTS0102 as
 `provisional`. Put that draft back, and gate on the rule it feeds:

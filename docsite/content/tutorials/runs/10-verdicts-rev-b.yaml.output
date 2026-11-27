@@ -1,2 +1,14 @@
-#agni-run db3a6369f97b97f4
-i2c-pull-up  26 fail, 28 pass
+#agni-run 2daa8e48d0e1986b
+i2c-pull-up  2 pass
+    pass  /SoM_IO/I2C0_SCL_1V8  U1 pulls its A2 pin up internally through 10 kΩ, per its
+                                datasheet
+    pass  /SoM_IO/I2C3_SDA_1V8  U1 pulls its A3 pin up internally through 10 kΩ, per its
+                                datasheet
+
+2 verdicts across 1 rule(s), 2 pass
+#agni-step
+i2c-pull-up  2 pass
+    pass  /SoM_IO/I2C0_SCL_1V8  /SoM_IO/I2C0_SCL_1V8 reaches rail +1V8 through R357
+    pass  /SoM_IO/I2C3_SDA_1V8  /SoM_IO/I2C3_SDA_1V8 reaches rail +1V8 through R358
+
+2 verdicts across 1 rule(s), 2 pass

@@ -28,6 +28,14 @@ func registerBuiltinSpecFuncs() {
 			return DeliberatelyOpen(m, ents["net"].(*ir.Net))
 		},
 	})
+	RegisterSpecFunc("pullup_off_board", &SpecFunc{
+		// A bus line with no pull-up that this board cannot judge (see PullUpOffBoard).
+		Reads:      []string{"component.class", "on_net"},
+		Primitives: []string{"exists", "traverse"},
+		Fn: func(m Model, ents map[string]any, _ []any) any {
+			return PullUpOffBoard(m, ents["net"].(*ir.Net)) != ""
+		},
+	})
 	RegisterSpecFunc("unprotected_power_reach", &SpecFunc{
 		// The WS3-011 reach walk behind input-protection. True when SOME net series-reachable
 		// from the in-scope connector net has a real power-input pin with neither a fuse

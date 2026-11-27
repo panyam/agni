@@ -57,9 +57,8 @@ with a direct pull-up and a second behind a series resistor shows both. A bus wi
 carries the same statement and context it always did.
 
 A resistor marked do-not-populate is not crossed, because an unfitted part pulls nothing (agni issue
-938). A line whose only pull-up footprint is DNP fails. That failure is right when the design relies
-on pull-ups the netlist does not show (inside a level translator, on a plugged-in module), and the
-reliance is worth recording.
+938). A line whose only pull-up footprint is DNP fails, unless a part's datasheet or an internal
+connector accounts for it, as the paragraphs below say.
 
 Sometimes the schematic marks a bus pin no-connect and the pin is alone on its net. The rule does
 not consider that pin (agni issue 1244). A part's SMBus or I2C pins are often unused, and KiCad
@@ -76,6 +75,15 @@ pin on the net. The row has to be bound to that pin, since a part-wide statement
 it does not cover, and the pass names the part, the resistance and the row. A failure does not name
 a part it could not read, because almost every bus has a microcontroller with no datasheet in the
 run, and its weak internal pull-up is not the pull-up a bus needs.
+
+Two kinds of line with no pull-up are not considered, because the board alone cannot judge them
+(agni issue 1911). Both are read across 0 Ohm links.
+
+- A line that reaches a connector the design declares internal, such as a Jetson module's
+  board-to-board socket (`intent: components: {J1: {exposure: internal}}`). The module across it may
+  carry the pull-up. The reason names the connector. A connector a cable plugs into stays judged.
+- A line with one part on it and only test points beside it, such as a multiplexer's unused channel.
+  No second device uses that bus, so nothing on it needs a pull-up.
 
 The lexicon's `i2c` vocabulary decides which nets are I2C, and a project extends or replaces it in
 its conventions (agni issue 1265). The built-in match is at a **token boundary**, not a substring

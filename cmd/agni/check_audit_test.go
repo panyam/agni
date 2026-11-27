@@ -28,12 +28,15 @@ import (
 
 type auditBoard struct {
 	name, dir, file string
-	minVerdicts     int // count guard, well under today's count
+	minVerdicts     int    // count guard, well under today's count
+	params          string // a --params folder the board is checked with, "" for none
 }
 
+// Jetson is checked with examples/jetson-project's params, as that project reviews it. Its NTS0104
+// spec credits the translator's integrated pull-ups (agni issue 1911).
 var auditBoards = []auditBoard{
-	{"glasgow-revC3", "../../tools/samples/boards/glasgow-revC3", "testdata/verdict-audit/glasgow-revC3.tsv", 5000},
-	{"jetson", "../../tools/samples/boards/jetson-agx-thor-baseboard", "testdata/verdict-audit/jetson.tsv", 20000},
+	{"glasgow-revC3", "../../tools/samples/boards/glasgow-revC3", "testdata/verdict-audit/glasgow-revC3.tsv", 5000, ""},
+	{"jetson", "../../tools/samples/boards/jetson-agx-thor-baseboard", "testdata/verdict-audit/jetson.tsv", 20000, "../../examples/jetson-project/params"},
 }
 
 type auditRow struct {
@@ -208,14 +211,18 @@ func (rep auditReport) table(board string) string {
 	return buf.String()
 }
 
-func runBoardVerdicts(t *testing.T, dir string) []*checks.Verdict {
+func runBoardVerdicts(t *testing.T, b auditBoard) []*checks.Verdict {
 	t.Helper()
-	if _, err := os.Stat(dir); err != nil {
+	if _, err := os.Stat(b.dir); err != nil {
 		// Fatal rather than skipped, because a missing corpus must not read as a pass.
-		t.Fatalf("%s missing (run `make samples-oracle`): %v", dir, err)
+		t.Fatalf("%s missing (run `make samples-oracle`): %v", b.dir, err)
+	}
+	args := []string{"--verdicts", "--format", "json"}
+	if b.params != "" {
+		args = append(args, "--params", b.params)
 	}
 	var resp webapi.CheckDesignResponse
-	if err := protojson.Unmarshal([]byte(runCheck(t, "--verdicts", "--format", "json", dir)), &resp); err != nil {
+	if err := protojson.Unmarshal([]byte(runCheck(t, append(args, b.dir)...)), &resp); err != nil {
 		t.Fatal(err)
 	}
 	return resp.GetVerdicts()
@@ -229,7 +236,7 @@ func TestVerdictAudit(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			verdicts := runBoardVerdicts(t, b.dir)
+			verdicts := runBoardVerdicts(t, b)
 			if len(verdicts) < b.minVerdicts {
 				t.Fatalf("%s stated %d verdicts, want at least %d", b.name, len(verdicts), b.minVerdicts)
 			}

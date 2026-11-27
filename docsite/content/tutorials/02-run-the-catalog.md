@@ -13,12 +13,13 @@ rungs 4 through 8. Run it from the board's folder, as in [rung 1](../01-read-a-d
 
 ## Reading one finding
 
-Take `[error] i2c-pull-up: /SoM_IO/I2C0_SCL_1V8 (I2C net has no pull-up resistor to a rail)`. It has
+Take `[error] i2c-pull-up: /USB Debug, PD/FTDI_CBUS0{slash}SDA (I2C net has no pull-up resistor to a rail)`. It has
 four parts.
 
 The **severity** is `error`. The **rule** is `i2c-pull-up`. The **subject** is the net
-`/SoM_IO/I2C0_SCL_1V8`. It names the specific thing on your board that the rule is about, and its
-prefix names the sheet where the net is drawn. The **reason** in parentheses says what is wrong in
+`/USB Debug, PD/FTDI_CBUS0{slash}SDA`. It names the specific thing on your board that the rule is
+about, and its prefix names the sheet where the net is drawn. `{slash}` is how KiCad writes a `/`
+inside a net's own name. The **reason** in parentheses says what is wrong in
 plain language.
 
 Severity is a policy signal, not a confidence signal. An `error` is something that will almost
@@ -27,16 +28,15 @@ because the parts on it can only pull the line down and nothing pulls it back up
 something that usually indicates a defect. An `info` is worth a look. None of them is a statement
 about how sure the tool is.
 
-Now look at the net itself. It joins three pins, one on the module connector J1, one on R357, and
-one on U1, an NTS0104 level translator. R357 is a 2.2 kOhm pull-up, and the schematic marks it
-do-not-populate, so the rule does not count it. The translator carries 10 kOhm pull-ups of its own
-inside the package. That fact comes from its datasheet and appears nowhere in the netlist. So the
-finding is right about what the drawing shows, and the board most likely works.
-[Rung 6](../06-part-limits/) closes that gap by turning a datasheet fact into something a check can
-read.
+Now look at the net itself. It joins the FT230X USB bridge's CBUS0 pin and R114, a 1 kOhm resistor.
+R114's other end sits on `FTDI_3V3`, the bridge's own 3.3 V regulator output. So the line has a
+pull-up. The rule asks for a pull-up to a RAIL, though, and agni reads `FTDI_3V3` as an ordinary net,
+because the name matches none of its built-in rail patterns. So the finding is right about what agni
+knows, and the board most likely works.
+[Rung 4](../04-your-names/) closes that gap by teaching agni the project's own names.
 
-Most findings on a real board read like this one. The rule is correct about the netlist, and
-whether it matters depends on something the netlist does not carry.
+Most findings on a real board read like this one. The rule is correct about what it can see, and
+whether it matters depends on something it does not know yet.
 
 ## Where a finding came from
 
@@ -52,9 +52,9 @@ agni check . --format json
   "severity": "error",
   "subject": {
     "kind": "net",
-    "ref": "/SoM_IO/I2C0_SCL_1V8",
+    "ref": "/USB Debug, PD/FTDI_CBUS0{slash}SDA",
     "pin": "",
-    "netId": "93b92cc31d78",
+    "netId": "183d68985b0a",
     "busId": ""
   },
   "message": "I2C net has no pull-up resistor to a rail",
@@ -66,16 +66,20 @@ agni check . --format json
     "nativeIdKind": ""
   },
   "sheets": [
-    "/SoM_IO"
+    "/USB Debug, PD",
+    "board"
   ],
   "locateReason": "LOCATE_REASON_UNSPECIFIED",
   "datasheets": [],
-  "context": []
+  "context": [],
+  "verdictIds": [
+    "i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS0{slash}SDA)"
+  ]
 }
 ```
 
 `provenance` points back at the design's source file, and `sheets` names the sheet where the net is
-drawn. Together they take you from a finding to the thing in your CAD tool. `datasheets` is empty
+drawn, plus `board` when the net is routed on the copper. Together they take you from a finding to the thing in your CAD tool. `datasheets` is empty
 here. On a datasheet-backed finding it carries the cited page and table, and rung 6 covers it.
 `inconclusive` marks a check that ran but could not decide. That matters enough to get its own rung
 later.
@@ -104,14 +108,14 @@ is all you need to put it in CI:
 
 {{ agniRun "content/tutorials/runs/02-gate-fails.yaml" }}
 
-The board has thirty `error` findings, all of them `i2c-pull-up`, so the command fails. A rule with
+The board has two `error` findings, both of them `i2c-pull-up`, so the command fails. A rule with
 no errors passes the same gate:
 
 {{ agniRun "content/tutorials/runs/02-gate-passes.yaml" }}
 
 Starting at `--fail-on error` is the practical choice. It gates on the things that will not work at
 all, which almost nobody argues with, and it lets you tighten to `warning` later once the backlog is
-clear. On a board like this one the first job is reading those thirty, because as the finding above
+clear. On a board like this one the first job is reading those two, because as the finding above
 showed, an error can be right about the netlist and still not be a defect.
 
 ## What the run says it looked at
@@ -120,17 +124,17 @@ Look at the last line of that first run again. Every run ends with it, whether o
 anything:
 
 ```
-24117 subject(s) considered by 35 rule(s), 615 not considered (--verdicts for the detail)
+24089 subject(s) considered by 35 rule(s), 643 not considered (--verdicts for the detail)
 ```
 
 A findings list cannot give you this half. Picture two runs. One finds nothing. In the other, every
 rule examined the wrong thing. Both produce an identical list of findings, namely none, so the
 findings alone can never tell you which one you are holding.
 
-Read the three numbers separately. **24117 considered** is how many subjects were actually judged.
+Read the three numbers separately. **24089 considered** is how many subjects were actually judged.
 **35 rules** is how many were willing to say what they looked at. That is not the same as how many
 ran. Most of the catalog has no subject in scope on any given board, and a rule with nothing to say
-is not a gap. **615 not considered** is the one worth reading closely, and it gets its own
+is not a gap. **643 not considered** is the one worth reading closely, and it gets its own
 look below.
 
 A second line can appear under that one:
@@ -166,7 +170,7 @@ default and the rows are a flag:
 rule was willing to judge that subject and something stopped it, so it says what stopped it rather
 than passing on incomplete evidence.
 
-On this board most of the 615 are one of three kinds. 319 are `netclass-via-drill` declining nets
+On this board most of the 643 are one of three kinds. 319 are `netclass-via-drill` declining nets
 that carry no via, since such a net has no drill to compare. 154 are `floating-input` declining a
 net that carries a passive part, because a resistor on a net might be the pull that fixes it, might
 be a series element with the driver on the far side, or might be a footprint nobody stuffed, and a

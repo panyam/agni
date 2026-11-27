@@ -1,9 +1,9 @@
-#agni-run 55544710c085c1de
+#agni-run 7df1cec7f750d0bb
 findings by rule:
   bulk-cap               1
   esd-protection         394
   floating-input         3
-  i2c-pull-up            28
+  i2c-pull-up            8
   i2c-redundant-pull-up  4
   input-protection       3
   jetson-profiles/pcie-esd-missing 48
@@ -12,5 +12,5 @@ findings by rule:
   single-pin-net         2
   test-point-coverage    36
 
-529 finding(s) total
-26059 subject(s) considered by 41 rule(s), 1041 not considered (--verdicts for the detail)
+509 finding(s) total
+26055 subject(s) considered by 41 rule(s), 1061 not considered (--verdicts for the detail)

@@ -16,9 +16,10 @@ stable. Everything is a change, so nothing is.
 
 The Jetson board upstream is a single snapshot, so the project makes its second revision itself, by a
 documented edit. `tools/make_rev_b.py` copies rev A and changes two things. It fits R357 and R358,
-two I2C pull-ups that the schematic marked do-not-populate. It also renames the two interrupt nets
-spelled with a trailing `n` to KiCad's overbar. A reviewer would plausibly ask for both after the
-first review.
+two 2.2 kOhm I2C pull-ups that the schematic marked do-not-populate. Those buses lean on the NTS0104
+translator's internal 10 kOhm pull-ups, which a reviewer might find weak for a fast bus. It also
+renames the two interrupt nets spelled with a trailing `n` to KiCad's overbar. A reviewer would
+plausibly ask for both after the first review.
 Rev B is a design folder of its own, `boards/jetson-rev-b`, with a descriptor matching rev A's, so the
 two read the same way and differ only by the edit.
 
@@ -69,14 +70,19 @@ The structural diff says what moved. Running the checklist on both says whether 
 {{ agniRun "content/tutorials/runs/10-review-delta.yaml" }}
 
 One failure became a pass. H1 passes because both trailing-`n` names are gone. I4, every I2C bus has
-pull-ups, still fails, because the board has other undriven buses, but it fails on two nets fewer:
+pull-ups, passed on rev A already, and the fitted resistors leave it passing. Its verdicts show what
+they changed:
 
 {{ agniRun "content/tutorials/runs/10-verdicts-rev-b.yaml" }}
 
-Read the subjects. The two fitted resistors pull up `I2C0_SCL_1V8` and `I2C3_SDA_1V8`, the clock of one
-bus and the data line of another, which their neighbouring reference designators would not suggest. The diff told you which parts changed. The verdicts told you
-which buses that helped. On a real revision, check that half. A fix can go onto a different net than
-the one intended, and then the fix causes a regression.
+Read the evidence. On rev A each line passes through U1's own pull-up, a fact from the NTS0104's
+datasheet that the project's `params/` supplies. On rev B the same lines pass through R357 and R358.
+The outcome stayed the same and the reason changed, and a review summary counting passes cannot show
+that. The fitted resistors also land on `I2C0_SCL_1V8` and `I2C3_SDA_1V8`, the clock of one bus and
+the data line of another, which their neighbouring reference designators would not suggest. The diff
+told you which parts changed. The verdicts told you which lines that touched. On a real revision,
+check that half. A fix can go onto a different net than the one intended, and then the fix causes a
+regression.
 
 ## Comparing across formats
 

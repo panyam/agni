@@ -105,13 +105,13 @@ nets that were invisible to it became rails. `rail-not-classified` is gone too. 
 catalog's own tripwire for this gap, and it had named `FTDI_3V3`. That net's name declares 3.3 V,
 and it feeds four supply pins, but it carries no rail role. It is already in the count above, since
 `net.rail` also counts any net that something drives as a power net. The rules read the rail ROLE,
-though, and only the lexicon gives the net one. And two `i2c-pull-up` errors disappeared:
+though, and only the lexicon gives the net one. And both `i2c-pull-up` errors disappeared:
 
 {{ agniRun "content/tutorials/runs/04-verdicts-ftdi.yaml" }}
 
 Both lines were pulled up all along, through R113 and R114 to `FTDI_3V3`. The rule asks for a
 pull-up to a RAIL, and until the lexicon named that net a rail, the resistors led nowhere the rule
-recognized. Two of rung 2's thirty errors were the vocabulary's blind spot rather than the design's.
+recognized. Both of rung 2's errors were the vocabulary's blind spot rather than the design's.
 
 Every tier follows that pattern. Supplying a tier adds its own findings. It can also change what
 your existing rules are able to see, in both directions.

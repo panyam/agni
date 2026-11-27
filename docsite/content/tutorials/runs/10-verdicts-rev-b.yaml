@@ -1,7 +1,12 @@
-# Rung 10: the two I2C lines the fitted pull-ups fixed, with the resistor each now reaches its rail by.
+# Rung 10: the two I2C lines the fitted pull-ups land on, on each revision, with the evidence each passes by.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
 fetched_into: boards/jetson
-script: |
-  python3 tools/make_rev_b.py boards/jetson boards/jetson-rev-b
-  agni check --verdicts --rule i2c-pull-up boards/jetson-rev-b 2>/dev/null | grep -E '^i2c-pull-up|I2C0_SCL_1V8 |I2C3_SDA_1V8 '
+steps:
+  - show: agni check --verdicts --rule i2c-pull-up --subject net:/SoM_IO/I2C0_SCL_1V8 --subject net:/SoM_IO/I2C3_SDA_1V8 boards/jetson
+    script: |
+      agni check --verdicts --rule i2c-pull-up --subject net:/SoM_IO/I2C0_SCL_1V8 --subject net:/SoM_IO/I2C3_SDA_1V8 boards/jetson 2>/dev/null
+  - show: agni check --verdicts --rule i2c-pull-up --subject net:/SoM_IO/I2C0_SCL_1V8 --subject net:/SoM_IO/I2C3_SDA_1V8 boards/jetson-rev-b
+    script: |
+      python3 tools/make_rev_b.py boards/jetson boards/jetson-rev-b
+      agni check --verdicts --rule i2c-pull-up --subject net:/SoM_IO/I2C0_SCL_1V8 --subject net:/SoM_IO/I2C3_SDA_1V8 boards/jetson-rev-b 2>/dev/null

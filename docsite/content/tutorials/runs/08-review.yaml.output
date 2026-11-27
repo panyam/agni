@@ -1,9 +1,9 @@
-#agni-run 2f6bf6629d416bd7
+#agni-run 84cb0efa47cda24a
 # Review: Jetson baseboard design review
 
 Design: `boards/jetson`
 
-**6 pass, 7 fail, 1 n/a, 1 not-automated (of 15)**
+**7 pass, 6 fail, 1 n/a, 1 not-automated (of 15)**
 
 ## Power
 
@@ -19,14 +19,14 @@ Design: `boards/jetson`
 
 ## Interfaces
 
-1 pass, 2 fail, 1 n/a, 0 not-automated (of 4)
+2 pass, 1 fail, 1 n/a, 0 not-automated (of 4)
 
 | # | Title | Outcome | Detail |
 |---|-------|---------|--------|
 | I1 | every PCIe link is complete | pass |  |
 | I2 | the CAN interface is complete and terminated | not-applicable | interface not present on this design |
 | I3 | exposed signals have ESD protection | fail | esd-protection: /SFP/SFI_CONN_RX_N (externally-exposed signal net has no ESD protection); esd-protection: /SFP/SFI_CONN_RX_P (externally-exposed signal net has no ESD protection); esd-protection: /SFP/SFI_CONN_TX_N (externally-exposed signal net has no ESD protection); (+7 more) |
-| I4 | every I2C bus has pull-ups | fail | i2c-pull-up: /CSI/I2C_MUX_SCL (I2C net has no pull-up resistor to a rail); i2c-pull-up: /CSI/I2C_MUX_SDA (I2C net has no pull-up resistor to a rail); i2c-pull-up: /CSI/I2C_{CAM}.SCL (I2C net has no pull-up resistor to a rail); (+25 more) |
+| I4 | every I2C bus has pull-ups | pass |  |
 
 ## House style
 
