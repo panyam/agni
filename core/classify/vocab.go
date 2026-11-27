@@ -30,12 +30,15 @@ type ClassVocab struct {
 // their ref-des says. Vendors sell TVS arrays as ICs (TI's TPD4E05U06 and TPD2E2U06, Nexperia's PESD
 // and PRTR, ST's ESDA and USBLC, Semtech's RClamp, Vishay's VBUS54, Murata's LXES) and label them U.
 // So neither the ref-des prefix nor a "tvs" word matches them (agni 934, 1257). A family matches at
-// the START of a token of the part's text, and that text includes its MPN property.
+// the START of a token of the part's text, and that text includes its MPN property. It also matches
+// at the start of a whole value, unsplit, so a family can name its series after a hyphen. Bourns
+// sells the CDSOD323-T line as TVS diodes, and only the `-T` sets it apart from the package name
+// (agni 1915). Glasgow draws two of them with KiCad's Zener symbol.
 //
 // Only a family match promotes an IC. The bare words "tvs" and "esd" keep refining a diode alone,
 // because an IC's free-text description mentioning "ESD protection" says nothing about what it is.
 var builtinFamilies = map[ComponentClass][]string{
-	ClassTVS: {`^tpd\d+e`, `^pesd`, `^esda`, `^esd\d`, `^usblc`, `^rclamp`, `^prtr`, `^sp05`, `^sm712`, `^smaj`, `^smbj`, `^smcj`, `^p6ke`, `^ptvs`, `^vbus54`, `^lxes`},
+	ClassTVS: {`^tpd\d+e`, `^pesd`, `^esda`, `^esd\d`, `^usblc`, `^rclamp`, `^prtr`, `^sp05`, `^sm712`, `^smaj`, `^smbj`, `^smcj`, `^p6ke`, `^ptvs`, `^vbus54`, `^lxes`, `^cdsod323-t\d`},
 }
 
 // DefaultClassVocab returns the built-in classification lexicon. It inverts the tokenClasses map into

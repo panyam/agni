@@ -112,7 +112,7 @@ func (l *Lexicon) Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 
 	// A suppressor's part number decides it on a diode, an IC or an unknown part.
 	if base == ClassDiode || base == ClassIC || base == ClassUnknown || base == "" {
-		if fam := l.class().FamilyClass(tokens); fam != "" {
+		if fam := l.class().FamilyClass(append(tokens, classValues(pt, c)...)); fam != "" {
 			return fam
 		}
 	}
@@ -230,6 +230,16 @@ func classTokens(pt *ir.PartType, c *ir.Component) []string {
 	}
 	flush(len(text))
 	return toks
+}
+
+// classValues returns the part name, kind and every attribute value whole and lowercased, so a
+// part-number family can match across the hyphen classTokens splits on (agni 1915).
+func classValues(pt *ir.PartType, c *ir.Component) []string {
+	out := []string{strings.ToLower(pt.GetName()), strings.ToLower(pt.GetKind())}
+	for _, v := range c.GetAttributes() {
+		out = append(out, strings.ToLower(strings.TrimSpace(v)))
+	}
+	return out
 }
 
 // refDesPrefix returns the leading run of letters of a ref-des, uppercased. It skips a leading '#',
