@@ -4,12 +4,12 @@ findings by rule:
   esd-protection         332
   i2c-pull-up            8
   i2c-redundant-pull-up  4
-  input-protection       3
+  input-protection       2
   jetson-profiles/pcie-esd-missing 48
   jetson/active-low-overbar 2
   reverse-blocking-absent 8
   single-pin-net         2
   test-point-coverage    29
 
-437 finding(s) total
-25982 subject(s) considered by 41 rule(s), 1127 not considered (--verdicts for the detail)
+436 finding(s) total
+25979 subject(s) considered by 41 rule(s), 1130 not considered (--verdicts for the detail)

@@ -38,7 +38,7 @@ type ClassVocab struct {
 // Only a family match promotes an IC. The bare words "tvs" and "esd" keep refining a diode alone,
 // because an IC's free-text description mentioning "ESD protection" says nothing about what it is.
 var builtinFamilies = map[ComponentClass][]string{
-	ClassTVS: {`^tpd\d+e`, `^pesd`, `^esda`, `^esd\d`, `^usblc`, `^rclamp`, `^prtr`, `^sp05`, `^sm712`, `^smaj`, `^smbj`, `^smcj`, `^p6ke`, `^ptvs`, `^vbus54`, `^lxes`, `^cdsod323-t\d`},
+	ClassTVS: {`^tpd\d+e`, `^pesd`, `^esda`, `^esd\d`, `^usblc`, `^rclamp`, `^prtr`, `^sp05`, `^sm712`, `^smaj`, `^smbj`, `^smcj`, `^p6ke`, `^p4sma`, `^ptvs`, `^vbus54`, `^lxes`, `^cdsod323-t\d`},
 }
 
 // DefaultClassVocab returns the built-in classification lexicon. It inverts the tokenClasses map into

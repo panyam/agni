@@ -211,6 +211,8 @@ func TestClassifyTVSFamilies(t *testing.T) {
 		{"an ESD array under an IC symbol", mpn("U16", "TPD4E05U06QDQARQ1"), ClassTVS},
 		{"a single-channel ESD diode", mpn("D37", "TPD1E0B04DPYR"), ClassTVS},
 		{"a TVS diode known only by part number", mpn("D8", "PESD5Z5.0F"), ClassTVS},
+		// MNT Reform guards its USB-C power input with a Vishay P4SMA24CA (agni issue 1939).
+		{"a P4SMA TVS diode", mpn("D13", "P4SMA24CA-E3/61"), ClassTVS},
 		{"a VBUS clamp", mpn("D7", "ESDA25P35-1U1M"), ClassTVS},
 		{"a power TVS on a supply input", mpn("D2", "PTVS26VS1UR,115"), ClassTVS},
 		{"a family named in the Value", &ir.Component{RefDes: "U3", Attributes: map[string]string{"Value": "TPD3E001DRLR"}}, ClassTVS},

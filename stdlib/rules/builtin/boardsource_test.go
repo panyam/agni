@@ -113,6 +113,11 @@ func TestACableSupplyPinKeepsAPortJudged(t *testing.T) {
 		{"an LDO's VIN typed passive, fed by the switch", map[string][]supplyPin{
 			"U5": {{"VIN", "1", pass}, {"VOUT", "2", pass}},
 		}, map[string][]string{"5V": {"U2.4"}, "3V3": {"U2.3", "U5.1"}, "LDO_3V3": {"U5.2"}}, check.NotConsidered},
+		// An INA233 types its Vbus sense pin input, and in KiCad that is the author's choice (agni
+		// issue 1241), so the pin draws nothing from the cable.
+		{"a current monitor's Vbus sense pin typed input", map[string][]supplyPin{
+			"U5": {{"Vbus", "1", ir.PinDirection_PIN_DIRECTION_INPUT}},
+		}, map[string][]string{"5V": {"U2.4"}, "3V3": {"U2.3", "U5.1"}}, check.NotConsidered},
 		{"a VBUS detect pin", map[string][]supplyPin{
 			"U5": {{"VBUS_DET", "1", inout}},
 		}, map[string][]string{"5V": {"U2.4"}, "3V3": {"U2.3", "U5.1"}}, check.NotConsidered},

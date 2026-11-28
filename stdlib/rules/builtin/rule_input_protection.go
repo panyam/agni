@@ -58,13 +58,19 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			continue // no connector on it, so nothing enters the board here
 		}
 		report := check.PowerPathProtection(m, n)
-		if report.Loads == 0 {
+		if report.Loads == 0 && !connectorPowerPin(m, n) {
 			continue // a connector net that feeds no supply pin is a signal, not a power entry
 		}
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		src := check.BoardSource(m, n)
 		switch {
+		case report.Loads == 0 && src != "":
+			v.Outcome = check.NotConsidered
+			v.Reason = "the board drives this net itself, from " + src + ", so its connector is an outlet rather than a power entry"
+		case report.Loads == 0:
+			v.Outcome = check.NotConsidered
+			v.Reason = fmt.Sprintf("the connector's power pin reaches no load within %d series hops, so whatever it powers is past what the rule reads", check.PowerPathReachHops)
 		case n.Attributes[netgraph.AttrExternal] == "true":
 			v.Outcome = check.NotConsidered
 			v.Reason = "the net continues onto a sheet this read did not open, so its fuse or clamp may be drawn outside it"
@@ -78,6 +84,7 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 				Terms: []check.WitnessTerm{
 					{Label: "power entries reached", Value: strconv.Itoa(report.Loads)},
 					{Label: "unprotected entry", Value: report.Unprotected},
+					{Label: "power entry", Value: report.Entry},
 				},
 			}
 			if report.Unread != "" {
@@ -94,6 +101,7 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 				Terms: []check.WitnessTerm{
 					{Label: "power entries reached", Value: strconv.Itoa(report.Loads)},
 					{Label: "protector", Value: report.Protector},
+					{Label: "power entry", Value: report.Entry},
 				},
 			}
 			v.Context = compContext(report.Protector, "fuse or clamp on the path")
@@ -111,6 +119,19 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		out = append(out, v)
 	}
 	return out
+}
+
+// connectorPowerPin reports whether an exposed connector's own pin on n is typed power_in or
+// power_out. Its symbol then says the pin carries power, so a net whose walk reaches no load is
+// still a power entry the rule could not follow, not a signal (agni issue 1939).
+func connectorPowerPin(m check.Model, n *ir.Net) bool {
+	return check.Exists(n.Connections, func(c *ir.Connection) bool {
+		if !m.ExposedConnector(c.ComponentRef) {
+			return false
+		}
+		d := check.ConnDir(m, c)
+		return d == ir.PinDirection_PIN_DIRECTION_POWER_IN || d == ir.PinDirection_PIN_DIRECTION_POWER_OUT
+	})
 }
 
 // inputProtectionSpec is the rule's declarative twin (WS3-003). The guard clauses are still AST,

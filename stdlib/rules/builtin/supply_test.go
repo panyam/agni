@@ -227,22 +227,40 @@ func TestAConnectorsOwnPinIsNotADecouplingSubject(t *testing.T) {
 	}
 }
 
-// A clamp array biased from the rail it guards is the protector and not the load: input-protection
-// credits it and reverse-blocking-absent does not stop at its supply pin (agni issue 1257).
+// A clamp array biased from the rail it guards is the protector and not the load (agni issue 1257).
+// With no other load the path feeds nothing, so neither rule judges it (agni issue 1939). With a real
+// load behind it, input-protection credits the clamp.
 func TestAClampsOwnSupplyPinIsNotALoad(t *testing.T) {
-	d := pinDesign(map[string][]supplyPin{
-		"J1": twoPin(), "U15": {{"VDD", "5", pwrIn}}, "FB1": twoPin(),
-	}, map[string][]string{"J1_VBUS": {"J1.1", "FB1.1"}, "VBUS": {"FB1.2", "U15.5"}})
-	for _, c := range d.Components {
-		if c.RefDes == "U15" {
-			c.Attributes = map[string]string{"Value": "LXES1TBCC2-004"}
-		}
-	}
-	classify.Stamp(d)
-	if got := verdictOn(t, inputProtection, d, "J1_VBUS"); got != string(check.Pass) {
-		t.Errorf("input-protection on J1_VBUS = %q, want pass", got)
-	}
-	if got := verdictOn(t, reverseBlockingAbsent, d, "J1_VBUS"); got != "" {
-		t.Errorf("reverse-blocking-absent on J1_VBUS = %q, want no verdict since no load remains", got)
+	for _, tc := range []struct {
+		name      string
+		load      bool
+		protector check.Outcome
+	}{
+		{"the clamp is the only part on the path", false, ""},
+		{"a regulator draws from the path", true, check.Pass},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			nets := map[string][]string{"J1_VBUS": {"J1.1", "FB1.1"}, "VBUS": {"FB1.2", "U15.5"}}
+			if tc.load {
+				nets["VBUS"] = append(nets["VBUS"], "U16.1")
+			}
+			d := pinDesign(map[string][]supplyPin{
+				"J1": twoPin(), "U15": {{"VDD", "5", pwrIn}}, "FB1": twoPin(), "U16": {{"VIN", "1", pwrIn}},
+			}, nets)
+			for _, c := range d.Components {
+				if c.RefDes == "U15" {
+					c.Attributes = map[string]string{"Value": "LXES1TBCC2-004"}
+				}
+			}
+			classify.Stamp(d)
+			if got := verdictOn(t, inputProtection, d, "J1_VBUS"); got != string(tc.protector) {
+				t.Errorf("input-protection on J1_VBUS = %q, want %q", got, tc.protector)
+			}
+			if !tc.load {
+				if got := verdictOn(t, reverseBlockingAbsent, d, "J1_VBUS"); got != "" {
+					t.Errorf("reverse-blocking-absent on J1_VBUS = %q, want no verdict since no load remains", got)
+				}
+			}
+		})
 	}
 }

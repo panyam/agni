@@ -500,9 +500,40 @@ type PowerPathReport struct {
 	// ProtectorWitness is the datasheet evidence when Protector is a current-limiting switch rather
 	// than a fuse or TVS (CurrentLimitCredit), nil otherwise.
 	ProtectorWitness *Witness
+	// Entry names a load pin the walk reached, as "U30's VBUS1 on USBC0_VBUS". It is the load on the
+	// Unprotected net when there is one, and otherwise the first load reached. "" means no load.
+	Entry string
 	// Unread names an IC at the Unprotected entry when the run has no datasheet for it. That IC may be
 	// a current-limiting switch (UnreadIC). Unread is "" when there is none.
 	Unread string
+}
+
+// LoadPin reports whether c is a pin that draws power, the load a power-entry rule protects (agni
+// issue 1939). A connector's own pin never counts, since the connector is where power enters, and
+// neither does a clamp's supply pin (agni issue 1257). A power_in pin counts. So does an inout,
+// passive or unspecified pin whose name is a supply name, because a vendor symbol often types a PD
+// controller's VBUS1 inout or an LDO's VIN passive. An input pin does not count by its name. In KiCad
+// an input is the author's choice, such as an INA233's Vbus sense pin (agni issue 1241), and the
+// formats that cannot type power_in promote a supply-named input at ingestion.
+func LoadPin(m Model, c *ir.Connection) bool {
+	ref := c.ComponentRef
+	if IsVirtualRef(ref) || !m.IsFitted(ref) || m.HasClass(ref, ClassConnector) || m.HasClass(ref, ClassTVS) {
+		return false
+	}
+	d := ConnDir(m, c)
+	if d == ir.PinDirection_PIN_DIRECTION_POWER_IN {
+		return true
+	}
+	return underTypedSupplyDir(d) && !IsPassiveClass(m.ComponentClass(ref)) && m.IsSupplyPinName(m.PinName(ref, c.PinRef))
+}
+
+// underTypedSupplyDir reports whether a pin typed d may still be a supply input, read from its name.
+func underTypedSupplyDir(d ir.PinDirection) bool {
+	switch d {
+	case ir.PinDirection_PIN_DIRECTION_INOUT, ir.PinDirection_PIN_DIRECTION_PASSIVE, ir.PinDirection_PIN_DIRECTION_UNSPECIFIED:
+		return true
+	}
+	return false
 }
 
 // PowerPathProtection walks the connector net's series neighborhood (WS3-011) and reports, per
@@ -523,12 +554,17 @@ func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
 	var out PowerPathReport
 	for _, target := range r.Nets {
 		// A load marked do-not-populate draws nothing on the assembled board (agni issue 961).
-		hasPowerIn := Exists(target.Connections, func(c *ir.Connection) bool {
-			return !IsVirtualRef(c.ComponentRef) && m.IsFitted(c.ComponentRef) && ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
-		})
-		if !hasPowerIn {
+		var load *ir.Connection
+		for _, c := range target.Connections {
+			if LoadPin(m, c) {
+				load = c
+				break
+			}
+		}
+		if load == nil {
 			continue
 		}
+		entry := load.ComponentRef + "'s " + m.PinName(load.ComponentRef, load.PinRef) + " on " + target.Name
 		out.Loads++
 		protector := ""
 		for _, ref := range r.ThroughOnPath(target) {
@@ -555,10 +591,13 @@ func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
 		}
 		switch {
 		case protector == "" && out.Unprotected == "":
-			out.Unprotected = target.Name
+			out.Unprotected, out.Entry = target.Name, entry
 			out.Unread = UnreadIC(m, target, "")
 		case protector != "" && out.Protector == "":
 			out.Protector, out.ProtectorWitness = protector, credit
+		}
+		if out.Entry == "" {
+			out.Entry = entry
 		}
 	}
 	return out
