@@ -9,4 +9,4 @@ findings by rule:
   test-point-coverage    20
 
 34 finding(s) total
-24182 subject(s) considered by 38 rule(s), 653 not considered (--verdicts for the detail)
+24179 subject(s) considered by 38 rule(s), 656 not considered (--verdicts for the detail)
