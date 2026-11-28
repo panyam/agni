@@ -250,7 +250,7 @@ reverse-blocking-absent:(net:+3.3V)	none		+3V3 is driven by U8 TLV75533; J5 pin 
 reverse-blocking-absent:(net:/IO_Banks/VIOA)	none		VIOA is sourced by U31 TPS73101 through R56/R49 shunts and handed to the target on J2 pin 2; an outlet, not a power entry
 reverse-blocking-absent:(net:/IO_Banks/VIOB)	none		VIOB is sourced by U14 TPS73101 through R48 shunt and handed to the target on J3 pin 2; an outlet, not a power entry
 reverse-blocking-absent:(net:/IO_Banks/VIO_AUX)	fail		J5 pin 44 feeds the FPGA bank supply directly, with no fuse, clamp or diode
-reverse-blocking-absent:(net:/xVBUS)	pass		J1 VBUS through FB1 reaches only U15 TPD3S014 IN; its seeded datasheet gives reverse leakage IREV 1 uA max at VOUT 5 V, VIN 0 V, so it blocks backfeed, and USB-C VBUS cannot be reversed
+reverse-blocking-absent:(net:/xVBUS)	none		J1 is a USB-C receptacle and its VBUS cannot mate reversed, so reverse polarity cannot arrive; U15 TPD3S014 also blocks backfeed (IREV 1 uA max), but the rule does not judge a USB bus supply (agni 1941)
 single-pin-net:(net:/SWSH)	fail		SW1's shield pin carries only the SWSH label; KiCad's ERC accepts the label as a connection, but the pin floats
 test-point-coverage:(net:/GNDPLL0)	fail		no TestPoint part on the rail in KiCad's netlist
 test-point-coverage:(net:/GNDPLL1)	fail		no TestPoint part on the rail in KiCad's netlist

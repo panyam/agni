@@ -56,7 +56,15 @@ func IsBusLike(m Model, n *ir.Net) bool {
 // Reach runs the bounded BFS over the model's pass-element adjacency, refusing a bus-like net
 // outright. See walk for the shared body and admitTerminus for the other admission rule.
 func (m *irModel) Reach(start *ir.Net, hops int) Reach {
-	return m.walk(start, hops, false)
+	return m.walk(start, hops, false, false)
+}
+
+// PowerReach is Reach for the power-entry walk. It also crosses a fitted transistor from its source
+// to its drain, or back, so a load switch between a connector and its load does not end the walk
+// (agni issue 1941). A transistor touching the walk through its gate is never crossed, and neither
+// is one whose far terminal the netlist does not pin to exactly one net.
+func (m *irModel) PowerReach(start *ir.Net, hops int) Reach {
+	return m.walk(start, hops, false, true)
 }
 
 // ReachToTerminus is Reach except that a bus-like net is admitted as a DESTINATION while still
@@ -69,12 +77,13 @@ func (m *irModel) Reach(start *ir.Net, hops int) Reach {
 // a property of the POSITION in the path, so filtering the node set once cannot express it (agni
 // issue 374).
 func (m *irModel) ReachToTerminus(start *ir.Net, hops int) Reach {
-	return m.walk(start, hops, true)
+	return m.walk(start, hops, true, false)
 }
 
-// walk is the bounded BFS both reach variants share. admitTerminus decides whether a bus-like
-// net is skipped entirely or recorded and never expanded.
-func (m *irModel) walk(start *ir.Net, hops int, admitTerminus bool) Reach {
+// walk is the bounded BFS the reach variants share. admitTerminus decides whether a bus-like net is
+// skipped entirely or recorded and never expanded. crossSwitch lets the walk cross a transistor from
+// source to drain (PowerReach).
+func (m *irModel) walk(start *ir.Net, hops int, admitTerminus, crossSwitch bool) Reach {
 	r := Reach{Crossed: map[string]bool{}, Parent: map[string]ReachStep{}, Depth: map[string]int{}}
 	if start == nil {
 		return r
@@ -89,12 +98,24 @@ func (m *irModel) walk(start *ir.Net, hops int, admitTerminus bool) Reach {
 			for _, c := range n.Connections {
 				// A part marked do-not-populate joins nothing on the assembled board, so a link left out
 				// to select an option is no path (agni issue 961).
-				if !passClass(m.ComponentClass(c.ComponentRef)) || !m.IsFitted(c.ComponentRef) {
+				if !m.IsFitted(c.ComponentRef) {
 					continue
 				}
-				others := m.passNets[c.ComponentRef]
-				if len(others) != 2 {
-					continue // only a TWO-net element is a series crossing
+				var others []*ir.Net
+				switch class := m.ComponentClass(c.ComponentRef); {
+				case passClass(class):
+					others = m.passNets[c.ComponentRef]
+					if len(others) != 2 {
+						continue // only a TWO-net element is a series crossing
+					}
+				case crossSwitch && class == ClassTransistor:
+					far := m.switchFar(c.ComponentRef, c.PinRef)
+					if far == nil {
+						continue
+					}
+					others = []*ir.Net{far}
+				default:
+					continue
 				}
 				for _, o := range others {
 					if visited[o.Name] || o.Name == n.Name {
@@ -123,6 +144,54 @@ func (m *irModel) walk(start *ir.Net, hops int, admitTerminus bool) Reach {
 	}
 	return r
 }
+
+// switchFar returns the net on the other side of a transistor's channel from pin, meaning its drain
+// when pin is its source and its source when pin is its drain. It returns nil for a gate or an
+// unroled pin, and when the far terminal's pins sit on no net or on more than one.
+func (m *irModel) switchFar(ref, pin string) *ir.Net {
+	var want PinRole
+	switch m.PinRole(ref, pin) {
+	case RoleSource:
+		want = RoleDrain
+	case RoleDrain:
+		want = RoleSource
+	default:
+		return nil
+	}
+	var far *ir.Net
+	for _, p := range m.switchPins(ref) {
+		if m.PinRole(ref, p) != want {
+			continue
+		}
+		n := m.netByName[m.pinNet[ref+"\x00"+p]]
+		if n == nil {
+			continue
+		}
+		if far != nil && far.Name != n.Name {
+			return nil
+		}
+		far = n
+	}
+	return far
+}
+
+// switchPins returns the pin designators each transistor has on some net, built once per model.
+func (m *irModel) switchPins(ref string) []string {
+	byRef := m.Memo(switchPinsKey{}, func() any {
+		out := map[string][]string{}
+		for _, n := range m.d.GetNets() {
+			for _, c := range n.Connections {
+				if m.ComponentClass(c.ComponentRef) == ClassTransistor {
+					out[c.ComponentRef] = append(out[c.ComponentRef], c.PinRef)
+				}
+			}
+		}
+		return out
+	}).(map[string][]string)
+	return byRef[ref]
+}
+
+type switchPinsKey struct{}
 
 // pinOn returns ref's pin designator on net n, or "" when the connection carries none. The first
 // match wins. A part with both pins on one net is a short rather than a crossing, and the walk

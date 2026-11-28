@@ -150,9 +150,10 @@ func TestAConnectorsOwnPinIsNotALoad(t *testing.T) {
 	if got := verdictOn(t, reverseBlockingAbsent, source, "VBUS"); got != "" {
 		t.Errorf("reverse-blocking-absent on a source port = %q, want no verdict", got)
 	}
-	// A sink port feeds a load on the board through passives alone, which is the rule's finding.
+	// A sink port feeds a load on the board through passives alone, which is the rule's finding. Its
+	// pin is not named VBUS, because a USB bus supply is not judged (agni issue 1941).
 	sink := pinDesign(map[string][]supplyPin{
-		"J1": {{"VBUS", "A4", pwrIn}},
+		"J1": {{"VIN", "A4", pwrIn}},
 		"U1": {{"VIN", "1", pwrIn}},
 	}, map[string][]string{"VBUS": {"J1.A4", "U1.1"}})
 	if got := verdictOn(t, reverseBlockingAbsent, sink, "VBUS"); got != string(check.Fail) {
@@ -191,7 +192,7 @@ func TestAGateOnTheConnectorNetIsNotInThePowerPath(t *testing.T) {
 		t.Errorf("reverse-blocking-absent with a FET gate on a source port's VBUS = %q, want no verdict", got)
 	}
 	series := pinDesign(map[string][]supplyPin{
-		"J1": {{"VBUS", "A4", pwrIn}},
+		"J1": {{"VIN", "A4", pwrIn}},
 		"Q1": {{"G", "1", ir.PinDirection_PIN_DIRECTION_INPUT}, {"S", "2", pass}, {"D", "3", pass}},
 		"U2": {{"VIN", "1", pwrIn}},
 	}, map[string][]string{"VBUS": {"J1.A4", "Q1.3"}, "VSYS": {"Q1.2", "U2.1"}, "EN": {"Q1.1"}})

@@ -541,7 +541,7 @@ func underTypedSupplyDir(d ir.PinDirection) bool {
 // along that path. The check is per target because one connector can feed a protected 5V path and an
 // unprotected 3V3 path, and protection on one must not excuse the other.
 func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
-	r := m.Reach(n, PowerPathReachHops)
+	r := m.PowerReach(n, PowerPathReachHops)
 	protectorOn := func(net *ir.Net) string {
 		for _, c := range net.Connections {
 			// An unfitted fuse or TVS protects nothing on the assembled board (agni issue 961).

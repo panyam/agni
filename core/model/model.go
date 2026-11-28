@@ -243,6 +243,10 @@ type Model interface {
 	// element splits the net, so a per-net quantifier cannot see "a fuse sits between connector and
 	// regulator".
 	Reach(start *ir.Net, hops int) Reach
+	// PowerReach is Reach that also crosses a fitted transistor from source to drain, for the
+	// power-entry walk. A load switch between a connector and its load passes power, so the walk
+	// continues past it to the load (agni issue 1941). A gate pin is never crossed.
+	PowerReach(start *ir.Net, hops int) Reach
 	// ReachToTerminus is the same walk with one admission rule changed. A bus-like net is a legal
 	// DESTINATION and still an illegal transit node. Some questions end on a rail, such as a pull-up's
 	// terminus or a trace to a pin that sits on one. Reach cannot answer them, because it drops such a

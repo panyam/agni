@@ -68,6 +68,12 @@ func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			out = append(out, v)
 			continue
 		}
+		if usb := usbSupplyPin(m, n); usb != "" {
+			v.Outcome = check.NotConsidered
+			v.Reason = usb + " is a USB bus supply, and a USB plug cannot mate with its VBUS reversed, so reverse polarity cannot arrive here"
+			out = append(out, v)
+			continue
+		}
 		switch outcome {
 		case pathProtected:
 			v.Outcome = check.Pass
@@ -226,18 +232,27 @@ const (
 	pathNoLoad
 )
 
-// hasPowerInput reports whether a net carries a real power-input pin, meaning a load. Virtual power
-// symbols are excluded, and so is a connector's own pin. A USB-C receptacle's symbol types VBUS
-// power_in, but the connector is where power enters or leaves the board. Counting it made every
-// source port's VBUS read as a load reached through passives alone (agni issue 935). A clamp's own
-// supply pin is excluded too, since a clamp array biased from the rail it guards is no load on that
-// rail (agni issue 1257).
+// hasPowerInput reports whether a net carries a load, read through check.LoadPin as input-protection
+// reads it (agni issue 1941). A connector's own pin is no load, since the connector is where power
+// enters or leaves the board (agni issue 935), and neither is a clamp's supply pin (agni issue 1257).
 func hasPowerInput(m check.Model, n *ir.Net) bool {
-	return check.Exists(n.GetConnections(), func(c *ir.Connection) bool {
+	return check.Exists(n.GetConnections(), func(c *ir.Connection) bool { return check.LoadPin(m, c) })
+}
+
+// usbSupplyPin names an exposed connector's pin on n that the lexicon reads as a cable supply, such
+// as a USB receptacle's VBUS, or returns "". The plug is keyed, so its VBUS can never mate reversed
+// (agni issue 1941).
+func usbSupplyPin(m check.Model, n *ir.Net) string {
+	for _, c := range n.GetConnections() {
 		ref := c.GetComponentRef()
-		// A load marked do-not-populate draws nothing on the assembled board (agni issue 961).
-		return !check.IsVirtualRef(ref) && m.IsFitted(ref) && !m.HasClass(ref, check.ClassConnector) && !m.HasClass(ref, check.ClassTVS) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
-	})
+		if !m.ExposedConnector(ref) {
+			continue
+		}
+		if name := m.PinName(ref, c.GetPinRef()); m.IsCableSupplyPinName(name) {
+			return ref + "'s " + name
+		}
+	}
+	return ""
 }
 
 // feedsPowerInput reports whether a power input sits on n or in its passive neighborhood.
