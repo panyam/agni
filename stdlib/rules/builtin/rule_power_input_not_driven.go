@@ -67,8 +67,20 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 		}
 		drivers := check.CountDir(dirs, feeds)
 
+		// A supply pin on a part marked do-not-populate draws nothing on the assembled board (agni
+		// issue 1931).
+		fittedIns := 0
+		for _, c := range n.Connections {
+			if m.IsFitted(c.ComponentRef) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN {
+				fittedIns++
+			}
+		}
+
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		switch {
+		case fittedIns == 0:
+			v.Outcome = check.NotConsidered
+			v.Reason = "every power-input pin on the net belongs to a part marked do-not-populate, so nothing on the assembled board draws from it"
 		case !typesPowerOut:
 			v.Outcome = check.NotConsidered
 			v.Reason = "the source format does not type power-output pins, so an absent driver is not evidence that the rail is unfed"

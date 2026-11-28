@@ -49,6 +49,10 @@ consider it either (agni issue 1244). Some datasheets allow a supply pin to be l
 feature is unused, such as an FPGA's VPP pin when its one-time memory is never programmed. A flagged
 pin that is also wired to another part is still judged.
 
+A supply pin on a part marked do-not-populate draws nothing on the assembled board. A net whose every
+power-input pin belongs to such a part is not considered, even with a power flag on it. Jetson's
+unfitted Tag-Connect translator rail is one (agni issue 1931).
+
 Concretely, the rule is gated OFF on a source format that does not type power OUTPUTS. EDIF's port
 grammar carries only INPUT/OUTPUT/INOUT and IPC-2581 is a board format with no pin electrical types
 (the `design.types_power_out` fact). There a rail's driver reads as a plain input, so "no power source"

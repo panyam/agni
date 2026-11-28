@@ -101,7 +101,9 @@ var railNotClassified = &check.Rule{
 // Without the pass, a project with a correct lexicon would get the same silence as one whose rails
 // are invisible.
 //
-// A net that names a voltage but types NO power-input pin is NotConsidered. The rule needs two
+// A net that names a voltage but types NO power-input pin is NotConsidered, even when its name has
+// already stamped the rail role. A real +12V and a converter's 12V_VDD bias node look alike then, and
+// the reason says which case it is (agni issue 1931). The rule needs two
 // channels to agree, a voltage in the name AND a pin the part declares a power input, because
 // `..._3V3` is a legitimate name for a signal that swings at 3.3 V as well as for a rail.
 // eachRailCandidate says why the missing channel is reported rather than dropped.
@@ -110,6 +112,10 @@ func railNotClassifiedVerdicts(ctx context.Context, m check.Model) []check.Verdi
 	eachRailCandidate(ctx, m, func(rc railCandidate) {
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: rc.net.GetName(), NetID: rc.net.GetId()}}}
 		switch {
+		case rc.supplies == 0 && rc.railRole:
+			v.Outcome = check.NotConsidered
+			v.Reason = fmt.Sprintf("the name alone makes the net a %gV rail, and the design types no power-input pin on it, "+
+				"so nothing confirms the stamp; a converter's bias node named for its rail reads the same way", rc.volts)
 		case rc.supplies == 0:
 			v.Outcome = check.NotConsidered
 			v.Reason = fmt.Sprintf("the name declares %gV but the design types no power-input pin on the net, "+

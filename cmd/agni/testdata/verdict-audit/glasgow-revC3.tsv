@@ -1,9 +1,96 @@
 # Hand-audited verdicts for Glasgow revC3, checked against kicad-cli's netlist, ERC and DRC (KiCad 10.0.6).
 # Columns: verdict id, the outcome a reader reached, the issue that explains a disagreement, what was checked.
 # Outcomes: pass, fail, not-considered, or none when the rule should not judge the subject at all.
+bulk-cap:(net:+1V2)	pass		U36 TLV73312 LDO output carries C14 and C27 4u7 plus C18 C24 C25 C77 100n
+bulk-cap:(net:+3.3V)	pass		the +3.3V power symbol names netlist net +3V3, U8 TLV75533 output, with C1 C19 C28 4u7 and about 50 more 100n caps
+bulk-cap:(net:+5V)	pass		USB 5V after U15 TPD3S014 carries C87 150u bulk plus C26 C31 C82 C86 4u7 and 100n caps
+bulk-cap:(net:/IO_Banks/VIOA)	pass		port A I/O supply carries C83 4u7 and ten 100n caps (C38 to C57)
+bulk-cap:(net:/IO_Banks/VIOB)	pass		port B I/O supply carries C53 4u7 and ten 100n caps (C29 C46 C64 to C75)
+bulk-cap:(net:/IO_Banks/VIO_AUX)	pass		iCE40 bank 3 supply U30 VCCIO_3 carries C92 4u7 and C33 100n
+bulk-cap:(net:/VCCPLL0)	pass		R31 100R filters +1V2 into U30 VCCPLL0, with C76 4u7 and C78 100n to /GNDPLL0
+bulk-cap:(net:/VCCPLL1)	pass		R32 100R filters +1V2 into U30 VCCPLL1, with C80 4u7 and C79 100n to /GNDPLL1
+bulk-cap:(net:/VUSB)	pass		VBUS after ferrite FB1 into U15 TPD3S014 IN carries C8 100n
 bulk-cap:(net:/xVBUS)	fail		USB-C VBUS before FB1 carries no capacitor; the bulk sits after the bead on /VUSB
+crystal-load-caps:(pin:Y1.1)	pass		Y1 24M 9pF 4-pin crystal, pins 2 and 4 on GND; pin 1 on /XTALIN carries C12 9p to GND beside U1 XTALIN
+crystal-load-caps:(pin:Y1.3)	pass		Y1 pin 3 on /XTALOUT carries C11 9p to GND beside U1 XTALOUT
+decoupling-present:(net:+1V2)	pass		U30 iCE40 VCC pins carry C14 C27 4u7 and C18 C24 C25 C77 100n
+decoupling-present:(net:+3.3V)	pass		+3V3 feeds U1 FX2, U30, the LVC1T45 buffers, EEPROMs, INA233s and DACs, with 54 caps on the net
+decoupling-present:(net:+5V)	pass		U8 U14 U31 U36 LDO inputs and U7 supervisor carry C87 150u, four 4u7 and three 100n caps
+decoupling-present:(net:/IO_Banks/VIOA)	pass		VCCB of U4 U6 U9 U10 U11 U16 U17 U18 and U19 VDD_P carry C83 4u7 and ten 100n caps
+decoupling-present:(net:/IO_Banks/VIOB)	pass		VCCB of U22 to U29 and U5 VDD_P carry C53 4u7 and ten 100n caps
+decoupling-present:(net:/IO_Banks/VIO_AUX)	pass		U30 VCCIO_3 E4 and G4 carry C92 4u7 and C33 100n
+decoupling-present:(net:/VCCPLL0)	pass		U30 VCCPLL0 carries C76 4u7 and C78 100n
+decoupling-present:(net:/VCCPLL1)	pass		U30 VCCPLL1 carries C80 4u7 and C79 100n
+decoupling-present:(net:/VUSB)	pass		U15 TPD3S014 IN carries C8 100n
+decoupling-present:(net:unconnected-%28U30E-VPP_FAST-PadB10%29)	none		U30 VPP_FAST B10 is marked no-connect and sits alone on its net; an unused supply pin draws nothing to decouple
+esd-clamp-not-tvs:(net:/CC1)	not-considered		USB-C J1 CC1 carries only the R53 5k1 Rd to GND; no IC or other damageable part in reach, and no clamp of any class
+esd-clamp-not-tvs:(net:/CC2)	not-considered		USB-C J1 CC2 carries only the R52 5k1 Rd to GND; no IC or other damageable part in reach, and no clamp of any class
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/P0)	not-considered		P0 leaves the board only through the 1x08 socket J9, which is DNP; U19 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/P1)	not-considered		P1 leaves the board only through the 1x08 socket J9, which is DNP; U19 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/P2)	not-considered		P2 leaves the board only through the 1x08 socket J9, which is DNP; U19 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/P3)	not-considered		P3 leaves the board only through the 1x08 socket J9, which is DNP; U19 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/P4)	not-considered		P4 leaves the board only through the 1x08 socket J9, which is DNP; U19 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/P5)	not-considered		P5 leaves the board only through the 1x08 socket J9, which is DNP; U19 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/P6)	not-considered		P6 leaves the board only through the 1x08 socket J9, which is DNP; U19 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/P7)	not-considered		P7 leaves the board only through the 1x08 socket J9, which is DNP; U19 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
 esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/VSENSE)	pass		the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/Z0)	pass		IO header J2 pin net clamped by D22 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J8 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/Z1)	pass		IO header J2 pin net clamped by D22 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J8 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/Z2)	pass		IO header J2 pin net clamped by D22 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J8 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/Z3)	pass		IO header J2 pin net clamped by D22 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J8 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/Z4)	pass		IO header J2 pin net clamped by D23 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J8 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/Z5)	pass		IO header J2 pin net clamped by D23 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J8 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/Z6)	pass		IO header J2 pin net clamped by D23 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J8 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_A/Z7)	pass		IO header J2 pin net clamped by D23 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J8 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/P0)	not-considered		P0 leaves the board only through the 1x08 socket J7, which is DNP; U5 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/P1)	not-considered		P1 leaves the board only through the 1x08 socket J7, which is DNP; U5 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/P2)	not-considered		P2 leaves the board only through the 1x08 socket J7, which is DNP; U5 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/P3)	not-considered		P3 leaves the board only through the 1x08 socket J7, which is DNP; U5 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/P4)	not-considered		P4 leaves the board only through the 1x08 socket J7, which is DNP; U5 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/P5)	not-considered		P5 leaves the board only through the 1x08 socket J7, which is DNP; U5 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/P6)	not-considered		P6 leaves the board only through the 1x08 socket J7, which is DNP; U5 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/P7)	not-considered		P7 leaves the board only through the 1x08 socket J7, which is DNP; U5 PCA6408A and a 10k pull-up are all that is fitted, and no clamp of any class is present
 esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/VSENSE)	pass		the clamp is a Bourns CDSOD323-T36S, a TVS drawn with the Zener symbol
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/Z0)	pass		IO header J3 pin net clamped by D20 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J6 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/Z1)	pass		IO header J3 pin net clamped by D20 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J6 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/Z2)	pass		IO header J3 pin net clamped by D20 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J6 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/Z3)	pass		IO header J3 pin net clamped by D20 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J6 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/Z4)	pass		IO header J3 pin net clamped by D21 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J6 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/Z5)	pass		IO header J3 pin net clamped by D21 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J6 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/Z6)	pass		IO header J3 pin net clamped by D21 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J6 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/IO_Buffer_B/Z7)	pass		IO header J3 pin net clamped by D21 SP3012-06UTG, a low-capacitance TVS array to GND; the DNP socket J6 does not change that
+esd-clamp-not-tvs:(net:/IO_Banks/Z0_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z0_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z10_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z10_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z11_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z11_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z12_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z12_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z1_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z1_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z2_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z2_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z3_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z3_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z4_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z4_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z5_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z5_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z6_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z6_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z7_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z7_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z8_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z8_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z9_N)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/Z9_P)	none		LVDS header J5 (Samtec FTS-122, fitted) straight to U30 iCE40 ball; no clamp of any class on the net, so this rule has no device to characterise and esd-protection judges it
+esd-clamp-not-tvs:(net:/IO_Banks/~{SYNC})	pass		the netlist draws D11 with the Device:D_Zener symbol and "Zener diode" text, but its MPN ESD5Z5.0T1G and BOM key esd-diode name an ESD TVS; read as a TVS on SYNC header J4 ahead of R38 47R to U32, so the concern is satisfied; read by symbol it would be fail
+esd-clamp-not-tvs:(net:/SHLD)	none		USB-C J1 shell tied to GND through C13 100n and R3 100k; a shield is chassis, not a signal, so a Zener-vs-TVS clamp question does not apply
+esd-clamp-not-tvs:(net:/USB_N)	pass		USB-C J1 D- to U1 FX2; U15 TPD3S014 sits on the net and its params carry an IEC 61000-4-2 rating for D1/D2; no Zener in reach
+esd-clamp-not-tvs:(net:/USB_P)	pass		USB-C J1 D+ to U1 FX2; U15 TPD3S014 sits on the net and its params carry an IEC 61000-4-2 rating for D1/D2; no Zener in reach
+esd-clamp-not-tvs:(net:Net-%28D12-K%29)	not-considered		only connector is AUX header J10, DNP; the ESD5Z5.0T1G clamp D12 is DNP too; R39 47R leads to U30, but nothing on the assembled board plugs in here
+esd-clamp-not-tvs:(net:Net-%28D13-K%29)	not-considered		only connector is AUX header J10, DNP; the ESD5Z5.0T1G clamp D13 is DNP too; R43 47R leads to U30, but nothing on the assembled board plugs in here
 esd-protection:(net:/CC1)	none		USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
 esd-protection:(net:/CC2)	none		USB-C CC pin to its 5k1 pull-down only, with no IC pin on the net to protect
 esd-protection:(net:/IO_Banks/IO_Buffer_A/P0)	none		only connector is J9, a 1x08 socket marked DNP, so the assembled board does not expose the net
@@ -75,7 +162,17 @@ floating-input:(net:/RD)	pass		an FPGA I/O or a driving output sits on the net i
 floating-input:(net:/WR)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
 floating-input:(net:Net-%28U3-A1%29)	fail		EEPROM U3 A1 goes only to R40, valued DNP; a fitted strap or the part's internal pull-down decides it
 floating-input:(net:Net-%28U7-~{RESET}%29)	pass		an FPGA I/O or a driving output sits on the net in KiCad's netlist
+i2c-pull-up-split-rail:(net:/SCL)	pass		only R2 2k2 reaches a rail, +3V3; no second rail
+i2c-pull-up-split-rail:(net:/SDA)	pass		only R1 2k2 reaches a rail, +3V3; no second rail
+i2c-pull-up:(net:/SCL)	pass		R2 2k2 pulls /SCL straight to +3V3; shared by U1 FX2, INA233s, DACs, PCA6408s, EEPROMs and U30
+i2c-pull-up:(net:/SDA)	pass		R1 2k2 pulls /SDA straight to +3V3; shared by U1 FX2, INA233s, DACs, PCA6408s, EEPROMs and U30
+i2c-redundant-pull-up:(net:/SCL)	pass		R2 2k2 to +3V3 is the only resistor on /SCL; one pull-up
+i2c-redundant-pull-up:(net:/SDA)	pass		R1 2k2 to +3V3 is the only resistor on /SDA; one pull-up
+input-protection:(net:+3.3V)	none		+3.3V is netlist +3V3, driven by U8 TLV75533 OUT; J5 pin 2 hands this board rail out to an add-on, so the connector is an outlet, not a power entry
+input-protection:(net:/IO_Banks/VIOA)	none		VIOA is the board's own I/O supply from U31 TPS73101 OUT through R56 0R33 and R49 0R15 sense shunts; J2 pin 2 sources it to the target, so it is an outlet, not an entry (D22 SP3012 clamps it anyway)
+input-protection:(net:/IO_Banks/VIOB)	none		VIOB is the board's own I/O supply from U14 TPS73101 OUT through R48 0R15; J3 pin 2 sources it to the target, so it is an outlet, not an entry (D20 SP3012 clamps it anyway)
 input-protection:(net:/IO_Banks/VIO_AUX)	fail		J5 pin 44 feeds the FPGA bank supply directly, with no fuse, clamp or diode
+input-protection:(net:/xVBUS)	pass		J1 USB-C VBUS through FB1 ferrite to /VUSB, whose only load is U15 TPD3S014 IN, a current-limit switch per its seeded datasheet (IOS 0.67 to 1.01 A)
 led-polarity:(component:D1)	pass		K on GND and A through its resistor
 led-polarity:(component:D10)	pass		K on GND and A through its resistor
 led-polarity:(component:D14)	pass		K on GND and A through its resistor
@@ -129,7 +226,31 @@ netclass-via-drill:(net:/VCCPLL0)	fail		routed below its net class's size in the
 netclass-via-drill:(net:/VCCPLL1)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
 netclass-via-drill:(net:/WR)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
 netclass-via-drill:(net:GND)	fail		routed below its net class's size in the .kicad_pro; the rule reads the class as intent, though KiCad treats it as a routing default and its DRC raises nothing
+pin-exceeds-abs-max:(pin:U15.2)	none		U15.2 is the GND pin of U15 TPD3S014DBVR on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-exceeds-abs-max:(pin:U15.3)	not-considered		U15 IN on /VUSB, fed by FB1 from J1 VBUS; a reader infers 5 V from the USB-C sink, but the rail name states no nominal, and declaring one is the remedy (as in #1919)
+pin-out-of-recommended:(pin:U15.2)	none		U15.2 is the GND pin of U15 TPD3S014DBVR on net GND; a ground reference is not a supply pin on a rail and the spec binds no supply limit to it
+pin-out-of-recommended:(pin:U15.3)	not-considered		U15 TPD3S014DBVR IN on /VUSB (5 V USB VBUS); the given spec has only an abs-max VIN row and no recommended-operating row bound to IN, so there is no range to judge against
+power-input-not-driven:(net:+1V2)	pass		U36 TLV73312 OUT (power_out) drives +1V2 feeding U30 iCE40 VCC
+power-input-not-driven:(net:+3.3V)	pass		netlist +3V3, U8 TLV75533 OUT (power_out) drives it
+power-input-not-driven:(net:+5V)	pass		U15 TPD3S014 OUT (typed passive) feeds +5V from USB VBUS, and a PWR_FLAG on +5V asserts the feed
+power-input-not-driven:(net:/GNDPLL0)	pass		iCE40 U30 GNDPLL0 is the isolated PLL return across C76/C78 per Lattice's filter, with a PWR_FLAG on the net; not an omission
+power-input-not-driven:(net:/GNDPLL1)	pass		iCE40 U30 GNDPLL1 is the isolated PLL return across C79/C80, with a PWR_FLAG on the net; not an omission
+power-input-not-driven:(net:/IO_Banks/VIOA)	pass		fed from U31 TPS73101 OUT through R56 0R33 and R49 0R15, with a PWR_FLAG on the net
+power-input-not-driven:(net:/IO_Banks/VIOB)	pass		fed from U14 TPS73101 OUT through R48 0R15 sense shunt, with a PWR_FLAG on the net
+power-input-not-driven:(net:/IO_Banks/VIO_AUX)	pass		no on-board source; U30 bank 3 VCCIO is fed by the add-on through J5 pin 44 by design, and a PWR_FLAG asserts that external feed
+power-input-not-driven:(net:/VCCPLL0)	pass		fed from +1V2 (U36) through R31 100R PLL filter, with a PWR_FLAG on the net
+power-input-not-driven:(net:/VCCPLL1)	pass		fed from +1V2 (U36) through R32 100R PLL filter, with a PWR_FLAG on the net
+power-input-not-driven:(net:/VUSB)	pass		fed from J1 USB-C VBUS through FB1 to U15 IN, with a PWR_FLAG on the net
+power-input-not-driven:(net:GND)	pass		ground reference tied to connector shields and grounds, with a PWR_FLAG on GND
+power-input-not-driven:(net:unconnected-%28U30E-VPP_FAST-PadB10%29)	none		U30 iCE40 VPP_FAST alone on its net and marked no-connect; it is only needed to program NVCM, so leaving it open is intended
+rail-not-classified:(net:+1V2)	pass		U36 TLV73312 LDO output feeding U30 iCE40 VCC pins (D8 typed power_in), 4u7 and 100n caps, TP2/TP17; real 1.2 V rail named in the +NVN form
+rail-not-classified:(net:+3.3V)	pass		no net of this name in the KiCad netlist; the io_buffer and io_banks +3.3V power symbols carry a hidden pin named +3V3, so they join the +3V3 rail, which feeds U1, U10, U11 and many more power_in pins; a real 3.3 V rail named in the + form
+rail-not-classified:(net:+5V)	pass		USB VBUS after U15 TPD3S014, feeding U14/U31 TPS73101 IN, U36 and U8 IN and U7 VCC (power_in), 150u C87 plus 4u7 caps; real 5 V rail named in the + form
+reverse-blocking-absent:(net:+3.3V)	none		+3V3 is driven by U8 TLV75533; J5 pin 2 is an outlet for an add-on, not a way power arrives
+reverse-blocking-absent:(net:/IO_Banks/VIOA)	none		VIOA is sourced by U31 TPS73101 through R56/R49 shunts and handed to the target on J2 pin 2; an outlet, not a power entry
+reverse-blocking-absent:(net:/IO_Banks/VIOB)	none		VIOB is sourced by U14 TPS73101 through R48 shunt and handed to the target on J3 pin 2; an outlet, not a power entry
 reverse-blocking-absent:(net:/IO_Banks/VIO_AUX)	fail		J5 pin 44 feeds the FPGA bank supply directly, with no fuse, clamp or diode
+reverse-blocking-absent:(net:/xVBUS)	pass		J1 VBUS through FB1 reaches only U15 TPD3S014 IN; its seeded datasheet gives reverse leakage IREV 1 uA max at VOUT 5 V, VIN 0 V, so it blocks backfeed, and USB-C VBUS cannot be reversed
 single-pin-net:(net:/SWSH)	fail		SW1's shield pin carries only the SWSH label; KiCad's ERC accepts the label as a connection, but the pin floats
 test-point-coverage:(net:/GNDPLL0)	fail		no TestPoint part on the rail in KiCad's netlist
 test-point-coverage:(net:/GNDPLL1)	fail		no TestPoint part on the rail in KiCad's netlist
