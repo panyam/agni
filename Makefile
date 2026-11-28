@@ -769,7 +769,7 @@ exercise-pin-functions: agni
 # prints one row per rule and every audited verdict agni disagrees with, and it fails while any
 # remain. The gate runs the same test as a ratchet, where each disagreement must name its bug.
 exercise-checks: samples-oracle
-	AGNI_EXERCISE_CHECKS=1 $(GO) test ./cmd/agni -run '^TestVerdictAudit$$' -count=1
+	AGNI_EXERCISE_CHECKS=1 $(GO) test -v ./cmd/agni -run '^TestVerdictAudit$$' -count=1
 
 # Mission #1264's exercise, steps 1 to 3, over the MNT Reform motherboard 3.0 from the oracle corpus
 # (agni issue 1266): the effective vocabulary with each pattern's source, why LPC_VCC is a rail, and
