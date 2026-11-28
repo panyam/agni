@@ -84,13 +84,9 @@ func TestUnresolvedGateReachesOnlyTheSubjectsALostPinMayChange(t *testing.T) {
 			t.Errorf("%s = %s, want %s", subject, got[subject], want)
 		}
 	}
-	if len(fs) != 5 {
-		t.Errorf("findings = %d, want one inconclusive per gated subject (5): %+v", len(fs), fs)
-	}
-	for _, f := range fs {
-		if !f.Inconclusive || f.Message == "" {
-			t.Errorf("finding %+v, want an inconclusive naming the unresolved symbol", f)
-		}
+	// One finding says the rule lost subjects to the gate. The verdicts name each one.
+	if len(fs) != 1 || !fs[0].Inconclusive || EntityRef(fs[0].Subject) != "lib:Missing" {
+		t.Errorf("findings = %+v, want the gate's one inconclusive", fs)
 	}
 }
 

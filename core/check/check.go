@@ -422,12 +422,22 @@ func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts
 			// is, whether or not the rule read the scope itself.
 			evaluated = scope.verdicts(evaluated)
 		}
+		lossHit := false
 		if lossGates && r.StatesConsideredSet {
 			for i := range evaluated {
 				if loss.affects(m, evaluated[i]) {
 					evaluated[i] = loss.inconclusive(evaluated[i])
+					lossHit = true
 				}
 			}
+		}
+		if wantFindings && !gated && lossHit {
+			// One finding says the rule lost subjects to the gate, as the design-wide gate always
+			// said. The verdicts name each one, and a finding apiece would bury the rule's own
+			// failures under a copy of the same sentence per subject.
+			f := loss.finding()
+			f.Rule, f.Severity = r.Name, r.Severity
+			fs = append(fs, f)
 		}
 		if wantFindings && !gated {
 			for _, f := range findingsOf(r, evaluated) {
@@ -595,13 +605,10 @@ func (p *pinLoss) affects(m Model, v Verdict) bool {
 	return false
 }
 
-// inconclusive turns v into the gate's answer, keeping its subjects and context.
+// inconclusive turns v into the gate's answer, keeping its subjects and context. It carries no
+// finding, because the run reports one gate finding per rule (see run).
 func (p *pinLoss) inconclusive(v Verdict) Verdict {
-	prov := p.prov
-	if v.Finding != nil && v.Finding.Prov != nil {
-		prov = v.Finding.Prov
-	}
-	v.Outcome, v.Reason = Inconclusive, ""
+	v.Outcome, v.Reason, v.Finding = Inconclusive, "", nil
 	v.Witness = &Witness{
 		Statement: "pins are unknown while " + p.symbols + " is unresolved, and a lost pin may connect to what this verdict rests on",
 		Terms:     []WitnessTerm{{Label: "unresolved symbol", Value: p.symbols}},
@@ -609,7 +616,6 @@ func (p *pinLoss) inconclusive(v Verdict) Verdict {
 	if p.plural {
 		v.Witness.Statement = "pins are unknown while " + p.symbols + " are unresolved, and a lost pin may connect to what this verdict rests on"
 	}
-	v.Finding = &Finding{Subject: v.Subjects[0], Inconclusive: true, Message: p.message(), Prov: prov}
 	return v
 }
 
