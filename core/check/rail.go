@@ -174,13 +174,11 @@ func BoardSource(m Model, n *ir.Net) string {
 }
 
 // cableSupplyPin reports whether c is a pin that draws on a cable's bus. The symbol may type it
-// power_in, or leave it inout, input, passive or unspecified, since a vendor symbol often does. A
-// clamp is never a sink, so a USB TVS array's VBUS pin does not count (agni issue 1257).
+// power_in, or leave it inout, passive or unspecified, since a vendor symbol often does. An input pin
+// is a sense pin in KiCad, such as an INA233's Vbus (agni issue 1939). A clamp is never a sink, so a
+// USB TVS array's VBUS pin does not count (agni issue 1257).
 func cableSupplyPin(m Model, c *ir.Connection) bool {
-	switch ConnDir(m, c) {
-	case ir.PinDirection_PIN_DIRECTION_POWER_IN, ir.PinDirection_PIN_DIRECTION_INOUT, ir.PinDirection_PIN_DIRECTION_INPUT,
-		ir.PinDirection_PIN_DIRECTION_PASSIVE, ir.PinDirection_PIN_DIRECTION_UNSPECIFIED:
-	default:
+	if d := ConnDir(m, c); d != ir.PinDirection_PIN_DIRECTION_POWER_IN && !underTypedSupplyDir(d) {
 		return false
 	}
 	return !m.HasClass(c.ComponentRef, ClassTVS) && m.IsCableSupplyPinName(m.PinName(c.ComponentRef, c.PinRef))
