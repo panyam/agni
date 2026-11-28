@@ -11,7 +11,7 @@ import (
 // count it under the severity the rule would have reported (agni issue 1045).
 func TestTheReportFilesAnInconclusiveFindingAsUnresolved(t *testing.T) {
 	out := runCLI(t, checkCmd(), filepath.Join("testdata", "conformance", "reverse-blocking.undecided.kicad_sch"), "--format", "markdown")
-	for _, want := range []string{"| unresolved | 1 |", "3 finding(s) and 1 unresolved", "\n## unresolved\n"} {
+	for _, want := range []string{"| unresolved | 1 |", "4 finding(s) and 1 unresolved", "\n## unresolved\n"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("report lacks %q:\n%s", want, out)
 		}

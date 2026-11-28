@@ -62,10 +62,6 @@ findings:
         - net:GND
   reverse-blocking-absent:
     - class: design-choice
-      why: VBUS from the USB-C port feeds the nPM1300's VBUS input directly, and the design relies on the PMIC's own input stage and power path to keep the battery from back-feeding the port. Not checked against the nPM1300 datasheet.
-      subjects:
-        - net:/Debugger/USB.VBUS
-    - class: design-choice
       why: The cell plugs into J4, a keyed JST-PH, and reaches the nPM1300's VBAT (U2.19) with no reverse-polarity element, as on other Feathers. A cell wired to the opposite JST polarity would be applied backwards, and the BAT header pin J2.1 shares the net.
       subjects:
         - net:+BATT

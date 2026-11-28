@@ -2,6 +2,9 @@ fires:
   reverse-blocking-absent:
     subjects: ["/VIN_CONN"]
     why: "Q1 sits between the barrel jack and U1's power input, and a netlist cannot tell a reverse-blocking P-FET from an ordinary switch, so the result is INCONCLUSIVE rather than a pass or a fail. This is the only fixture in the tree that reaches that outcome"
+  input-protection:
+    subjects: ["/VIN_CONN"]
+    why: "the walk crosses Q1 from source to drain and reaches U1's VDD on /VIN with no fuse or TVS on the way (agni issue 1941)"
   power-input-not-driven:
     subjects: ["/VIN"]
     why: "VIN is fed through Q1, so no power-out pin drives it; kept rather than silenced with a PWR_FLAG so the fixture carries a real defect beside the undecided one"
