@@ -44,6 +44,8 @@ private static final long serialVersionUID = 0L;
     noJunctionEndpoints_ = java.util.Collections.emptyList();
     unmodeledBuses_ = java.util.Collections.emptyList();
     unresolvedSymbols_ = java.util.Collections.emptyList();
+    netsMissingPins_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
     resolvedSymbols_ = java.util.Collections.emptyList();
     joinedTaps_ = java.util.Collections.emptyList();
     unannotatedComponents_ = java.util.Collections.emptyList();
@@ -440,6 +442,95 @@ private static final long serialVersionUID = 0L;
   public io.github.panyam.agni.v1.ir.UnresolvedSymbolOrBuilder getUnresolvedSymbolsOrBuilder(
       int index) {
     return unresolvedSymbols_.get(index);
+  }
+
+  public static final int NETS_MISSING_PINS_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList netsMissingPins_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+   * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+   * those pins is then left alone at its point, and the net of every such lone point is listed here.
+   * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+   * library gates the nets near its parts rather than the whole design.
+   *
+   * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+   * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+   * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+   * `supplied`, and the gate then treats the whole design as affected.
+   * </pre>
+   *
+   * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+   * @return A list containing the netsMissingPins.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getNetsMissingPinsList() {
+    return netsMissingPins_;
+  }
+  /**
+   * <pre>
+   * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+   * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+   * those pins is then left alone at its point, and the net of every such lone point is listed here.
+   * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+   * library gates the nets near its parts rather than the whole design.
+   *
+   * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+   * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+   * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+   * `supplied`, and the gate then treats the whole design as affected.
+   * </pre>
+   *
+   * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+   * @return The count of netsMissingPins.
+   */
+  public int getNetsMissingPinsCount() {
+    return netsMissingPins_.size();
+  }
+  /**
+   * <pre>
+   * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+   * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+   * those pins is then left alone at its point, and the net of every such lone point is listed here.
+   * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+   * library gates the nets near its parts rather than the whole design.
+   *
+   * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+   * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+   * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+   * `supplied`, and the gate then treats the whole design as affected.
+   * </pre>
+   *
+   * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+   * @param index The index of the element to return.
+   * @return The netsMissingPins at the given index.
+   */
+  public java.lang.String getNetsMissingPins(int index) {
+    return netsMissingPins_.get(index);
+  }
+  /**
+   * <pre>
+   * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+   * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+   * those pins is then left alone at its point, and the net of every such lone point is listed here.
+   * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+   * library gates the nets near its parts rather than the whole design.
+   *
+   * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+   * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+   * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+   * `supplied`, and the gate then treats the whole design as affected.
+   * </pre>
+   *
+   * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the netsMissingPins at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getNetsMissingPinsBytes(int index) {
+    return netsMissingPins_.getByteString(index);
   }
 
   public static final int RESOLVED_SYMBOLS_FIELD_NUMBER = 8;
@@ -1293,6 +1384,9 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < groupBuses_.size(); i++) {
       output.writeMessage(12, groupBuses_.get(i));
     }
+    for (int i = 0; i < netsMissingPins_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, netsMissingPins_.getRaw(i));
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -1404,6 +1498,14 @@ private static final long serialVersionUID = 0L;
           }
           size += 1 * count;
         }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < netsMissingPins_.size(); i++) {
+        dataSize += computeStringSizeNoTag(netsMissingPins_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getNetsMissingPinsList().size();
+    }
     return size;
   }
   @java.lang.Override
@@ -1438,6 +1540,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getUnmodeledBusesList())) return false;
     if (!getUnresolvedSymbolsList()
         .equals(other.getUnresolvedSymbolsList())) return false;
+    if (!getNetsMissingPinsList()
+        .equals(other.getNetsMissingPinsList())) return false;
     if (!getResolvedSymbolsList()
         .equals(other.getResolvedSymbolsList())) return false;
     if (!getJoinedTapsList()
@@ -1482,6 +1586,10 @@ private static final long serialVersionUID = 0L;
     if (getUnresolvedSymbolsCount() > 0) {
       hash = (37 * hash) + UNRESOLVED_SYMBOLS_FIELD_NUMBER;
       hash = (53 * hash) + getUnresolvedSymbolsList().hashCode();
+    }
+    if (getNetsMissingPinsCount() > 0) {
+      hash = (37 * hash) + NETS_MISSING_PINS_FIELD_NUMBER;
+      hash = (53 * hash) + getNetsMissingPinsList().hashCode();
     }
     if (getResolvedSymbolsCount() > 0) {
       hash = (37 * hash) + RESOLVED_SYMBOLS_FIELD_NUMBER;
@@ -1688,48 +1796,50 @@ private static final long serialVersionUID = 0L;
         unresolvedSymbolsBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000010);
+      netsMissingPins_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       if (resolvedSymbolsBuilder_ == null) {
         resolvedSymbols_ = java.util.Collections.emptyList();
       } else {
         resolvedSymbols_ = null;
         resolvedSymbolsBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000020);
+      bitField0_ = (bitField0_ & ~0x00000040);
       if (joinedTapsBuilder_ == null) {
         joinedTaps_ = java.util.Collections.emptyList();
       } else {
         joinedTaps_ = null;
         joinedTapsBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000040);
+      bitField0_ = (bitField0_ & ~0x00000080);
       if (unannotatedComponentsBuilder_ == null) {
         unannotatedComponents_ = java.util.Collections.emptyList();
       } else {
         unannotatedComponents_ = null;
         unannotatedComponentsBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000080);
+      bitField0_ = (bitField0_ & ~0x00000100);
       if (unexpandedHierarchyBuilder_ == null) {
         unexpandedHierarchy_ = java.util.Collections.emptyList();
       } else {
         unexpandedHierarchy_ = null;
         unexpandedHierarchyBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000100);
+      bitField0_ = (bitField0_ & ~0x00000200);
       if (rangeLabelsBuilder_ == null) {
         rangeLabels_ = java.util.Collections.emptyList();
       } else {
         rangeLabels_ = null;
         rangeLabelsBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000200);
+      bitField0_ = (bitField0_ & ~0x00000400);
       if (groupBusesBuilder_ == null) {
         groupBuses_ = java.util.Collections.emptyList();
       } else {
         groupBuses_ = null;
         groupBusesBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000400);
+      bitField0_ = (bitField0_ & ~0x00000800);
       supplied_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
@@ -1811,54 +1921,54 @@ private static final long serialVersionUID = 0L;
         result.unresolvedSymbols_ = unresolvedSymbolsBuilder_.build();
       }
       if (resolvedSymbolsBuilder_ == null) {
-        if (((bitField0_ & 0x00000020) != 0)) {
+        if (((bitField0_ & 0x00000040) != 0)) {
           resolvedSymbols_ = java.util.Collections.unmodifiableList(resolvedSymbols_);
-          bitField0_ = (bitField0_ & ~0x00000020);
+          bitField0_ = (bitField0_ & ~0x00000040);
         }
         result.resolvedSymbols_ = resolvedSymbols_;
       } else {
         result.resolvedSymbols_ = resolvedSymbolsBuilder_.build();
       }
       if (joinedTapsBuilder_ == null) {
-        if (((bitField0_ & 0x00000040) != 0)) {
+        if (((bitField0_ & 0x00000080) != 0)) {
           joinedTaps_ = java.util.Collections.unmodifiableList(joinedTaps_);
-          bitField0_ = (bitField0_ & ~0x00000040);
+          bitField0_ = (bitField0_ & ~0x00000080);
         }
         result.joinedTaps_ = joinedTaps_;
       } else {
         result.joinedTaps_ = joinedTapsBuilder_.build();
       }
       if (unannotatedComponentsBuilder_ == null) {
-        if (((bitField0_ & 0x00000080) != 0)) {
+        if (((bitField0_ & 0x00000100) != 0)) {
           unannotatedComponents_ = java.util.Collections.unmodifiableList(unannotatedComponents_);
-          bitField0_ = (bitField0_ & ~0x00000080);
+          bitField0_ = (bitField0_ & ~0x00000100);
         }
         result.unannotatedComponents_ = unannotatedComponents_;
       } else {
         result.unannotatedComponents_ = unannotatedComponentsBuilder_.build();
       }
       if (unexpandedHierarchyBuilder_ == null) {
-        if (((bitField0_ & 0x00000100) != 0)) {
+        if (((bitField0_ & 0x00000200) != 0)) {
           unexpandedHierarchy_ = java.util.Collections.unmodifiableList(unexpandedHierarchy_);
-          bitField0_ = (bitField0_ & ~0x00000100);
+          bitField0_ = (bitField0_ & ~0x00000200);
         }
         result.unexpandedHierarchy_ = unexpandedHierarchy_;
       } else {
         result.unexpandedHierarchy_ = unexpandedHierarchyBuilder_.build();
       }
       if (rangeLabelsBuilder_ == null) {
-        if (((bitField0_ & 0x00000200) != 0)) {
+        if (((bitField0_ & 0x00000400) != 0)) {
           rangeLabels_ = java.util.Collections.unmodifiableList(rangeLabels_);
-          bitField0_ = (bitField0_ & ~0x00000200);
+          bitField0_ = (bitField0_ & ~0x00000400);
         }
         result.rangeLabels_ = rangeLabels_;
       } else {
         result.rangeLabels_ = rangeLabelsBuilder_.build();
       }
       if (groupBusesBuilder_ == null) {
-        if (((bitField0_ & 0x00000400) != 0)) {
+        if (((bitField0_ & 0x00000800) != 0)) {
           groupBuses_ = java.util.Collections.unmodifiableList(groupBuses_);
-          bitField0_ = (bitField0_ & ~0x00000400);
+          bitField0_ = (bitField0_ & ~0x00000800);
         }
         result.groupBuses_ = groupBuses_;
       } else {
@@ -1868,7 +1978,11 @@ private static final long serialVersionUID = 0L;
 
     private void buildPartial0(io.github.panyam.agni.v1.ir.InputDiagnostics result) {
       int from_bitField0_ = bitField0_;
-      if (((from_bitField0_ & 0x00000800) != 0)) {
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        netsMissingPins_.makeImmutable();
+        result.netsMissingPins_ = netsMissingPins_;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
         supplied_.makeImmutable();
         result.supplied_ = supplied_;
       }
@@ -2016,11 +2130,21 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (!other.netsMissingPins_.isEmpty()) {
+        if (netsMissingPins_.isEmpty()) {
+          netsMissingPins_ = other.netsMissingPins_;
+          bitField0_ |= 0x00000020;
+        } else {
+          ensureNetsMissingPinsIsMutable();
+          netsMissingPins_.addAll(other.netsMissingPins_);
+        }
+        onChanged();
+      }
       if (resolvedSymbolsBuilder_ == null) {
         if (!other.resolvedSymbols_.isEmpty()) {
           if (resolvedSymbols_.isEmpty()) {
             resolvedSymbols_ = other.resolvedSymbols_;
-            bitField0_ = (bitField0_ & ~0x00000020);
+            bitField0_ = (bitField0_ & ~0x00000040);
           } else {
             ensureResolvedSymbolsIsMutable();
             resolvedSymbols_.addAll(other.resolvedSymbols_);
@@ -2033,7 +2157,7 @@ private static final long serialVersionUID = 0L;
             resolvedSymbolsBuilder_.dispose();
             resolvedSymbolsBuilder_ = null;
             resolvedSymbols_ = other.resolvedSymbols_;
-            bitField0_ = (bitField0_ & ~0x00000020);
+            bitField0_ = (bitField0_ & ~0x00000040);
             resolvedSymbolsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetResolvedSymbolsFieldBuilder() : null;
@@ -2046,7 +2170,7 @@ private static final long serialVersionUID = 0L;
         if (!other.joinedTaps_.isEmpty()) {
           if (joinedTaps_.isEmpty()) {
             joinedTaps_ = other.joinedTaps_;
-            bitField0_ = (bitField0_ & ~0x00000040);
+            bitField0_ = (bitField0_ & ~0x00000080);
           } else {
             ensureJoinedTapsIsMutable();
             joinedTaps_.addAll(other.joinedTaps_);
@@ -2059,7 +2183,7 @@ private static final long serialVersionUID = 0L;
             joinedTapsBuilder_.dispose();
             joinedTapsBuilder_ = null;
             joinedTaps_ = other.joinedTaps_;
-            bitField0_ = (bitField0_ & ~0x00000040);
+            bitField0_ = (bitField0_ & ~0x00000080);
             joinedTapsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetJoinedTapsFieldBuilder() : null;
@@ -2072,7 +2196,7 @@ private static final long serialVersionUID = 0L;
         if (!other.unannotatedComponents_.isEmpty()) {
           if (unannotatedComponents_.isEmpty()) {
             unannotatedComponents_ = other.unannotatedComponents_;
-            bitField0_ = (bitField0_ & ~0x00000080);
+            bitField0_ = (bitField0_ & ~0x00000100);
           } else {
             ensureUnannotatedComponentsIsMutable();
             unannotatedComponents_.addAll(other.unannotatedComponents_);
@@ -2085,7 +2209,7 @@ private static final long serialVersionUID = 0L;
             unannotatedComponentsBuilder_.dispose();
             unannotatedComponentsBuilder_ = null;
             unannotatedComponents_ = other.unannotatedComponents_;
-            bitField0_ = (bitField0_ & ~0x00000080);
+            bitField0_ = (bitField0_ & ~0x00000100);
             unannotatedComponentsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetUnannotatedComponentsFieldBuilder() : null;
@@ -2098,7 +2222,7 @@ private static final long serialVersionUID = 0L;
         if (!other.unexpandedHierarchy_.isEmpty()) {
           if (unexpandedHierarchy_.isEmpty()) {
             unexpandedHierarchy_ = other.unexpandedHierarchy_;
-            bitField0_ = (bitField0_ & ~0x00000100);
+            bitField0_ = (bitField0_ & ~0x00000200);
           } else {
             ensureUnexpandedHierarchyIsMutable();
             unexpandedHierarchy_.addAll(other.unexpandedHierarchy_);
@@ -2111,7 +2235,7 @@ private static final long serialVersionUID = 0L;
             unexpandedHierarchyBuilder_.dispose();
             unexpandedHierarchyBuilder_ = null;
             unexpandedHierarchy_ = other.unexpandedHierarchy_;
-            bitField0_ = (bitField0_ & ~0x00000100);
+            bitField0_ = (bitField0_ & ~0x00000200);
             unexpandedHierarchyBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetUnexpandedHierarchyFieldBuilder() : null;
@@ -2124,7 +2248,7 @@ private static final long serialVersionUID = 0L;
         if (!other.rangeLabels_.isEmpty()) {
           if (rangeLabels_.isEmpty()) {
             rangeLabels_ = other.rangeLabels_;
-            bitField0_ = (bitField0_ & ~0x00000200);
+            bitField0_ = (bitField0_ & ~0x00000400);
           } else {
             ensureRangeLabelsIsMutable();
             rangeLabels_.addAll(other.rangeLabels_);
@@ -2137,7 +2261,7 @@ private static final long serialVersionUID = 0L;
             rangeLabelsBuilder_.dispose();
             rangeLabelsBuilder_ = null;
             rangeLabels_ = other.rangeLabels_;
-            bitField0_ = (bitField0_ & ~0x00000200);
+            bitField0_ = (bitField0_ & ~0x00000400);
             rangeLabelsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetRangeLabelsFieldBuilder() : null;
@@ -2150,7 +2274,7 @@ private static final long serialVersionUID = 0L;
         if (!other.groupBuses_.isEmpty()) {
           if (groupBuses_.isEmpty()) {
             groupBuses_ = other.groupBuses_;
-            bitField0_ = (bitField0_ & ~0x00000400);
+            bitField0_ = (bitField0_ & ~0x00000800);
           } else {
             ensureGroupBusesIsMutable();
             groupBuses_.addAll(other.groupBuses_);
@@ -2163,7 +2287,7 @@ private static final long serialVersionUID = 0L;
             groupBusesBuilder_.dispose();
             groupBusesBuilder_ = null;
             groupBuses_ = other.groupBuses_;
-            bitField0_ = (bitField0_ & ~0x00000400);
+            bitField0_ = (bitField0_ & ~0x00000800);
             groupBusesBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetGroupBusesFieldBuilder() : null;
@@ -2175,7 +2299,7 @@ private static final long serialVersionUID = 0L;
       if (!other.supplied_.isEmpty()) {
         if (supplied_.isEmpty()) {
           supplied_ = other.supplied_;
-          bitField0_ |= 0x00000800;
+          bitField0_ |= 0x00001000;
         } else {
           ensureSuppliedIsMutable();
           supplied_.addAll(other.supplied_);
@@ -2354,6 +2478,11 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 98
+            case 106: {
+              ensureNetsMissingPinsIsMutable();
+              netsMissingPins_.add(input.readStringRequireUtf8());
+              break;
+            } // case 106
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -4135,12 +4264,240 @@ private static final long serialVersionUID = 0L;
       return unresolvedSymbolsBuilder_;
     }
 
+    private com.google.protobuf.LazyStringArrayList netsMissingPins_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureNetsMissingPinsIsMutable() {
+      if (!netsMissingPins_.isModifiable()) {
+        netsMissingPins_ = new com.google.protobuf.LazyStringArrayList(netsMissingPins_);
+      }
+      bitField0_ |= 0x00000020;
+    }
+    /**
+     * <pre>
+     * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+     * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+     * those pins is then left alone at its point, and the net of every such lone point is listed here.
+     * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+     * library gates the nets near its parts rather than the whole design.
+     *
+     * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+     * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+     * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+     * `supplied`, and the gate then treats the whole design as affected.
+     * </pre>
+     *
+     * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+     * @return A list containing the netsMissingPins.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getNetsMissingPinsList() {
+      netsMissingPins_.makeImmutable();
+      return netsMissingPins_;
+    }
+    /**
+     * <pre>
+     * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+     * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+     * those pins is then left alone at its point, and the net of every such lone point is listed here.
+     * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+     * library gates the nets near its parts rather than the whole design.
+     *
+     * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+     * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+     * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+     * `supplied`, and the gate then treats the whole design as affected.
+     * </pre>
+     *
+     * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+     * @return The count of netsMissingPins.
+     */
+    public int getNetsMissingPinsCount() {
+      return netsMissingPins_.size();
+    }
+    /**
+     * <pre>
+     * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+     * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+     * those pins is then left alone at its point, and the net of every such lone point is listed here.
+     * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+     * library gates the nets near its parts rather than the whole design.
+     *
+     * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+     * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+     * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+     * `supplied`, and the gate then treats the whole design as affected.
+     * </pre>
+     *
+     * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+     * @param index The index of the element to return.
+     * @return The netsMissingPins at the given index.
+     */
+    public java.lang.String getNetsMissingPins(int index) {
+      return netsMissingPins_.get(index);
+    }
+    /**
+     * <pre>
+     * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+     * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+     * those pins is then left alone at its point, and the net of every such lone point is listed here.
+     * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+     * library gates the nets near its parts rather than the whole design.
+     *
+     * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+     * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+     * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+     * `supplied`, and the gate then treats the whole design as affected.
+     * </pre>
+     *
+     * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the netsMissingPins at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getNetsMissingPinsBytes(int index) {
+      return netsMissingPins_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+     * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+     * those pins is then left alone at its point, and the net of every such lone point is listed here.
+     * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+     * library gates the nets near its parts rather than the whole design.
+     *
+     * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+     * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+     * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+     * `supplied`, and the gate then treats the whole design as affected.
+     * </pre>
+     *
+     * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+     * @param index The index to set the value at.
+     * @param value The netsMissingPins to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNetsMissingPins(
+        int index, java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureNetsMissingPinsIsMutable();
+      netsMissingPins_.set(index, value);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+     * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+     * those pins is then left alone at its point, and the net of every such lone point is listed here.
+     * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+     * library gates the nets near its parts rather than the whole design.
+     *
+     * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+     * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+     * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+     * `supplied`, and the gate then treats the whole design as affected.
+     * </pre>
+     *
+     * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+     * @param value The netsMissingPins to add.
+     * @return This builder for chaining.
+     */
+    public Builder addNetsMissingPins(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureNetsMissingPinsIsMutable();
+      netsMissingPins_.add(value);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+     * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+     * those pins is then left alone at its point, and the net of every such lone point is listed here.
+     * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+     * library gates the nets near its parts rather than the whole design.
+     *
+     * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+     * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+     * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+     * `supplied`, and the gate then treats the whole design as affected.
+     * </pre>
+     *
+     * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+     * @param values The netsMissingPins to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllNetsMissingPins(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureNetsMissingPinsIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, netsMissingPins_);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+     * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+     * those pins is then left alone at its point, and the net of every such lone point is listed here.
+     * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+     * library gates the nets near its parts rather than the whole design.
+     *
+     * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+     * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+     * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+     * `supplied`, and the gate then treats the whole design as affected.
+     * </pre>
+     *
+     * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearNetsMissingPins() {
+      netsMissingPins_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000020);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+     * symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+     * those pins is then left alone at its point, and the net of every such lone point is listed here.
+     * A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+     * library gates the nets near its parts rather than the whole design.
+     *
+     * A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+     * more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+     * ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+     * `supplied`, and the gate then treats the whole design as affected.
+     * </pre>
+     *
+     * <code>repeated string nets_missing_pins = 13 [json_name = "netsMissingPins"];</code>
+     * @param value The bytes of the netsMissingPins to add.
+     * @return This builder for chaining.
+     */
+    public Builder addNetsMissingPinsBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      ensureNetsMissingPinsIsMutable();
+      netsMissingPins_.add(value);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
     private java.util.List<io.github.panyam.agni.v1.ir.ResolvedSymbol> resolvedSymbols_ =
       java.util.Collections.emptyList();
     private void ensureResolvedSymbolsIsMutable() {
-      if (!((bitField0_ & 0x00000020) != 0)) {
+      if (!((bitField0_ & 0x00000040) != 0)) {
         resolvedSymbols_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.ResolvedSymbol>(resolvedSymbols_);
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000040;
        }
     }
 
@@ -4482,7 +4839,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearResolvedSymbols() {
       if (resolvedSymbolsBuilder_ == null) {
         resolvedSymbols_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000040);
         onChanged();
       } else {
         resolvedSymbolsBuilder_.clear();
@@ -4685,7 +5042,7 @@ private static final long serialVersionUID = 0L;
         resolvedSymbolsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.ResolvedSymbol, io.github.panyam.agni.v1.ir.ResolvedSymbol.Builder, io.github.panyam.agni.v1.ir.ResolvedSymbolOrBuilder>(
                 resolvedSymbols_,
-                ((bitField0_ & 0x00000020) != 0),
+                ((bitField0_ & 0x00000040) != 0),
                 getParentForChildren(),
                 isClean());
         resolvedSymbols_ = null;
@@ -4696,9 +5053,9 @@ private static final long serialVersionUID = 0L;
     private java.util.List<io.github.panyam.agni.v1.ir.JoinedTap> joinedTaps_ =
       java.util.Collections.emptyList();
     private void ensureJoinedTapsIsMutable() {
-      if (!((bitField0_ & 0x00000040) != 0)) {
+      if (!((bitField0_ & 0x00000080) != 0)) {
         joinedTaps_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.JoinedTap>(joinedTaps_);
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000080;
        }
     }
 
@@ -5007,7 +5364,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearJoinedTaps() {
       if (joinedTapsBuilder_ == null) {
         joinedTaps_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000080);
         onChanged();
       } else {
         joinedTapsBuilder_.clear();
@@ -5189,7 +5546,7 @@ private static final long serialVersionUID = 0L;
         joinedTapsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.JoinedTap, io.github.panyam.agni.v1.ir.JoinedTap.Builder, io.github.panyam.agni.v1.ir.JoinedTapOrBuilder>(
                 joinedTaps_,
-                ((bitField0_ & 0x00000040) != 0),
+                ((bitField0_ & 0x00000080) != 0),
                 getParentForChildren(),
                 isClean());
         joinedTaps_ = null;
@@ -5200,9 +5557,9 @@ private static final long serialVersionUID = 0L;
     private java.util.List<io.github.panyam.agni.v1.ir.UnannotatedComponent> unannotatedComponents_ =
       java.util.Collections.emptyList();
     private void ensureUnannotatedComponentsIsMutable() {
-      if (!((bitField0_ & 0x00000080) != 0)) {
+      if (!((bitField0_ & 0x00000100) != 0)) {
         unannotatedComponents_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.UnannotatedComponent>(unannotatedComponents_);
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
        }
     }
 
@@ -5511,7 +5868,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearUnannotatedComponents() {
       if (unannotatedComponentsBuilder_ == null) {
         unannotatedComponents_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000080);
+        bitField0_ = (bitField0_ & ~0x00000100);
         onChanged();
       } else {
         unannotatedComponentsBuilder_.clear();
@@ -5693,7 +6050,7 @@ private static final long serialVersionUID = 0L;
         unannotatedComponentsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.UnannotatedComponent, io.github.panyam.agni.v1.ir.UnannotatedComponent.Builder, io.github.panyam.agni.v1.ir.UnannotatedComponentOrBuilder>(
                 unannotatedComponents_,
-                ((bitField0_ & 0x00000080) != 0),
+                ((bitField0_ & 0x00000100) != 0),
                 getParentForChildren(),
                 isClean());
         unannotatedComponents_ = null;
@@ -5704,9 +6061,9 @@ private static final long serialVersionUID = 0L;
     private java.util.List<io.github.panyam.agni.v1.ir.UnexpandedHierarchy> unexpandedHierarchy_ =
       java.util.Collections.emptyList();
     private void ensureUnexpandedHierarchyIsMutable() {
-      if (!((bitField0_ & 0x00000100) != 0)) {
+      if (!((bitField0_ & 0x00000200) != 0)) {
         unexpandedHierarchy_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.UnexpandedHierarchy>(unexpandedHierarchy_);
-        bitField0_ |= 0x00000100;
+        bitField0_ |= 0x00000200;
        }
     }
 
@@ -6059,7 +6416,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearUnexpandedHierarchy() {
       if (unexpandedHierarchyBuilder_ == null) {
         unexpandedHierarchy_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000100);
+        bitField0_ = (bitField0_ & ~0x00000200);
         onChanged();
       } else {
         unexpandedHierarchyBuilder_.clear();
@@ -6269,7 +6626,7 @@ private static final long serialVersionUID = 0L;
         unexpandedHierarchyBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.UnexpandedHierarchy, io.github.panyam.agni.v1.ir.UnexpandedHierarchy.Builder, io.github.panyam.agni.v1.ir.UnexpandedHierarchyOrBuilder>(
                 unexpandedHierarchy_,
-                ((bitField0_ & 0x00000100) != 0),
+                ((bitField0_ & 0x00000200) != 0),
                 getParentForChildren(),
                 isClean());
         unexpandedHierarchy_ = null;
@@ -6280,9 +6637,9 @@ private static final long serialVersionUID = 0L;
     private java.util.List<io.github.panyam.agni.v1.ir.RangeLabel> rangeLabels_ =
       java.util.Collections.emptyList();
     private void ensureRangeLabelsIsMutable() {
-      if (!((bitField0_ & 0x00000200) != 0)) {
+      if (!((bitField0_ & 0x00000400) != 0)) {
         rangeLabels_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.RangeLabel>(rangeLabels_);
-        bitField0_ |= 0x00000200;
+        bitField0_ |= 0x00000400;
        }
     }
 
@@ -6558,7 +6915,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearRangeLabels() {
       if (rangeLabelsBuilder_ == null) {
         rangeLabels_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000200);
+        bitField0_ = (bitField0_ & ~0x00000400);
         onChanged();
       } else {
         rangeLabelsBuilder_.clear();
@@ -6719,7 +7076,7 @@ private static final long serialVersionUID = 0L;
         rangeLabelsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.RangeLabel, io.github.panyam.agni.v1.ir.RangeLabel.Builder, io.github.panyam.agni.v1.ir.RangeLabelOrBuilder>(
                 rangeLabels_,
-                ((bitField0_ & 0x00000200) != 0),
+                ((bitField0_ & 0x00000400) != 0),
                 getParentForChildren(),
                 isClean());
         rangeLabels_ = null;
@@ -6730,9 +7087,9 @@ private static final long serialVersionUID = 0L;
     private java.util.List<io.github.panyam.agni.v1.ir.GroupBus> groupBuses_ =
       java.util.Collections.emptyList();
     private void ensureGroupBusesIsMutable() {
-      if (!((bitField0_ & 0x00000400) != 0)) {
+      if (!((bitField0_ & 0x00000800) != 0)) {
         groupBuses_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.GroupBus>(groupBuses_);
-        bitField0_ |= 0x00000400;
+        bitField0_ |= 0x00000800;
        }
     }
 
@@ -6953,7 +7310,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearGroupBuses() {
       if (groupBusesBuilder_ == null) {
         groupBuses_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000400);
+        bitField0_ = (bitField0_ & ~0x00000800);
         onChanged();
       } else {
         groupBusesBuilder_.clear();
@@ -7079,7 +7436,7 @@ private static final long serialVersionUID = 0L;
         groupBusesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.GroupBus, io.github.panyam.agni.v1.ir.GroupBus.Builder, io.github.panyam.agni.v1.ir.GroupBusOrBuilder>(
                 groupBuses_,
-                ((bitField0_ & 0x00000400) != 0),
+                ((bitField0_ & 0x00000800) != 0),
                 getParentForChildren(),
                 isClean());
         groupBuses_ = null;
@@ -7093,7 +7450,7 @@ private static final long serialVersionUID = 0L;
       if (!supplied_.isModifiable()) {
         supplied_ = new com.google.protobuf.LazyStringArrayList(supplied_);
       }
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
     }
     /**
      * <pre>
@@ -7249,7 +7606,7 @@ private static final long serialVersionUID = 0L;
       java.util.Objects.requireNonNull(value);
       ensureSuppliedIsMutable();
       supplied_.set(index, value);
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }
@@ -7285,7 +7642,7 @@ private static final long serialVersionUID = 0L;
       java.util.Objects.requireNonNull(value);
       ensureSuppliedIsMutable();
       supplied_.add(value);
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }
@@ -7321,7 +7678,7 @@ private static final long serialVersionUID = 0L;
       ensureSuppliedIsMutable();
       com.google.protobuf.AbstractMessageLite.Builder.addAll(
           values, supplied_);
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }
@@ -7354,7 +7711,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearSupplied() {
       supplied_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
-      bitField0_ = (bitField0_ & ~0x00000800);;
+      bitField0_ = (bitField0_ & ~0x00001000);;
       onChanged();
       return this;
     }
@@ -7391,7 +7748,7 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       ensureSuppliedIsMutable();
       supplied_.add(value);
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }

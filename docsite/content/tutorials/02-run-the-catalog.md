@@ -124,7 +124,7 @@ Look at the last line of that first run again. Every run ends with it, whether o
 anything:
 
 ```
-24071 subject(s) considered by 35 rule(s), 654 not considered (--verdicts for the detail)
+24071 subject(s) considered by 35 rule(s), 656 not considered (--verdicts for the detail)
 ```
 
 A findings list cannot give you this half. Picture two runs. One finds nothing. In the other, every
@@ -134,7 +134,7 @@ findings alone can never tell you which one you are holding.
 Read the three numbers separately. **24071 considered** is how many subjects were actually judged.
 **35 rules** is how many were willing to say what they looked at. That is not the same as how many
 ran. Most of the catalog has no subject in scope on any given board, and a rule with nothing to say
-is not a gap. **654 not considered** is the one worth reading closely, and it gets its own
+is not a gap. **656 not considered** is the one worth reading closely, and it gets its own
 look below.
 
 A second line can appear under that one:
@@ -170,7 +170,7 @@ default and the rows are a flag:
 rule was willing to judge that subject and something stopped it, so it says what stopped it rather
 than passing on incomplete evidence.
 
-On this board most of the 654 are one of three kinds. 319 are `netclass-via-drill` declining nets
+On this board most of the 656 are one of three kinds. 319 are `netclass-via-drill` declining nets
 that carry no via, since such a net has no drill to compare. 154 are `floating-input` declining a
 net that carries a passive part, because a resistor on a net might be the pull that fixes it, might
 be a series element with the driver on the far side, or might be a footprint nobody stuffed, and a

@@ -199,6 +199,7 @@ A read can succeed and still be worth complaining about. A reader records what i
 | `ref_des_collisions` | one designator claimed by placements that are not sections of one part |
 | `unmodeled_buses` | a bus construct recognized but not expanded into member nets |
 | `unresolved_symbols` | a symbol file that failed to open, so its placements carry no pins |
+| `nets_missing_pins` | while a symbol is unresolved, the nets whose wire end, label or pin is left alone where a lost pin was |
 | `resolved_symbols` | a symbol reference that DID open, with the pin count it supplied |
 | `unannotated_components` | parts whose designator is still a placeholder |
 | `unexpanded_hierarchy` | a hierarchical block (an EDIF sub-cell) whose contents the read did not extract, with its instance count |
@@ -246,6 +247,8 @@ A T-tap with no junction dot is drawn as a connection, but the netlist does not 
 The reader had the answer. `splitWiresAt` runs at every junction dot and mid-span label BEFORE the detection pass, so a joined tap is an endpoint of both wires by the time anything looks. Running the same detection once more before the split recovers the set.
 
 </details>
+
+`nets_missing_pins` lets the check gate only the subjects a lost pin may change (agni issue 88). The net solver finds each point that holds exactly one wire end, label or pin, with `netgraph.LoneNets`, and the reader keeps the list while a symbol is unresolved. A reader that leaves the name out of `supplied` keeps the gate design-wide, so a new reader loses nothing by not computing it.
 
 Copy two things when adding a reader. Declare `resolved_symbols` in `supplied` only on the branch that actually opened a symbol, because xschem and gEDA have a no-opener path where the caller deliberately asked for a symbol-free read, and declaring there would turn "we did not look" into "we looked and found nothing missing". And keep the two lists a partition, since a reference on both would let a rule report one subject as passed and failed at once. A guard in `readers/formats` checks that a reader recording unresolved symbols also declares the resolved set.
 

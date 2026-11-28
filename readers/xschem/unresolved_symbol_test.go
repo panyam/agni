@@ -141,3 +141,21 @@ func TestResolvedSymbolsExcludeFailures(t *testing.T) {
 		}
 	}
 }
+
+// TestUnresolvedSymbolNamesTheNetsItsPinsMayJoin (agni issue 88) checks that each net whose wire ends
+// where a lost pin was is named, so the check gates those nets and not the whole design. Net 0 is
+// there because gnd.sym lost its pin too, which leaves its label alone at its point.
+func TestUnresolvedSymbolNamesTheNetsItsPinsMayJoin(t *testing.T) {
+	failing := func(string) ([]byte, error) { return nil, fmt.Errorf("missing") }
+	d, err := ReadWithSymbols(bytes.NewReader(readSch(t, "divider.sch")), "divider.sch", failing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diag := d.GetInputDiagnostics()
+	if !slices.Contains(diag.GetSupplied(), "nets_missing_pins") {
+		t.Fatal("nets_missing_pins not declared, so the gate cannot trust the list")
+	}
+	if got := diag.GetNetsMissingPins(); !slices.Equal(got, []string{"0", "IN", "MID", "OUT"}) {
+		t.Errorf("nets missing pins = %v, want [0 IN MID OUT]", got)
+	}
+}

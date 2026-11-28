@@ -40,10 +40,10 @@ func TestRunAllEvaluatesEachRuleOnce(t *testing.T) {
 	}
 }
 
-// On a design with an unresolved symbol, a connectivity rule's FINDINGS are the gate's single
-// inconclusive, as Run has always reported, while its VERDICTS are still evaluated, as RunVerdicts
-// has always done. RunAll keeps both, evaluating the rule once, and only because a verdict needs it.
-func TestRunAllKeepsTheGateOnFindingsOnly(t *testing.T) {
+// On a design with an unresolved symbol and no attribution of the nets it touched, a connectivity
+// rule's FINDINGS are the gate's single inconclusive, as Run has always reported. Its VERDICTS are
+// evaluated, once and only because a verdict needs it, and each is inconclusive too (agni issue 88).
+func TestRunAllGatesFindingsAndVerdicts(t *testing.T) {
 	d := &ir.Design{InputDiagnostics: &ir.InputDiagnostics{UnresolvedSymbols: []*ir.UnresolvedSymbol{{Symref: "lib:Missing"}}}}
 	n := 0
 	r := countingRule("gated", []string{"pin.net"}, &n)
@@ -59,6 +59,11 @@ func TestRunAllKeepsTheGateOnFindingsOnly(t *testing.T) {
 	}
 	if len(vs) != 2 || n != 1 {
 		t.Errorf("verdicts = %d after %d evaluations, want 2 after 1", len(vs), n)
+	}
+	for _, v := range vs {
+		if v.Outcome != Inconclusive {
+			t.Errorf("verdict on %s = %s, want inconclusive while the read lost pins", SubjectRefs(v), v.Outcome)
+		}
 	}
 	n = 0
 	if _, err := Run(context.Background(), NewModel(d), []*Rule{r}); err != nil || n != 0 {

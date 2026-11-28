@@ -86,11 +86,16 @@ reports its path as unblocked rather than guessing which way the part faces.
 ### When it passes or does not apply
 
 - No connector on the net, since the rule is about what enters the board.
-- No power input reachable from it. A connector's own pins are not loads. A receptacle's symbol
-  types VBUS power_in and the rule still skips it, so a source port driven by a load switch reaches
-  none (agni issue 935).
-  A clamp array's own supply pin is not a load either, since the part guards the rail it is biased
-  from (agni issue 1257).
+- No power input reachable from it. The rule reads its loads through `check.LoadPin`, as
+  input-protection does (agni issue 1941), and that page says what counts. A connector's own pins are
+  not loads. A receptacle's symbol types VBUS power_in and the rule still skips it, so a source port
+  driven by a load switch reaches none (agni issue 935). A clamp array's own supply pin is not a load
+  either, since the part guards the rail it is biased from (agni issue 1257).
+- A USB bus supply is not-considered. A USB plug is keyed, so its VBUS cannot mate reversed, and
+  reverse polarity cannot arrive on the net (agni issue 1941). The rule reads a connector pin as a
+  bus supply when the lexicon's `pin.cable_supply` vocabulary matches its name, `^VBUS` by default.
+  Backfeed through such a port is still possible, and a reviewer who cares about it reads the port's
+  power path by hand.
 - A transistor touching the path only through its gate, such as a FET sensing VBUS for presence
   detection, is not in the path and makes nothing inconclusive.
 - A transistor on the path, when a seeded datasheet identifies it as an ideal-diode / ORing
@@ -99,9 +104,8 @@ reports its path as unblocked rather than guessing which way the part faces.
   specifies a reverse current. A switch states a reverse current only when it blocks one (agni issue
   1248).
   The pass cites that row and says the switch stops backfeed but not a reversed supply, since such a
-  switch is rated to a few hundred millivolts below ground at its input. On a USB-C port, where VBUS
-  cannot be plugged in backwards, backfeed is the half that matters. Without the datasheet the entry
-  still fails, and the verdict names the IC it could not read.
+  switch is rated to a few hundred millivolts below ground at its input. Without the datasheet the
+  entry still fails, and the verdict names the IC it could not read.
 - Ground and read-gap (external) nets, excluded up front.
 - A net the board drives itself is not-considered, since its connector is an outlet rather than a
   way power arrives (agni issue 1016). A converter's output counts, and the rule reads one as a

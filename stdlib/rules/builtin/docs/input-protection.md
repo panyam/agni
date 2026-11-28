@@ -37,9 +37,13 @@ A connector's own pin is never the load, and neither is a clamp's supply pin (ag
 pin typed `power_in` counts. So does a pin typed inout, passive or unspecified when its name is a
 supply name, because a vendor symbol often types a PD controller's VBUS1 inout or an LDO's VIN
 passive. A pin typed input does not count by its name, since in KiCad that is the author's choice,
-as on an INA233's Vbus sense pin. Sometimes the walk reaches no load from a connector pin typed as
-power. HackRF One's USB VBUS reaches its board through a P-FET the walk does not cross. Such a net
-reports not-considered and says the walk found no load, rather than dropping out of the run.
+as on an INA233's Vbus sense pin.
+
+The walk also crosses a fitted transistor from its source to its drain, or back, because a load
+switch passes the power it switches (agni issue 1941). HackRF One's USB VBUS reaches its regulator
+through P-FET Q5 that way. A transistor touching the walk only through its gate is not crossed.
+Sometimes the walk still reaches no load from a connector pin typed as power. Such a net reports
+not-considered and says the walk found no load, rather than dropping out of the run.
 
 A current-limiting power switch also counts when it is the entry's only load. An eFuse or a USB
 power switch wired between the connector and the board is one. Its current limit gives the

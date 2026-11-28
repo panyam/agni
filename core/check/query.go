@@ -436,6 +436,10 @@ func (m *irModel) UnresolvedSymbols() []*ir.UnresolvedSymbol {
 	return m.d.GetInputDiagnostics().GetUnresolvedSymbols()
 }
 
+func (m *irModel) NetsMissingPins() []string {
+	return m.d.GetInputDiagnostics().GetNetsMissingPins()
+}
+
 func (m *irModel) ResolvedSymbols() []*ir.ResolvedSymbol {
 	return m.d.GetInputDiagnostics().GetResolvedSymbols()
 }

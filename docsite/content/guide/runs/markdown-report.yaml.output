@@ -4,10 +4,10 @@
 | severity | findings |
 |---|---|
 | error | 1 |
-| warning | 6 |
+| warning | 5 |
 | info | 4 |
 
-11 finding(s), 88 rule(s) run.
+10 finding(s), 88 rule(s) run.
 
 ## error
 
@@ -38,12 +38,6 @@ A power rail feeds power-input pins but has no decoupling capacitor on it.
 A connector feeds a power-input pin directly with no fuse or TVS in the path.
 
 - `VBUS`: connector feeds a power input with no fuse or TVS in the path (showcase.fires.kicad_sch)
-
-### reverse-blocking-absent
-
-A connector feeds a power input with no directional element blocking reverse flow.
-
-- `VBUS`: connector feeds a power input with no reverse-blocking element in the path (showcase.fires.kicad_sch)
 
 ## info
 

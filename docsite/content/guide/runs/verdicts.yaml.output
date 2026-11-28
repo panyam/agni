@@ -26,11 +26,6 @@ input-protection  1 fail
                           clamp on the path, and U1's datasheet was not read, so whether it
                           limits its current is unverified
 
-reverse-blocking-absent  1 fail
-    fail            VBUS  the connector reaches a power input through passives alone, so nothing
-                          in the path passes current one way, and U1's datasheet was not read,
-                          so whether it blocks reverse current is unverified
-
 test-point-coverage  2 fail, 1 pass
     fail            GND   rail carries no test point; bring-up and factory test cannot probe it
     fail            VBUS  rail carries no test point; bring-up and factory test cannot probe it
@@ -164,6 +159,10 @@ rail-not-classified  1 pass
     pass            +3V3  the net carries the rail role, so the rail rules and
                           net.nominal_voltage answer over it (3.3V, 1 supply pin(s))
 
+reverse-blocking-absent  1 not-considered
+    not-considered  VBUS  J1's VBUS is a USB bus supply, and a USB plug cannot mate with its
+                          VBUS reversed, so reverse polarity cannot arrive here
+
 single-pin-net  11 pass
     pass            +3V3     net reaches 8 connections, so it is not a stub
     pass            /LED_A   net reaches 2 connections, so it is not a stub
@@ -251,4 +250,4 @@ unspecified-pin-with-driver  4 pass
     pass            VBUS     passes because no net.connections where pin.electrical_type ==
                              "unspecified" and pin.declared and not (conn.virtual) (4 examined)
 
-154 verdicts across 26 rule(s), 141 pass, 11 fail, 2 not-considered
+154 verdicts across 26 rule(s), 141 pass, 10 fail, 3 not-considered

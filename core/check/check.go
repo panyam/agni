@@ -361,8 +361,9 @@ const (
 
 // Run evaluates rules over a Model and returns findings sorted by rule, then subject. The caller
 // picks the rules (the full set, a subset, diff gates); RunDesign is the shortcut for the standard
-// checks over a design. On a design with an unresolved symbol, a connectivity rule emits one
-// Inconclusive finding instead of evaluating (see unresolvedSymbolGate).
+// checks over a design. On a design with an unresolved symbol, a connectivity rule reports each
+// subject a lost pin may reach as Inconclusive, or one Inconclusive finding in place of all its
+// findings when it cannot be gated per subject (see pinLoss).
 //
 // It checks ctx before each rule and returns its error when the caller has gone (agni issue 795),
 // rather than the findings so far, which would read as a run that found nothing more.
@@ -379,17 +380,14 @@ func RunAll(ctx context.Context, m Model, rules []*Rule) ([]Finding, []Verdict, 
 	return run(ctx, m, rules, true, true)
 }
 
-// run is the one loop behind Run, RunVerdicts and RunAll. Findings take the unresolved-symbol gate,
-// as Run always has; verdicts never did, so a gated rule that states a considered set is still
-// evaluated for its verdicts, and only then. Each rule's Eval runs at most once.
+// run is the one loop behind Run, RunVerdicts and RunAll. Findings and verdicts both take the
+// unresolved-symbol gate (pinLoss). A rule gated whole for its findings is still evaluated when a
+// caller wants its verdicts, and only then. Each rule's Eval runs at most once.
 func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts bool) ([]Finding, []Verdict, error) {
 	defer timing.Begin(ctx, "rules")()
 	var fs []Finding
 	var vs []Verdict
-	gate := func(*Rule) (Finding, bool) { return Finding{}, false }
-	if wantFindings {
-		gate = unresolvedSymbolGate(m)
-	}
+	loss := newPinLoss(m)
 	scope := SubjectScope(ctx)
 	for _, r := range rules {
 		if err := ctx.Err(); err != nil {
@@ -398,13 +396,16 @@ func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts
 		if scope != nil && r.Scoping == ScopeDesignWide {
 			continue // nothing it concludes is about the scope's subjects; SplitDesignWide names it
 		}
+		// A rule that states its considered set has each verdict gated on its own. A rule that
+		// reports only failures cannot have its silence gated, so a lost pin replaces its findings
+		// with one inconclusive, and so does a design-wide loss (agni issue 88).
+		lossGates := loss != nil && readsConnectivity(r)
 		gated := false
-		if wantFindings {
-			if f, ok := gate(r); ok {
-				f.Rule, f.Severity = r.Name, r.Severity
-				fs = append(fs, f)
-				gated = true
-			}
+		if wantFindings && lossGates && (loss.designWide || !r.StatesConsideredSet) {
+			f := loss.finding()
+			f.Rule, f.Severity = r.Name, r.Severity
+			fs = append(fs, f)
+			gated = true
 		}
 		needVerdicts := wantVerdicts && r.StatesConsideredSet
 		if gated && !needVerdicts {
@@ -420,6 +421,23 @@ func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts
 			// Narrowed before findings are projected, so a finding is kept exactly when its verdict
 			// is, whether or not the rule read the scope itself.
 			evaluated = scope.verdicts(evaluated)
+		}
+		lossHit := false
+		if lossGates && r.StatesConsideredSet {
+			for i := range evaluated {
+				if loss.affects(m, evaluated[i]) {
+					evaluated[i] = loss.inconclusive(evaluated[i])
+					lossHit = true
+				}
+			}
+		}
+		if wantFindings && !gated && lossHit {
+			// One finding says the rule lost subjects to the gate, as the design-wide gate always
+			// said. The verdicts name each one, and a finding apiece would bury the rule's own
+			// failures under a copy of the same sentence per subject.
+			f := loss.finding()
+			f.Rule, f.Severity = r.Name, r.Severity
+			fs = append(fs, f)
 		}
 		if wantFindings && !gated {
 			for _, f := range findingsOf(r, evaluated) {
@@ -473,40 +491,132 @@ func stampCorpus(m Model, cs []*DatasheetCitation) {
 	}
 }
 
-// unresolvedSymbolGate returns a per-rule gate reporting whether a rule cannot be DECIDED because the
-// read lost pins (WS1-052), with the Inconclusive finding to emit instead.
+// PinLossReachHops is how far from a net a lost pin may have joined the unresolved-symbol gate still
+// reaches (agni issue 88). A walk rule judges a net by what it finds up to PowerPathReachHops away,
+// so a load lost on the third hop changes the verdict on a net that kept every pin.
+const PinLossReachHops = PowerPathReachHops
+
+// pinLoss is what unresolved symbols took from a read (WS1-052), and which subjects a rule can no
+// longer decide because of it.
 //
-// The gate is DESIGN-WIDE, so one unresolved symbol gates every connectivity rule, as WS1-013 does
-// for dangling endpoints in the readers. A per-subject gate needs a finding-to-refdes mapping that
-// does not exist yet, and without one it would claim the unflagged parts are unaffected.
+// A reader that supplies nets_missing_pins says which nets a lost pin may have joined. The gate then
+// reaches only the subjects within PinLossReachHops of those nets, plus the lost parts themselves
+// (agni issue 88). A reader that does not supply it leaves the gate DESIGN-WIDE, as WS1-013 does for
+// dangling endpoints in the readers, because claiming the unflagged parts are unaffected needs that
+// attribution.
 //
 // Inconclusive rather than not-applicable, because a --symbol-path fixes an unresolved symbol while a
 // missing capability is permanent for the format.
-func unresolvedSymbolGate(m Model) func(*Rule) (Finding, bool) {
-	var unresolved []*ir.UnresolvedSymbol
-	if m != nil {
-		unresolved = m.UnresolvedSymbols()
+type pinLoss struct {
+	symbols    string
+	plural     bool
+	prov       *ir.Provenance
+	designWide bool
+	lost       map[string]bool // placements that lost their pins
+	nets       map[string]bool // nets a lost pin may have joined, widened by PinLossReachHops
+	parts      map[string]bool // lost placements, and every part with a pin on one of those nets
+}
+
+// newPinLoss reads m's unresolved symbols, or returns nil when every symbol resolved.
+func newPinLoss(m Model) *pinLoss {
+	if m == nil || len(m.UnresolvedSymbols()) == 0 {
+		return nil
 	}
-	if len(unresolved) == 0 {
-		return func(*Rule) (Finding, bool) { return Finding{}, false }
-	}
-	refs := make([]string, 0, len(unresolved))
-	for _, u := range unresolved {
+	us := m.UnresolvedSymbols()
+	refs := make([]string, 0, len(us))
+	p := &pinLoss{prov: us[0].GetProv(), plural: len(us) > 1, lost: map[string]bool{}, nets: map[string]bool{}, parts: map[string]bool{}}
+	for _, u := range us {
 		refs = append(refs, u.GetSymref())
-	}
-	// Short because every gated rule repeats it. symbol-unresolved carries the affected placements
-	// and the fix.
-	subject := strings.Join(refs, ", ")
-	msg := "cannot decide: pins are unknown while " + subject + " is unresolved (see symbol-unresolved)"
-	if len(refs) > 1 {
-		msg = "cannot decide: pins are unknown while " + subject + " are unresolved (see symbol-unresolved)"
-	}
-	return func(r *Rule) (Finding, bool) {
-		if !readsConnectivity(r) {
-			return Finding{}, false
+		for _, r := range u.GetRefDes() {
+			p.lost[r], p.parts[r] = true, true
 		}
-		return Finding{Subject: SymbolEntity(subject), Inconclusive: true, Message: msg, Prov: unresolved[0].GetProv()}, true
 	}
+	p.symbols = strings.Join(refs, ", ")
+	if !m.SuppliesDiagnostic("nets_missing_pins") {
+		p.designWide = true
+		return p
+	}
+	byName := map[string]*ir.Net{}
+	for _, n := range m.Nets() {
+		byName[n.GetName()] = n
+	}
+	for _, name := range m.NetsMissingPins() {
+		if n := byName[name]; n != nil {
+			for _, rn := range m.PowerReach(n, PinLossReachHops).Nets {
+				p.nets[rn.GetName()] = true
+			}
+		}
+	}
+	for _, n := range m.Nets() {
+		if p.nets[n.GetName()] {
+			for _, c := range n.GetConnections() {
+				p.parts[c.GetComponentRef()] = true
+			}
+		}
+	}
+	return p
+}
+
+// message is the gate's finding text. It is short because every gated subject repeats it, and
+// symbol-unresolved carries the affected placements and the fix.
+func (p *pinLoss) message() string {
+	verb := " is unresolved"
+	if p.plural {
+		verb = " are unresolved"
+	}
+	return "cannot decide: pins are unknown while " + p.symbols + verb + " (see symbol-unresolved)"
+}
+
+// finding is the one Inconclusive finding a design-wide gate emits in place of a rule's findings.
+func (p *pinLoss) finding() Finding {
+	return Finding{Subject: SymbolEntity(p.symbols), Inconclusive: true, Message: p.message(), Prov: p.prov}
+}
+
+// touches reports whether a lost pin may change what a rule concludes about e. A subject kind the
+// gate cannot place, such as an endpoint or a bus, is touched, so the gate errs toward inconclusive.
+func (p *pinLoss) touches(m Model, e Entity, unknown bool) bool {
+	switch e.Kind {
+	case KindNet:
+		return p.nets[e.Ref]
+	case KindComponent:
+		return p.parts[e.Ref]
+	case KindPin:
+		return p.lost[e.Ref] || p.nets[m.PinNetName(e.Ref, e.Pin)]
+	}
+	return unknown
+}
+
+// affects reports whether v rests on anything a lost pin may change, through its subjects or the
+// entities its proof names.
+func (p *pinLoss) affects(m Model, v Verdict) bool {
+	if p.designWide {
+		return true
+	}
+	for _, e := range v.Subjects {
+		if p.touches(m, e, true) {
+			return true
+		}
+	}
+	for _, c := range v.Context {
+		if p.touches(m, c.Entity, false) {
+			return true
+		}
+	}
+	return false
+}
+
+// inconclusive turns v into the gate's answer, keeping its subjects and context. It carries no
+// finding, because the run reports one gate finding per rule (see run).
+func (p *pinLoss) inconclusive(v Verdict) Verdict {
+	v.Outcome, v.Reason, v.Finding = Inconclusive, "", nil
+	v.Witness = &Witness{
+		Statement: "pins are unknown while " + p.symbols + " is unresolved, and a lost pin may connect to what this verdict rests on",
+		Terms:     []WitnessTerm{{Label: "unresolved symbol", Value: p.symbols}},
+	}
+	if p.plural {
+		v.Witness.Statement = "pins are unknown while " + p.symbols + " are unresolved, and a lost pin may connect to what this verdict rests on"
+	}
+	return v
 }
 
 // readsConnectivity reports whether a rule's conclusions depend on pins existing. A rule that reads

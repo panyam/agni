@@ -63,6 +63,11 @@ type Model interface {
 	// where the connections were never drawn. Rules that read pin or connectivity facts are gated to
 	// inconclusive while this is non-empty (check.Run).
 	UnresolvedSymbols() []*ir.UnresolvedSymbol
+	// NetsMissingPins are the nets an unresolved symbol's lost pins may have joined (agni issue 88).
+	// Gate on SuppliesDiagnostic("nets_missing_pins") before trusting it, because a reader that never
+	// looked returns the same nothing, and a gate reading that as "no net lost a pin" would pass every
+	// subject on a design with a missing library.
+	NetsMissingPins() []string
 	// ResolvedSymbols are the symbol references that DID load, one per distinct reference, with the
 	// pin count each supplied. It is the other half of UnresolvedSymbols, so a rule over symbol
 	// resolution can state what it examined rather than only what failed (agni issue 418).
@@ -243,6 +248,10 @@ type Model interface {
 	// element splits the net, so a per-net quantifier cannot see "a fuse sits between connector and
 	// regulator".
 	Reach(start *ir.Net, hops int) Reach
+	// PowerReach is Reach that also crosses a fitted transistor from source to drain, for the
+	// power-entry walk. A load switch between a connector and its load passes power, so the walk
+	// continues past it to the load (agni issue 1941). A gate pin is never crossed.
+	PowerReach(start *ir.Net, hops int) Reach
 	// ReachToTerminus is the same walk with one admission rule changed. A bus-like net is a legal
 	// DESTINATION and still an illegal transit node. Some questions end on a rail, such as a pull-up's
 	// terminus or a trace to a pin that sits on one. Reach cannot answer them, because it drops such a
