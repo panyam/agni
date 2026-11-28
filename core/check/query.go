@@ -284,6 +284,12 @@ func (m *irModel) IsSupplyPinName(name string) bool {
 	return m.lexicon().RoleVocab().IsSupplyPin(ident.FoldScripts(name))
 }
 
+// IsCableSupplyPinName reads a pin name as a supply input fed from a cable's bus; see
+// Model.IsCableSupplyPinName. Subscript markup is folded first, as IsSupplyPinName does.
+func (m *irModel) IsCableSupplyPinName(name string) bool {
+	return m.lexicon().RoleVocab().IsCableSupplyPin(ident.FoldScripts(name))
+}
+
 func (m *irModel) IsPowerRailName(name string) bool { return m.lexicon().RoleVocab().IsRail(name) }
 func (m *irModel) IsGroundName(name string) bool    { return m.lexicon().RoleVocab().IsGround(name) }
 func (m *irModel) IsFeedbackName(name string) bool  { return m.lexicon().RoleVocab().IsFeedback(name) }

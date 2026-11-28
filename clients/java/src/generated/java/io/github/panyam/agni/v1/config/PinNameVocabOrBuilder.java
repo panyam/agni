@@ -249,4 +249,40 @@ public interface PinNameVocabOrBuilder extends
    * <code>.agni.v1.config.PinPairVocab through_pair = 10 [json_name = "throughPair"];</code>
    */
   io.github.panyam.agni.v1.config.PinPairVocabOrBuilder getThroughPairOrBuilder();
+
+  /**
+   * <pre>
+   * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+   * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+   * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+   * only when supply also matches it.
+   * </pre>
+   *
+   * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+   * @return Whether the cableSupply field is set.
+   */
+  boolean hasCableSupply();
+  /**
+   * <pre>
+   * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+   * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+   * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+   * only when supply also matches it.
+   * </pre>
+   *
+   * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+   * @return The cableSupply.
+   */
+  io.github.panyam.agni.v1.config.VocabPatterns getCableSupply();
+  /**
+   * <pre>
+   * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+   * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+   * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+   * only when supply also matches it.
+   * </pre>
+   *
+   * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+   */
+  io.github.panyam.agni.v1.config.VocabPatternsOrBuilder getCableSupplyOrBuilder();
 }

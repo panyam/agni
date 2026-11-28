@@ -136,7 +136,8 @@ tells the engine what a name *means*, so the built-in rules reason about your bo
 A net can carry several roles at once, and six of them are configurable. Three more net vocabularies
 name the I2C bus lines, a net left open on purpose, and the two halves of a differential pair. The
 pull-up rules judge the I2C lines. The pin vocabularies name supply pins, transistor terminals, a
-package's exposed pad, a diode's anode and cathode, and a regulator's feedback and switch pins:
+package's exposed pad, a diode's anode and cathode, a regulator's feedback and switch pins, and the
+supply pins fed from a cable's bus:
 
 ```yaml
 lexicon:
@@ -164,6 +165,7 @@ lexicon:
     cathode:   { patterns: ["^NEG$"] }
     feedback:  { patterns: ["^FDBK[0-9]*$"] }
     switching: { patterns: ["^HSD[0-9]*$"] }
+    cable_supply: { patterns: ["^VCABLE"] }  # ^VBUS by default; a name must be a supply pin too
     through_pair:
       pairs:
         - { a: "IO{n}_L", b: "IO{n}_H" }  # A{n}/B{n}, {n}A/{n}Y, SDA1/SDA2 and SCL1/SCL2 by default
@@ -223,6 +225,11 @@ The `pin.feedback` and `pin.switching` vocabularies read a regulator's own pins,
 buck's output reads as an outlet when no net is named for the converter. A house that calls the pin
 `FDBK` adds `^FDBK[0-9]*$` to `pin.feedback`. The net vocabularies of the same names read nets only,
 because a pin name carries no rail prefix for a pattern like `_FB$` to end on.
+
+`pin.cable_supply` names the supply pins that draw on a cable's bus, such as a PD controller's
+`VBUS1` (agni issue 1934). A connector net with such a pin on it can take power in, so the
+power-entry rules judge it even when a load switch on the board also drives it. A name counts only
+when `pin.supply` matches it as well, so `VBUS_DET` stays out.
 
 `pin.anode` and `pin.cathode` apply to the diode family alone, and they match the whole pin name
 rather than its leaf, so a pin named `A/K` is not read. A `diff_pair` entry names a suffix pair

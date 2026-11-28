@@ -408,6 +408,53 @@ private static final long serialVersionUID = 0L;
     return throughPair_ == null ? io.github.panyam.agni.v1.config.PinPairVocab.getDefaultInstance() : throughPair_;
   }
 
+  public static final int CABLE_SUPPLY_FIELD_NUMBER = 11;
+  private io.github.panyam.agni.v1.config.VocabPatterns cableSupply_;
+  /**
+   * <pre>
+   * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+   * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+   * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+   * only when supply also matches it.
+   * </pre>
+   *
+   * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+   * @return Whether the cableSupply field is set.
+   */
+  @java.lang.Override
+  public boolean hasCableSupply() {
+    return ((bitField0_ & 0x00000400) != 0);
+  }
+  /**
+   * <pre>
+   * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+   * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+   * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+   * only when supply also matches it.
+   * </pre>
+   *
+   * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+   * @return The cableSupply.
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.config.VocabPatterns getCableSupply() {
+    return cableSupply_ == null ? io.github.panyam.agni.v1.config.VocabPatterns.getDefaultInstance() : cableSupply_;
+  }
+  /**
+   * <pre>
+   * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+   * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+   * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+   * only when supply also matches it.
+   * </pre>
+   *
+   * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.config.VocabPatternsOrBuilder getCableSupplyOrBuilder() {
+    return cableSupply_ == null ? io.github.panyam.agni.v1.config.VocabPatterns.getDefaultInstance() : cableSupply_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -452,6 +499,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000200) != 0)) {
       output.writeMessage(10, getThroughPair());
     }
+    if (((bitField0_ & 0x00000400) != 0)) {
+      output.writeMessage(11, getCableSupply());
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -495,6 +545,10 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000200) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(10, getThroughPair());
+    }
+    if (((bitField0_ & 0x00000400) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(11, getCableSupply());
     }
     return size;
   }
@@ -570,6 +624,11 @@ private static final long serialVersionUID = 0L;
       if (!getThroughPair()
           .equals(other.getThroughPair())) return false;
     }
+    if (hasCableSupply() != other.hasCableSupply()) return false;
+    if (hasCableSupply()) {
+      if (!getCableSupply()
+          .equals(other.getCableSupply())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -620,6 +679,10 @@ private static final long serialVersionUID = 0L;
     if (hasThroughPair()) {
       hash = (37 * hash) + THROUGH_PAIR_FIELD_NUMBER;
       hash = (53 * hash) + getThroughPair().hashCode();
+    }
+    if (hasCableSupply()) {
+      hash = (37 * hash) + CABLE_SUPPLY_FIELD_NUMBER;
+      hash = (53 * hash) + getCableSupply().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -770,6 +833,7 @@ private static final long serialVersionUID = 0L;
         internalGetFeedbackFieldBuilder();
         internalGetSwitchingFieldBuilder();
         internalGetThroughPairFieldBuilder();
+        internalGetCableSupplyFieldBuilder();
       }
     }
     @java.lang.Override
@@ -825,6 +889,11 @@ private static final long serialVersionUID = 0L;
       if (throughPairBuilder_ != null) {
         throughPairBuilder_.dispose();
         throughPairBuilder_ = null;
+      }
+      cableSupply_ = null;
+      if (cableSupplyBuilder_ != null) {
+        cableSupplyBuilder_.dispose();
+        cableSupplyBuilder_ = null;
       }
       return this;
     }
@@ -920,6 +989,12 @@ private static final long serialVersionUID = 0L;
             : throughPairBuilder_.build();
         to_bitField0_ |= 0x00000200;
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.cableSupply_ = cableSupplyBuilder_ == null
+            ? cableSupply_
+            : cableSupplyBuilder_.build();
+        to_bitField0_ |= 0x00000400;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -964,6 +1039,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasThroughPair()) {
         mergeThroughPair(other.getThroughPair());
+      }
+      if (other.hasCableSupply()) {
+        mergeCableSupply(other.getCableSupply());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1059,6 +1137,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 90: {
+              input.readMessage(
+                  internalGetCableSupplyFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2534,6 +2619,188 @@ private static final long serialVersionUID = 0L;
         throughPair_ = null;
       }
       return throughPairBuilder_;
+    }
+
+    private io.github.panyam.agni.v1.config.VocabPatterns cableSupply_;
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.config.VocabPatterns, io.github.panyam.agni.v1.config.VocabPatterns.Builder, io.github.panyam.agni.v1.config.VocabPatternsOrBuilder> cableSupplyBuilder_;
+    /**
+     * <pre>
+     * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+     * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+     * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+     * only when supply also matches it.
+     * </pre>
+     *
+     * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+     * @return Whether the cableSupply field is set.
+     */
+    public boolean hasCableSupply() {
+      return ((bitField0_ & 0x00000400) != 0);
+    }
+    /**
+     * <pre>
+     * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+     * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+     * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+     * only when supply also matches it.
+     * </pre>
+     *
+     * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+     * @return The cableSupply.
+     */
+    public io.github.panyam.agni.v1.config.VocabPatterns getCableSupply() {
+      if (cableSupplyBuilder_ == null) {
+        return cableSupply_ == null ? io.github.panyam.agni.v1.config.VocabPatterns.getDefaultInstance() : cableSupply_;
+      } else {
+        return cableSupplyBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+     * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+     * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+     * only when supply also matches it.
+     * </pre>
+     *
+     * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+     */
+    public Builder setCableSupply(io.github.panyam.agni.v1.config.VocabPatterns value) {
+      if (cableSupplyBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        cableSupply_ = value;
+      } else {
+        cableSupplyBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+     * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+     * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+     * only when supply also matches it.
+     * </pre>
+     *
+     * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+     */
+    public Builder setCableSupply(
+        io.github.panyam.agni.v1.config.VocabPatterns.Builder builderForValue) {
+      if (cableSupplyBuilder_ == null) {
+        cableSupply_ = builderForValue.build();
+      } else {
+        cableSupplyBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+     * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+     * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+     * only when supply also matches it.
+     * </pre>
+     *
+     * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+     */
+    public Builder mergeCableSupply(io.github.panyam.agni.v1.config.VocabPatterns value) {
+      if (cableSupplyBuilder_ == null) {
+        if (((bitField0_ & 0x00000400) != 0) &&
+          cableSupply_ != null &&
+          cableSupply_ != io.github.panyam.agni.v1.config.VocabPatterns.getDefaultInstance()) {
+          getCableSupplyBuilder().mergeFrom(value);
+        } else {
+          cableSupply_ = value;
+        }
+      } else {
+        cableSupplyBuilder_.mergeFrom(value);
+      }
+      if (cableSupply_ != null) {
+        bitField0_ |= 0x00000400;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+     * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+     * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+     * only when supply also matches it.
+     * </pre>
+     *
+     * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+     */
+    public Builder clearCableSupply() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      cableSupply_ = null;
+      if (cableSupplyBuilder_ != null) {
+        cableSupplyBuilder_.dispose();
+        cableSupplyBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+     * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+     * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+     * only when supply also matches it.
+     * </pre>
+     *
+     * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+     */
+    public io.github.panyam.agni.v1.config.VocabPatterns.Builder getCableSupplyBuilder() {
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return internalGetCableSupplyFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+     * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+     * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+     * only when supply also matches it.
+     * </pre>
+     *
+     * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+     */
+    public io.github.panyam.agni.v1.config.VocabPatternsOrBuilder getCableSupplyOrBuilder() {
+      if (cableSupplyBuilder_ != null) {
+        return cableSupplyBuilder_.getMessageOrBuilder();
+      } else {
+        return cableSupply_ == null ?
+            io.github.panyam.agni.v1.config.VocabPatterns.getDefaultInstance() : cableSupply_;
+      }
+    }
+    /**
+     * <pre>
+     * cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+     * (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+     * also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+     * only when supply also matches it.
+     * </pre>
+     *
+     * <code>.agni.v1.config.VocabPatterns cable_supply = 11 [json_name = "cableSupply"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.config.VocabPatterns, io.github.panyam.agni.v1.config.VocabPatterns.Builder, io.github.panyam.agni.v1.config.VocabPatternsOrBuilder> 
+        internalGetCableSupplyFieldBuilder() {
+      if (cableSupplyBuilder_ == null) {
+        cableSupplyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            io.github.panyam.agni.v1.config.VocabPatterns, io.github.panyam.agni.v1.config.VocabPatterns.Builder, io.github.panyam.agni.v1.config.VocabPatternsOrBuilder>(
+                getCableSupply(),
+                getParentForChildren(),
+                isClean());
+        cableSupply_ = null;
+      }
+      return cableSupplyBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.config.PinNameVocab)

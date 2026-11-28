@@ -155,7 +155,7 @@ public final class NamingProto extends com.google.protobuf.GeneratedFile {
       "i.v1.config.DiffSuffixR\005pairs\022\030\n\007replace" +
       "\030\002 \001(\010R\007replace\"D\n\nDiffSuffix\022\032\n\010positiv" +
       "e\030\001 \001(\tR\010positive\022\032\n\010negative\030\002 \001(\tR\010neg" +
-      "ative\"\313\004\n\014PinNameVocab\0225\n\006supply\030\001 \001(\0132\035" +
+      "ative\"\215\005\n\014PinNameVocab\0225\n\006supply\030\001 \001(\0132\035" +
       ".agni.v1.config.VocabPatternsR\006supply\0221\n" +
       "\004gate\030\002 \001(\0132\035.agni.v1.config.VocabPatter" +
       "nsR\004gate\0225\n\006source\030\003 \001(\0132\035.agni.v1.confi" +
@@ -169,26 +169,28 @@ public final class NamingProto extends com.google.protobuf.GeneratedFile {
       "onfig.VocabPatternsR\010feedback\022;\n\tswitchi" +
       "ng\030\t \001(\0132\035.agni.v1.config.VocabPatternsR" +
       "\tswitching\022?\n\014through_pair\030\n \001(\0132\034.agni." +
-      "v1.config.PinPairVocabR\013throughPair\"W\n\014P" +
-      "inPairVocab\022-\n\005pairs\030\001 \003(\0132\027.agni.v1.con" +
-      "fig.PinPairR\005pairs\022\030\n\007replace\030\002 \001(\010R\007rep" +
-      "lace\"%\n\007PinPair\022\014\n\001a\030\001 \001(\tR\001a\022\014\n\001b\030\002 \001(\t" +
-      "R\001b\"_\n\rVocabPatterns\022\032\n\010patterns\030\001 \003(\tR\010" +
-      "patterns\022\030\n\007replace\030\002 \001(\010R\007replace\022\030\n\007ex" +
-      "clude\030\004 \003(\tR\007exclude\"\245\001\n\nClassVocab\022\032\n\010p" +
-      "atterns\030\001 \003(\tR\010patterns\022\030\n\007replace\030\002 \001(\010" +
-      "R\007replace\022\032\n\010prefixes\030\003 \003(\tR\010prefixes\022\032\n" +
-      "\010families\030\005 \003(\tR\010families\022)\n\020exclude_pre" +
-      "fixes\030\006 \003(\tR\017excludePrefixes\"\233\001\n\nNamingR" +
-      "ule\022\022\n\004name\030\001 \001(\tR\004name\022\032\n\010severity\030\002 \001(" +
-      "\tR\010severity\022\020\n\003why\030\003 \001(\tR\003why\022\024\n\005allow\030\004" +
-      " \003(\tR\005allow\022\026\n\006exempt\030\005 \003(\tR\006exempt\022\035\n\nm" +
-      "atch_full\030\006 \001(\010R\tmatchFullB\266\001\n\037io.github" +
-      ".panyam.agni.v1.configB\013NamingProtoP\001Z,g" +
-      "ithub.com/panyam/agni/gen/go/agni/v1/con" +
-      "fig\242\002\003AVC\252\002\016Agni.V1.Config\312\002\016Agni\\V1\\Con" +
-      "fig\342\002\032Agni\\V1\\Config\\GPBMetadata\352\002\020Agni:" +
-      ":V1::Configb\006proto3"
+      "v1.config.PinPairVocabR\013throughPair\022@\n\014c" +
+      "able_supply\030\013 \001(\0132\035.agni.v1.config.Vocab" +
+      "PatternsR\013cableSupply\"W\n\014PinPairVocab\022-\n" +
+      "\005pairs\030\001 \003(\0132\027.agni.v1.config.PinPairR\005p" +
+      "airs\022\030\n\007replace\030\002 \001(\010R\007replace\"%\n\007PinPai" +
+      "r\022\014\n\001a\030\001 \001(\tR\001a\022\014\n\001b\030\002 \001(\tR\001b\"_\n\rVocabPa" +
+      "tterns\022\032\n\010patterns\030\001 \003(\tR\010patterns\022\030\n\007re" +
+      "place\030\002 \001(\010R\007replace\022\030\n\007exclude\030\004 \003(\tR\007e" +
+      "xclude\"\245\001\n\nClassVocab\022\032\n\010patterns\030\001 \003(\tR" +
+      "\010patterns\022\030\n\007replace\030\002 \001(\010R\007replace\022\032\n\010p" +
+      "refixes\030\003 \003(\tR\010prefixes\022\032\n\010families\030\005 \003(" +
+      "\tR\010families\022)\n\020exclude_prefixes\030\006 \003(\tR\017e" +
+      "xcludePrefixes\"\233\001\n\nNamingRule\022\022\n\004name\030\001 " +
+      "\001(\tR\004name\022\032\n\010severity\030\002 \001(\tR\010severity\022\020\n" +
+      "\003why\030\003 \001(\tR\003why\022\024\n\005allow\030\004 \003(\tR\005allow\022\026\n" +
+      "\006exempt\030\005 \003(\tR\006exempt\022\035\n\nmatch_full\030\006 \001(" +
+      "\010R\tmatchFullB\266\001\n\037io.github.panyam.agni.v" +
+      "1.configB\013NamingProtoP\001Z,github.com/pany" +
+      "am/agni/gen/go/agni/v1/config\242\002\003AVC\252\002\016Ag" +
+      "ni.V1.Config\312\002\016Agni\\V1\\Config\342\002\032Agni\\V1\\" +
+      "Config\\GPBMetadata\352\002\020Agni::V1::Configb\006p" +
+      "roto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -253,7 +255,7 @@ public final class NamingProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_config_PinNameVocab_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_config_PinNameVocab_descriptor,
-        new java.lang.String[] { "Supply", "Gate", "Source", "Drain", "ExposedPad", "Anode", "Cathode", "Feedback", "Switching", "ThroughPair", });
+        new java.lang.String[] { "Supply", "Gate", "Source", "Drain", "ExposedPad", "Anode", "Cathode", "Feedback", "Switching", "ThroughPair", "CableSupply", });
     internal_static_agni_v1_config_PinPairVocab_descriptor =
       getDescriptor().getMessageType(8);
     internal_static_agni_v1_config_PinPairVocab_fieldAccessorTable = new

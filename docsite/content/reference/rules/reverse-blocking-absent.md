@@ -114,7 +114,12 @@ reports its path as unblocked rather than guessing which way the part faces.
   the rule still judges the net. The pin counts again when the driver's own input is wired to a net
   those parts do not feed, because that shape is a cascade of regulators. A dual-role port whose
   sink reaches the driver only through a further converter reads as that cascade, and a design with
-  that shape loses this rule on the net. A boost converter's input reaches its switch node through
+  that shape loses this rule on the net. A cable-supply pin on the walk keeps the net judged whatever
+  drives it (agni issue 1934). On Jetson a PD controller's VBUS1 sinks a port that a load switch
+  sources. The symbol types VBUS1 inout and the controller feeds nothing back to the switch, so only
+  the pin's name says power can arrive. The lexicon's `pin.cable_supply` vocabulary names such pins,
+  `^VBUS` by default, and a USB TVS array's VBUS pin does not count. A converter's output still
+  counts as board-driven. A boost converter's input reaches its switch node through
   the inductor too. The rule still judges that input, because its feedback divider sits on the
   output side.
 
