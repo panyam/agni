@@ -140,3 +140,29 @@ func TestResolvedSymbolsExcludeFailures(t *testing.T) {
 		}
 	}
 }
+
+// TestUnresolvedSymbolNamesTheNetsItsPinsMayJoin (agni issue 88) checks that a read missing its
+// resistor.sym names the nets whose wires end where the lost pins were, so the check gates those and
+// not the whole design. With every symbol open, no pin was lost and the list is empty.
+func TestUnresolvedSymbolNamesTheNetsItsPinsMayJoin(t *testing.T) {
+	failing := func(string) ([]byte, error) { return nil, fmt.Errorf("missing") }
+	d, err := ReadWithSymbols(bytes.NewReader(readGedaSch(t, "divider.sch")), "divider.sch", failing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diag := d.GetInputDiagnostics()
+	if !slices.Contains(diag.GetSupplied(), "nets_missing_pins") {
+		t.Fatal("nets_missing_pins not declared, so the gate cannot trust the list")
+	}
+	if got := diag.GetNetsMissingPins(); !slices.Equal(got, []string{"IN", "MID"}) {
+		t.Errorf("nets missing pins = %v, want [IN MID]", got)
+	}
+	open := func(symref string) ([]byte, error) { return os.ReadFile("testdata/" + symref) }
+	clean, err := ReadWithSymbols(bytes.NewReader(readGedaSch(t, "divider.sch")), "divider.sch", open)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := clean.GetInputDiagnostics().GetNetsMissingPins(); len(got) != 0 {
+		t.Errorf("nets missing pins on a clean read = %v, want none", got)
+	}
+}

@@ -28,14 +28,33 @@ of a lost symbol is that the design reports LESS than it would have.
 
 ### What it does to other rules
 
-If any symbol is unresolved, every rule that reads a pin or connectivity fact reports
-`inconclusive` for the whole design, rather than passing over an incomplete netlist. The gate is
-DESIGN-WIDE. That is deliberately the conservative reading. It matches what the readers already do
-with dangling endpoints, where one unresolved placement suppresses the whole design's dangles.
+If any symbol is unresolved, a rule that reads a pin or connectivity fact reports `inconclusive` on
+every subject a lost pin may change, rather than passing over an incomplete netlist (agni issue 88).
 
-A gate on only the affected parts would need a mapping from a finding back to the ref-des it
-concerns. That mapping does not exist yet. Until it does, a narrower gate would amount to asserting
-that the parts not flagged are unaffected, and the reader cannot support that claim.
+The reader finds those subjects from the drawing. A lost symbol takes its pins with it, so each wire
+end, label or pin drawn to one of them is left alone at its point. The reader lists the net of every
+such lone point as `nets_missing_pins`. The gate then reaches three kinds of subject:
+
+- a lost part, or a pin on one
+- a listed net, or a net within three series crossings of one, the reach the power-entry walk uses
+- a part with a pin on any of those nets, and a verdict whose proof names any of them
+
+Every other subject keeps its verdict. On Glasgow, deleting one library symbol at a time gates
+between 5 and 1,064 of about 2,300 connectivity verdicts and keeps the rest.
+`TestTheUnresolvedGateCoversEveryVerdictALostLibraryChanges` checks each such read against the full
+one, and every verdict that differs is inconclusive.
+
+The list can name more nets than the loss reaches, since a real dangling end and an unconnected pin
+are alone at their points too. It cannot see a lost pin drawn onto a bend between two wire ends, and
+the oracle above is how a case like that would show up.
+
+Two cases stay design-wide. A reader that does not supply `nets_missing_pins` gives no basis for
+keeping any verdict, so every subject of every connectivity rule is inconclusive. A rule that reports
+only its failures cannot have its silence on one subject gated, so its findings are replaced by one
+inconclusive finding.
+
+A rule that reads only net names is not gated. KiCad names an unlabelled net after one of its pins,
+so losing that pin renames the net, and such a rule judges the name the read has.
 
 The outcome is `inconclusive` rather than `not-applicable`. A missing source-format capability is
 permanent. An unresolved symbol is a property of THIS read, and a `--symbol-path` can fix it.

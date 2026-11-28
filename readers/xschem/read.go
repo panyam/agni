@@ -199,7 +199,7 @@ func extract(objs []object, src string, open SymbolOpener) *ir.Design {
 
 	if open != nil {
 		pins, resolved, unresolved := symread.ResolvePins(placements, loadPins(open), quant)
-		nets, dangles, _ := netgraph.Build(wires, anchors, pins, nil)
+		nets, dangles, _, pointNets := netgraph.BuildWithPoints(wires, anchors, pins, nil)
 		d.Nets = append(d.Nets, netgraph.IRNets(nets, src)...)
 		// Dangling endpoints are trustworthy only when every placement resolved. A symbol
 		// that fails to load drops its pins. A wire end drawn to one of those pins then reads
@@ -214,7 +214,11 @@ func extract(objs []object, src string, open SymbolOpener) *ir.Design {
 			// them, because the no-opener path examines no symbol. See
 			// docsite/content/architecture/ingestion-and-ir.md#input-diagnostics.
 			ResolvedSymbols: irResolved(resolved),
-			Supplied:        []string{"resolved_symbols"},
+			Supplied:        []string{"resolved_symbols", "nets_missing_pins"},
+		}
+		if len(unresolved) > 0 {
+			// The nets a lost pin may have joined, so the gate reaches only those (agni issue 88).
+			d.InputDiagnostics.NetsMissingPins = netgraph.LoneNets(wires, anchors, pins, nil, pointNets)
 		}
 		if len(unresolved) == 0 {
 			d.InputDiagnostics.DanglingEndpoints = geomDangles(dangles, src)

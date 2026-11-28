@@ -268,7 +268,7 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 		// Hidden net= pin taps become anchors at their resolved pin points. Power taps use the
 		// same mechanism.
 		anchors = append(anchors, tapAnchors(netTaps, pins)...)
-		nets, dangles, _ := netgraph.Build(wires, anchors, pins, nil)
+		nets, dangles, _, pointNets := netgraph.BuildWithPoints(wires, anchors, pins, nil)
 		d.Nets = append(d.Nets, netgraph.IRNets(nets, src)...)
 		// Dangling endpoints are trustworthy only when every placement resolved (WS1-013). An
 		// unresolved symbol drops its pins and turns wire ends into phantom dangles, so one
@@ -282,7 +282,11 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 			// path opens no symbol, so declaring them there would claim a check that never ran. See
 			// docsite/content/architecture/ingestion-and-ir.md#input-diagnostics.
 			ResolvedSymbols: irResolved(resolved),
-			Supplied:        []string{"resolved_symbols"},
+			Supplied:        []string{"resolved_symbols", "nets_missing_pins"},
+		}
+		if len(unresolved) > 0 {
+			// The nets a lost pin may have joined, so the gate reaches only those (agni issue 88).
+			d.InputDiagnostics.NetsMissingPins = netgraph.LoneNets(wires, anchors, pins, nil, pointNets)
 		}
 		if len(unresolved) == 0 {
 			d.InputDiagnostics.DanglingEndpoints = netgraph.IRDangles(dangles, src, "")

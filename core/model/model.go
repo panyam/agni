@@ -63,6 +63,11 @@ type Model interface {
 	// where the connections were never drawn. Rules that read pin or connectivity facts are gated to
 	// inconclusive while this is non-empty (check.Run).
 	UnresolvedSymbols() []*ir.UnresolvedSymbol
+	// NetsMissingPins are the nets an unresolved symbol's lost pins may have joined (agni issue 88).
+	// Gate on SuppliesDiagnostic("nets_missing_pins") before trusting it, because a reader that never
+	// looked returns the same nothing, and a gate reading that as "no net lost a pin" would pass every
+	// subject on a design with a missing library.
+	NetsMissingPins() []string
 	// ResolvedSymbols are the symbol references that DID load, one per distinct reference, with the
 	// pin count each supplied. It is the other half of UnresolvedSymbols, so a rule over symbol
 	// resolution can state what it examined rather than only what failed (agni issue 418).

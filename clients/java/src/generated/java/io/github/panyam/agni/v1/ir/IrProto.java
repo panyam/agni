@@ -292,7 +292,7 @@ public final class IrProto extends com.google.protobuf.GeneratedFile {
       "fidelity\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir.Prov" +
       "enanceR\004prov\032=\n\017AttributesEntry\022\020\n\003key\030\001" +
       " \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001J\004\010\n\020" +
-      "\013R\007stackup\"\307\006\n\020InputDiagnostics\022K\n\022dangl" +
+      "\013R\007stackup\"\363\006\n\020InputDiagnostics\022K\n\022dangl" +
       "ing_endpoints\030\001 \003(\0132\034.agni.v1.ir.Danglin" +
       "gEndpointR\021danglingEndpoints\022I\n\022ref_des_" +
       "collisions\030\002 \003(\0132\033.agni.v1.ir.RefDesColl" +
@@ -302,185 +302,186 @@ public final class IrProto extends com.google.protobuf.GeneratedFile {
       "uses\030\004 \003(\0132\031.agni.v1.ir.BusNotModeledR\016u" +
       "nmodeledBuses\022K\n\022unresolved_symbols\030\005 \003(" +
       "\0132\034.agni.v1.ir.UnresolvedSymbolR\021unresol" +
-      "vedSymbols\022E\n\020resolved_symbols\030\010 \003(\0132\032.a" +
-      "gni.v1.ir.ResolvedSymbolR\017resolvedSymbol" +
-      "s\0226\n\013joined_taps\030\t \003(\0132\025.agni.v1.ir.Join" +
-      "edTapR\njoinedTaps\022W\n\026unannotated_compone" +
-      "nts\030\006 \003(\0132 .agni.v1.ir.UnannotatedCompon" +
-      "entR\025unannotatedComponents\022R\n\024unexpanded" +
-      "_hierarchy\030\n \003(\0132\037.agni.v1.ir.Unexpanded" +
-      "HierarchyR\023unexpandedHierarchy\0229\n\014range_" +
-      "labels\030\013 \003(\0132\026.agni.v1.ir.RangeLabelR\013ra" +
-      "ngeLabels\0225\n\013group_buses\030\014 \003(\0132\024.agni.v1" +
-      ".ir.GroupBusR\ngroupBuses\022\032\n\010supplied\030\007 \003" +
-      "(\tR\010supplied\"\306\001\n\023UnexpandedHierarchy\022\022\n\004" +
-      "name\030\001 \001(\tR\004name\022\022\n\004kind\030\002 \001(\tR\004kind\022%\n\016" +
-      "instance_count\030\003 \001(\005R\rinstanceCount\022*\n\004p" +
-      "rov\030\004 \001(\0132\026.agni.v1.ir.ProvenanceR\004prov\022" +
-      "4\n\006reason\030\005 \001(\0162\034.agni.v1.ir.UnexpandedR" +
-      "easonR\006reason\"e\n\024UnannotatedComponent\022\027\n" +
-      "\007ref_des\030\001 \001(\tR\006refDes\0224\n\tinstances\030\002 \003(" +
-      "\0132\026.agni.v1.ir.ProvenanceR\tinstances\"Y\n\016" +
-      "ResolvedSymbol\022\026\n\006symref\030\001 \001(\tR\006symref\022\022" +
-      "\n\004kind\030\002 \001(\tR\004kind\022\033\n\tpin_count\030\003 \001(\005R\010p" +
-      "inCount\"\203\001\n\020UnresolvedSymbol\022\026\n\006symref\030\001" +
-      " \001(\tR\006symref\022\022\n\004kind\030\002 \001(\tR\004kind\022\027\n\007ref_" +
-      "des\030\003 \003(\tR\006refDes\022*\n\004prov\030\004 \001(\0132\026.agni.v" +
-      "1.ir.ProvenanceR\004prov\"f\n\010GroupBus\022\024\n\005lab" +
-      "el\030\001 \001(\tR\005label\022\030\n\007members\030\002 \003(\tR\007member" +
-      "s\022*\n\004prov\030\003 \001(\0132\026.agni.v1.ir.ProvenanceR" +
-      "\004prov\"\177\n\rBusNotModeled\022\024\n\005label\030\001 \001(\tR\005l" +
-      "abel\022\022\n\004kind\030\002 \001(\tR\004kind\022*\n\004prov\030\003 \001(\0132\026" +
-      ".agni.v1.ir.ProvenanceR\004prov\022\030\n\007members\030" +
-      "\004 \003(\tR\007members\"\242\001\n\tJoinedTap\022\014\n\001x\030\001 \001(\003R" +
-      "\001x\022\014\n\001y\030\002 \001(\003R\001y\022\033\n\tjoin_kind\030\003 \001(\tR\010joi" +
-      "nKind\022\024\n\005label\030\004 \001(\tR\005label\022\032\n\010segments\030" +
-      "\005 \001(\005R\010segments\022*\n\004prov\030\006 \001(\0132\026.agni.v1." +
-      "ir.ProvenanceR\004prov\"p\n\nRangeLabel\022\024\n\005lab" +
-      "el\030\001 \001(\tR\005label\022 \n\014reads_as_bus\030\002 \001(\010R\nr" +
-      "eadsAsBus\022*\n\004prov\030\003 \001(\0132\026.agni.v1.ir.Pro" +
-      "venanceR\004prov\"Z\n\020DanglingEndpoint\022\014\n\001x\030\001" +
-      " \001(\003R\001x\022\014\n\001y\030\002 \001(\003R\001y\022*\n\004prov\030\003 \001(\0132\026.ag" +
-      "ni.v1.ir.ProvenanceR\004prov\"`\n\017RefDesColli" +
-      "sion\022\027\n\007ref_des\030\001 \001(\tR\006refDes\0224\n\tinstanc" +
-      "es\030\002 \003(\0132\026.agni.v1.ir.ProvenanceR\tinstan" +
-      "ces\"\201\002\n\013PartLibrary\022\022\n\004name\030\001 \001(\tR\004name\022" +
-      "*\n\005parts\030\002 \003(\0132\024.agni.v1.ir.PartTypeR\005pa" +
-      "rts\022G\n\nattributes\030\016 \003(\0132\'.agni.v1.ir.Par" +
-      "tLibrary.AttributesEntryR\nattributes\022*\n\004" +
-      "prov\030\020 \001(\0132\026.agni.v1.ir.ProvenanceR\004prov" +
-      "\032=\n\017AttributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n" +
-      "\005value\030\002 \001(\tR\005value:\0028\001\"\307\002\n\010PartType\022\022\n\004" +
-      "name\030\001 \001(\tR\004name\022\022\n\004kind\030\002 \001(\tR\004kind\022+\n\021" +
-      "designator_prefix\030\003 \001(\tR\020designatorPrefi" +
-      "x\022#\n\004pins\030\004 \003(\0132\017.agni.v1.ir.PinR\004pins\022\020" +
-      "\n\003mpn\030\005 \001(\tR\003mpn\022D\n\nattributes\030\016 \003(\0132$.a" +
-      "gni.v1.ir.PartType.AttributesEntryR\nattr" +
-      "ibutes\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir.Proven" +
-      "anceR\004prov\032=\n\017AttributesEntry\022\020\n\003key\030\001 \001" +
-      "(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\235\002\n\003Pi" +
-      "n\022\022\n\004name\030\001 \001(\tR\004name\022\036\n\ndesignator\030\002 \001(" +
-      "\tR\ndesignator\0226\n\tdirection\030\003 \001(\0162\030.agni." +
-      "v1.ir.PinDirectionR\tdirection\022?\n\nattribu" +
-      "tes\030\016 \003(\0132\037.agni.v1.ir.Pin.AttributesEnt" +
-      "ryR\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni.v1.i" +
-      "r.ProvenanceR\004prov\032=\n\017AttributesEntry\022\020\n" +
-      "\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028" +
-      "\001\"\277\003\n\tComponent\022\027\n\007ref_des\030\001 \001(\tR\006refDes" +
-      "\0228\n\010sections\030\002 \003(\0132\034.agni.v1.ir.Componen" +
-      "tSectionR\010sections\022#\n\rfootprint_ref\030\003 \001(" +
-      "\tR\014footprintRef\022D\n\016device_classes\030\007 \003(\0132" +
-      "\035.agni.v1.ir.ComponentClassTagR\rdeviceCl" +
-      "asses\022*\n\005value\030\005 \001(\0132\024.agni.v1.ir.Quanti" +
-      "tyR\005value\022\020\n\003mpn\030\006 \001(\tR\003mpn\022E\n\nattribute" +
-      "s\030\016 \003(\0132%.agni.v1.ir.Component.Attribute" +
+      "vedSymbols\022*\n\021nets_missing_pins\030\r \003(\tR\017n" +
+      "etsMissingPins\022E\n\020resolved_symbols\030\010 \003(\013" +
+      "2\032.agni.v1.ir.ResolvedSymbolR\017resolvedSy" +
+      "mbols\0226\n\013joined_taps\030\t \003(\0132\025.agni.v1.ir." +
+      "JoinedTapR\njoinedTaps\022W\n\026unannotated_com" +
+      "ponents\030\006 \003(\0132 .agni.v1.ir.UnannotatedCo" +
+      "mponentR\025unannotatedComponents\022R\n\024unexpa" +
+      "nded_hierarchy\030\n \003(\0132\037.agni.v1.ir.Unexpa" +
+      "ndedHierarchyR\023unexpandedHierarchy\0229\n\014ra" +
+      "nge_labels\030\013 \003(\0132\026.agni.v1.ir.RangeLabel" +
+      "R\013rangeLabels\0225\n\013group_buses\030\014 \003(\0132\024.agn" +
+      "i.v1.ir.GroupBusR\ngroupBuses\022\032\n\010supplied" +
+      "\030\007 \003(\tR\010supplied\"\306\001\n\023UnexpandedHierarchy" +
+      "\022\022\n\004name\030\001 \001(\tR\004name\022\022\n\004kind\030\002 \001(\tR\004kind" +
+      "\022%\n\016instance_count\030\003 \001(\005R\rinstanceCount\022" +
+      "*\n\004prov\030\004 \001(\0132\026.agni.v1.ir.ProvenanceR\004p" +
+      "rov\0224\n\006reason\030\005 \001(\0162\034.agni.v1.ir.Unexpan" +
+      "dedReasonR\006reason\"e\n\024UnannotatedComponen" +
+      "t\022\027\n\007ref_des\030\001 \001(\tR\006refDes\0224\n\tinstances\030" +
+      "\002 \003(\0132\026.agni.v1.ir.ProvenanceR\tinstances" +
+      "\"Y\n\016ResolvedSymbol\022\026\n\006symref\030\001 \001(\tR\006symr" +
+      "ef\022\022\n\004kind\030\002 \001(\tR\004kind\022\033\n\tpin_count\030\003 \001(" +
+      "\005R\010pinCount\"\203\001\n\020UnresolvedSymbol\022\026\n\006symr" +
+      "ef\030\001 \001(\tR\006symref\022\022\n\004kind\030\002 \001(\tR\004kind\022\027\n\007" +
+      "ref_des\030\003 \003(\tR\006refDes\022*\n\004prov\030\004 \001(\0132\026.ag" +
+      "ni.v1.ir.ProvenanceR\004prov\"f\n\010GroupBus\022\024\n" +
+      "\005label\030\001 \001(\tR\005label\022\030\n\007members\030\002 \003(\tR\007me" +
+      "mbers\022*\n\004prov\030\003 \001(\0132\026.agni.v1.ir.Provena" +
+      "nceR\004prov\"\177\n\rBusNotModeled\022\024\n\005label\030\001 \001(" +
+      "\tR\005label\022\022\n\004kind\030\002 \001(\tR\004kind\022*\n\004prov\030\003 \001" +
+      "(\0132\026.agni.v1.ir.ProvenanceR\004prov\022\030\n\007memb" +
+      "ers\030\004 \003(\tR\007members\"\242\001\n\tJoinedTap\022\014\n\001x\030\001 " +
+      "\001(\003R\001x\022\014\n\001y\030\002 \001(\003R\001y\022\033\n\tjoin_kind\030\003 \001(\tR" +
+      "\010joinKind\022\024\n\005label\030\004 \001(\tR\005label\022\032\n\010segme" +
+      "nts\030\005 \001(\005R\010segments\022*\n\004prov\030\006 \001(\0132\026.agni" +
+      ".v1.ir.ProvenanceR\004prov\"p\n\nRangeLabel\022\024\n" +
+      "\005label\030\001 \001(\tR\005label\022 \n\014reads_as_bus\030\002 \001(" +
+      "\010R\nreadsAsBus\022*\n\004prov\030\003 \001(\0132\026.agni.v1.ir" +
+      ".ProvenanceR\004prov\"Z\n\020DanglingEndpoint\022\014\n" +
+      "\001x\030\001 \001(\003R\001x\022\014\n\001y\030\002 \001(\003R\001y\022*\n\004prov\030\003 \001(\0132" +
+      "\026.agni.v1.ir.ProvenanceR\004prov\"`\n\017RefDesC" +
+      "ollision\022\027\n\007ref_des\030\001 \001(\tR\006refDes\0224\n\tins" +
+      "tances\030\002 \003(\0132\026.agni.v1.ir.ProvenanceR\tin" +
+      "stances\"\201\002\n\013PartLibrary\022\022\n\004name\030\001 \001(\tR\004n" +
+      "ame\022*\n\005parts\030\002 \003(\0132\024.agni.v1.ir.PartType" +
+      "R\005parts\022G\n\nattributes\030\016 \003(\0132\'.agni.v1.ir" +
+      ".PartLibrary.AttributesEntryR\nattributes" +
+      "\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir.ProvenanceR\004" +
+      "prov\032=\n\017AttributesEntry\022\020\n\003key\030\001 \001(\tR\003ke" +
+      "y\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\307\002\n\010PartType" +
+      "\022\022\n\004name\030\001 \001(\tR\004name\022\022\n\004kind\030\002 \001(\tR\004kind" +
+      "\022+\n\021designator_prefix\030\003 \001(\tR\020designatorP" +
+      "refix\022#\n\004pins\030\004 \003(\0132\017.agni.v1.ir.PinR\004pi" +
+      "ns\022\020\n\003mpn\030\005 \001(\tR\003mpn\022D\n\nattributes\030\016 \003(\013" +
+      "2$.agni.v1.ir.PartType.AttributesEntryR\n" +
+      "attributes\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir.Pr" +
+      "ovenanceR\004prov\032=\n\017AttributesEntry\022\020\n\003key" +
+      "\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\235\002" +
+      "\n\003Pin\022\022\n\004name\030\001 \001(\tR\004name\022\036\n\ndesignator\030" +
+      "\002 \001(\tR\ndesignator\0226\n\tdirection\030\003 \001(\0162\030.a" +
+      "gni.v1.ir.PinDirectionR\tdirection\022?\n\natt" +
+      "ributes\030\016 \003(\0132\037.agni.v1.ir.Pin.Attribute" +
       "sEntryR\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni." +
       "v1.ir.ProvenanceR\004prov\032=\n\017AttributesEntr" +
       "y\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005valu" +
-      "e:\0028\001J\004\010\004\020\005\"Z\n\021ComponentClassTag\022\024\n\005clas" +
-      "s\030\001 \001(\tR\005class\022/\n\006source\030\002 \001(\0162\027.agni.v1" +
-      ".ir.ClassSourceR\006source\"Y\n\010Quantity\022\024\n\005i" +
-      "nput\030\001 \001(\tR\005input\022\031\n\005value\030\002 \001(\001H\000R\005valu" +
-      "e\210\001\001\022\022\n\004unit\030\003 \001(\tR\004unitB\010\n\006_value\"\235\002\n\020C" +
-      "omponentSection\022\024\n\005index\030\001 \001(\005R\005index\022\031\n" +
-      "\010part_ref\030\002 \001(\tR\007partRef\022\037\n\013library_ref\030" +
-      "\003 \001(\tR\nlibraryRef\022L\n\nattributes\030\016 \003(\0132,." +
-      "agni.v1.ir.ComponentSection.AttributesEn" +
+      "e:\0028\001\"\277\003\n\tComponent\022\027\n\007ref_des\030\001 \001(\tR\006re" +
+      "fDes\0228\n\010sections\030\002 \003(\0132\034.agni.v1.ir.Comp" +
+      "onentSectionR\010sections\022#\n\rfootprint_ref\030" +
+      "\003 \001(\tR\014footprintRef\022D\n\016device_classes\030\007 " +
+      "\003(\0132\035.agni.v1.ir.ComponentClassTagR\rdevi" +
+      "ceClasses\022*\n\005value\030\005 \001(\0132\024.agni.v1.ir.Qu" +
+      "antityR\005value\022\020\n\003mpn\030\006 \001(\tR\003mpn\022E\n\nattri" +
+      "butes\030\016 \003(\0132%.agni.v1.ir.Component.Attri" +
+      "butesEntryR\nattributes\022*\n\004prov\030\020 \001(\0132\026.a" +
+      "gni.v1.ir.ProvenanceR\004prov\032=\n\017Attributes" +
+      "Entry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005" +
+      "value:\0028\001J\004\010\004\020\005\"Z\n\021ComponentClassTag\022\024\n\005" +
+      "class\030\001 \001(\tR\005class\022/\n\006source\030\002 \001(\0162\027.agn" +
+      "i.v1.ir.ClassSourceR\006source\"Y\n\010Quantity\022" +
+      "\024\n\005input\030\001 \001(\tR\005input\022\031\n\005value\030\002 \001(\001H\000R\005" +
+      "value\210\001\001\022\022\n\004unit\030\003 \001(\tR\004unitB\010\n\006_value\"\235" +
+      "\002\n\020ComponentSection\022\024\n\005index\030\001 \001(\005R\005inde" +
+      "x\022\031\n\010part_ref\030\002 \001(\tR\007partRef\022\037\n\013library_" +
+      "ref\030\003 \001(\tR\nlibraryRef\022L\n\nattributes\030\016 \003(" +
+      "\0132,.agni.v1.ir.ComponentSection.Attribut" +
+      "esEntryR\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni" +
+      ".v1.ir.ProvenanceR\004prov\032=\n\017AttributesEnt" +
+      "ry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005val" +
+      "ue:\0028\001\"\214\001\n\007NetRole\022-\n\trole_kind\030\003 \001(\0162\020." +
+      "agni.v1.ir.RoleR\010roleKind\022.\n\006source\030\002 \001(" +
+      "\0162\026.agni.v1.ir.RoleSourceR\006source\022\026\n\006rea" +
+      "son\030\004 \001(\tR\006reasonJ\004\010\001\020\002R\004role\"\214\001\n\010NetGro" +
+      "up\022\022\n\004name\030\001 \001(\tR\004name\022,\n\004kind\030\002 \001(\0162\030.a" +
+      "gni.v1.ir.NetGroupKindR\004kind\022\022\n\004nets\030\003 \003" +
+      "(\tR\004nets\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir.Prov" +
+      "enanceR\004prov\"\341\002\n\003Net\022\022\n\004name\030\001 \001(\tR\004name" +
+      "\022\037\n\013net_classes\030\002 \003(\tR\nnetClasses\0228\n\013con" +
+      "nections\030\003 \003(\0132\026.agni.v1.ir.ConnectionR\013" +
+      "connections\022\016\n\002id\030\004 \001(\tR\002id\022)\n\005roles\030\006 \003" +
+      "(\0132\023.agni.v1.ir.NetRoleR\005roles\022?\n\nattrib" +
+      "utes\030\016 \003(\0132\037.agni.v1.ir.Net.AttributesEn" +
       "tryR\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni.v1." +
       "ir.ProvenanceR\004prov\032=\n\017AttributesEntry\022\020" +
       "\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\002" +
-      "8\001\"\214\001\n\007NetRole\022-\n\trole_kind\030\003 \001(\0162\020.agni" +
-      ".v1.ir.RoleR\010roleKind\022.\n\006source\030\002 \001(\0162\026." +
-      "agni.v1.ir.RoleSourceR\006source\022\026\n\006reason\030" +
-      "\004 \001(\tR\006reasonJ\004\010\001\020\002R\004role\"\214\001\n\010NetGroup\022\022" +
-      "\n\004name\030\001 \001(\tR\004name\022,\n\004kind\030\002 \001(\0162\030.agni." +
-      "v1.ir.NetGroupKindR\004kind\022\022\n\004nets\030\003 \003(\tR\004" +
-      "nets\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir.Provenan" +
-      "ceR\004prov\"\341\002\n\003Net\022\022\n\004name\030\001 \001(\tR\004name\022\037\n\013" +
-      "net_classes\030\002 \003(\tR\nnetClasses\0228\n\013connect" +
-      "ions\030\003 \003(\0132\026.agni.v1.ir.ConnectionR\013conn" +
-      "ections\022\016\n\002id\030\004 \001(\tR\002id\022)\n\005roles\030\006 \003(\0132\023" +
-      ".agni.v1.ir.NetRoleR\005roles\022?\n\nattributes" +
-      "\030\016 \003(\0132\037.agni.v1.ir.Net.AttributesEntryR" +
-      "\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir.P" +
-      "rovenanceR\004prov\032=\n\017AttributesEntry\022\020\n\003ke" +
-      "y\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001J\004" +
-      "\010\005\020\006\"\375\001\n\nConnection\022#\n\rcomponent_ref\030\001 \001" +
-      "(\tR\014componentRef\022\027\n\007pin_ref\030\002 \001(\tR\006pinRe" +
-      "f\022F\n\nattributes\030\016 \003(\0132&.agni.v1.ir.Conne" +
-      "ction.AttributesEntryR\nattributes\022*\n\004pro" +
-      "v\030\020 \001(\0132\026.agni.v1.ir.ProvenanceR\004prov\032=\n" +
-      "\017AttributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005va" +
-      "lue\030\002 \001(\tR\005value:\0028\001\"\331\001\n\005Sheet\022\016\n\002id\030\001 \001" +
-      "(\tR\002id\022\022\n\004name\030\002 \001(\tR\004name\022A\n\nattributes" +
-      "\030\016 \003(\0132!.agni.v1.ir.Sheet.AttributesEntr" +
-      "yR\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir" +
-      ".ProvenanceR\004prov\032=\n\017AttributesEntry\022\020\n\003" +
-      "key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001" +
-      "\"\353\001\n\tFootprint\022\022\n\004name\030\001 \001(\tR\004name\022\030\n\007li" +
-      "brary\030\002 \001(\tR\007library\022E\n\nattributes\030\016 \003(\013" +
-      "2%.agni.v1.ir.Footprint.AttributesEntryR" +
-      "\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir.P" +
-      "rovenanceR\004prov\032=\n\017AttributesEntry\022\020\n\003ke" +
-      "y\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\226" +
-      "\002\n\005Layer\022\022\n\004name\030\001 \001(\tR\004name\022\024\n\005index\030\002 " +
-      "\001(\005R\005index\0225\n\010function\030\003 \001(\0162\031.agni.v1.i" +
-      "r.LayerFunctionR\010function\022A\n\nattributes\030" +
-      "\016 \003(\0132!.agni.v1.ir.Layer.AttributesEntry" +
-      "R\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni.v1.ir." +
-      "ProvenanceR\004prov\032=\n\017AttributesEntry\022\020\n\003k" +
-      "ey\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"" +
-      "\336\002\n\nConstraint\022\022\n\004name\030\001 \001(\tR\004name\022\022\n\004ki" +
-      "nd\030\002 \001(\tR\004kind\022:\n\006params\030\003 \003(\0132\".agni.v1" +
-      ".ir.Constraint.ParamsEntryR\006params\022F\n\nat" +
-      "tributes\030\016 \003(\0132&.agni.v1.ir.Constraint.A" +
-      "ttributesEntryR\nattributes\022*\n\004prov\030\020 \001(\013" +
-      "2\026.agni.v1.ir.ProvenanceR\004prov\0329\n\013Params" +
-      "Entry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005" +
-      "value:\0028\001\032=\n\017AttributesEntry\022\020\n\003key\030\001 \001(" +
-      "\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\244\002\n\007Bom" +
-      "Line\022\027\n\007ref_des\030\001 \003(\tR\006refDes\022\020\n\003mpn\030\002 \001" +
-      "(\tR\003mpn\022\"\n\014manufacturer\030\003 \001(\tR\014manufactu" +
-      "rer\022\032\n\010quantity\030\004 \001(\005R\010quantity\022C\n\nattri" +
-      "butes\030\016 \003(\0132#.agni.v1.ir.BomLine.Attribu" +
-      "tesEntryR\nattributes\022*\n\004prov\030\020 \001(\0132\026.agn" +
-      "i.v1.ir.ProvenanceR\004prov\032=\n\017AttributesEn" +
-      "try\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005va" +
-      "lue:\0028\001*\342\002\n\014PinDirection\022\035\n\031PIN_DIRECTIO" +
-      "N_UNSPECIFIED\020\000\022\027\n\023PIN_DIRECTION_INPUT\020\001" +
-      "\022\030\n\024PIN_DIRECTION_OUTPUT\020\002\022\027\n\023PIN_DIRECT" +
-      "ION_INOUT\020\003\022\031\n\025PIN_DIRECTION_PASSIVE\020\004\022\027" +
-      "\n\023PIN_DIRECTION_POWER\020\005\022\034\n\030PIN_DIRECTION" +
-      "_NO_CONNECT\020\006\022\032\n\026PIN_DIRECTION_POWER_IN\020" +
-      "\007\022\033\n\027PIN_DIRECTION_POWER_OUT\020\010\022\032\n\026PIN_DI" +
-      "RECTION_TRISTATE\020\t\022 \n\034PIN_DIRECTION_OPEN" +
-      "_COLLECTOR\020\n\022\036\n\032PIN_DIRECTION_OPEN_EMITT" +
-      "ER\020\013*\230\001\n\020UnexpandedReason\022!\n\035UNEXPANDED_" +
-      "REASON_UNSPECIFIED\020\000\022 \n\034UNEXPANDED_REASO" +
-      "N_NOT_WALKED\020\001\022\033\n\027UNEXPANDED_REASON_CYCL" +
-      "E\020\002\022\"\n\036UNEXPANDED_REASON_FILE_MISSING\020\003*" +
-      "j\n\013ClassSource\022\034\n\030CLASS_SOURCE_UNSPECIFI" +
-      "ED\020\000\022\033\n\027CLASS_SOURCE_CONVENTION\020\001\022\032\n\026CLA" +
-      "SS_SOURCE_DATASHEET\020\003\"\004\010\002\020\002*z\n\nRoleSourc" +
-      "e\022\033\n\027ROLE_SOURCE_UNSPECIFIED\020\000\022\032\n\026ROLE_S" +
-      "OURCE_CONVENTION\020\001\022\030\n\024ROLE_SOURCE_DECLAR" +
-      "ED\020\002\022\031\n\025ROLE_SOURCE_DATASHEET\020\003*\212\001\n\004Role" +
-      "\022\024\n\020ROLE_UNSPECIFIED\020\000\022\r\n\tROLE_RAIL\020\001\022\017\n" +
-      "\013ROLE_GROUND\020\002\022\021\n\rROLE_FEEDBACK\020\003\022\022\n\016ROL" +
-      "E_SWITCHING\020\004\022\020\n\014ROLE_CONTROL\020\005\022\023\n\017ROLE_" +
-      "GATE_DRIVE\020\006*l\n\014NetGroupKind\022\036\n\032NET_GROU" +
-      "P_KIND_UNSPECIFIED\020\000\022\034\n\030NET_GROUP_KIND_D" +
-      "IFF_PAIR\020\001\022\036\n\032NET_GROUP_KIND_MATCH_GROUP" +
-      "\020\002*\334\001\n\rLayerFunction\022\036\n\032LAYER_FUNCTION_U" +
-      "NSPECIFIED\020\000\022\031\n\025LAYER_FUNCTION_SIGNAL\020\001\022" +
-      "\030\n\024LAYER_FUNCTION_PLANE\020\002\022\035\n\031LAYER_FUNCT" +
-      "ION_DIELECTRIC\020\003\022\036\n\032LAYER_FUNCTION_SOLDE" +
-      "R_MASK\020\004\022\035\n\031LAYER_FUNCTION_SILKSCREEN\020\005\022" +
-      "\030\n\024LAYER_FUNCTION_PASTE\020\006B\232\001\n\033io.github." +
-      "panyam.agni.v1.irB\007IrProtoP\001Z(github.com" +
-      "/panyam/agni/gen/go/agni/v1/ir\242\002\003AVI\252\002\nA" +
-      "gni.V1.Ir\312\002\nAgni\\V1\\Ir\342\002\026Agni\\V1\\Ir\\GPBM" +
-      "etadata\352\002\014Agni::V1::Irb\006proto3"
+      "8\001J\004\010\005\020\006\"\375\001\n\nConnection\022#\n\rcomponent_ref" +
+      "\030\001 \001(\tR\014componentRef\022\027\n\007pin_ref\030\002 \001(\tR\006p" +
+      "inRef\022F\n\nattributes\030\016 \003(\0132&.agni.v1.ir.C" +
+      "onnection.AttributesEntryR\nattributes\022*\n" +
+      "\004prov\030\020 \001(\0132\026.agni.v1.ir.ProvenanceR\004pro" +
+      "v\032=\n\017AttributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024" +
+      "\n\005value\030\002 \001(\tR\005value:\0028\001\"\331\001\n\005Sheet\022\016\n\002id" +
+      "\030\001 \001(\tR\002id\022\022\n\004name\030\002 \001(\tR\004name\022A\n\nattrib" +
+      "utes\030\016 \003(\0132!.agni.v1.ir.Sheet.Attributes" +
+      "EntryR\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni.v" +
+      "1.ir.ProvenanceR\004prov\032=\n\017AttributesEntry" +
+      "\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value" +
+      ":\0028\001\"\353\001\n\tFootprint\022\022\n\004name\030\001 \001(\tR\004name\022\030" +
+      "\n\007library\030\002 \001(\tR\007library\022E\n\nattributes\030\016" +
+      " \003(\0132%.agni.v1.ir.Footprint.AttributesEn" +
+      "tryR\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni.v1." +
+      "ir.ProvenanceR\004prov\032=\n\017AttributesEntry\022\020" +
+      "\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\002" +
+      "8\001\"\226\002\n\005Layer\022\022\n\004name\030\001 \001(\tR\004name\022\024\n\005inde" +
+      "x\030\002 \001(\005R\005index\0225\n\010function\030\003 \001(\0162\031.agni." +
+      "v1.ir.LayerFunctionR\010function\022A\n\nattribu" +
+      "tes\030\016 \003(\0132!.agni.v1.ir.Layer.AttributesE" +
+      "ntryR\nattributes\022*\n\004prov\030\020 \001(\0132\026.agni.v1" +
+      ".ir.ProvenanceR\004prov\032=\n\017AttributesEntry\022" +
+      "\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:" +
+      "\0028\001\"\336\002\n\nConstraint\022\022\n\004name\030\001 \001(\tR\004name\022\022" +
+      "\n\004kind\030\002 \001(\tR\004kind\022:\n\006params\030\003 \003(\0132\".agn" +
+      "i.v1.ir.Constraint.ParamsEntryR\006params\022F" +
+      "\n\nattributes\030\016 \003(\0132&.agni.v1.ir.Constrai" +
+      "nt.AttributesEntryR\nattributes\022*\n\004prov\030\020" +
+      " \001(\0132\026.agni.v1.ir.ProvenanceR\004prov\0329\n\013Pa" +
+      "ramsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001" +
+      "(\tR\005value:\0028\001\032=\n\017AttributesEntry\022\020\n\003key\030" +
+      "\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\244\002\n" +
+      "\007BomLine\022\027\n\007ref_des\030\001 \003(\tR\006refDes\022\020\n\003mpn" +
+      "\030\002 \001(\tR\003mpn\022\"\n\014manufacturer\030\003 \001(\tR\014manuf" +
+      "acturer\022\032\n\010quantity\030\004 \001(\005R\010quantity\022C\n\na" +
+      "ttributes\030\016 \003(\0132#.agni.v1.ir.BomLine.Att" +
+      "ributesEntryR\nattributes\022*\n\004prov\030\020 \001(\0132\026" +
+      ".agni.v1.ir.ProvenanceR\004prov\032=\n\017Attribut" +
+      "esEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\t" +
+      "R\005value:\0028\001*\342\002\n\014PinDirection\022\035\n\031PIN_DIRE" +
+      "CTION_UNSPECIFIED\020\000\022\027\n\023PIN_DIRECTION_INP" +
+      "UT\020\001\022\030\n\024PIN_DIRECTION_OUTPUT\020\002\022\027\n\023PIN_DI" +
+      "RECTION_INOUT\020\003\022\031\n\025PIN_DIRECTION_PASSIVE" +
+      "\020\004\022\027\n\023PIN_DIRECTION_POWER\020\005\022\034\n\030PIN_DIREC" +
+      "TION_NO_CONNECT\020\006\022\032\n\026PIN_DIRECTION_POWER" +
+      "_IN\020\007\022\033\n\027PIN_DIRECTION_POWER_OUT\020\010\022\032\n\026PI" +
+      "N_DIRECTION_TRISTATE\020\t\022 \n\034PIN_DIRECTION_" +
+      "OPEN_COLLECTOR\020\n\022\036\n\032PIN_DIRECTION_OPEN_E" +
+      "MITTER\020\013*\230\001\n\020UnexpandedReason\022!\n\035UNEXPAN" +
+      "DED_REASON_UNSPECIFIED\020\000\022 \n\034UNEXPANDED_R" +
+      "EASON_NOT_WALKED\020\001\022\033\n\027UNEXPANDED_REASON_" +
+      "CYCLE\020\002\022\"\n\036UNEXPANDED_REASON_FILE_MISSIN" +
+      "G\020\003*j\n\013ClassSource\022\034\n\030CLASS_SOURCE_UNSPE" +
+      "CIFIED\020\000\022\033\n\027CLASS_SOURCE_CONVENTION\020\001\022\032\n" +
+      "\026CLASS_SOURCE_DATASHEET\020\003\"\004\010\002\020\002*z\n\nRoleS" +
+      "ource\022\033\n\027ROLE_SOURCE_UNSPECIFIED\020\000\022\032\n\026RO" +
+      "LE_SOURCE_CONVENTION\020\001\022\030\n\024ROLE_SOURCE_DE" +
+      "CLARED\020\002\022\031\n\025ROLE_SOURCE_DATASHEET\020\003*\212\001\n\004" +
+      "Role\022\024\n\020ROLE_UNSPECIFIED\020\000\022\r\n\tROLE_RAIL\020" +
+      "\001\022\017\n\013ROLE_GROUND\020\002\022\021\n\rROLE_FEEDBACK\020\003\022\022\n" +
+      "\016ROLE_SWITCHING\020\004\022\020\n\014ROLE_CONTROL\020\005\022\023\n\017R" +
+      "OLE_GATE_DRIVE\020\006*l\n\014NetGroupKind\022\036\n\032NET_" +
+      "GROUP_KIND_UNSPECIFIED\020\000\022\034\n\030NET_GROUP_KI" +
+      "ND_DIFF_PAIR\020\001\022\036\n\032NET_GROUP_KIND_MATCH_G" +
+      "ROUP\020\002*\334\001\n\rLayerFunction\022\036\n\032LAYER_FUNCTI" +
+      "ON_UNSPECIFIED\020\000\022\031\n\025LAYER_FUNCTION_SIGNA" +
+      "L\020\001\022\030\n\024LAYER_FUNCTION_PLANE\020\002\022\035\n\031LAYER_F" +
+      "UNCTION_DIELECTRIC\020\003\022\036\n\032LAYER_FUNCTION_S" +
+      "OLDER_MASK\020\004\022\035\n\031LAYER_FUNCTION_SILKSCREE" +
+      "N\020\005\022\030\n\024LAYER_FUNCTION_PASTE\020\006B\232\001\n\033io.git" +
+      "hub.panyam.agni.v1.irB\007IrProtoP\001Z(github" +
+      ".com/panyam/agni/gen/go/agni/v1/ir\242\002\003AVI" +
+      "\252\002\nAgni.V1.Ir\312\002\nAgni\\V1\\Ir\342\002\026Agni\\V1\\Ir\\" +
+      "GPBMetadata\352\002\014Agni::V1::Irb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -521,7 +522,7 @@ public final class IrProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_ir_InputDiagnostics_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_ir_InputDiagnostics_descriptor,
-        new java.lang.String[] { "DanglingEndpoints", "RefDesCollisions", "NoJunctionEndpoints", "UnmodeledBuses", "UnresolvedSymbols", "ResolvedSymbols", "JoinedTaps", "UnannotatedComponents", "UnexpandedHierarchy", "RangeLabels", "GroupBuses", "Supplied", });
+        new java.lang.String[] { "DanglingEndpoints", "RefDesCollisions", "NoJunctionEndpoints", "UnmodeledBuses", "UnresolvedSymbols", "NetsMissingPins", "ResolvedSymbols", "JoinedTaps", "UnannotatedComponents", "UnexpandedHierarchy", "RangeLabels", "GroupBuses", "Supplied", });
     internal_static_agni_v1_ir_UnexpandedHierarchy_descriptor =
       getDescriptor().getMessageType(5);
     internal_static_agni_v1_ir_UnexpandedHierarchy_fieldAccessorTable = new

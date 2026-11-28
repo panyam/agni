@@ -71,6 +71,7 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 	d.Libraries = w.libs.libraries()
 
 	built, dangles, _, pointNets := netgraph.BuildWithPoints(w.in.wires, w.in.anchors, w.in.pins, w.in.terminals, kicadNaming)
+	lone := netgraph.LoneNets(w.in.wires, w.in.anchors, w.in.pins, w.in.terminals, pointNets)
 	kept := built[:0]
 	for _, n := range built {
 		if len(n.Conns) > 0 {
@@ -84,13 +85,14 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 		DanglingEndpoints: hierDangles(dangles, w.srcs),
 		RefDesCollisions:  collisions,
 		// Declared even when empty, so an empty list reads as "looked, found none" (agni issue 309).
-		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps", "range_labels"},
+		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps", "range_labels", "nets_missing_pins"},
 		NoJunctionEndpoints:   w.in.noJunction,
 		JoinedTaps:            w.in.joinedTaps,
 		UnmodeledBuses:        w.buses,
 		GroupBuses:            w.groupBuses,
 		RangeLabels:           w.ranges,
 		UnresolvedSymbols:     unresolvedSyms,
+		NetsMissingPins:       netsMissingPins(unresolvedSyms, lone),
 		ResolvedSymbols:       w.libs.resolvedSymbols(),
 		UnannotatedComponents: refdes.Unannotated(d.Components),
 	}

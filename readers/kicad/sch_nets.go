@@ -20,10 +20,14 @@ import (
 // Each lib pin is mapped to sheet coordinates with geomath.ApplyTransform, the transform that the
 // renderer draws with (C17), so a pin ends up on the wire endpoint it connects to. Wires, labels and
 // pins all go through the same coordinate conversion so coincident points compare equal.
-func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.DanglingEndpoint, []*ir.DanglingEndpoint, []*ir.JoinedTap) {
+//
+// The last return is the nets holding a lone point, which a pin lost to an unresolved symbol may have
+// joined (netgraph.LoneNets, agni issue 88).
+func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.DanglingEndpoint, []*ir.DanglingEndpoint, []*ir.JoinedTap, []string) {
 	var in netInputs
 	collectSheetNets(root, sheetScope{src: src, syms: syms}, &in)
-	built, dangles, _ := netgraph.Build(in.wires, in.anchors, in.pins, in.terminals, kicadNaming)
+	built, dangles, _, pointNets := netgraph.BuildWithPoints(in.wires, in.anchors, in.pins, in.terminals, kicadNaming)
+	lone := netgraph.LoneNets(in.wires, in.anchors, in.pins, in.terminals, pointNets)
 	// KiCad omits a named-but-pinless net (a label on a dangling wire), so drop it before emission.
 	kept := built[:0]
 	for _, n := range built {
@@ -31,7 +35,7 @@ func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.Dangli
 			kept = append(kept, n)
 		}
 	}
-	return netgraph.IRNets(kept, src), netgraph.IRDangles(dangles, src, "kicad-uuid"), in.noJunction, in.joinedTaps
+	return netgraph.IRNets(kept, src), netgraph.IRDangles(dangles, src, "kicad-uuid"), in.noJunction, in.joinedTaps, lone
 }
 
 // Anchor ranks for KiCad net naming, which netgraph resolves lowest first and, between equal

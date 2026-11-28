@@ -932,6 +932,17 @@ type InputDiagnostics struct {
 	// the read quieter and was then discarded. Now it is recorded, so the pin-dependent rules can
 	// report inconclusive instead of passing over a netlist that is missing connections.
 	UnresolvedSymbols []*UnresolvedSymbol `protobuf:"bytes,5,rep,name=unresolved_symbols,json=unresolvedSymbols,proto3" json:"unresolved_symbols,omitempty"`
+	// The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+	// symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+	// those pins is then left alone at its point, and the net of every such lone point is listed here.
+	// A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+	// library gates the nets near its parts rather than the whole design.
+	//
+	// A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+	// more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+	// ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+	// `supplied`, and the gate then treats the whole design as affected.
+	NetsMissingPins []string `protobuf:"bytes,13,rep,name=nets_missing_pins,json=netsMissingPins,proto3" json:"nets_missing_pins,omitempty"`
 	// The symbol references that DID resolve, one per distinct reference (agni issue 418). With this
 	// list, a consumer can tell a design whose symbols all loaded from one the reader never looked at.
 	//
@@ -1091,6 +1102,13 @@ func (x *InputDiagnostics) GetUnmodeledBuses() []*BusNotModeled {
 func (x *InputDiagnostics) GetUnresolvedSymbols() []*UnresolvedSymbol {
 	if x != nil {
 		return x.UnresolvedSymbols
+	}
+	return nil
+}
+
+func (x *InputDiagnostics) GetNetsMissingPins() []string {
+	if x != nil {
+		return x.NetsMissingPins
 	}
 	return nil
 }
@@ -3241,13 +3259,14 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\n" +
-	"\x10\vR\astackup\"\xc7\x06\n" +
+	"\x10\vR\astackup\"\xf3\x06\n" +
 	"\x10InputDiagnostics\x12K\n" +
 	"\x12dangling_endpoints\x18\x01 \x03(\v2\x1c.agni.v1.ir.DanglingEndpointR\x11danglingEndpoints\x12I\n" +
 	"\x12ref_des_collisions\x18\x02 \x03(\v2\x1b.agni.v1.ir.RefDesCollisionR\x10refDesCollisions\x12P\n" +
 	"\x15no_junction_endpoints\x18\x03 \x03(\v2\x1c.agni.v1.ir.DanglingEndpointR\x13noJunctionEndpoints\x12B\n" +
 	"\x0funmodeled_buses\x18\x04 \x03(\v2\x19.agni.v1.ir.BusNotModeledR\x0eunmodeledBuses\x12K\n" +
-	"\x12unresolved_symbols\x18\x05 \x03(\v2\x1c.agni.v1.ir.UnresolvedSymbolR\x11unresolvedSymbols\x12E\n" +
+	"\x12unresolved_symbols\x18\x05 \x03(\v2\x1c.agni.v1.ir.UnresolvedSymbolR\x11unresolvedSymbols\x12*\n" +
+	"\x11nets_missing_pins\x18\r \x03(\tR\x0fnetsMissingPins\x12E\n" +
 	"\x10resolved_symbols\x18\b \x03(\v2\x1a.agni.v1.ir.ResolvedSymbolR\x0fresolvedSymbols\x126\n" +
 	"\vjoined_taps\x18\t \x03(\v2\x15.agni.v1.ir.JoinedTapR\n" +
 	"joinedTaps\x12W\n" +

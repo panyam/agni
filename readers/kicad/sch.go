@@ -77,7 +77,7 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 
 	// Nets are computed from the schematic geometry (wires + pins + labels); see sch_nets.go.
 	// The same geometry pass surfaces dangling wire endpoints (connections drawn but not completed).
-	nets, dangles, noJunction, joinedTaps := schNets(root, src, syms)
+	nets, dangles, noJunction, joinedTaps, lone := schNets(root, src, syms)
 	d.Nets = nets
 	// Unlike the board readers, this one KEEPS a placeholder-designated symbol. Such a symbol is
 	// real circuitry that somebody has not named yet, and dropping it would make the design read
@@ -89,13 +89,14 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 		// Declared even when the slice is empty, because this reader looked. Here an empty list
 		// means "no collisions". On a reader that cannot look it would mean "nobody asked" (agni
 		// issue 309).
-		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps", "range_labels"},
+		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps", "range_labels", "nets_missing_pins"},
 		NoJunctionEndpoints:   noJunction,
 		JoinedTaps:            joinedTaps,
 		UnmodeledBuses:        collectBuses(root, src, nil),
 		GroupBuses:            collectGroupBuses(root, src, busAliases(root), nil),
 		RangeLabels:           rangeLabels(root, src),
 		UnresolvedSymbols:     unresolvedSyms,
+		NetsMissingPins:       netsMissingPins(unresolvedSyms, lone),
 		ResolvedSymbols:       libs.resolvedSymbols(),
 		UnannotatedComponents: refdes.Unannotated(d.Components),
 	}
@@ -170,6 +171,15 @@ func (a *libAccum) collect(root *node, src string) {
 // placements that lost pins, in first-appearance order. A nil cache (no opener supplied) reports
 // nothing, since that is the caller choosing to read without symbols rather than a resolution
 // failure.
+// netsMissingPins is lone when a symbol is unresolved and nil otherwise, since with every symbol
+// resolved no pin was lost (agni issue 88).
+func netsMissingPins(unresolved []*ir.UnresolvedSymbol, lone []string) []string {
+	if len(unresolved) == 0 {
+		return nil
+	}
+	return lone
+}
+
 func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src string) []*ir.UnresolvedSymbol {
 	if syms == nil {
 		return nil

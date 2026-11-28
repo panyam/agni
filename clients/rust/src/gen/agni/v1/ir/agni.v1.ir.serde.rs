@@ -2118,6 +2118,9 @@ impl serde::Serialize for InputDiagnostics {
         if !self.unresolved_symbols.is_empty() {
             len += 1;
         }
+        if !self.nets_missing_pins.is_empty() {
+            len += 1;
+        }
         if !self.resolved_symbols.is_empty() {
             len += 1;
         }
@@ -2154,6 +2157,9 @@ impl serde::Serialize for InputDiagnostics {
         }
         if !self.unresolved_symbols.is_empty() {
             struct_ser.serialize_field("unresolvedSymbols", &self.unresolved_symbols)?;
+        }
+        if !self.nets_missing_pins.is_empty() {
+            struct_ser.serialize_field("netsMissingPins", &self.nets_missing_pins)?;
         }
         if !self.resolved_symbols.is_empty() {
             struct_ser.serialize_field("resolvedSymbols", &self.resolved_symbols)?;
@@ -2196,6 +2202,8 @@ impl<'de> serde::Deserialize<'de> for InputDiagnostics {
             "unmodeledBuses",
             "unresolved_symbols",
             "unresolvedSymbols",
+            "nets_missing_pins",
+            "netsMissingPins",
             "resolved_symbols",
             "resolvedSymbols",
             "joined_taps",
@@ -2218,6 +2226,7 @@ impl<'de> serde::Deserialize<'de> for InputDiagnostics {
             NoJunctionEndpoints,
             UnmodeledBuses,
             UnresolvedSymbols,
+            NetsMissingPins,
             ResolvedSymbols,
             JoinedTaps,
             UnannotatedComponents,
@@ -2251,6 +2260,7 @@ impl<'de> serde::Deserialize<'de> for InputDiagnostics {
                             "noJunctionEndpoints" | "no_junction_endpoints" => Ok(GeneratedField::NoJunctionEndpoints),
                             "unmodeledBuses" | "unmodeled_buses" => Ok(GeneratedField::UnmodeledBuses),
                             "unresolvedSymbols" | "unresolved_symbols" => Ok(GeneratedField::UnresolvedSymbols),
+                            "netsMissingPins" | "nets_missing_pins" => Ok(GeneratedField::NetsMissingPins),
                             "resolvedSymbols" | "resolved_symbols" => Ok(GeneratedField::ResolvedSymbols),
                             "joinedTaps" | "joined_taps" => Ok(GeneratedField::JoinedTaps),
                             "unannotatedComponents" | "unannotated_components" => Ok(GeneratedField::UnannotatedComponents),
@@ -2282,6 +2292,7 @@ impl<'de> serde::Deserialize<'de> for InputDiagnostics {
                 let mut no_junction_endpoints__ = None;
                 let mut unmodeled_buses__ = None;
                 let mut unresolved_symbols__ = None;
+                let mut nets_missing_pins__ = None;
                 let mut resolved_symbols__ = None;
                 let mut joined_taps__ = None;
                 let mut unannotated_components__ = None;
@@ -2320,6 +2331,12 @@ impl<'de> serde::Deserialize<'de> for InputDiagnostics {
                                 return Err(serde::de::Error::duplicate_field("unresolvedSymbols"));
                             }
                             unresolved_symbols__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::NetsMissingPins => {
+                            if nets_missing_pins__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("netsMissingPins"));
+                            }
+                            nets_missing_pins__ = Some(map_.next_value()?);
                         }
                         GeneratedField::ResolvedSymbols => {
                             if resolved_symbols__.is_some() {
@@ -2371,6 +2388,7 @@ impl<'de> serde::Deserialize<'de> for InputDiagnostics {
                     no_junction_endpoints: no_junction_endpoints__.unwrap_or_default(),
                     unmodeled_buses: unmodeled_buses__.unwrap_or_default(),
                     unresolved_symbols: unresolved_symbols__.unwrap_or_default(),
+                    nets_missing_pins: nets_missing_pins__.unwrap_or_default(),
                     resolved_symbols: resolved_symbols__.unwrap_or_default(),
                     joined_taps: joined_taps__.unwrap_or_default(),
                     unannotated_components: unannotated_components__.unwrap_or_default(),

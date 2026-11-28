@@ -162,6 +162,18 @@ pub struct InputDiagnostics {
     /// report inconclusive instead of passing over a netlist that is missing connections.
     #[prost(message, repeated, tag="5")]
     pub unresolved_symbols: ::prost::alloc::vec::Vec<UnresolvedSymbol>,
+    /// The nets a lost pin may have joined, while unresolved_symbols is not empty (agni issue 88). A
+    /// symbol that fails to resolve takes its pins with it. Each wire end, label or pin drawn to one of
+    /// those pins is then left alone at its point, and the net of every such lone point is listed here.
+    /// A rule's subject that touches none of them, and is no lost part, keeps its verdict, so one missing
+    /// library gates the nets near its parts rather than the whole design.
+    ///
+    /// A real dangling wire end or an unconnected pin is alone at its point too, so the list can name
+    /// more nets than the lost pins reach. It cannot see a lost pin drawn onto a bend between two wire
+    /// ends. Empty when every symbol resolved. A reader that cannot compute it leaves the name out of
+    /// `supplied`, and the gate then treats the whole design as affected.
+    #[prost(string, repeated, tag="13")]
+    pub nets_missing_pins: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// The symbol references that DID resolve, one per distinct reference (agni issue 418). With this
     /// list, a consumer can tell a design whose symbols all loaded from one the reader never looked at.
     ///

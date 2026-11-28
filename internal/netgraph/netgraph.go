@@ -474,6 +474,42 @@ func dangling(wires []Wire, anchors []Anchor, pins []Pin, terminals []Point) []D
 	return out
 }
 
+// LoneNets returns the sorted names of the nets that hold a lone point. A point is lone when exactly
+// one thing sits on it, a single wire end, anchor or pin, with no junction or no-connect flag there.
+// A pin lost to an unresolved symbol leaves whatever was drawn to it alone at its point, so these are
+// the nets a lost pin may have joined (agni issue 88). A real dangling end and an unconnected pin are
+// lone too, so the set can be wider than the loss. pointNets is BuildWithPoints' point map, and a
+// point on drawing noise names no net.
+func LoneNets(wires []Wire, anchors []Anchor, pins []Pin, terminals []Point, pointNets map[Point]NetRef) []string {
+	count := map[Point]int{}
+	for _, w := range wires {
+		count[w.A]++
+		count[w.B]++
+	}
+	for _, a := range anchors {
+		count[a.At]++
+	}
+	for _, p := range pins {
+		count[p.At]++
+	}
+	for _, tm := range terminals {
+		count[tm] += 2 // a junction or a flag marks the point as finished, never lone
+	}
+	seen := map[string]bool{}
+	var out []string
+	for pt, n := range count {
+		if n != 1 {
+			continue
+		}
+		if ref, ok := pointNets[pt]; ok && ref.Name != "" && !seen[ref.Name] {
+			seen[ref.Name] = true
+			out = append(out, ref.Name)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // dedupSort removes duplicate conns (Dir included in the key) and sorts the rest by (Comp, Pin).
 func dedupSort(cs []Conn) []Conn {
 	seen := map[Conn]bool{}
