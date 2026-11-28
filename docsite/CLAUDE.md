@@ -32,7 +32,7 @@ This file covers building, testing and previewing the docsite, its figures, and 
 - Never use `--layout force` in `images.sh`. It alone differs between arm64 and amd64 (agni 472).
 - `tutorial-runs-check` regenerates every capture and fails on any difference.
 - A capture's stamp hashes the spec and the fixture but NOT the engine. Regenerating is the only way to see engine drift.
-- **Editing any tracked file inside a fixture restamps every capture over it.** `examples/tutorial-project` has 61 such captures. Commit the fixture edit, then run `make tutorial-runs`, then check that the diff holds stamp lines alone.
+- **Editing any tracked file inside a fixture restamps every capture over it.** `examples/tutorial-project` has 61 such captures, and `cmd/agni/testdata/conformance` has 25. Commit the fixture edit, then run `make tutorial-runs`, then check that the diff holds stamp lines alone.
 - Adding a file to `examples/common/boards` restamps 11 captures. `tutorial-runs-check` refuses an untracked file there, so commit it before `make tutorial-runs` (agni 1352).
 - A fixture under `tools/samples/` has nothing tracked, so its captures hash `hack/samples.pin` instead (agni 682).
 

@@ -9,14 +9,14 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-27, at `5ef6f645`.
+Last pruned 2026-11-28, at `24359663`.
 
 ## At a glance
 
-**Mission #1708 is active**, to run agni check on a real board and trust every verdict, at 10 of
-26 tickets. Its exercise is `make exercise-checks` (#1712), which holds Glasgow revC3's and Jetson's
-verdicts to the hand-audited files in `cmd/agni/testdata/verdict-audit`. It last ran on 2026-11-27
-at `5ef6f645`, with 6 disagreements left, down from 75. `TestVerdictAuditServerParity` holds a
+**Mission #1708 is active**, to run agni check on a real board and trust every verdict, at 20 of
+33 tickets. Its exercise is `make exercise-checks` (#1712), which holds Glasgow revC3's and Jetson's
+verdicts to the hand-audited files in `cmd/agni/testdata/verdict-audit`. It last ran on 2026-11-28
+at `24359663`, with every audited verdict matching (Glasgow 259 of 259, Jetson 586 of 586). `TestVerdictAuditServerParity` holds a
 server's verdicts on both boards to the CLI's, over `check --remote` and a stored design (#1922). The audit runs Jetson with
 `examples/jetson-project/params`. Before blaming a clamp or a connector in an audit row, check
 `component.dnp`, since two of the first rows were parts never fitted (`build/check-rule.md`).
@@ -49,36 +49,33 @@ release.
 - **Other missions.** #1611 (markup, starts at #1612 and #1613), and two whose first ticket
   writes the exercise: #1709 (#1713) and #1711 (#1715, which needs a datasheet PDF agni-samples
   may carry). #1710 has its exercise now, at 1 of 11, next #134.
-  `make exercise-formats` exits 1 at `b8ba5401`, because royalblue54L-feather does not read (#681). #1176 holds only Later lines.
+  `make exercise-formats` exits 1 at `b8ba5401`, because royalblue54L-feather does not read (#681).
 
 ## Open, ranked
 
-Mission #1708's queue, by `~/.claude/skills/retriage/queue.sh`. The audit's bugs go first, ranked
-by how many audited rows each clears: #1916 (3, TUSB1046 four-level strap pins), #1918 (2, the
-TPD3S014's integrated clamps on USB D+ and D-) and #1920 (1, the LTC4412 ideal diode). They are P2,
-so `queue.sh` ranks #88 above them by age. Each needs a datasheet fact. Glasgow already carries a
-TPD3S014 spec in its `params/`, which #1918 may extend with an ESD rating.
+Mission #1708's queue, by `~/.claude/skills/retriage/queue.sh`. The audit has no open bug rows, so
+the queue moves to rules that skip or overclaim subjects the audit does not cover yet: #157 (the
+reach walk skips bus-like nets), then #159, #162 and #163. #1944 holds what #88 left, verdicts a
+lossy read stops stating without saying so.
 
 Later work is #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
 roadmap lives on panyam/jaala. Modules (jaala#3) and aggregation inside rules (jaala#4) have both shipped, and agni tracks the latest jaala, so a
 derived question goes in `stdlib/lib` before it becomes a Go relation.
 
-#799 (the PartSpec contract module) waits for a second implementer or consumer.
-
 `OUT_OF_SCOPE.md` has five rows waiting on a decision about the ledger itself, not on code: the
 `core/svg` move, the `.edn` sniffing row (its WS6-008 ticket was wrong), the WS9-035 row (agni
 issue 541 half-settled it), the `Witness.Statement` row that asks for a ticket, and the
 `agni version` row whose trigger is "never".
 
-Two items are gated, #677 (only the "declare a NEW class" half, gated on the class registry) and
-#681.
+One item is gated, #681.
 
 ## Worth knowing before the next change
 
 - **`reverse-blocking.undecided.kicad_sch` is the only fixture that reaches an inconclusive
   finding.** It is a barrel jack feeding an MCU through a P-FET, and `reverse-blocking-absent` cannot
-  decide that circuit from a netlist. The browser suite mounts it as `conformance=`.
+  decide that circuit from a netlist. input-protection fails it too, since its walk crosses the FET
+  (agni 1941). The browser suite mounts it as `conformance=`.
 - **`severitySections` in `web/src/findings.ts` has no renderer, on purpose.** It is a parity oracle.
   It pins the client against `GetCheckReport`. It exists to catch drift, and "improving" it would
   hide that drift.
