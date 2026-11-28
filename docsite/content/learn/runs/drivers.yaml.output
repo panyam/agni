@@ -1,4 +1,4 @@
-#agni-run 559a48bb40ba9fc5
+#agni-run 42a62a78e0e10461
 floating-input  1 fail
     fail  FLOAT  all 2 of the net's fitted pins are inputs or no-connects, and 2 of them are
                  logic inputs
