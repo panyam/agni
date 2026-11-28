@@ -93,6 +93,7 @@ func roleVocabs(base, over *configpb.NamingLexicon) []namedVocab {
 		{"pin.cathode", bp.GetCathode(), op.GetCathode()},
 		{"pin.feedback", bp.GetFeedback(), op.GetFeedback()},
 		{"pin.switching", bp.GetSwitching(), op.GetSwitching()},
+		{"pin.cable_supply", bp.GetCableSupply(), op.GetCableSupply()},
 	}
 }
 
@@ -338,6 +339,7 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 	n.NoConnect, n.Voltage = lists["net.no_connect"], lists["net.voltage"]
 	p.Supply, p.Gate, p.Source, p.Drain, p.ExposedPad = lists["pin.supply"], lists["pin.gate"], lists["pin.source"], lists["pin.drain"], lists["pin.exposed_pad"]
 	p.Anode, p.Cathode, p.Feedback, p.Switching = lists["pin.anode"], lists["pin.cathode"], lists["pin.feedback"], lists["pin.switching"]
+	p.CableSupply = lists["pin.cable_supply"]
 	out.Class = classes
 	return out
 }

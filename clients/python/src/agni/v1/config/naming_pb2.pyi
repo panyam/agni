@@ -106,7 +106,7 @@ class DiffSuffix(_message.Message):
     def __init__(self, positive: _Optional[str] = ..., negative: _Optional[str] = ...) -> None: ...
 
 class PinNameVocab(_message.Message):
-    __slots__ = ("supply", "gate", "source", "drain", "exposed_pad", "anode", "cathode", "feedback", "switching", "through_pair")
+    __slots__ = ("supply", "gate", "source", "drain", "exposed_pad", "anode", "cathode", "feedback", "switching", "through_pair", "cable_supply")
     SUPPLY_FIELD_NUMBER: _ClassVar[int]
     GATE_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
@@ -117,6 +117,7 @@ class PinNameVocab(_message.Message):
     FEEDBACK_FIELD_NUMBER: _ClassVar[int]
     SWITCHING_FIELD_NUMBER: _ClassVar[int]
     THROUGH_PAIR_FIELD_NUMBER: _ClassVar[int]
+    CABLE_SUPPLY_FIELD_NUMBER: _ClassVar[int]
     supply: VocabPatterns
     gate: VocabPatterns
     source: VocabPatterns
@@ -127,7 +128,8 @@ class PinNameVocab(_message.Message):
     feedback: VocabPatterns
     switching: VocabPatterns
     through_pair: PinPairVocab
-    def __init__(self, supply: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate: _Optional[_Union[VocabPatterns, _Mapping]] = ..., source: _Optional[_Union[VocabPatterns, _Mapping]] = ..., drain: _Optional[_Union[VocabPatterns, _Mapping]] = ..., exposed_pad: _Optional[_Union[VocabPatterns, _Mapping]] = ..., anode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., cathode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ..., through_pair: _Optional[_Union[PinPairVocab, _Mapping]] = ...) -> None: ...
+    cable_supply: VocabPatterns
+    def __init__(self, supply: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate: _Optional[_Union[VocabPatterns, _Mapping]] = ..., source: _Optional[_Union[VocabPatterns, _Mapping]] = ..., drain: _Optional[_Union[VocabPatterns, _Mapping]] = ..., exposed_pad: _Optional[_Union[VocabPatterns, _Mapping]] = ..., anode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., cathode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ..., through_pair: _Optional[_Union[PinPairVocab, _Mapping]] = ..., cable_supply: _Optional[_Union[VocabPatterns, _Mapping]] = ...) -> None: ...
 
 class PinPairVocab(_message.Message):
     __slots__ = ("pairs", "replace")

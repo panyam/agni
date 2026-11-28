@@ -329,8 +329,8 @@ i2c-redundant-pull-up:(net:/USB Debug%2C PD/PDC_I2C2_SCL)	pass		R105 4k7 is the 
 i2c-redundant-pull-up:(net:/USB Debug%2C PD/PDC_I2C2_SDA)	pass		R107 4k7 is the one pull-up on U30 I2C2_SDA
 input-protection:(net:+3V3)	none		+3V3 is driven by the board (5V/3V3 DC/DC through R258 shunt); J12 SFP28 VccT/VccR and J14 M.2 draw from it, so the connectors are outlets, not power entries
 input-protection:(net:/Recovery USB/USBC2_VBUS)	none		U23 AP22615A OUT sources J3 VBUS; nothing on the board draws from it (Q15 gate senses it), so it is a source port, not an entry (D50 PESD5Z5 clamps it anyway)
-input-protection:(net:/USB DP Alt mode/USBC1_VBUS)	pass	#1934	dual-role J9 port: U35 AP22615A sources it, U30 TPS65988 VBUS2 sinks PD power; D22 ESDA25P35 TVS sits on the net
-input-protection:(net:/USB Debug%2C PD/USBC0_VBUS)	pass	#1934	J7 VBUS from the host feeds U32 NCP718 VIN (FTDI 3V3) and U30 TPS65988 VBUS1; D23 ESDA25P35 TVS sits on the net
+input-protection:(net:/USB DP Alt mode/USBC1_VBUS)	pass		dual-role J9 port: U35 AP22615A sources it, U30 TPS65988 VBUS2 sinks PD power; D22 ESDA25P35 TVS sits on the net
+input-protection:(net:/USB Debug%2C PD/USBC0_VBUS)	pass		J7 VBUS from the host feeds U32 NCP718 VIN (FTDI 3V3) and U30 TPS65988 VBUS1; D23 ESDA25P35 TVS sits on the net
 input-protection:(net:/USB Hub/USBC3_VBUS)	none		U18 AP22615A OUT sources J6 VBUS; no on-board load, so it is a source port, not an entry (D45 PESD5Z5 clamps it anyway)
 input-protection:(net:/USB Hub/USBC4_VBUS)	none		U20 AP22615A OUT sources J5 VBUS; no on-board load, so it is a source port, not an entry (D48 PESD5Z5 clamps it anyway)
 input-protection:(net:VCC_IN)	pass		J2 Mini-Fit power entry feeds U65 SIC431 VIN, U6 LTC4412 IN and Q2/Q39; D2 PTVS26VS1UR TVS sits on VCC_IN (no fuse, a TVS satisfies the rule)

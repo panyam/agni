@@ -2374,6 +2374,9 @@ impl serde::Serialize for PinNameVocab {
         if self.through_pair.is_some() {
             len += 1;
         }
+        if self.cable_supply.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.config.PinNameVocab", len)?;
         if let Some(v) = self.supply.as_ref() {
             struct_ser.serialize_field("supply", v)?;
@@ -2405,6 +2408,9 @@ impl serde::Serialize for PinNameVocab {
         if let Some(v) = self.through_pair.as_ref() {
             struct_ser.serialize_field("throughPair", v)?;
         }
+        if let Some(v) = self.cable_supply.as_ref() {
+            struct_ser.serialize_field("cableSupply", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -2427,6 +2433,8 @@ impl<'de> serde::Deserialize<'de> for PinNameVocab {
             "switching",
             "through_pair",
             "throughPair",
+            "cable_supply",
+            "cableSupply",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -2441,6 +2449,7 @@ impl<'de> serde::Deserialize<'de> for PinNameVocab {
             Feedback,
             Switching,
             ThroughPair,
+            CableSupply,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -2472,6 +2481,7 @@ impl<'de> serde::Deserialize<'de> for PinNameVocab {
                             "feedback" => Ok(GeneratedField::Feedback),
                             "switching" => Ok(GeneratedField::Switching),
                             "throughPair" | "through_pair" => Ok(GeneratedField::ThroughPair),
+                            "cableSupply" | "cable_supply" => Ok(GeneratedField::CableSupply),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -2501,6 +2511,7 @@ impl<'de> serde::Deserialize<'de> for PinNameVocab {
                 let mut feedback__ = None;
                 let mut switching__ = None;
                 let mut through_pair__ = None;
+                let mut cable_supply__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Supply => {
@@ -2563,6 +2574,12 @@ impl<'de> serde::Deserialize<'de> for PinNameVocab {
                             }
                             through_pair__ = map_.next_value()?;
                         }
+                        GeneratedField::CableSupply => {
+                            if cable_supply__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("cableSupply"));
+                            }
+                            cable_supply__ = map_.next_value()?;
+                        }
                     }
                 }
                 Ok(PinNameVocab {
@@ -2576,6 +2593,7 @@ impl<'de> serde::Deserialize<'de> for PinNameVocab {
                     feedback: feedback__,
                     switching: switching__,
                     through_pair: through_pair__,
+                    cable_supply: cable_supply__,
                 })
             }
         }

@@ -107,9 +107,15 @@ func FirstOnRail(m Model, n *ir.Net, class ComponentClass) (string, JoinedNet) {
 // through the connector and the entry rules still judge it. The pin also counts when the driver's own
 // input comes from a net those parts do not feed. That shape is a cascade of regulators rather than a
 // port (independentDriver, agni issue 1253).
+//
+// A cable-supply pin on the walk keeps a power output from counting at all (agni issue 1934). On
+// Jetson a PD controller's VBUS1 sinks a port that a load switch sources. The symbol types VBUS1
+// inout, and the controller feeds nothing back to the switch, so only the pin's name says power can
+// arrive. The pin is read from the lexicon's cable_supply vocabulary. A converter's output still
+// counts, so a rail a buck or boost drives keeps its board-driven read.
 func BoardSource(m Model, n *ir.Net) string {
 	r := m.Reach(n, PowerPathReachHops)
-	var sw, coil, fb, out string
+	var sw, coil, fb, out, cable string
 	var sinks, drivers []string
 	fbPin := map[string]string{} // part -> the net its feedback pin sits on
 	for _, rn := range r.Nets {
@@ -126,6 +132,9 @@ func BoardSource(m Model, n *ir.Net) string {
 				drivers = append(drivers, ref)
 			case ir.PinDirection_PIN_DIRECTION_POWER_IN:
 				sinks = append(sinks, ref)
+			}
+			if cable == "" && cableSupplyPin(m, c) {
+				cable = ref
 			}
 			if m.IsFeedbackPinName(m.PinName(c.ComponentRef, c.PinRef)) {
 				if _, ok := fbPin[ref]; !ok {
@@ -156,10 +165,25 @@ func BoardSource(m Model, n *ir.Net) string {
 	switch {
 	case sw != "" && fb != "":
 		return "a converter's output, its switch node " + sw + " behind inductor " + coil + " and its feedback on " + fb
+	case cable != "":
+		return ""
 	case out != "" && !anyPowerSource(m, sinks):
 		return out
 	}
 	return independentDriver(m, drivers, sinks)
+}
+
+// cableSupplyPin reports whether c is a pin that draws on a cable's bus. The symbol may type it
+// power_in, or leave it inout, input, passive or unspecified, since a vendor symbol often does. A
+// clamp is never a sink, so a USB TVS array's VBUS pin does not count (agni issue 1257).
+func cableSupplyPin(m Model, c *ir.Connection) bool {
+	switch ConnDir(m, c) {
+	case ir.PinDirection_PIN_DIRECTION_POWER_IN, ir.PinDirection_PIN_DIRECTION_INOUT, ir.PinDirection_PIN_DIRECTION_INPUT,
+		ir.PinDirection_PIN_DIRECTION_PASSIVE, ir.PinDirection_PIN_DIRECTION_UNSPECIFIED:
+	default:
+		return false
+	}
+	return !m.HasClass(c.ComponentRef, ClassTVS) && m.IsCableSupplyPinName(m.PinName(c.ComponentRef, c.PinRef))
 }
 
 // independentDriver names the first of drivers fed from a net where none of sinks has a power

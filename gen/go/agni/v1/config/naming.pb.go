@@ -604,7 +604,12 @@ type PinNameVocab struct {
 	// through_pair names pins that carry one signal across a part, such as a level translator's A2 and
 	// B2 or a buffer's 1A and 1Y (agni issue 1338). A walk crossing a part from one pin of a pair
 	// goes on through its partner alone, rather than through every pin of the part.
-	ThroughPair   *PinPairVocab `protobuf:"bytes,10,opt,name=through_pair,json=throughPair,proto3" json:"through_pair,omitempty"`
+	ThroughPair *PinPairVocab `protobuf:"bytes,10,opt,name=through_pair,json=throughPair,proto3" json:"through_pair,omitempty"`
+	// cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+	// (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+	// also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+	// only when supply also matches it.
+	CableSupply   *VocabPatterns `protobuf:"bytes,11,opt,name=cable_supply,json=cableSupply,proto3" json:"cable_supply,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -705,6 +710,13 @@ func (x *PinNameVocab) GetSwitching() *VocabPatterns {
 func (x *PinNameVocab) GetThroughPair() *PinPairVocab {
 	if x != nil {
 		return x.ThroughPair
+	}
+	return nil
+}
+
+func (x *PinNameVocab) GetCableSupply() *VocabPatterns {
+	if x != nil {
+		return x.CableSupply
 	}
 	return nil
 }
@@ -1118,7 +1130,7 @@ const file_agni_v1_config_naming_proto_rawDesc = "" +
 	"\n" +
 	"DiffSuffix\x12\x1a\n" +
 	"\bpositive\x18\x01 \x01(\tR\bpositive\x12\x1a\n" +
-	"\bnegative\x18\x02 \x01(\tR\bnegative\"\xcb\x04\n" +
+	"\bnegative\x18\x02 \x01(\tR\bnegative\"\x8d\x05\n" +
 	"\fPinNameVocab\x125\n" +
 	"\x06supply\x18\x01 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x06supply\x121\n" +
 	"\x04gate\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x04gate\x125\n" +
@@ -1131,7 +1143,8 @@ const file_agni_v1_config_naming_proto_rawDesc = "" +
 	"\bfeedback\x18\b \x01(\v2\x1d.agni.v1.config.VocabPatternsR\bfeedback\x12;\n" +
 	"\tswitching\x18\t \x01(\v2\x1d.agni.v1.config.VocabPatternsR\tswitching\x12?\n" +
 	"\fthrough_pair\x18\n" +
-	" \x01(\v2\x1c.agni.v1.config.PinPairVocabR\vthroughPair\"W\n" +
+	" \x01(\v2\x1c.agni.v1.config.PinPairVocabR\vthroughPair\x12@\n" +
+	"\fcable_supply\x18\v \x01(\v2\x1d.agni.v1.config.VocabPatternsR\vcableSupply\"W\n" +
 	"\fPinPairVocab\x12-\n" +
 	"\x05pairs\x18\x01 \x03(\v2\x17.agni.v1.config.PinPairR\x05pairs\x12\x18\n" +
 	"\areplace\x18\x02 \x01(\bR\areplace\"%\n" +
@@ -1222,13 +1235,14 @@ var file_agni_v1_config_naming_proto_depIdxs = []int32{
 	10, // 29: agni.v1.config.PinNameVocab.feedback:type_name -> agni.v1.config.VocabPatterns
 	10, // 30: agni.v1.config.PinNameVocab.switching:type_name -> agni.v1.config.VocabPatterns
 	8,  // 31: agni.v1.config.PinNameVocab.through_pair:type_name -> agni.v1.config.PinPairVocab
-	9,  // 32: agni.v1.config.PinPairVocab.pairs:type_name -> agni.v1.config.PinPair
-	11, // 33: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.ClassVocab
-	34, // [34:34] is the sub-list for method output_type
-	34, // [34:34] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	10, // 32: agni.v1.config.PinNameVocab.cable_supply:type_name -> agni.v1.config.VocabPatterns
+	9,  // 33: agni.v1.config.PinPairVocab.pairs:type_name -> agni.v1.config.PinPair
+	11, // 34: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.ClassVocab
+	35, // [35:35] is the sub-list for method output_type
+	35, // [35:35] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_config_naming_proto_init() }

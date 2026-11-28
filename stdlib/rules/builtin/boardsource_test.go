@@ -23,6 +23,7 @@ func railFromConnector(nets map[string][]string) *ir.Design {
 		"U2": {{"SW", "1", pass}, {"FB", "2", pass}, {"OUT", "3", pwrOut}, {"VIN", "4", pwrIn}},
 		"L1": twoPin(), "R2": twoPin(), "R3": twoPin(),
 		"U3": {{"VBUS", "1", pwrIn}, {"LDO", "2", pwrOut}},
+		"U4": {{"VIN", "1", pwrIn}, {"VOUT", "2", pwrOut}},
 	}, all)
 	classify.Stamp(d)
 	classify.StampNetRoles(d)
@@ -75,7 +76,7 @@ func TestARegulatorCascadeIsBoardDriven(t *testing.T) {
 		want check.Outcome
 	}{
 		{"the upstream regulator is fed from elsewhere", map[string][]string{
-			"5V": {"U2.4"}, "3V3": {"U2.3", "U3.1"}, "LDO_OUT": {"U3.2"},
+			"5V": {"U2.4"}, "3V3": {"U2.3", "U4.1"}, "LDO_OUT": {"U4.2"},
 		}, check.NotConsidered},
 		{"the sink feeds the driver back, as a dual-role port does", map[string][]string{
 			"3V3": {"U2.3", "U3.1"}, "LDO_OUT": {"U3.2", "U2.4"},
@@ -87,6 +88,99 @@ func TestARegulatorCascadeIsBoardDriven(t *testing.T) {
 				if got := verdictOn(t, r, d, "3V3"); got != string(tc.want) {
 					t.Errorf("%s on 3V3 = %q, want %q", r.Name, got, tc.want)
 				}
+			}
+		})
+	}
+}
+
+// A dual-role USB-C port whose sink is read from its pin names (agni issue 1934). On Jetson a load
+// switch fed from +5V sources VBUS, and a PD controller's VBUS1 pin, typed inout, sinks it. The
+// controller feeds nothing back to the switch, so only the pin's name says power can arrive.
+func TestACableSupplyPinKeepsAPortJudged(t *testing.T) {
+	inout := ir.PinDirection_PIN_DIRECTION_INOUT
+	for _, tc := range []struct {
+		name  string
+		parts map[string][]supplyPin
+		nets  map[string][]string
+		want  check.Outcome
+	}{
+		{"a PD controller's VBUS pin typed inout", map[string][]supplyPin{
+			"U5": {{"VBUS1", "1", inout}, {"LDO_3V3", "2", pwrOut}},
+		}, map[string][]string{"5V": {"U2.4"}, "3V3": {"U2.3", "U5.1"}, "LDO_3V3": {"U5.2"}}, check.Fail},
+		{"a USB device's VBUS pin typed passive", map[string][]supplyPin{
+			"U5": {{"VBUS", "1", pass}},
+		}, map[string][]string{"5V": {"U2.4"}, "3V3": {"U2.3", "U5.1"}}, check.Fail},
+		{"an LDO's VIN typed passive, fed by the switch", map[string][]supplyPin{
+			"U5": {{"VIN", "1", pass}, {"VOUT", "2", pass}},
+		}, map[string][]string{"5V": {"U2.4"}, "3V3": {"U2.3", "U5.1"}, "LDO_3V3": {"U5.2"}}, check.NotConsidered},
+		{"a VBUS detect pin", map[string][]supplyPin{
+			"U5": {{"VBUS_DET", "1", inout}},
+		}, map[string][]string{"5V": {"U2.4"}, "3V3": {"U2.3", "U5.1"}}, check.NotConsidered},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := railFromConnector(tc.nets)
+			extra := pinDesign(tc.parts, nil)
+			d.Libraries[0].Parts = append(d.Libraries[0].Parts, extra.Libraries[0].Parts...)
+			d.Components = append(d.Components, extra.Components...)
+			classify.Stamp(d)
+			classify.StampNetRoles(d)
+			for _, r := range []*check.Rule{reverseBlockingAbsent, inputProtection} {
+				if got := verdictOn(t, r, d, "3V3"); got != string(tc.want) {
+					t.Errorf("%s on 3V3 = %q, want %q", r.Name, got, tc.want)
+				}
+			}
+			specFires := len(inputProtectionSpec.Eval(context.Background(), check.NewModel(d))) > 0
+			if specFires != (tc.want == check.Fail) {
+				t.Errorf("input-protection's spec twin fires = %v, want %v", specFires, tc.want == check.Fail)
+			}
+		})
+	}
+}
+
+// A USB TVS array names a pin VBUS too, and a clamp draws no power (agni issue 1257). A project that
+// takes VBUS out of its cable_supply vocabulary gets the board-driven read back.
+func TestACableSupplyPinIsAPowerSink(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		mpn   string
+		cable *configpb.VocabPatterns
+		want  bool
+	}{
+		{"a PD controller's VBUS pin", "", nil, false},
+		{"a TVS array's VBUS pin", "TPD4E05U06", nil, true},
+		{"a convention whose cable_supply leaves VBUS out", "", &configpb.VocabPatterns{Patterns: []string{`^VCABLE$`}, Replace: true}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := pinDesign(map[string][]supplyPin{
+				"J1": twoPin(), "U1": {{"VDD", "1", pwrIn}, {"GND", "2", pwrIn}},
+				"U2": {{"OUT", "1", pwrOut}, {"IN", "2", pwrIn}},
+				"U5": {{"VBUS", "1", ir.PinDirection_PIN_DIRECTION_INOUT}, {"GND", "2", pass}},
+			}, map[string][]string{
+				"3V3": {"J1.1", "U1.1", "U2.1", "U5.1"}, "5V": {"U2.2"}, "GND": {"U1.2", "J1.2", "U5.2"},
+			})
+			for _, c := range d.Components {
+				if c.RefDes == "U5" {
+					c.Attributes = map[string]string{"MPN": tc.mpn}
+				}
+			}
+			classify.Stamp(d)
+			classify.StampNetRoles(d)
+			rv, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Pin: &configpb.PinNameVocab{CableSupply: tc.cable}})
+			if err != nil {
+				t.Fatalf("BuildRoleVocab: %v", err)
+			}
+			m := check.NewModel(d, check.WithLexicon(&classify.Lexicon{Role: rv}))
+			if isTVS := m.HasClass("U5", check.ClassTVS); isTVS != (tc.mpn != "") {
+				t.Fatalf("U5 reads as a TVS = %v, want %v", isTVS, tc.mpn != "")
+			}
+			var rail *ir.Net
+			for _, n := range d.Nets {
+				if n.Name == "3V3" {
+					rail = n
+				}
+			}
+			if got := check.BoardSource(m, rail); (got != "") != tc.want {
+				t.Errorf("BoardSource = %q, want board driven = %v", got, tc.want)
 			}
 		})
 	}

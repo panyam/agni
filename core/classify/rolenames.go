@@ -100,6 +100,8 @@ type RoleVocab struct {
 	// anode and cathode are the diode family's terminals, under the same gate. feedbackPin and
 	// switchingPin read a regulator's own pins, and noConnect reads a net that its designer left open.
 	anode, cathode, feedbackPin, switchingPin, noConnect vocab
+	// cableSupply narrows supplyPin to the pins that draw on a cable's bus (agni issue 1934).
+	cableSupply vocab
 	// voltage reads a net name's tokens as a nominal voltage, through each pattern's capture groups.
 	voltage vocab
 	// attrs lists the attribute keys to read a part number, a value and a do-not-populate flag from.
@@ -211,6 +213,9 @@ func defaultLexicon() *configpb.NamingLexicon {
 			// A regulator's own pins, with an optional prefix and bank number (SW1, FB2, BUCK1_FB).
 			Feedback:  vp(`(^|_)(FB|VFB|FEEDBACK|VSENSE|SENSE|SNS)[0-9]*$`),
 			Switching: vp(`(^|_)(SW|BOOT|PHASE|LX)[0-9]*$`),
+			// A supply pin fed from a cable's bus (agni 1934). A PD controller names its sink path
+			// VBUS1 and VBUS2, and a USB device names its bus input VBUS.
+			CableSupply: vp(`^VBUS`),
 			// Pins that carry one signal across a part (agni 1338). A{n} and B{n} name a level
 			// translator's two sides (TXS0104, 74LVC245), {n}A and {n}Y a buffer's input and output
 			// (74LVC2G07), and SDA1/SDA2 and SCL1/SCL2 an I2C translator's (PCA9306).
@@ -267,6 +272,12 @@ func (v *RoleVocab) IsCathode(name string) bool { return v.cathode.matchWhole(na
 // IsFeedbackPin and IsSwitchingPin classify a part's PIN name as a regulator's feedback or switch pin.
 func (v *RoleVocab) IsFeedbackPin(name string) bool  { return v.feedbackPin.match(name) != "" }
 func (v *RoleVocab) IsSwitchingPin(name string) bool { return v.switchingPin.match(name) != "" }
+
+// IsCableSupplyPin classifies a part's PIN name as a supply input fed from a cable's bus. The name has
+// to be a supply pin as well, so supply's exclusions (VBUS_DET) hold here too.
+func (v *RoleVocab) IsCableSupplyPin(name string) bool {
+	return v.cableSupply.match(name) != "" && v.IsSupplyPin(name)
+}
 
 // IsNoConnect reports whether a net's name says its designer left it unconnected on purpose.
 func (v *RoleVocab) IsNoConnect(name string) bool { return v.noConnect.match(name) != "" }
@@ -401,6 +412,7 @@ func BuildRoleVocab(over *configpb.NamingLexicon) (*RoleVocab, error) {
 		{"cathode", pin.GetCathode(), &v.cathode},
 		{"feedback_pin", pin.GetFeedback(), &v.feedbackPin},
 		{"switching_pin", pin.GetSwitching(), &v.switchingPin},
+		{"cable_supply", pin.GetCableSupply(), &v.cableSupply},
 		{"voltage", net.GetVoltage(), &v.voltage},
 	} {
 		out, err := compileVocab(d.src)
@@ -456,16 +468,17 @@ func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 			InferRailFromSupplyPins: bn.InferRailFromSupplyPins,
 		},
 		Pin: &configpb.PinNameVocab{
-			Supply:     mergeVocab(bp.GetSupply(), op.GetSupply()),
-			Gate:       mergeVocab(bp.GetGate(), op.GetGate()),
-			Source:     mergeVocab(bp.GetSource(), op.GetSource()),
-			Drain:      mergeVocab(bp.GetDrain(), op.GetDrain()),
-			ExposedPad: mergeVocab(bp.GetExposedPad(), op.GetExposedPad()),
-			Anode:      mergeVocab(bp.GetAnode(), op.GetAnode()),
-			Cathode:    mergeVocab(bp.GetCathode(), op.GetCathode()),
+			Supply:      mergeVocab(bp.GetSupply(), op.GetSupply()),
+			Gate:        mergeVocab(bp.GetGate(), op.GetGate()),
+			Source:      mergeVocab(bp.GetSource(), op.GetSource()),
+			Drain:       mergeVocab(bp.GetDrain(), op.GetDrain()),
+			ExposedPad:  mergeVocab(bp.GetExposedPad(), op.GetExposedPad()),
+			Anode:       mergeVocab(bp.GetAnode(), op.GetAnode()),
+			Cathode:     mergeVocab(bp.GetCathode(), op.GetCathode()),
 			Feedback:    mergeVocab(bp.GetFeedback(), op.GetFeedback()),
 			Switching:   mergeVocab(bp.GetSwitching(), op.GetSwitching()),
 			ThroughPair: mergePinPairs(bp.GetThroughPair(), op.GetThroughPair()),
+			CableSupply: mergeVocab(bp.GetCableSupply(), op.GetCableSupply()),
 		},
 	}
 	if on != nil && on.InferRailFromSupplyPins != nil {

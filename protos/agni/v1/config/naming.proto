@@ -153,6 +153,11 @@ message PinNameVocab {
   // B2 or a buffer's 1A and 1Y (agni issue 1338). A walk crossing a part from one pin of a pair
   // goes on through its partner alone, rather than through every pin of the part.
   PinPairVocab through_pair = 10;
+  // cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+  // (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+  // also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+  // only when supply also matches it.
+  VocabPatterns cable_supply = 11;
 }
 
 // PinPairVocab is the pin pairs a project adds to the built-ins, or with replace, the whole set.

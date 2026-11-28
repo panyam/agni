@@ -366,6 +366,12 @@ pub struct PinNameVocab {
     /// goes on through its partner alone, rather than through every pin of the part.
     #[prost(message, optional, tag="10")]
     pub through_pair: ::core::option::Option<PinPairVocab>,
+    /// cable_supply names a supply pin that draws on a cable's bus, such as a PD controller's VBUS1
+    /// (agni issue 1934). A connector net with such a pin on it can take power in even when the board
+    /// also drives it, so the power-entry rules still judge a dual-role USB-C port. A name here counts
+    /// only when supply also matches it.
+    #[prost(message, optional, tag="11")]
+    pub cable_supply: ::core::option::Option<VocabPatterns>,
 }
 /// PinPairVocab is the pin pairs a project adds to the built-ins, or with replace, the whole set.
 #[derive(Clone, PartialEq, ::prost::Message)]

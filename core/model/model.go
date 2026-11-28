@@ -161,6 +161,9 @@ type Model interface {
 	// IsSupplyPinName reads a PIN name as a supply input (VDD, VCC, VIN and their kin), from the
 	// lexicon's supply_pin vocabulary.
 	IsSupplyPinName(name string) bool
+	// IsCableSupplyPinName reads a PIN name as a supply input fed from a cable's bus (VBUS, VBUS1),
+	// from the lexicon's cable_supply vocabulary. Every such name is also a supply pin name.
+	IsCableSupplyPinName(name string) bool
 	// DiffNegative is the complementary net name for a differential pair's positive member, under this
 	// model's lexicon, and ok=false when the name is not a positive member.
 	DiffNegative(name string) (string, bool)
